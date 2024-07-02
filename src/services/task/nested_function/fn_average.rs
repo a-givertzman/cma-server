@@ -4,7 +4,7 @@ use crate::core_::{
     point::{point::Point, point_type::PointType},
     types::fn_in_out_ref::FnInOutRef,
 };
-use super::{fn_::{FnInOut, FnOut, FnIn}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Returns an average value (in Double) of the input
 #[derive(Debug)]
@@ -57,40 +57,53 @@ impl FnOut for FnAverage {
         inputs
     }
     //
-    fn out(&mut self) -> PointType {
-        let enable = match &mut self.enable {
-            Some(en) => en.borrow_mut().out().to_bool().as_bool().value.0,
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let enable = match &self.enable {
+            Some(enable) => {
+                let enable = enable.borrow_mut().out();
+                trace!("{}.out | enable: {:?}", self.id, enable);
+                match enable {
+                    FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
+                    FnResult::None => return FnResult::None,
+                    FnResult::Err(err) => return FnResult::Err(err),
+                }
+            }
             None => true,
         };
-        // trace!("{}.out | enable: {:?}", self.id, enable);
         let input = self.input.borrow_mut().out();
         // trace!("{}.out | input: {:?}", self.id, input);
-        if enable {
-            let value = input.to_double().as_double().value;
-            self.sum += value;
-            self.count += 1;
-        } else {
-            self.count = 0;
-            self.sum = 0.0;
+        match input {
+            FnResult::Ok(input) => {
+                if enable {
+                    let value = input.to_double().as_double().value;
+                    self.sum += value;
+                    self.count += 1;
+                } else {
+                    self.count = 0;
+                    self.sum = 0.0;
+                }
+                let average = if self.count != 0 {
+                    self.sum / (self.count as f64)
+                } else {
+                    0.0
+                };
+                trace!("{}.out | sum: {:?}", self.id, self.sum);
+                trace!("{}.out | count: {:?}", self.id, self.count);
+                trace!("{}.out | average: {:?}", self.id, average);
+                FnResult::Ok(PointType::Double(
+                    Point::new(
+                        input.tx_id(),
+                        &self.id,
+                        average,
+                        input.status(),
+                        input.cot(),
+                        input.timestamp(),
+                    )
+                ))
+            }
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
         }
-        let average = if self.count != 0 {
-            self.sum / (self.count as f64)
-        } else {
-            0.0
-        };
-        trace!("{}.out | sum: {:?}", self.id, self.sum);
-        trace!("{}.out | count: {:?}", self.id, self.count);
-        trace!("{}.out | average: {:?}", self.id, average);
-        PointType::Double(
-            Point::new(
-                input.tx_id(),
-                &self.id,
-                average,
-                input.status(),
-                input.cot(),
-                input.timestamp(),
-            )
-        )
     }
     //
     fn reset(&mut self) {

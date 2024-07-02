@@ -4,18 +4,23 @@ use crate::core_::{
     point::{point::Point, point_type::PointType},
     types::{bool::Bool, fn_in_out_ref::FnInOutRef},
 };
-use super::{fn_::{FnInOut, FnOut, FnIn}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Creates SQL requests on [op-cycle] falling edge:
 /// - Operating cycle SQL request (id, start, stop)
 /// - Operating cycle metrics SQL requests (cycle_id, pid, metric_id, value)
-/// - Returns [enable] input
+/// - Returns [enable] input if all inputs are Ok
+/// 
+/// Example
+/// 
+/// ```yaml
+/// ```
 #[derive(Debug)]
 pub struct FnRecOpCycleMetric {
     id: String,
     kind: FnKind,
     enable: Option<FnInOutRef>,
-    tx_send: Option<Sender<PointType>>,
+    send_to: Option<Sender<PointType>>,
     op_cycle: FnInOutRef,
     inputs: Vec<FnInOutRef>,
     values: Vec<PointType>,
@@ -29,12 +34,12 @@ impl FnRecOpCycleMetric {
     ///
     /// Creates new instance of the FnRecOpCycleMetric
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, tx_send: Option<Sender<PointType>>, op_cycle: FnInOutRef, inputs: Vec<FnInOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, send_to: Option<Sender<PointType>>, op_cycle: FnInOutRef, inputs: Vec<FnInOutRef>) -> Self {
         Self { 
             id: format!("{}/FnRecOpCycleMetric{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
             enable,
-            tx_send,
+            send_to,
             op_cycle,
             inputs,
             values: vec![],
@@ -44,9 +49,9 @@ impl FnRecOpCycleMetric {
         }
     }
     ///
-    /// Sending Point to the external service if 'send-to' specified
+    /// Sends Point to the external service if 'send-to' specified
     fn send(&self, point: &PointType) {
-        match &self.tx_send {
+        match &self.send_to {
             Some(tx_send) => match tx_send.send(point.clone()) {
                 Ok(_) => {
                     debug!("{}.out | Point sent: {:#?}", self.id, point);
@@ -86,20 +91,28 @@ impl FnOut for FnRecOpCycleMetric {
         inputs
     }
     //
-    fn out(&mut self) -> PointType {
+    fn out(&mut self) -> FnResult<PointType, String> {
         let enable = match &mut self.enable {
-            Some(en) => en.borrow_mut().out().to_bool().as_bool().value.0,
+            Some(en) => match en.borrow_mut().out() {
+                FnResult::Ok(en) => en.to_bool().as_bool().value.0,
+                FnResult::None => return FnResult::None,
+                FnResult::Err(err) => return FnResult::Err(err),
+            }
             None => true,
         };
         let (op_cycle, tx_id, status, cot, timestamp) = {
             let op_cycle = self.op_cycle.borrow_mut().out();
-            (
-                op_cycle.to_bool().as_bool().value.0,
-                op_cycle.tx_id(),
-                op_cycle.status(),
-                op_cycle.cot(),
-                op_cycle.timestamp(),
-            )
+            match op_cycle {
+                FnResult::Ok(op_cycle) => (
+                    op_cycle.to_bool().as_bool().value.0,
+                    op_cycle.tx_id(),
+                    op_cycle.status(),
+                    op_cycle.cot(),
+                    op_cycle.timestamp(),
+                ),
+                FnResult::None => return FnResult::None,
+                FnResult::Err(err) => return FnResult::Err(err),
+            }
         };
         if op_cycle & (! self.prev) {
             warn!("{}.out | Operating Cycle - STARTED", self.id);
@@ -127,16 +140,18 @@ impl FnOut for FnRecOpCycleMetric {
             trace!("{}.out | Operating Cycle - values", self.id);
             self.values.clear();
             for input in &self.inputs {
-                let value = input.borrow_mut().out();
-                trace!("{}.out | Operating Cycle - value: {:?}", self.id, value);
-                self.values.push(value)
+                let input = input.borrow_mut().out();
+                match input {
+                    FnResult::Ok(input) => {
+                        trace!("{}.out | Input '{}': {:?}", self.id, input.name(), input.value());
+                        self.values.push(input)
+                    }
+                    FnResult::None => {}
+                    FnResult::Err(err) => return FnResult::Err(err),
+                }
             }
-            // let log_values: Vec<String> = self.values.iter().map(|point| {
-            //     format!("{}: {}", point.name(), point.value().to_string())
-            // }).collect();
-            // trace!("{}.out | Operating Cycle - values: {:#?}", self.id, log_values);
         }
-        PointType::Bool(
+        FnResult::Ok(PointType::Bool(
             Point::new(
                 tx_id,
                 &self.id,
@@ -145,7 +160,7 @@ impl FnOut for FnRecOpCycleMetric {
                 cot,
                 timestamp,
             )
-        )
+        ))
     }
     //
     fn reset(&mut self) {

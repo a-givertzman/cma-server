@@ -5,7 +5,7 @@ use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
     state::switch_state::{Switch, SwitchCondition, SwitchState},
     types::fn_in_out_ref::FnInOutRef,
 }};
-use super::{fn_::{FnInOut, FnIn, FnOut}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 //
 //
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -18,7 +18,7 @@ enum FnTimerState {
     Done,
 }
 ///
-/// Returns elapsed time in seconds (double) from raised input (>0) to dropped (<=0)
+/// Function | Returns elapsed time in seconds (double) from raised input (>0) to dropped (<=0)
 /// - if repeat = true, then elapsed is total secods of 
 /// multiple periods
 #[derive(Debug)]
@@ -102,10 +102,20 @@ impl FnTimer {
     }
     ///
     /// Returns initial value
-    fn initial(&mut self) -> f64 {
-        self.initial.as_mut().map_or(0.0, |initial| {
-            initial.borrow_mut().out().to_double().as_double().value
-        })
+    fn total_elapsed<'a>(total_elapsed: &'a mut Option<f64>, initial: Option<FnInOutRef>) -> FnResult<&'a mut f64, String> {
+        let mut default = 0.0;
+        if total_elapsed.is_none() {
+            if let Some(init) = initial {
+                match init.borrow_mut().out() {
+                    FnResult::Ok(init) => {
+                        default = init.to_double().as_double().value;
+                    }
+                    FnResult::None => return FnResult::None,
+                    FnResult::Err(err) => return FnResult::Err(err),
+                }
+            }
+        }
+        FnResult::Ok(total_elapsed.get_or_insert(default))
     }
 }
 //
@@ -135,104 +145,94 @@ impl FnOut for FnTimer {
         inputs
     }
     ///
-    fn out(&mut self) -> PointType {
-        // trace!("{}.out | input: {:?}", self.id, self.input.print());
+    fn out(&mut self) -> FnResult<PointType, String> {
         let enable = match &mut self.enable {
-            Some(en) => en.borrow_mut().out().to_bool().as_bool().value.0,
+            Some(en) => match en.borrow_mut().out() {
+                FnResult::Ok(en) => en.to_bool().as_bool().value.0,
+                FnResult::None => return FnResult::None,
+                FnResult::Err(err) => return FnResult::Err(err),
+            }
             None => true,
         };
         let input = self.input.borrow_mut().out();
-        let out = if enable {
-            let total_elapsed = match &mut self.total_elapsed {
-                Some(total_elapsed) => total_elapsed,
-                None => {
-                    let initial = self.initial();
-                    self.total_elapsed = Some(initial);
-                    self.total_elapsed.as_mut().unwrap()
-                },
-            };
-            let value = input.to_bool().as_bool().value.0;
-            self.state.add(value);
-            let state = self.state.state();
-            trace!("{}.out | input: {:?}   |   state: {:?}", self.id, value, state);
-            match state {
-                FnTimerState::Off => {}
-                FnTimerState::Start => {
-                    self.start = Some(Instant::now());
-                }
-                FnTimerState::Progress => {
-                    self.session_elapsed = self.start.unwrap().elapsed().as_secs_f64();
-                }
-                FnTimerState::Stop => {
-                    self.session_elapsed = 0.0;
-                    *total_elapsed += self.start.unwrap().elapsed().as_secs_f64();
-                    self.start = None;
-                }
-                FnTimerState::Done => {
-                    self.session_elapsed = 0.0;
-                    if let Some(start) = self.start {
-                        *total_elapsed += start.elapsed().as_secs_f64();
-                        self.start = None;
+        // trace!("{}.out | input: {:?}", self.id, self.input.print());
+        match input {
+            FnResult::Ok(input) => {
+                let out = if enable {
+                    match Self::total_elapsed(&mut self.total_elapsed, self.initial.clone()) {
+                        FnResult::Ok(total_elapsed) => {
+                            let value = input.to_bool().as_bool().value.0;
+                            self.state.add(value);
+                            let state = self.state.state();
+                            trace!("{}.out | input: {:?}   |   state: {:?}", self.id, value, state);
+                            match state {
+                                FnTimerState::Off => {}
+                                FnTimerState::Start => {
+                                    self.start = Some(Instant::now());
+                                }
+                                FnTimerState::Progress => {
+                                    self.session_elapsed = self.start.unwrap().elapsed().as_secs_f64();
+                                }
+                                FnTimerState::Stop => {
+                                    self.session_elapsed = 0.0;
+                                    *total_elapsed += self.start.unwrap().elapsed().as_secs_f64();
+                                    self.start = None;
+                                }
+                                FnTimerState::Done => {
+                                    self.session_elapsed = 0.0;
+                                    if let Some(start) = self.start {
+                                        *total_elapsed += start.elapsed().as_secs_f64();
+                                        self.start = None;
+                                    }
+                                }
+                            };
+                            *total_elapsed + self.session_elapsed
+                        }
+                        FnResult::None => return FnResult::None,
+                        FnResult::Err(err) => return FnResult::Err(err),
                     }
-                }
-            };
-            *total_elapsed + self.session_elapsed
-        } else {
-            self.start = None;
-            self.session_elapsed = 0.0;
-            let initial = self.initial();
-            self.total_elapsed = Some(initial);
-            self.state.reset();
-            initial
-        };
-        trace!("{}.out | out: {:?}", self.id, out);
-        match &self.initial {
-            Some(initial) => {
-                let type_ = initial.borrow_mut().out().type_();
-                match type_ {
-                    PointConfigType::Int => PointType::Int(
-                        Point::new(
-                            input.tx_id(),
-                            &format!("{}.out", self.id),
-                            out.round() as i64,
-                            input.status(),
-                            Cot::Inf,
-                            input.timestamp(),
-                        )
-                    ),
-                    PointConfigType::Real => PointType::Real(
-                        Point::new(
-                            input.tx_id(),
-                            &format!("{}.out", self.id),
-                            out as f32,
-                            input.status(),
-                            Cot::Inf,
-                            input.timestamp(),
-                        )
-                    ),
-                    PointConfigType::Double => PointType::Double(
-                        Point::new(
-                            input.tx_id(),
-                            &format!("{}.out", self.id),
-                            out,
-                            input.status(),
-                            Cot::Inf,
-                            input.timestamp(),
-                        )
-                    ),
-                    _ => panic!("{}.out | Usupported initial type '{:?}'", self.id, type_),
+                } else {
+                    self.start = None;
+                    self.session_elapsed = 0.0;
+                    self.total_elapsed = None;
+                    self.state.reset();
+                    match Self::total_elapsed(&mut self.total_elapsed, self.initial.clone()) {
+                        FnResult::Ok(total_elapsed) => total_elapsed.to_owned(),
+                        FnResult::None => return FnResult::None,
+                        FnResult::Err(err) => return FnResult::Err(err),
+                    }                    
+                };
+                trace!("{}.out | out: {:?}", self.id, out);
+                let value = PointType::Double(
+                    Point::new(
+                        input.tx_id(),
+                        &format!("{}.out", self.id),
+                        out,
+                        input.status(),
+                        Cot::Inf,
+                        input.timestamp(),
+                    )
+                );
+                match &self.initial {
+                    Some(initial) => {
+                        match initial.borrow_mut().out() {
+                            FnResult::Ok(initial) => {
+                                match initial.type_() {
+                                    PointConfigType::Int => FnResult::Ok(value.to_int()),
+                                    PointConfigType::Real => FnResult::Ok(value.to_real()),
+                                    PointConfigType::Double => FnResult::Ok(value),
+                                    _ => panic!("{}.out | Usupported type in initial input '{:?}'", self.id, initial.type_()),
+                                }
+                            }
+                            FnResult::None => FnResult::None,
+                            FnResult::Err(err) => FnResult::Err(err),
+                        }
+                    }
+                    None => FnResult::Ok(value),
                 }
             }
-            None => PointType::Double(
-                Point::new(
-                    input.tx_id(),
-                    &format!("{}.out", self.id),
-                    out,
-                    input.status(),
-                    Cot::Inf,
-                    input.timestamp(),
-                )
-            ),
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
         }
     }
     //
@@ -240,10 +240,11 @@ impl FnOut for FnTimer {
     fn reset(&mut self) {
         self.start = None;
         self.session_elapsed = 0.0;
-        self.total_elapsed = Some(self.initial.as_mut().map_or(0.0, |initial| {
-            initial.borrow_mut().reset();
-            initial.borrow_mut().out().to_double().as_double().value
-        }));
+        self.total_elapsed = None;
+        // Some(self.initial.as_mut().map_or(0.0, |initial| {
+        //     initial.borrow_mut().reset();
+        //     initial.borrow_mut().out().to_double().as_double().value
+        // }));
         self.state.reset();
         if let Some(enable) = &self.enable {
             enable.borrow_mut().reset();

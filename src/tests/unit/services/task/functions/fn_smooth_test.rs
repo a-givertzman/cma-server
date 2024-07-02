@@ -5,7 +5,7 @@ mod fn_smooth {
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::fn_conf_keywd::FnConfPointType, 
+        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
         core_::{
             aprox_eq::aprox_eq::AproxEq, point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef
         },
@@ -27,18 +27,26 @@ mod fn_smooth {
     /// returns:
     ///  - ...
     fn init_each(parent: &str, initial: Value) -> FnInOutRef {
+        let mut conf = FnConfig {
+            name: "test".to_owned(),
+            type_: match initial {
+                Value::Bool(_) => FnConfPointType::Bool,
+                Value::Int(_) => FnConfPointType::Int,
+                Value::Real(_) => FnConfPointType::Real,
+                Value::Double(_) => FnConfPointType::Double,
+                Value::String(_) => FnConfPointType::String,
+            },
+            options: FnConfOptions {default: Some(match initial {
+                Value::Bool(v) => v.to_string(),
+                Value::Int(v) => v.to_string(),
+                Value::Real(v) => v.to_string(),
+                Value::Double(v) => v.to_string(),
+                Value::String(v) => v.to_string(),
+            }),
+                ..Default::default()}, ..Default::default()
+        };        
         Rc::new(RefCell::new(Box::new(
-            FnInput::new(
-                parent,
-                initial.to_point(0, "test"),
-                match initial {
-                    Value::Bool(_) => FnConfPointType::Bool,
-                    Value::Int(_) => FnConfPointType::Int,
-                    Value::Real(_) => FnConfPointType::Real,
-                    Value::Double(_) => FnConfPointType::Double,
-                    Value::String(_) => FnConfPointType::String,
-                } 
-            )
+            FnInput::new(parent, 0, &mut conf)
         )))
     }
     ///
@@ -127,7 +135,7 @@ mod fn_smooth {
             let point = value.to_point(0, &format!("input step {}", step));
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let result = fn_smooth.out();
+            let result = fn_smooth.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_real().value.aprox_eq(target, 4), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -220,7 +228,7 @@ mod fn_smooth {
             let point = value.to_point(0, &format!("input step {}", step));
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let result = fn_smooth.out();
+            let result = fn_smooth.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_double().value.aprox_eq(target, 6), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);

@@ -22,8 +22,8 @@
 //! etc...
 pub mod fn_;
 pub mod fn_kind;
+pub mod fn_result;
 pub mod functions;
-pub mod fn_add;
 pub mod fn_input;
 pub mod fn_count;
 pub mod fn_timer;
@@ -34,10 +34,6 @@ pub mod fn_debug;
 pub mod fn_to_int;
 pub mod fn_average;
 pub mod fn_acc;
-pub mod fn_mul;
-pub mod fn_sub;
-pub mod fn_div;
-pub mod fn_pow;
 pub mod fn_to_real;
 pub mod fn_to_double;
 pub mod fn_to_bool;

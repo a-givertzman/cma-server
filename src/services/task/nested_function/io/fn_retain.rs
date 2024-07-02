@@ -10,7 +10,7 @@ use crate::{
         status::status::Status,
         types::{bool::Bool, fn_in_out_ref::FnInOutRef},
     }, 
-    services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind},
+    services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///
 /// Function | Used for store input Point value to the local disk
@@ -247,22 +247,48 @@ impl FnOut for FnRetain {
         inputs
     }
     //
-    fn out(&mut self) -> PointType {
-        let point = match &self.input {
+    fn out(&mut self) -> FnResult<PointType, String> {
+        match &self.input {
             Some(input) => {
-                let point = input.borrow_mut().out();
-                let enable = self.enable.as_ref().map_or(true, |enable| enable.borrow_mut().out().to_bool().as_bool().value.0);
-                if enable {
-                    if let Err(err) = self.store(&point) {
-                        error!("{}.out | Error: '{:?}'", self.id, err);
-                    };
+                let enable = match &self.enable {
+                    Some(enable) => {
+                        let enable = enable.borrow_mut().out();
+                        trace!("{}.out | enable: {:?}", self.id, enable);
+                        match enable {
+                            FnResult::Ok(enable) => Some(enable.to_bool().as_bool()),
+                            FnResult::None => return FnResult::None,
+                            FnResult::Err(err) => return FnResult::Err(err),
+                        }
+                    }
+                    None => None,
+                };
+                trace!("{}.out | enable: {:?}", self.id, enable);
+                let input = input.borrow_mut().out();
+                trace!("{}.out | input: {:?}", self.id, input);
+                match input {
+                    FnResult::Ok(input) => {
+                        let enable = enable.map_or(true, |enable| enable.value.0);
+                        if enable {
+                            if let Err(err) = self.store(&input) {
+                                error!("{}.out | Error: '{:?}'", self.id, err);
+                            };
+                        }
+                        FnResult::Ok(input)
+                    }
+                    FnResult::None => FnResult::None,
+                    FnResult::Err(err) => FnResult::Err(err),
                 }
-                point
             }
             None => {
-                let default = match &mut self.default {
+                let default = match &self.default {
                     Some(default) => {
-                        default.borrow_mut().out()
+                        let default = default.borrow_mut().out();
+                        trace!("{}.out | default: {:?}", self.id, default);
+                        match default {
+                            FnResult::Ok(default) => default,
+                            FnResult::None => return FnResult::None,
+                            FnResult::Err(err) => return FnResult::Err(err),
+                        }
                     }
                     None => panic!("{}.out | The [default] input is not specified", self.id),
                 };
@@ -272,7 +298,7 @@ impl FnOut for FnRetain {
                         None => default,
                     };
                     trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
-                    point
+                    FnResult::Ok(point)
                 } else {
                     let point = match &self.cache {
                         Some(point) => point.clone(),
@@ -285,11 +311,10 @@ impl FnOut for FnRetain {
                     };
                     self.cache = Some(point.clone());
                     trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
-                    point
+                    FnResult::Ok(point)
                 }
             }
-        };
-        point
+        }
     }
     //
     fn reset(&mut self) {

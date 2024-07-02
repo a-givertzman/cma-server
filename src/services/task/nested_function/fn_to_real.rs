@@ -8,6 +8,8 @@ use crate::{
         fn_kind::FnKind,
     },
 };
+
+use super::fn_result::FnResult;
 ///
 /// Function converts input to Real
 ///  - bool: true -> 1.0, false -> 0.0
@@ -52,35 +54,41 @@ impl FnOut for FnToReal {
     }
     //
     //
-    fn out(&mut self) -> PointType {
-        let point = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, point);
-        let out = match &point {
-            PointType::Bool(value) => {
-                if value.value.0 {1.0f32} else {0.0f32}
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let input = self.input.borrow_mut().out();
+        trace!("{}.out | input: {:?}", self.id, input);
+        match input {
+            FnResult::Ok(input) => {
+                let out = match &input {
+                    PointType::Bool(value) => {
+                        if value.value.0 {1.0f32} else {0.0f32}
+                    }
+                    PointType::Int(value) => {
+                        value.value as f32
+                    }
+                    PointType::Real(value) => {
+                        value.value
+                    }
+                    PointType::Double(value) => {
+                        value.value as f32
+                    }
+                    _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
+                };
+                trace!("{}.out | out: {:?}", self.id, &out);
+                FnResult::Ok(PointType::Real(
+                    Point::new(
+                        input.tx_id(),
+                        &concat_string!(self.id, ".out"),
+                        out,
+                        input.status(),
+                        input.cot(),
+                        input.timestamp(),
+                    )
+                ))
             }
-            PointType::Int(value) => {
-                value.value as f32
-            }
-            PointType::Real(value) => {
-                value.value
-            }
-            PointType::Double(value) => {
-                value.value as f32
-            }
-            _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, point.print_type_of(), point),
-        };
-        trace!("{}.out | out: {:?}", self.id, &out);
-        PointType::Real(
-            Point::new(
-                point.tx_id(),
-                &concat_string!(self.id, ".out"),
-                out,
-                point.status(),
-                point.cot(),
-                point.timestamp(),
-            )
-        )
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
     }
     //
     //

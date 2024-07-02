@@ -1,7 +1,7 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
 use log::trace;
 use crate::core_::point::point_type::PointType;
-use super::{fn_::{FnIn, FnOut, FnInOut}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Constant value
 #[derive(Debug, Clone)]
@@ -44,9 +44,9 @@ impl FnOut for FnConst {
         vec![]
     }
     //
-    fn out(&mut self) -> PointType {
+    fn out(&mut self) -> FnResult<PointType, String> {
         trace!("{}.out | value: {:?}", self.id, &self.point);
-        self.point.clone()
+        FnResult::Ok(self.point.clone())
     }
     //
     fn reset(&mut self) {}

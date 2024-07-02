@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
 use log::{error, trace};
 use crate::{
-    conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType}, core_::{point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind}
+    conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType}, core_::{point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}
 };
 ///
 /// Function | Used for export Point from Task service to another service
@@ -163,42 +163,57 @@ impl FnOut for FnPoint {
         inputs
     }
     //
-    fn out(&mut self) -> PointType {
-        let enable = match &self.enable {
-            Some(enable) => enable.borrow_mut().out().to_bool().as_bool().value.0,
-            None => true,
-        };
+    fn out(&mut self) -> FnResult<PointType, String> {
         match &self.input {
             Some(input) => {
-                let point = input.borrow_mut().out();
+                let enable = match &self.enable {
+                    Some(enable) => match enable.borrow_mut().out() {
+                        FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
+                        FnResult::None => return FnResult::None,
+                        FnResult::Err(err) => return FnResult::Err(err),
+                    },
+                    None => true,
+                };
                 let changes_only = match &self.changes_only {
-                    Some(changes_only) => changes_only.borrow_mut().out().to_bool().as_bool().value.0,
+                    Some(changes_only) => match changes_only.borrow_mut().out() {
+                        FnResult::Ok(changes_only) => changes_only.to_bool().as_bool().value.0,
+                        FnResult::None => return FnResult::None,
+                        FnResult::Err(err) => return FnResult::Err(err),
+                    }
                     None => false,
                 };
-                match &self.state {
-                    Some(state) => {
-                        if changes_only {
-                            if !point.cmp_value(state) {
+                let input = input.borrow_mut().out();
+                trace!("{}.out | input: {:?}", self.id, input);
+                match input {
+                    FnResult::Ok(point) => {
+                        match &self.state {
+                            Some(state) => {
+                                if changes_only {
+                                    if !point.cmp_value(state) {
+                                        self.state = Some(point.clone());
+                                        if enable {
+                                            self.send(&point);
+                                        }
+                                    }
+                                } else {
+                                    self.state = Some(point.clone());
+                                    if enable {
+                                        self.send(&point);
+                                    }
+                                }
+                            }
+                            None => {
                                 self.state = Some(point.clone());
                                 if enable {
                                     self.send(&point);
                                 }
                             }
-                        } else {
-                            self.state = Some(point.clone());
-                            if enable {
-                                self.send(&point);
-                            }
                         }
+                        FnResult::Ok(point)
                     }
-                    None => {
-                        self.state = Some(point.clone());
-                        if enable {
-                            self.send(&point);
-                        }
-                    }
+                    FnResult::None => FnResult::None,
+                    FnResult::Err(err) => FnResult::Err(err),
                 }
-                point
             }
             None => panic!("{}.out | Input is not configured for the Point '{}'", self.id, self.conf.name),
         }

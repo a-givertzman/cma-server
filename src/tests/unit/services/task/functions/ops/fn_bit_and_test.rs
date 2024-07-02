@@ -4,9 +4,9 @@ mod fn_bit_and {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_conf_keywd::FnConfPointType, 
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
-        services::task::nested_function::{ops::fn_bit_and::FnBitAnd, fn_::FnOut, fn_input::FnInput}
+        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
+        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, ops::fn_bit_and::FnBitAnd}
     };
     ///
     ///
@@ -21,9 +21,10 @@ mod fn_bit_and {
     ///
     /// returns:
     ///  - ...
-    fn init_each(initial: PointType, type_: FnConfPointType) -> FnInOutRef {
+    fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
         Rc::new(RefCell::new(Box::new(
-            FnInput::new("test", initial, type_)
+            FnInput::new("test", 0, &mut conf)
         )))
     }
     ///
@@ -35,8 +36,8 @@ mod fn_bit_and {
         let self_id = "test_bool";
         info!("{}", self_id);
         let mut target: bool;
-        let input1 = init_each(false.to_point(0, "bool"), FnConfPointType::Bool);
-        let input2 = init_each(false.to_point(0, "bool"), FnConfPointType::Bool);
+        let input1 = init_each("false", FnConfPointType::Bool);
+        let input2 = init_each("false", FnConfPointType::Bool);
         let mut fn_bit_and = FnBitAnd::new(
             self_id,
             vec![
@@ -55,7 +56,7 @@ mod fn_bit_and {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(point1.clone());
             input2.borrow_mut().add(point2.clone());
-            let result = fn_bit_and.out().as_bool().value.0;
+            let result = fn_bit_and.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 & value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -70,9 +71,9 @@ mod fn_bit_and {
         let self_id = "test_bool_3";
         info!("{}", self_id);
         let mut target: bool;
-        let input1 = init_each(false.to_point(0, "bool"), FnConfPointType::Bool);
-        let input2 = init_each(false.to_point(0, "bool"), FnConfPointType::Bool);
-        let input3 = init_each(false.to_point(0, "bool"), FnConfPointType::Bool);
+        let input1 = init_each("false", FnConfPointType::Bool);
+        let input2 = init_each("false", FnConfPointType::Bool);
+        let input3 = init_each("false", FnConfPointType::Bool);
         let mut fn_bit_and = FnBitAnd::new(
             self_id,
             vec![
@@ -98,7 +99,7 @@ mod fn_bit_and {
             input1.borrow_mut().add(point1.clone());
             input2.borrow_mut().add(point2.clone());
             input3.borrow_mut().add(point3.clone());
-            let result = fn_bit_and.out().as_bool().value.0;
+            let result = fn_bit_and.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
             target = value1 & value2 & value3;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -113,8 +114,8 @@ mod fn_bit_and {
         let self_id = "test_int";
         info!("{}", self_id);
         let mut target: i64;
-        let input1 = init_each(0.to_point(0, "int"), FnConfPointType::Int);
-        let input2 = init_each(0.to_point(0, "int"), FnConfPointType::Int);
+        let input1 = init_each("0", FnConfPointType::Int);
+        let input2 = init_each("0", FnConfPointType::Int);
         let mut fn_bit_and = FnBitAnd::new(
             self_id,
             vec![
@@ -140,7 +141,7 @@ mod fn_bit_and {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(point1.clone());
             input2.borrow_mut().add(point2.clone());
-            let result = fn_bit_and.out().as_int().value;
+            let result = fn_bit_and.out().unwrap().as_int().value;
             debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 & value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -155,9 +156,9 @@ mod fn_bit_and {
         let self_id = "test_int_3";
         info!("{}", self_id);
         let mut target: i64;
-        let input1 = init_each(0.to_point(0, "int"), FnConfPointType::Int);
-        let input2 = init_each(0.to_point(0, "int"), FnConfPointType::Int);
-        let input3 = init_each(0.to_point(0, "int"), FnConfPointType::Int);
+        let input1 = init_each("0", FnConfPointType::Int);
+        let input2 = init_each("0", FnConfPointType::Int);
+        let input3 = init_each("0", FnConfPointType::Int);
         let mut fn_bit_and = FnBitAnd::new(
             self_id,
             vec![
@@ -186,7 +187,7 @@ mod fn_bit_and {
             input1.borrow_mut().add(point1.clone());
             input2.borrow_mut().add(point2.clone());
             input3.borrow_mut().add(point3.clone());
-            let result = fn_bit_and.out().as_int().value;
+            let result = fn_bit_and.out().unwrap().as_int().value;
             debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
             target = value1 & value2 & value3;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);

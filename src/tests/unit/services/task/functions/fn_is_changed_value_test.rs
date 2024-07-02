@@ -5,9 +5,9 @@ mod fn_is_changed_value {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_conf_keywd::FnConfPointType, 
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
-        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_is_changed_value::{self, FnIsChangedValue}, reset_counter::AtomicReset}
+        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
+        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_is_changed_value::FnIsChangedValue}
     };
     ///
     ///
@@ -22,10 +22,10 @@ mod fn_is_changed_value {
     ///
     /// returns:
     ///  - ...
-    fn init_each(initial: PointType, type_: FnConfPointType) -> FnInOutRef {
-        fn_is_changed_value::COUNT.reset(0);
+    fn init_each(default: &str, name: impl Into<String>, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: name.into(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
         Rc::new(RefCell::new(Box::new(
-            FnInput::new("test", initial, type_)
+            FnInput::new("test", 0, &mut conf)
         )))
     }
     ///
@@ -36,11 +36,11 @@ mod fn_is_changed_value {
         init_once();
         let self_id = "is_changed_bool";
         info!("{}", self_id);
-        let input1 = init_each(false.to_point(0, &format!("/{}/Bool", self_id)), FnConfPointType::Bool);
-        let input2 = init_each(0.to_point(0, &format!("/{}/Int", self_id)), FnConfPointType::Int);
-        let input3 = init_each(0.0f32.to_point(0, &format!("/{}/Real", self_id)), FnConfPointType::Real);
-        let input4 = init_each(0.0f64.to_point(0, &format!("/{}/Double", self_id)), FnConfPointType::Double);
-        let input5 = init_each("test".to_point(0, &format!("/{}/String", self_id)), FnConfPointType::String);
+        let input1 = init_each("false", format!("/{}/Bool", self_id), FnConfPointType::Bool);
+        let input2 = init_each("0", format!("/{}/Int", self_id), FnConfPointType::Int);
+        let input3 = init_each("0.0", format!("/{}/Real", self_id), FnConfPointType::Real);
+        let input4 = init_each("0.0", format!("/{}/Double", self_id), FnConfPointType::Double);
+        let input5 = init_each("test", format!("/{}/String", self_id), FnConfPointType::String);
         let mut fn_is_changed = FnIsChangedValue::new(
             "test",
             vec![
@@ -93,7 +93,7 @@ mod fn_is_changed_value {
                 }
             };
             // debug!("input: {:?}", &input);
-            let state = fn_is_changed.out();
+            let state = fn_is_changed.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("step {}   |   value: {:?}   |   state: {:?}", step, value, state);
             assert!(state.as_bool().value.0 == (target > 0), "step {} \n result: {:?} \ntarget: {}", step, state.as_bool().value.0, target > 0);

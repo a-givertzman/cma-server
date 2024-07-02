@@ -4,9 +4,9 @@ mod fn_bit_not {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_conf_keywd::FnConfPointType, 
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
-        services::task::nested_function::{ops::fn_bit_not::FnBitNot, fn_::FnOut, fn_input::FnInput}
+        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
+        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, ops::fn_bit_not::FnBitNot}
     };
     ///
     ///
@@ -21,9 +21,10 @@ mod fn_bit_not {
     ///
     /// returns:
     ///  - ...
-    fn init_each(initial: PointType, type_: FnConfPointType) -> FnInOutRef {
+    fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
         Rc::new(RefCell::new(Box::new(
-            FnInput::new("test", initial, type_)
+            FnInput::new("test", 0, &mut conf)
         )))
     }
     ///
@@ -35,7 +36,7 @@ mod fn_bit_not {
         let self_id = "test_bool";
         info!("{}", self_id);
         let mut target: bool;
-        let input = init_each(false.to_point(0, "bool"), FnConfPointType::Bool);
+        let input = init_each("false", FnConfPointType::Bool);
         let mut fn_bit_not = FnBitNot::new(
             self_id,
             input.clone(),
@@ -49,7 +50,7 @@ mod fn_bit_not {
         for (step, value) in test_data {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(point.clone());
-            let result = fn_bit_not.out().as_bool().value.0;
+            let result = fn_bit_not.out().unwrap().as_bool().value.0;
             debug!("step {}  |  ! value: {:?} | result: {:?}", step, value, result);
             target = ! value;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -64,7 +65,7 @@ mod fn_bit_not {
         let self_id = "test_int";
         info!("{}", self_id);
         let mut target: i64;
-        let input = init_each(0.to_point(0, "int"), FnConfPointType::Int);
+        let input = init_each("0", FnConfPointType::Int);
         let mut fn_bit_not = FnBitNot::new(
             self_id,
             input.clone(),
@@ -85,7 +86,7 @@ mod fn_bit_not {
         for (step, value) in test_data {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(point.clone());
-            let result = fn_bit_not.out().as_int().value;
+            let result = fn_bit_not.out().unwrap().as_int().value;
             debug!("step {}  |  ! value1: {:?} | result: {:?}", step, value, result);
             target = ! value;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);

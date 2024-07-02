@@ -9,8 +9,6 @@ mod fn_timer_test;
 
 mod fn_var_test;
 
-mod fn_add_test;
-
 mod fn_point_id_test;
 
 mod fn_rising_edge_test;
@@ -27,14 +25,6 @@ mod fn_threshold_factor_test;
 
 mod fn_smooth_test;
 mod fn_filter_test;
-
-mod fn_mul_test;
-
-mod fn_sub_test;
-
-mod fn_div_test;
-
-mod fn_pow_test;
 
 mod fn_piecewise_line_approx_test;
 

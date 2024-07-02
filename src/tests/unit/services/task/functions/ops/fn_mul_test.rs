@@ -4,9 +4,9 @@ mod fn_mul {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_conf_keywd::FnConfPointType, 
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
-        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_mul::FnMul}
+        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
+        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, ops::fn_mul::FnMul}
     };
     ///
     ///
@@ -21,9 +21,10 @@ mod fn_mul {
     ///
     /// returns:
     ///  - ...
-    fn init_each(initial: PointType, type_: FnConfPointType) -> FnInOutRef {
+    fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
         Rc::new(RefCell::new(Box::new(
-            FnInput::new("test", initial, type_)
+            FnInput::new("test", 0, &mut conf)
         )))
     }
     ///
@@ -33,11 +34,11 @@ mod fn_mul {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("fn_mul_bool");
-        let mut value1_stored = false.to_point(0, "bool");
+        let mut value1_stored;
         let mut value2_stored = false.to_point(0, "bool");
         let mut target: bool;
-        let input1 = init_each(value1_stored.clone(), FnConfPointType::Bool);
-        let input2 = init_each(value2_stored.clone(), FnConfPointType::Bool);
+        let input1 = init_each("false", FnConfPointType::Bool);
+        let input2 = init_each("false", FnConfPointType::Bool);
         let mut fn_mul = FnMul::new(
             "test",
             input1.clone(),
@@ -56,14 +57,14 @@ mod fn_mul {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(point1.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_bool().value.0 && value2_stored.as_bool().value.0;
             let result = state.as_bool().value.0;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
             input2.borrow_mut().add(point2.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_bool().value.0 && value2_stored.as_bool().value.0;
@@ -79,11 +80,11 @@ mod fn_mul {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("fn_mul_int");
-        let mut value1_stored = 0.to_point(0, "int");
+        let mut value1_stored;
         let mut value2_stored = 0.to_point(0, "int");
         let mut target: i64;
-        let input1 = init_each(value1_stored.clone(), FnConfPointType::Int);
-        let input2 = init_each(value2_stored.clone(), FnConfPointType::Int);
+        let input1 = init_each("0", FnConfPointType::Int);
+        let input2 = init_each("0", FnConfPointType::Int);
         let mut fn_mul = FnMul::new(
             "test",
             input1.clone(),
@@ -107,14 +108,14 @@ mod fn_mul {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(point1.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_int().value * value2_stored.as_int().value;
             let result = state.as_int().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
             input2.borrow_mut().add(point2.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_int().value * value2_stored.as_int().value;
@@ -130,11 +131,11 @@ mod fn_mul {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("fn_mul_real");
-        let mut value1_stored = 0.0f32.to_point(0, "real");
+        let mut value1_stored;
         let mut value2_stored = 0.0f32.to_point(0, "real");
         let mut target: f32;
-        let input1 = init_each(value1_stored.clone(), FnConfPointType::Real);
-        let input2 = init_each(value2_stored.clone(), FnConfPointType::Real);
+        let input1 = init_each("0.0", FnConfPointType::Real);
+        let input2 = init_each("0.0", FnConfPointType::Real);
         let mut fn_mul = FnMul::new(
             "test",
             input1.clone(),
@@ -166,14 +167,14 @@ mod fn_mul {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(point1.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_real().value * value2_stored.as_real().value;
             let result = state.as_real().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
             input2.borrow_mut().add(point2.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_real().value * value2_stored.as_real().value;
@@ -189,11 +190,11 @@ mod fn_mul {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("fn_mul_double");
-        let mut value1_stored = 0.0f64.to_point(0, "double");
+        let mut value1_stored;
         let mut value2_stored = 0.0f64.to_point(0, "double");
         let mut target: f64;
-        let input1 = init_each(value1_stored.clone(), FnConfPointType::Double);
-        let input2 = init_each(value2_stored.clone(), FnConfPointType::Double);
+        let input1 = init_each("0.0", FnConfPointType::Double);
+        let input2 = init_each("0.0", FnConfPointType::Double);
         let mut fn_mul = FnMul::new(
             "test",
             input1.clone(),
@@ -225,14 +226,14 @@ mod fn_mul {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(point1.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_double().value * value2_stored.as_double().value;
             let result = state.as_double().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
             input2.borrow_mut().add(point2.clone());
-            let state = fn_mul.out();
+            let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_double().value * value2_stored.as_double().value;

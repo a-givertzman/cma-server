@@ -4,7 +4,7 @@ use crate::core_::{
     point::{point::Point, point_type::PointType},
     types::fn_in_out_ref::FnInOutRef,
 };
-use super::{fn_::{FnInOut, FnOut, FnIn}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Counts number of raised fronts of boolean input
 #[derive(Debug)]
@@ -57,47 +57,56 @@ impl FnOut for FnCount {
         inputs
     }
     ///
-    fn out(&mut self) -> PointType {
-        // trace!("{}.out | input: {:?}", self.id, self.input.print());
+    fn out(&mut self) -> FnResult<PointType, String> {
         let mut count = match self.count {
             Some(count) => count,
             None => {
                 match &mut self.initial {
                     Some(initial) => {
-                        initial.borrow_mut().out().as_int().value
+                        let initial = match initial.borrow_mut().out() {
+                            FnResult::Ok(initial) => initial,
+                            FnResult::None => return FnResult::None,
+                            FnResult::Err(err) => return FnResult::Err(err),
+                        };
+                        initial
+                            .try_as_int()
+                            .unwrap_or_else(|_| {
+                                panic!("{}.out | Initial must be of type 'Bool', but found '{:?}'", self.id, initial.type_())
+                            })
+                            .value
                     },
                     None => 0,
                 }
             }
         };
         let input = self.input.borrow_mut().out();
-        let value = input.to_bool().as_bool().value.0;
-        if !self.prev && value {
-            count += 1;
-            self.count = Some(count);
+        // trace!("{}.out | input: {:?}", self.id, self.input.print());
+        match input {
+            FnResult::Ok(input) => {
+                let input_val = input.to_bool().as_bool().value.0;
+                if !self.prev && input_val {
+                    count += 1;
+                    self.count = Some(count);
+                }
+                self.prev = input_val;
+                trace!("{}.out | value: {:?}", self.id, count);
+                FnResult::Ok(PointType::Int(
+                    Point::new(
+                        input.tx_id(),
+                        &format!("{}.out", self.id),
+                        count,
+                        input.status(),
+                        input.cot(),
+                        input.timestamp(),
+                    )
+                ))
+            }
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
         }
-        self.prev = value;
-        trace!("{}.out | input.out: {:?}   | state: {:?}", self.id, &value, self.count);
-        PointType::Int(
-            Point::new(
-                input.tx_id(),
-                &format!("{}.out", self.id),
-                count,
-                input.status(),
-                input.cot(),
-                input.timestamp(),
-            )
-        )
     }
     fn reset(&mut self) {
-        let initial = match &self.initial {
-            Some(initial) => {
-                initial.borrow_mut().reset();
-                initial.borrow_mut().out().as_int().value
-            }
-            None => 0,
-        };
-        self.count = Some(initial);
+        self.count = None;
         self.input.borrow_mut().reset();
     }
 }

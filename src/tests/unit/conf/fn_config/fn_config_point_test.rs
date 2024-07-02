@@ -6,7 +6,7 @@ mod tests {
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::{
-        fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_config::FnConfig, fn_point_config::FnPointConfig}, point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}
+        fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig, fn_point_config::FnPointConfig}, point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}
     };
     ///
     ///
@@ -61,8 +61,8 @@ mod tests {
                 "#,
                 FnConfKind::Var(
                     FnConfig { name: "newVar".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                        ("input".to_string(), FnConfKind::Const( FnConfig { name: "13.55".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() })),
-                    ]) }
+                        ("input".to_string(), FnConfKind::Const( FnConfig { name: "13.55".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), })),
+                    ]), options: FnConfOptions::default(), }
                 ),
             ),
             (
@@ -86,17 +86,17 @@ mod tests {
                         conf: test_point1,
                         send_to: None,
                         enable: None,
-                        input: Some(Box::new(FnConfKind::Const( FnConfig { name: "0.05".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::new()} ))),
+                        input: Some(Box::new(FnConfKind::Const( FnConfig { name: "0.05".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::new(), options: FnConfOptions::default() } ))),
                         changes_only: None,
                     })),
                     ("in2".to_string(), FnConfKind::PointConf( FnPointConfig {
                         conf: test_point2,
                         send_to: None,
                         enable: None,
-                        input: Some(Box::new(FnConfKind::Const( FnConfig { name: "0.07".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::new()} ))),
+                        input: Some(Box::new(FnConfKind::Const( FnConfig { name: "0.07".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::new(), options: FnConfOptions::default() } ))),
                         changes_only: None,
                     })),
-                ]) } ),
+                ]), options: FnConfOptions::default(), } ),
             ),
         ];
         for (points_target, value, target) in test_data {

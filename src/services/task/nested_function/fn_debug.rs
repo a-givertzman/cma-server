@@ -1,13 +1,14 @@
-use chrono::Utc;
 use log::debug;
+use concat_string::concat_string;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::{cot::cot::Cot, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::fn_in_out_ref::FnInOutRef},
+    core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,
     },
 };
+use super::fn_result::FnResult;
 ///
 /// Function | Just doing debug of values coming from inputs
 /// - Returns value from the last input
@@ -55,19 +56,36 @@ impl FnOut for FnDebug {
     }
     //
     //
-    fn out(&mut self) -> PointType {
-        let mut value = PointType::String(Point::new(
-            PointTxId::from_str(&self.id),
-            &self.id, "No inputs to get the value".to_owned(),
-            Status::Ok,
-            Cot::Inf,
-            Utc::now(),
-        ));
-        for input in &self.inputs {
-            value = input.borrow_mut().out();
-            debug!("{}.out | value: {:#?}", self.id, value);
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let mut inputs = self.inputs.iter();
+        let mut value: PointType;
+        // let first = .cloned();
+        match inputs.next() {
+            Some(first) => {
+                let first = first.borrow_mut().out();
+                match first {
+                    FnResult::Ok(input) => {
+                        value = input.to_owned();
+                        debug!("{}.out | value: {:#?}", self.id, value);
+                        while let Some(input) = inputs.next().cloned() {
+                            let input = input.borrow_mut().out();
+                            match input {
+                                FnResult::Ok(input) => {
+                                    value = input.clone();
+                                    debug!("{}.out | value: {:#?}", self.id, value);
+                                }
+                                FnResult::None => return FnResult::None,
+                                FnResult::Err(err) => return FnResult::Err(err),
+                            }
+                        }        
+                    }
+                    FnResult::None => return FnResult::None,
+                    FnResult::Err(err) => return FnResult::Err(err),
+                }
+            }
+            None => return FnResult::Err(concat_string!(self.id, ".out | No inputs found")),
         }
-        value
+        FnResult::Ok(value)
     }
     //
     //

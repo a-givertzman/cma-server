@@ -9,7 +9,7 @@ mod task_nodes {
         core_::{object::object::Object, point::point_type::{PointType, ToPoint}},
         services::{
             safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services,
-            task::{nested_function::{fn_count, comp::fn_ge, fn_kind::FnKind, sql_metric}, task_nodes::TaskNodes}
+            task::{nested_function::{comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric}, task_nodes::TaskNodes}
         },
     };
     ///
@@ -120,22 +120,26 @@ mod task_nodes {
                     for eval_node_out in eval_node.getOuts() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
-                        let out_value = out.value().to_string();
-                        debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
-                        if eval_node_out.borrow().kind() != &FnKind::Var {
-                            let out_name = out.name();
-                            debug!("TaskEvalNode.eval | out.name: '{}'", out_name);
-                            let target = match target_value.get(out_name.as_str()) {
-                                Some(target) => target.to_string(),
-                                None => panic!("TaskEvalNode.eval | out.name '{}' - not foind in {:?}", out_name, target_value),
-                            };
-                            assert!(out_value == target, "\n   outValue: {} \ntargetValue: {}", out_value, target);
-                        }
+                        match out {
+                            FnResult::Ok(out) => {
+                                let out_value = out.value().to_string();
+                                debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                                if eval_node_out.borrow().kind() != &FnKind::Var {
+                                    let out_name = out.name();
+                                    debug!("TaskEvalNode.eval | out.name: '{}'", out_name);
+                                    let target = match target_value.get(out_name.as_str()) {
+                                        Some(target) => target.to_string(),
+                                        None => panic!("TaskEvalNode.eval | out.name '{}' - not foind in {:?}", out_name, target_value),
+                                    };
+                                    assert!(out_value == target, "\n   outValue: {} \ntargetValue: {}", out_value, target);
+                                }
+                            }
+                            FnResult::None => warn!("TaskEvalNode.eval | evalNode '{}' out is None", eval_node.name()),
+                            FnResult::Err(err) => warn!("TaskEvalNode.eval | evalNode '{}' out is Error: {:#?}", eval_node.name(), err),
+                        };
                     };
                 }
-                None => {
-                    panic!("input {:?} - not found in the current taskStuff", &name)
-                }
+                None => panic!("input {:?} - not found in the current taskStuff", &name)
             };
         }
         mock_service.lock().unwrap().exit();

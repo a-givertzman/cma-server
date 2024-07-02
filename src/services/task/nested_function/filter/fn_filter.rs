@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::{
-    core_::{point::{point_tx_id::PointTxId, point_type::PointType}, types::fn_in_out_ref::FnInOutRef},
-    services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind},
+    core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef},
+    services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///
 /// Function | Returns filtered input or default value
@@ -11,7 +11,7 @@ use crate::{
 #[derive(Debug)]
 pub struct FnFilter {
     id: String,
-    tx_id: usize,
+    // tx_id: usize,
     kind: FnKind,
     default: Option<FnInOutRef>,
     input: FnInOutRef,
@@ -29,23 +29,12 @@ impl FnFilter {
         let self_id = format!("{}/FnFilter{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
-            tx_id: PointTxId::from_str(&self_id),
+            // tx_id: PointTxId::from_str(&self_id),
             kind: FnKind::Fn,
             default,
             input,
             pass,
             state: None,
-        }
-    }
-    ///
-    /// 
-    fn default(&mut self) -> PointType {
-        match self.input.borrow_mut().out() {
-            PointType::Bool(_) => PointType::new(self.tx_id, &self.id, false),
-            PointType::Int(_) => PointType::new(self.tx_id, &self.id, 0),
-            PointType::Real(_) => PointType::new(self.tx_id, &self.id, 0.0f32),
-            PointType::Double(_) => PointType::new(self.tx_id, &self.id, 0.0f64),
-            PointType::String(_) => PointType::new(self.tx_id, &self.id, ""),
         }
     }
 }
@@ -74,38 +63,26 @@ impl FnOut for FnFilter {
         inputs
     }
     //
-    fn out(&mut self) -> PointType {
-        let input = self.input.borrow_mut().out();
+    fn out(&mut self) -> FnResult<PointType, String> {
         let pass_point = self.pass.borrow_mut().out();
-        let pass = pass_point.to_bool().as_bool().value.0;
-        trace!("{}.out | pass: {:?}", self.id, pass);
-        if pass {
-            trace!("{}.out | Passed input: {:?}", self.id, input);
-            self.state = Some(input.clone());
-            input
-        } else {
-            match &self.state {
-                Some(state) => {
-                    trace!("{}.out | Passed prev state: {:?}", self.id, state);
-                    state.to_owned()
-                }
-                None => {
-                    match &self.default {
-                        Some(default) => {
-                            let default = default.borrow_mut().out();
-                            self.state = Some(default.clone());
-                            trace!("{}.out | Passed default input: {:?}", self.id, default);
-                            default
-                        }
-                        None => {
-                            let default = self.default();
-                            self.state = Some(default.clone());
-                            trace!("{}.out | Passed default: {:?}", self.id, default);
-                            default
-                        }
-                    }
-                }
+        trace!("{}.out | pass: {:?}", self.id, pass_point);
+        let pass = match pass_point {
+            FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
+            FnResult::None => return FnResult::None,
+            FnResult::Err(err) => return FnResult::Err(err),
+        };
+        let input = self.input.borrow_mut().out();
+        trace!("{}.out | input: {:?}", self.id, input);
+        match input {
+            FnResult::Ok(input) => if pass {
+                trace!("{}.out | Passed: {:?}", self.id, input);
+                self.state = Some(input.clone());
+                FnResult::Ok(input)
+            } else {
+                FnResult::None
             }
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
         }
     }
     //

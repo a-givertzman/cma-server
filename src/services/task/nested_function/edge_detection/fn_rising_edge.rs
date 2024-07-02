@@ -4,7 +4,7 @@ use crate::{
     core_::{point::{point::Point, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
-        fn_kind::FnKind,
+        fn_kind::FnKind, fn_result::FnResult,
     },
 };
 ///
@@ -52,21 +52,28 @@ impl FnOut for FnRisingEdge {
     }
     //
     //
-    fn out(&mut self) -> PointType {
+    fn out(&mut self) -> FnResult<PointType, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:#?}", self.id, input);
-        let input_value = input.to_bool().as_bool().value.0;
-        let value = PointType::Bool(Point::new(
-            input.tx_id(),
-            &input.name(),
-            Bool(input_value && (! self.prev)),
-            input.status(),
-            input.cot(),
-            input.timestamp(),
-        ));
-        self.prev = input_value;
-        trace!("{}.out | value: {:#?}", self.id, value);
-        value
+        match input {
+            FnResult::Ok(input) => {
+                let input_value = input.to_bool().as_bool().value.0;
+                let value = PointType::Bool(Point::new(
+                    input.tx_id(),
+                    &input.name(),
+                    Bool(input_value && (! self.prev)),
+                    input.status(),
+                    input.cot(),
+                    input.timestamp(),
+                ));
+                self.prev = input_value;
+                trace!("{}.out | value: {:#?}", self.id, value);
+                FnResult::Ok(value)
+            }
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
+
     }
     //
     //

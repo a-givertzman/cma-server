@@ -1,4 +1,5 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, str::FromStr};
+use concat_string::concat_string;
 ///
 ///
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -17,6 +18,20 @@ impl Status {
     const OBSOLETE      : i64 = 2;      // Prevously stored information always obsolete, connection lost
     const TIME_INVALID  : i64 = 3;
     const INVALID       : i64 = 10;     // Not sampled, conversion, calculation error
+}
+//
+//
+impl FromStr for Status {
+    type Err = String;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match input.to_lowercase().as_str() {
+            "ok" => Ok(Status::Ok),
+            "obsolete" => Ok(Status::Obsolete),
+            "timeinvalid" => Ok(Status::TimeInvalid),
+            "invalid" => Ok(Status::Invalid),
+            _ => Err(concat_string!("Status.from_str | Unknown status '", input, "'")),
+        }
+    }
 }
 //
 //

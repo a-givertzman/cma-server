@@ -4,8 +4,8 @@ mod fn_acc {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_conf_keywd::FnConfPointType, 
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
+        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
         services::task::nested_function::{fn_::FnOut, fn_acc::{self, FnAcc}, fn_input::FnInput, reset_counter::AtomicReset}
     };
     ///
@@ -21,10 +21,11 @@ mod fn_acc {
     ///
     /// returns:
     ///  - ...
-    fn init_each(initial: PointType, type_: FnConfPointType) -> FnInOutRef {
+    fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
         fn_acc::COUNT.reset(0);
         Rc::new(RefCell::new(Box::new(
-            FnInput::new("test", initial, type_)
+            FnInput::new("test", 0, &mut conf)
         )))
     }
     ///
@@ -34,8 +35,8 @@ mod fn_acc {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("acc_bool");
-        let initial = Some(init_each(0.to_point(0, "initial int"), FnConfPointType::Int));
-        let input = init_each(false.to_point(0, "bool"), FnConfPointType::Bool);
+        let initial = Some(init_each("0", FnConfPointType::Int));
+        let input = init_each("false", FnConfPointType::Bool);
         let mut fn_count = FnAcc::new(
             "test",
             initial,
@@ -61,7 +62,7 @@ mod fn_acc {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let state = fn_count.out();
+            let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target, "\n result: {:?} \ntarget: {}", state, target);
@@ -74,8 +75,8 @@ mod fn_acc {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("acc_int");
-        let initial = Some(init_each(0.to_point(0, "initial int"), FnConfPointType::Int));
-        let input = init_each(0.to_point(0, "input int"), FnConfPointType::Int);
+        let initial = Some(init_each("0", FnConfPointType::Int));
+        let input = init_each("0", FnConfPointType::Int);
         let mut fn_count = FnAcc::new(
             "test",
             initial,
@@ -101,7 +102,7 @@ mod fn_acc {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let state = fn_count.out();
+            let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target, "\n   result: {:?} \ntarget: {}", state, target);
@@ -114,8 +115,8 @@ mod fn_acc {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("acc_int_reset");
-        let initial = Some(init_each(0.to_point(0, "initial int"), FnConfPointType::Int));
-        let input = init_each(0.to_point(0, "input int"), FnConfPointType::Int);
+        let initial = Some(init_each("0", FnConfPointType::Int));
+        let input = init_each("0", FnConfPointType::Int);
         let mut fn_count = FnAcc::new(
             "test",
             initial,
@@ -144,7 +145,7 @@ mod fn_acc {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let state = fn_count.out();
+            let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target, "\n   result: {:?} \ntarget: {}", state, target);
@@ -157,8 +158,8 @@ mod fn_acc {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("acc_real");
-        let initial = Some(init_each(0.0f32.to_point(0, "initial real"), FnConfPointType::Real));
-        let input = init_each(0.0f32.to_point(0, "input real"), FnConfPointType::Real);
+        let initial = Some(init_each("0.0", FnConfPointType::Real));
+        let input = init_each("0.0", FnConfPointType::Real);
         let mut fn_count = FnAcc::new(
             "test",
             initial,
@@ -184,7 +185,7 @@ mod fn_acc {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let state = fn_count.out();
+            let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_real().value, target, "\n   result: {:?} \ntarget: {}", state, target);
@@ -197,8 +198,8 @@ mod fn_acc {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("acc_double");
-        let initial = Some(init_each(0.0f64.to_point(0, "initial double"), FnConfPointType::Double));
-        let input = init_each(0.0f64.to_point(0, "input double"), FnConfPointType::Double);
+        let initial = Some(init_each("0.0", FnConfPointType::Double));
+        let input = init_each("0.0", FnConfPointType::Double);
         let mut fn_count = FnAcc::new(
             "test",
             initial,
@@ -224,7 +225,7 @@ mod fn_acc {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let state = fn_count.out();
+            let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_double().value, target, "\n   result: {:?} \ntarget: {}", state, target);

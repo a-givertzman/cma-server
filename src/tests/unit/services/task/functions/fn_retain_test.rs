@@ -400,11 +400,12 @@ mod fn_retain {
                         /AppTest/MultiQueue:                    # - multicast subscription to the MultiQueue
                             {cot: Inf}: []                      #   - on all points having Cot::Inf
                     
+                    let realRetain:
+                        input fn Retain:
+                            default: const real 0.0
+                            key: 'RealRetain'
                     fn Debug:
-                        in1 let realRetain:
-                            input fn Retain:
-                                default: const real 0.0
-                                key: 'RealRetain'
+                        in1: realRetain
                         in2 fn Retain:
                             key: 'RealRetain'
                             input fn Export:
@@ -555,6 +556,8 @@ mod fn_retain {
                         in fn Retain RetainStore:
                             key: 'RealRetainEveryCycle'
                             input fn Export:
+                                conf point Retained.Point:
+                                    type: real
                                 send-to: /AppTest/TaskTestReceiver.in-queue
                                 input fn Add:
                                     input1 fn Retain RetainLoad:
@@ -574,7 +577,7 @@ mod fn_retain {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -613,7 +616,8 @@ mod fn_retain {
             "in-queue",
             target_count,
         )));
-        services.wlock(self_id).insert(receiver.clone());      // "TaskTestReceiver",
+        services.wlock(self_id).insert(receiver.clone());
+        thread::sleep(Duration::from_millis(100));
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
         let producer = Arc::new(Mutex::new(TaskTestProducer::new(
             self_id,
@@ -623,6 +627,7 @@ mod fn_retain {
             &test_data,
         )));
         services.wlock(self_id).insert(producer.clone());
+        thread::sleep(Duration::from_millis(100));
         let services_handle = services.wlock(self_id).run().unwrap();
         let multi_queue_handle = multi_queue.lock().unwrap().run().unwrap();
         let receiver_handle = receiver.lock().unwrap().run().unwrap();

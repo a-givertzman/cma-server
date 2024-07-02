@@ -11,6 +11,8 @@ use crate::{
         fn_kind::FnKind,
     }
 };
+
+use super::fn_result::FnResult;
 ///
 /// Function | Piecewise Linear Approximation (кусочно-линейная аппроксимация)
 ///  - bool: true -> 1, false -> 0
@@ -97,13 +99,19 @@ impl FnOut for FnPiecewiseLineApprox {
     }
     //
     //
-    fn out(&mut self) -> PointType {
+    fn out(&mut self) -> FnResult<PointType, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:?}", self.id, input);
-        let value = self.pieces.line_approx(input.to_double().as_double().value);
-        let out = self.build_point(&input, value);
-        trace!("{}.out | out: {:?}", self.id, &out);
-        out
+        match input {
+            FnResult::Ok(input) => {
+                let value = self.pieces.line_approx(input.to_double().as_double().value);
+                let out = self.build_point(&input, value);
+                trace!("{}.out | out: {:?}", self.id, &out);
+                FnResult::Ok(out)
+            }
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
     }
     //
     //

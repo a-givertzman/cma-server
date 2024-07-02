@@ -4,7 +4,7 @@ use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
     point::{point::Point, point_type::PointType},
     types::fn_in_out_ref::FnInOutRef,
 }};
-use super::{fn_::{FnInOut, FnOut, FnIn}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Accumulates numeric incoming Point's value
 /// - if input is not numeric - will panic
@@ -57,38 +57,48 @@ impl FnOut for FnAcc {
         inputs
     }
     ///
-    fn out(&mut self) -> PointType {
-        // trace!("{}.out | input: {:?}", self.id, self.input.print());
+    fn out(&mut self) -> FnResult<PointType, String> {
         let input = self.input.borrow_mut().out();
-        let acc = match self.acc.clone() {
-            Some(acc) => acc,
-            None => {
-                match &mut self.initial {
-                    Some(initial) => {
-                        initial.borrow_mut().out()
+        // trace!("{}.out | input: {:?}", self.id, input);
+        match input {
+            FnResult::Ok(input) => {
+                let acc = match self.acc.clone() {
+                    Some(acc) => acc,
+                    None => {
+                        match &mut self.initial {
+                            Some(initial) => {
+                                match initial.borrow_mut().out() {
+                                    FnResult::Ok(initial) => initial,
+                                    FnResult::None => return FnResult::None,
+                                    FnResult::Err(err) => return FnResult::Err(err),
+                                }
+                            }
+                            None => match input.type_() {
+                                PointConfigType::Bool | PointConfigType::Int  => PointType::Int(Point::new(
+                                    input.tx_id(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
+                                )),
+                                PointConfigType::Real => PointType::Real(Point::new(
+                                    input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
+                                )),
+                                PointConfigType::Double => PointType::Double(Point::new(
+                                    input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
+                                )),
+                                _ => panic!("{}.out | Invalit input type '{:?}'", self.id, input.type_()),
+                            }
+                        }
                     }
-                    None => match input.type_() {
-                        PointConfigType::Bool | PointConfigType::Int  => PointType::Int(Point::new(
-                            input.tx_id(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
-                        )),
-                        PointConfigType::Real => PointType::Real(Point::new(
-                            input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
-                        )),
-                        PointConfigType::Double => PointType::Double(Point::new(
-                            input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
-                        )),
-                        _ => panic!("{}.out | Invalit input type '{:?}'", self.id, input.type_()),
-                    }
-                }
+                };
+                let acc = match &input {
+                    PointType::Bool(_) => acc + input.to_int(),
+                    _ => acc + input,
+                };
+                trace!("{}.out | out: {:?}", self.id, acc);
+                self.acc = Some(acc.clone());
+                FnResult::Ok(acc)
             }
-        };
-        let acc = match &input {
-            PointType::Bool(_) => acc + input.to_int(),
-            _ => acc + input,
-        };
-        trace!("{}.out | out: {:?}", self.id, acc);
-        self.acc = Some(acc.clone());
-        acc
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
     }
     fn reset(&mut self) {
         if let Some(initial) = &self.initial {

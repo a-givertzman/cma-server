@@ -3,11 +3,13 @@
 mod sql_metric {
     use log::trace;
     use log::debug;
+    use log::warn;
     use regex::RegexBuilder;
     use std::sync::RwLock;
     use std::sync::{Once, Arc};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::point_config::name::Name;
+    use crate::services::task::nested_function::fn_result::FnResult;
     use crate::{
         conf::task_config::TaskConfig,
         core_::point::point_type::{ToPoint, PointType},
@@ -37,10 +39,9 @@ mod sql_metric {
     fn int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         let self_id = "test_int";
         let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
+        debug!("\n{}", self_id);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_int_test.yaml";
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
@@ -79,19 +80,25 @@ mod sql_metric {
                     for eval_node_out in eval_node.getOuts() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
-                        let out_value = match &out {
-                            PointType::Bool(point) => point.value.to_string(),
-                            PointType::Int(point) => point.value.to_string(),
-                            PointType::Real(point) => point.value.to_string(),
-                            PointType::Double(point) => point.value.to_string(),
-                            PointType::String(point) => point.value.clone(),
-                        };
-                        debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
-                        assert_eq!(
-                            out_value,
-                            format!("UPDATE SelectMetric_test_table_name SET kind = '{:.1}' WHERE id = '{}';",target_value, 1.11),
-                            // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
-                        );
+                        match out {
+                            FnResult::Ok(out) => {
+                                let out_value = match &out {
+                                    PointType::Bool(point) => point.value.to_string(),
+                                    PointType::Int(point) => point.value.to_string(),
+                                    PointType::Real(point) => point.value.to_string(),
+                                    PointType::Double(point) => point.value.to_string(),
+                                    PointType::String(point) => point.value.clone(),
+                                };
+                                debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                                assert_eq!(
+                                    out_value,
+                                    format!("UPDATE SelectMetric_test_table_name SET kind = '{:.1}' WHERE id = '{}';",target_value, 1.11),
+                                    // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
+                                );
+                            }
+                            FnResult::None => warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node.name(), eval_node_out.borrow().id()),
+                            FnResult::Err(err) => warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node.name(), eval_node_out.borrow().id(), err),
+                        } 
                     }
                 }
                 None => {
@@ -106,10 +113,9 @@ mod sql_metric {
     fn real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         let self_id = "test_real";
         let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
+        debug!("\n{}", self_id);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_real_test.yaml";
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
@@ -148,29 +154,35 @@ mod sql_metric {
                     for eval_node_out in eval_node.getOuts() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
-                        let out_value = match &out {
-                            PointType::Bool(point) => point.value.to_string(),
-                            PointType::Int(point) => point.value.to_string(),
-                            PointType::Real(point) => point.value.to_string(),
-                            PointType::Double(point) => point.value.to_string(),
-                            PointType::String(point) => point.value.clone(),
-                        };
-                        debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
-                        let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
-                        trace!("re: {}", re);
-                        let re = RegexBuilder::new(&re).multi_line(false).build().unwrap();
-                        let digits: f64 = re.captures(&out_value).unwrap().get(2).unwrap().as_str().parse().unwrap();
-                        let digits = format!("{:.1}", digits);
-                        trace!("digits: {:?}", digits);
-                        let out = re.replace(&out_value, "$1{!}$3");
-                        let out = out.replace("{!}", &digits);
-                        trace!("out: {}", out);
-                        debug!("value: {:?}   |   state: {:?}", point.as_real().value, out_value);
-                        assert_eq!(
-                            out,
-                            format!("UPDATE SelectMetric_test_table_name SET kind = '{:.1}' WHERE id = '{}';",target_value, 3.33),
-                            // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
-                        );
+                        match out {
+                            FnResult::Ok(out) => {
+                                let out_value = match &out {
+                                    PointType::Bool(point) => point.value.to_string(),
+                                    PointType::Int(point) => point.value.to_string(),
+                                    PointType::Real(point) => point.value.to_string(),
+                                    PointType::Double(point) => point.value.to_string(),
+                                    PointType::String(point) => point.value.clone(),
+                                };
+                                debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                                let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
+                                trace!("re: {}", re);
+                                let re = RegexBuilder::new(&re).multi_line(false).build().unwrap();
+                                let digits: f64 = re.captures(&out_value).unwrap().get(2).unwrap().as_str().parse().unwrap();
+                                let digits = format!("{:.1}", digits);
+                                trace!("digits: {:?}", digits);
+                                let out = re.replace(&out_value, "$1{!}$3");
+                                let out = out.replace("{!}", &digits);
+                                trace!("out: {}", out);
+                                debug!("value: {:?}   |   state: {:?}", point.as_real().value, out_value);
+                                assert_eq!(
+                                    out,
+                                    format!("UPDATE SelectMetric_test_table_name SET kind = '{:.1}' WHERE id = '{}';",target_value, 3.33),
+                                    // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
+                                );
+                            }
+                            FnResult::None => warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node.name(), eval_node_out.borrow().id()),
+                            FnResult::Err(err) => warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node.name(), eval_node_out.borrow().id(), err),
+                        }
                     }
                 }
                 None => {
@@ -185,10 +197,9 @@ mod sql_metric {
     fn double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         let self_id = "test_real";
         let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
+        debug!("\n{}", self_id);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_double_test.yaml";
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
@@ -227,29 +238,35 @@ mod sql_metric {
                     for eval_node_out in eval_node.getOuts() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
-                        let out_value = match &out {
-                            PointType::Bool(point) => point.value.to_string(),
-                            PointType::Int(point) => point.value.to_string(),
-                            PointType::Real(point) => point.value.to_string(),
-                            PointType::Double(point) => point.value.to_string(),
-                            PointType::String(point) => point.value.clone(),
+                        match out {
+                            FnResult::Ok(out) => {
+                                let out_value = match &out {
+                                    PointType::Bool(point) => point.value.to_string(),
+                                    PointType::Int(point) => point.value.to_string(),
+                                    PointType::Real(point) => point.value.to_string(),
+                                    PointType::Double(point) => point.value.to_string(),
+                                    PointType::String(point) => point.value.clone(),
+                                };
+                                debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                                let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
+                                trace!("re: {}", re);
+                                let re = RegexBuilder::new(&re).multi_line(false).build().unwrap();
+                                let digits: f64 = re.captures(&out_value).unwrap().get(2).unwrap().as_str().parse().unwrap();
+                                let digits = format!("{:.1}", digits);
+                                trace!("digits: {:?}", digits);
+                                let out = re.replace(&out_value, "$1{!}$3");
+                                let out = out.replace("{!}", &digits);
+                                trace!("out: {}", out);
+                                debug!("value: {:?}   |   state: {:?}", point.as_double().value, out_value);
+                                assert_eq!(
+                                    out,
+                                    format!("UPDATE SelectMetric_test_table_name SET kind = '{:.1}' WHERE id = '{}';",target_value, 3.33),
+                                    // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
+                                );
+                            }
+                            FnResult::None => warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node.name(), eval_node_out.borrow().id()),
+                            FnResult::Err(err) => warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node.name(), eval_node_out.borrow().id(), err),
                         };
-                        debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
-                        let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
-                        trace!("re: {}", re);
-                        let re = RegexBuilder::new(&re).multi_line(false).build().unwrap();
-                        let digits: f64 = re.captures(&out_value).unwrap().get(2).unwrap().as_str().parse().unwrap();
-                        let digits = format!("{:.1}", digits);
-                        trace!("digits: {:?}", digits);
-                        let out = re.replace(&out_value, "$1{!}$3");
-                        let out = out.replace("{!}", &digits);
-                        trace!("out: {}", out);
-                        debug!("value: {:?}   |   state: {:?}", point.as_double().value, out_value);
-                        assert_eq!(
-                            out,
-                            format!("UPDATE SelectMetric_test_table_name SET kind = '{:.1}' WHERE id = '{}';",target_value, 3.33),
-                            // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
-                        );
                     }
                 }
                 None => {

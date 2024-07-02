@@ -5,8 +5,9 @@ mod fn_trip {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_conf_keywd::FnConfPointType, core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef},
-        services::task::nested_function::{fn_::FnOut, comp::fn_ge::FnGe, fn_input::FnInput}
+        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig},
+        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef},
+        services::task::nested_function::{comp::fn_ge::FnGe, fn_::FnOut, fn_input::FnInput},
     };
     ///
     ///
@@ -21,9 +22,10 @@ mod fn_trip {
     ///
     /// returns:
     ///  - ...
-    fn init_each(initial: PointType, type_: FnConfPointType) -> FnInOutRef {
+    fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
         Rc::new(RefCell::new(Box::new(
-            FnInput::new("test", initial, type_)
+            FnInput::new("test", 0, &mut conf)
         )))
     }
     ///
@@ -34,8 +36,8 @@ mod fn_trip {
         init_once();
         info!("test_single");
         // let (initial, switches) = init_each();
-        let input1 = init_each(0.to_point(0, "point1"), FnConfPointType::Int);
-        let input2 = init_each(0.to_point(0, "point2"), FnConfPointType::Int);
+        let input1 = init_each("0", FnConfPointType::Int);
+        let input2 = init_each("0", FnConfPointType::Int);
         let mut fn_trip = FnGe::new(
             "test",
             input1.clone(),
@@ -61,7 +63,7 @@ mod fn_trip {
             input1.borrow_mut().add(point1);
             input2.borrow_mut().add(point2);
             // debug!("input: {:?}", &input);
-            let state = fn_trip.out();
+            let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
             assert_eq!(state.as_bool().value.0, target_state);
@@ -76,8 +78,8 @@ mod fn_trip {
         info!("test_single");
 
         // let (initial, switches) = init_each();
-        let input1 = init_each(0.to_point(0, "point1"), FnConfPointType::Int);
-        let input2 = init_each(0.to_point(0, "point2"), FnConfPointType::Int);
+        let input1 = init_each("0", FnConfPointType::Int);
+        let input2 = init_each("0", FnConfPointType::Int);
         let mut fn_trip = FnGe::new(
             "test",
             input1.clone(),
@@ -107,7 +109,7 @@ mod fn_trip {
             input1.borrow_mut().add(point1);
             input2.borrow_mut().add(point2);
             // debug!("input: {:?}", &input);
-            let state = fn_trip.out();
+            let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
             assert_eq!(state.as_bool().value.0, target_dtate);
@@ -121,8 +123,8 @@ mod fn_trip {
         init_once();
         info!("test_single");
         // let (initial, switches) = init_each();
-        let input1 = init_each(0.0.to_point(0, "point1"), FnConfPointType::Real);
-        let input2 = init_each(0.0.to_point(0, "point2"), FnConfPointType::Real);
+        let input1 = init_each("0.0", FnConfPointType::Real);
+        let input2 = init_each("0.0", FnConfPointType::Real);
         let mut fn_trip = FnGe::new(
             "test",
             input1.clone(),
@@ -152,10 +154,9 @@ mod fn_trip {
             input1.borrow_mut().add(point1);
             input2.borrow_mut().add(point2);
             // debug!("input: {:?}", &input);
-            let state = fn_trip.out();
+            let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
-
             assert_eq!(state.as_bool().value.0, target_state);
         }
     }
@@ -167,8 +168,8 @@ mod fn_trip {
         init_once();
         info!("test_single");
         // let (initial, switches) = init_each();
-        let input1 = init_each(0.0.to_point(0, "point1"), FnConfPointType::Real);
-        let input2 = init_each(0.0.to_point(0, "point2"), FnConfPointType::Real);
+        let input1 = init_each("0.0", FnConfPointType::Real);
+        let input2 = init_each("0.0", FnConfPointType::Real);
         let mut fn_trip = FnGe::new(
             "test",
             input1.clone(),
@@ -198,10 +199,9 @@ mod fn_trip {
             input1.borrow_mut().add(point1);
             input2.borrow_mut().add(point2);
             // debug!("input: {:?}", &input);
-            let state = fn_trip.out();
+            let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
-
             assert_eq!(state.as_bool().value.0, target_state);
         }
     }

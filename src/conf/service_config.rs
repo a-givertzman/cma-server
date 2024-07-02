@@ -220,7 +220,7 @@ impl ServiceConfig {
                     _ => ConfParam::Err(format!("{}.get_send_to_many | Array<String> expected in 'send-to', but found: {:#?}", self.id, conf)),
                 }
             }
-            Err(err) => ConfParam::None,
+            Err(_) => ConfParam::None,
         }
     }
     ///

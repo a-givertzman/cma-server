@@ -1,10 +1,10 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::core_::{
-    point::{point::Point, point_type::PointType},
+    point::point_type::PointType,
     types::fn_in_out_ref::FnInOutRef,
 };
-use super::{fn_::{FnInOut, FnOut, FnIn}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Returns an max value (in Double) of the input
 #[derive(Debug)]
@@ -13,7 +13,7 @@ pub struct FnMax {
     kind: FnKind,
     enable: Option<FnInOutRef>,
     input: FnInOutRef,
-    max: f64,
+    max: Option<PointType>,
 }
 //
 // 
@@ -27,7 +27,7 @@ impl FnMax {
             kind:FnKind::Fn,
             enable,
             input,
-            max: 0.0,
+            max: None,
         }
     }
 }
@@ -55,37 +55,66 @@ impl FnOut for FnMax {
         inputs
     }
     //
-    fn out(&mut self) -> PointType {
-        let enable = match &mut self.enable {
-            Some(en) => en.borrow_mut().out().to_bool().as_bool().value.0,
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let enable = match &self.enable {
+            Some(enable) => match enable.borrow_mut().out() {
+                FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
+                FnResult::None => return FnResult::None,
+                FnResult::Err(err) => return FnResult::Err(err),
+            },
             None => true,
         };
         // trace!("{}.out | enable: {:?}", self.id, enable);
-        let input = self.input.borrow_mut().out();
-        // trace!("{}.out | input: {:?}", self.id, input);
         if enable {
-            let value = input.to_double().as_double().value;
-            if value > self.max {
-                self.max = value;
-            }
+            let input = self.input.borrow_mut().out();
+            // trace!("{}.out | input: {:?}", self.id, input);
+            match input {
+                FnResult::Ok(input) => {
+                    trace!("{}.out | max: {:?}", self.id, self.max);
+                    // let max = self.max.clone().unwrap_or_else(|| {
+                    //     self.max = Some(input.clone());
+                    //     input.clone()
+                    // });
+                    let max = self.max.get_or_insert(input.clone());
+                    match &input {
+                        PointType::Bool(input_val) => {
+                            let max_val = max.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
+                            if input_val.value.0 > max_val.value.0 {
+                                *max = input;
+                            }
+                        }
+                        PointType::Int(input_val) => {
+                            let max_val = max.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
+                            if input_val.value > max_val.value {
+                                *max = input;
+                            }
+                        }
+                        PointType::Real(input_val) => {
+                            let max_val = max.try_as_real().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
+                            if input_val.value > max_val.value {
+                                *max = input;
+                            }
+                        }
+                        PointType::Double(input_val) => {
+                            let max_val = max.try_as_double().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
+                            if input_val.value > max_val.value {
+                                *max = input;
+                            }
+                        }
+                        PointType::String(_) => panic!("{}.out | Input of type 'String' is not suppoted in: '{}'", self.id, input.name()),
+                    }
+                }
+                FnResult::None => {}
+                FnResult::Err(err) => return FnResult::Err(err),
+            };
+            self.max.clone().map_or(FnResult::None, |max| FnResult::Ok(max))
         } else {
-            self.max = 0.0;
+            FnResult::None
         }
-        trace!("{}.out | max: {:?}", self.id, self.max);
-        PointType::Double(
-            Point::new(
-                input.tx_id(),
-                &self.id,
-                self.max,
-                input.status(),
-                input.cot(),
-                input.timestamp(),
-            )
-        )
     }
     //
     fn reset(&mut self) {
-        self.max = 0.0;
+        self.max = None;
         if let Some(enable) = &self.enable {
             enable.borrow_mut().reset();
         }

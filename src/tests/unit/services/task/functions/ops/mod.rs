@@ -2,3 +2,8 @@ mod fn_bit_and_test;
 mod fn_bit_or_test;
 mod fn_bit_xor_test;
 mod fn_bit_not_test;
+mod fn_add_test;
+mod fn_sub_test;
+mod fn_mul_test;
+mod fn_div_test;
+mod fn_pow_test;

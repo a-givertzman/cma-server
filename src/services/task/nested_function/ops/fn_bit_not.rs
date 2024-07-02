@@ -5,7 +5,7 @@ use crate::{
         point::point_type::PointType, types::fn_in_out_ref::FnInOutRef,
     },
     services::task::nested_function::{
-        fn_::{FnInOut, FnIn, FnOut}, fn_kind::FnKind,
+        fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     },
 
 };
@@ -59,30 +59,36 @@ impl FnOut for FnBitNot {
         self.input.borrow().inputs()
     }
     //
-    fn out(&mut self) -> PointType {
+    fn out(&mut self) -> FnResult<PointType, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:#?}", self.id, input);
-        let value = match input {
-            PointType::Bool(mut val) => {
-                val.value = ! val.value;
-                PointType::Bool(val)
+        match input {
+            FnResult::Ok(input) => {
+                let value = match input {
+                    PointType::Bool(mut val) => {
+                        val.value = ! val.value;
+                        PointType::Bool(val)
+                    }
+                    PointType::Int(mut val) => {
+                        val.value = ! val.value;
+                        PointType::Int(val)
+                    }
+                    PointType::Real(_) => {
+                        panic!("{}.out | Not implemented for Real", self.id);
+                    }
+                    PointType::Double(_) => {
+                        panic!("{}.out | Not implemented for Double", self.id);
+                    }
+                    PointType::String(_) => {
+                        panic!("{}.out | Not implemented for String", self.id);
+                    }
+                };
+                // trace!("{}.out | value: {:#?}", self.id, value);
+                FnResult::Ok(value)
             }
-            PointType::Int(mut val) => {
-                val.value = ! val.value;
-                PointType::Int(val)
-            }
-            PointType::Real(_) => {
-                panic!("{}.out | Not implemented for Real", self.id);
-            }
-            PointType::Double(_) => {
-                panic!("{}.out | Not implemented for Double", self.id);
-            }
-            PointType::String(_) => {
-                panic!("{}.out | Not implemented for String", self.id);
-            }
-        };
-        // trace!("{}.out | value: {:#?}", self.id, value);
-        value
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
     }
     //
     fn reset(&mut self) {

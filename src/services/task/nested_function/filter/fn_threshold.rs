@@ -6,7 +6,7 @@ use crate::{
         types::fn_in_out_ref::FnInOutRef,
     }, services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
-        fn_kind::FnKind,
+        fn_kind::FnKind, fn_result::FnResult,
     }
 };
 ///
@@ -79,45 +79,69 @@ impl FnOut for FnThreshold {
     }
     //
     //
-    fn out(&mut self) -> PointType {
-        let input = self.input.borrow_mut().out();
-        let input_type = input.type_();
-        let input = input.to_double().as_double();
-        match &mut self.value {
-            Some(value) => {
-                let threshold = self.threshold.borrow_mut().out().to_double().as_double();
-                let delta = (input.clone() - value.to_double().as_double()).abs();
-                trace!("{}.out | Absolute delta: {}", self.id, delta.value);
-                if delta >= threshold {
-                    *value = PointType::Double(input);
-                    self.delta = Point::new_double(0, "", 0.0);
-                } else {
-                    if let Some(factor) = &self.factor {
-                        let factor = factor.borrow_mut().out().to_double().as_double();
-                        self.delta = self.delta.clone() + (delta * factor);
-                        trace!("{}.out | Integral delta: {}", self.id, self.delta.value);
-                        if self.delta >= threshold {
-                            self.value = Some(PointType::Double(input));
-                            self.delta = Point::new_double(0, "", 0.0);
-                        }
-                    }
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let threshold = self.threshold.borrow_mut().out();
+        trace!("{}.out | threshold: {:?}", self.id, threshold);
+        let threshold = match threshold {
+            FnResult::Ok(threshold) => threshold.to_double().as_double(),
+            FnResult::None => return FnResult::None,
+            FnResult::Err(err) => return FnResult::Err(err),
+        };
+        let factor = match &self.factor {
+            Some(factor) => {
+                let factor = factor.borrow_mut().out();
+                trace!("{}.out | factor: {:?}", self.id, factor);
+                match factor {
+                    FnResult::Ok(factor) => Some(factor.to_double().as_double()),
+                    FnResult::None => return FnResult::None,
+                    FnResult::Err(err) => return FnResult::Err(err),
                 }
             }
-            None => {
-                self.value = Some(PointType::Double(input));
-            }
-        }
-        let value = match &self.value {
-            Some(value) => match input_type {
-                PointConfigType::Int => value.to_int(),
-                PointConfigType::Real => value.to_real(),
-                PointConfigType::Double => value.to_double(),
-                _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
-            }
-            None => panic!("{}.out | Internal error - self.value is not initialised", self.id),
+            None => None,
         };
-        trace!("{}.out | value: {:?}", self.id, value);
-        value
+        let input = self.input.borrow_mut().out();
+        trace!("{}.out | input: {:?}", self.id, input);
+        match input {
+            FnResult::Ok(input) => {
+                let input_type = input.type_();
+                let input = input.to_double().as_double();
+                match &mut self.value {
+                    Some(value) => {
+                        let delta = (input.clone() - value.to_double().as_double()).abs();
+                        trace!("{}.out | Absolute delta: {}", self.id, delta.value);
+                        if delta >= threshold {
+                            *value = PointType::Double(input);
+                            self.delta = Point::new_double(0, "", 0.0);
+                        } else {
+                            if let Some(factor) = factor {
+                                self.delta = self.delta.clone() + (delta * factor);
+                                trace!("{}.out | Integral delta: {}", self.id, self.delta.value);
+                                if self.delta >= threshold {
+                                    self.value = Some(PointType::Double(input));
+                                    self.delta = Point::new_double(0, "", 0.0);
+                                }
+                            }
+                        }
+                    }
+                    None => {
+                        self.value = Some(PointType::Double(input));
+                    }
+                }
+                let value = match &self.value {
+                    Some(value) => match input_type {
+                        PointConfigType::Int => value.to_int(),
+                        PointConfigType::Real => value.to_real(),
+                        PointConfigType::Double => value.to_double(),
+                        _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
+                    }
+                    None => panic!("{}.out | Internal error - self.value is not initialised", self.id),
+                };
+                trace!("{}.out | value: {:?}", self.id, value);
+                FnResult::Ok(value)
+            }
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
     }
     //
     //

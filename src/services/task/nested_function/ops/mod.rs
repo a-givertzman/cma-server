@@ -2,3 +2,8 @@ pub mod fn_bit_and;
 pub mod fn_bit_or;
 pub mod fn_bit_xor;
 pub mod fn_bit_not;
+pub mod fn_add;
+pub mod fn_sub;
+pub mod fn_mul;
+pub mod fn_div;
+pub mod fn_pow;

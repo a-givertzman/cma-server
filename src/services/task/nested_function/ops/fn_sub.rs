@@ -4,13 +4,13 @@ use crate::{
     core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef},
     services::task::nested_function::{
         fn_::{FnInOut, FnIn, FnOut},
-        fn_kind::FnKind,
+        fn_kind::FnKind, fn_result::FnResult
     },
 };
 ///
-/// Function | Returns input1 ^ input2
+/// Function | Returns input1 - input2
 #[derive(Debug)]
-pub struct FnPow {
+pub struct FnSub {
     id: String,
     kind: FnKind,
     input1: FnInOutRef,
@@ -18,13 +18,13 @@ pub struct FnPow {
 }
 //
 // 
-impl FnPow {
+impl FnSub {
     ///
-    /// Creates new instance of the FnPow
+    /// Creates new instance of the FnSub
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, input1: FnInOutRef, input2: FnInOutRef) -> Self {
         Self { 
-            id: format!("{}/FnPow{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
+            id: format!("{}/FnSub{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
             kind: FnKind::Fn,
             input1,
             input2,
@@ -33,10 +33,10 @@ impl FnPow {
 }
 //
 // 
-impl FnIn for FnPow {}
+impl FnIn for FnSub {}
 //
 // 
-impl FnOut for FnPow { 
+impl FnOut for FnSub { 
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -53,15 +53,25 @@ impl FnOut for FnPow {
     }
     //
     //
-    fn out(&mut self) -> PointType {
-        // TODO Mul overflow check
+    fn out(&mut self) -> FnResult<PointType, String> {
+        // TODO Add overflow check
         let input1 = self.input1.borrow_mut().out();
         trace!("{}.out | input1: {:?}", self.id, &input1);
+        let input1 = match input1 {
+            FnResult::Ok(input1) => input1,
+            FnResult::None => return FnResult::None,
+            FnResult::Err(err) => return FnResult::Err(err),
+        };
         let input2 = self.input2.borrow_mut().out();
         trace!("{}.out | input2: {:?}", self.id, &input2);
-        let out = input1.pow(input2);
+        let input2 = match input2 {
+            FnResult::Ok(input2) => input2,
+            FnResult::None => return FnResult::None,
+            FnResult::Err(err) => return FnResult::Err(err),
+        };
+        let out = input1 - input2;
         trace!("{}.out | out: {:?}", self.id, &out);
-        out
+        FnResult::Ok(out)
     }
     //
     //
@@ -72,7 +82,7 @@ impl FnOut for FnPow {
 }
 //
 // 
-impl FnInOut for FnPow {}
+impl FnInOut for FnSub {}
 ///
-/// Global static counter of FnPow instances
+/// Global static counter of FnSub instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

@@ -6,8 +6,8 @@ mod fn_point_id {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{fn_::fn_conf_keywd::FnConfPointType, point_config::{point_config::PointConfig, name::Name}},
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef},
+        conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, point_config::{name::Name, point_config::PointConfig}},
+        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef},
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_point_id::FnPointId},
     };
     ///
@@ -23,12 +23,11 @@ mod fn_point_id {
     ///
     /// returns:
     ///  - ...
-    fn init_each(initial: PointType, type_: FnConfPointType) -> FnInOutRef {
-        Rc::new(RefCell::new(
-            Box::new(
-                FnInput::new("test", initial, type_)
-            )
-        ))
+    fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
+        Rc::new(RefCell::new(Box::new(
+            FnInput::new("test", 0, &mut conf)
+        )))
     }
     const POINTS: &[(usize, &str)] = &[
                     (0, r#"PointName0:
@@ -55,7 +54,7 @@ mod fn_point_id {
         init_once();
         let self_id = "fn_point_id_test";
         println!("{}", self_id);
-        let input = init_each(0.to_point(0, "any type"), FnConfPointType::Any);
+        let input = init_each("0", FnConfPointType::Any);
         let points = POINTS.into_iter().map(|(id, conf)| {
             let mut point = PointConfig::from_yaml(&Name::new(self_id, ""), &serde_yaml::from_str(conf).unwrap());
             point.id = *id;
@@ -95,7 +94,7 @@ mod fn_point_id {
             let point = value.to_point(0, &name);
             input.borrow_mut().add(point);
             // debug!("input: {:?}", &input);
-            let state = fn_point_id.out();
+            let state = fn_point_id.out().unwrap();
             // debug!("input: {:?}", &mut input);
             debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target_id);

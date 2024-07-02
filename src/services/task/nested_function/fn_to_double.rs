@@ -8,6 +8,8 @@ use crate::{
         fn_kind::FnKind,
     },
 };
+
+use super::fn_result::FnResult;
 ///
 /// Function converts input to Double
 ///  - bool: true -> 1.0, false -> 0.0
@@ -52,35 +54,41 @@ impl FnOut for FnToDouble {
     }
     //
     //
-    fn out(&mut self) -> PointType {
-        let point = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, point);
-        let out = match &point {
-            PointType::Bool(value) => {
-                if value.value.0 {1.0f64} else {0.0f64}
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let input = self.input.borrow_mut().out();
+        trace!("{}.out | input: {:?}", self.id, input);
+        match input {
+            FnResult::Ok(input) => {
+                let out = match &input {
+                    PointType::Bool(value) => {
+                        if value.value.0 {1.0f64} else {0.0f64}
+                    }
+                    PointType::Int(value) => {
+                        value.value as f64
+                    }
+                    PointType::Real(value) => {
+                        value.value as f64
+                    }
+                    PointType::Double(value) => {
+                        value.value
+                    }
+                    _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
+                };
+                trace!("{}.out | out: {:?}", self.id, &out);
+                FnResult::Ok(PointType::Double(
+                    Point::new(
+                        input.tx_id(),
+                        &concat_string!(self.id, ".out"),
+                        out,
+                        input.status(),
+                        input.cot(),
+                        input.timestamp(),
+                    )
+                ))
             }
-            PointType::Int(value) => {
-                value.value as f64
-            }
-            PointType::Real(value) => {
-                value.value as f64
-            }
-            PointType::Double(value) => {
-                value.value
-            }
-            _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, point.print_type_of(), point),
-        };
-        trace!("{}.out | out: {:?}", self.id, &out);
-        PointType::Double(
-            Point::new(
-                point.tx_id(),
-                &concat_string!(self.id, ".out"),
-                out,
-                point.status(),
-                point.cot(),
-                point.timestamp(),
-            )
-        )
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
     }
     //
     //

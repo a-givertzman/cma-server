@@ -87,21 +87,22 @@ mod cma_recorder {
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
         services.wlock(self_id).insert(multi_queue.clone());
         let test_data = vec![
-            (format!("/{}/Load", self_id), Value::Real(-7.035),  0.0),
-            (format!("/{}/Load", self_id), Value::Real(-2.5),    0.0),
-            (format!("/{}/Load", self_id), Value::Real(-5.5),    0.0),
-            (format!("/{}/Load", self_id), Value::Real(-1.5),    0.0),
-            (format!("/{}/Load", self_id), Value::Real(-1.0),    0.0),
-            (format!("/{}/Load", self_id), Value::Real(-0.1),    0.0),
-            (format!("/{}/Load", self_id), Value::Real(0.1),     0.0),
-            (format!("/{}/Load", self_id), Value::Real(1.0),     0.0),
-            (format!("/{}/Load", self_id), Value::Real(1.5),     1.5),
-            (format!("/{}/Load", self_id), Value::Real(5.5),     5.5),
-            (format!("/{}/Load", self_id), Value::Real(2.5),     2.5),
-            (format!("/{}/Load", self_id), Value::Real(7.035),   7.035),
+            (format!("/{}/Load", self_id), Value::Real(-7.035),  None),
+            (format!("/{}/Load", self_id), Value::Real(-2.5),    None),
+            (format!("/{}/Load", self_id), Value::Real(-5.5),    None),
+            (format!("/{}/Load", self_id), Value::Real(-1.5),    None),
+            (format!("/{}/Load", self_id), Value::Real(-1.0),    None),
+            (format!("/{}/Load", self_id), Value::Real(-0.1),    None),
+            (format!("/{}/Load", self_id), Value::Real(0.1),     None),
+            (format!("/{}/Load", self_id), Value::Real(1.0),     None),
+            (format!("/{}/Load", self_id), Value::Real(1.5),     Some(1.5)),
+            (format!("/{}/Load", self_id), Value::Real(5.5),     Some(5.5)),
+            (format!("/{}/Load", self_id), Value::Real(2.5),     Some(2.5)),
+            (format!("/{}/Load", self_id), Value::Real(7.035),   Some(7.035)),
         ];
+        let mut target_data = test_data.iter().filter(|(_, _, target)| target.is_some());
         let total_count = test_data.len();
-        let target_count = total_count;
+        let target_count = target_data.clone().count();
         let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
             self_id,
             "",
@@ -146,9 +147,9 @@ mod cma_recorder {
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         let target_name = "/App/RecorderTask/Load002";
-        for (i, result) in receiver.lock().unwrap().received().lock().unwrap().iter().enumerate() {
-            let (_, _, target) = test_data[i].clone();
-            assert!(result.value().as_real() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
+        for result in receiver.lock().unwrap().received().lock().unwrap().iter() {
+            let (_, _, target) = target_data.next().unwrap();
+            assert!(result.value().as_real() == target.unwrap(), "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
         };
         test_duration.exit();

@@ -173,13 +173,25 @@ mod cma_recorder {
         ];
         let total_count = test_data.len();
         let target_thrd: Vec<(i32, f32)> = test_data.iter().filter_map(|(i, _name, _value, _op_cycle, thrd, _smooth)| {
-            Some((*i, thrd.clone()))
+            if *_name == format!("/{}/Load", self_id) {
+                Some((*i, thrd.clone()))
+            } else {
+                None
+            }
         }).collect();
         let target_smooth: Vec<(i32, f32)> = test_data.iter().filter_map(|(i, _name, _value, _op_cycle, _thrd, smooth)| {
-            Some((*i, smooth.clone()))
+            if *_name == format!("/{}/Load", self_id) {
+                Some((*i, smooth.clone()))
+            } else {
+                None
+            }
         }).collect();
         let target_op_cycle: Vec<(i32, i32)> = test_data.iter().filter_map(|(i, _name, _value, op_cycle, _thrd, _smooth)| {
-            Some((*i, op_cycle.clone()))
+            if *_name == format!("/{}/Load", self_id) {
+                Some((*i, op_cycle.clone()))
+            } else {
+                None
+            }
         }).collect();
         let target_thrd_count = target_thrd.len();
         let target_smooth_count = target_smooth.len();
