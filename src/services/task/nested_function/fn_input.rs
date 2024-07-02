@@ -1,7 +1,7 @@
 use log::{error, trace};
 use concat_string::concat_string;
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-use crate::{conf::fn_::{fn_conf_keywd::FnConfPointType, fn_config::FnConfig}, core_::{point::{point::Point, point_type::{PointType, ToPoint}}, types::bool::Bool}};
+use crate::{conf::fn_::{fn_conf_keywd::FnConfPointType, fn_config::FnConfig}, core_::{point::{point::Point, point_type::{PointType, ToPoint}}, status::status::Status, types::bool::Bool}};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// 
@@ -13,6 +13,7 @@ pub struct FnInput {
     type_: FnConfPointType,
     point: Option<PointType>,
     initial: Option<PointType>,
+    status: Option<Status>,
 }
 //
 // 
@@ -48,7 +49,8 @@ impl FnInput {
             name: conf.name.clone(),
             type_: conf.type_.clone(),
             point: initial.clone(), 
-            initial
+            initial,
+            status: conf.options.status
         }
     }
 }
@@ -57,6 +59,11 @@ impl FnInput {
 impl FnIn for FnInput {
     fn add(&mut self, point: PointType) {
         trace!("{}.add | value: {:?}", self.id, &self.point);
+        if let Some(status) = self.status {
+            if point.status() != status {
+                return
+            }
+        }
         let point = match self.type_ {
             FnConfPointType::Bool => {
                 match point {
