@@ -1,5 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
+use concat_string::concat_string;
 use crate::core_::{
     point::point_type::PointType,
     types::fn_in_out_ref::FnInOutRef,
@@ -71,10 +72,6 @@ impl FnOut for FnMax {
             match input {
                 FnResult::Ok(input) => {
                     trace!("{}.out | max: {:?}", self.id, self.max);
-                    // let max = self.max.clone().unwrap_or_else(|| {
-                    //     self.max = Some(input.clone());
-                    //     input.clone()
-                    // });
                     let max = self.max.get_or_insert(input.clone());
                     match &input {
                         PointType::Bool(input_val) => {
@@ -101,7 +98,7 @@ impl FnOut for FnMax {
                                 *max = input;
                             }
                         }
-                        PointType::String(_) => panic!("{}.out | Input of type 'String' is not suppoted in: '{}'", self.id, input.name()),
+                        PointType::String(_) => return FnResult::Err(concat_string!(self.id, ".out | Input of type 'String' is not suppoted in: '", input.name(), "'")),
                     }
                 }
                 FnResult::None => {}
@@ -109,6 +106,7 @@ impl FnOut for FnMax {
             };
             self.max.clone().map_or(FnResult::None, |max| FnResult::Ok(max))
         } else {
+            self.max = None;
             FnResult::None
         }
     }

@@ -40,6 +40,8 @@ pub mod fn_to_bool;
 pub mod fn_max;
 pub mod fn_piecewise_line_approx;
 pub mod fn_is_changed_value;
+pub mod fn_keep_valid;
+pub mod fn_to_string;
 
 pub mod nested_fn;
 

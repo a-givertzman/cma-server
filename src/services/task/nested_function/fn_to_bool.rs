@@ -5,13 +5,11 @@ use crate::{
     core_::{point::{point::Point, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef, type_of::DebugTypeOf}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
-        fn_kind::FnKind,
+        fn_kind::FnKind, fn_result::FnResult,
     },
 };
-
-use super::fn_result::FnResult;
 ///
-/// Function converts input to Bool
+/// Function | Converts input to Bool
 ///  - bool: true -> 1, false -> 0
 ///  - real: 0.1 -> 0 | 0.5 -> 1 | 0.9 -> 1 | 1.1 -> 1
 ///  - string: try to parse bool

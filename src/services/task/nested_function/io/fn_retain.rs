@@ -15,15 +15,14 @@ use crate::{
 ///
 /// Function | Used for store input Point value to the local disk
 ///  - Point will be read from disk if:
+///     - if enable is true or >0 (if not specified - default true)
 ///     - if retain file already exists
 ///         - if [every-cycle] is true - read will done in every computing cycle
 ///         - if [every-cycle] is false - read will be done only once
 ///     - if retain file does not exists, [default] value will be returned
 ///  - Point will be stored to the disk if:
-///     - [input] is specified
-///     - [enable] 
-///         - if specified and is true (or [enable] > 0)
-///         - if not specified - default is true
+///     - if enable is true or >0 (if not specified - default true)
+///         - [input] is specified
 ///  - [key] - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
 ///  - Returns
 ///     - read Point if [input] is not specified (read will be done only once)
@@ -49,7 +48,7 @@ impl FnRetain {
     /// Creates new instance of the FnRetain
     /// - [parent] - the name of the parent entitie
     /// - [name] - the name of the parent
-    /// - [enable] - boolean (numeric) input enables the storing if true (> 0)
+    /// - [enable] - boolean (numeric) input enables the readinf/storing and pass through if true (> 0)
     /// - [every-cycle] - if true read will done in every computing cycle, else read will done only once
     /// - [key] - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
     /// - [input] - incoming Point's
@@ -248,72 +247,73 @@ impl FnOut for FnRetain {
     }
     //
     fn out(&mut self) -> FnResult<PointType, String> {
-        match &self.input {
-            Some(input) => {
-                let enable = match &self.enable {
-                    Some(enable) => {
-                        let enable = enable.borrow_mut().out();
-                        trace!("{}.out | enable: {:?}", self.id, enable);
-                        match enable {
-                            FnResult::Ok(enable) => Some(enable.to_bool().as_bool()),
-                            FnResult::None => return FnResult::None,
-                            FnResult::Err(err) => return FnResult::Err(err),
-                        }
-                    }
-                    None => None,
-                };
+        let enable = match &self.enable {
+            Some(enable) => {
+                let enable = enable.borrow_mut().out();
                 trace!("{}.out | enable: {:?}", self.id, enable);
-                let input = input.borrow_mut().out();
-                trace!("{}.out | input: {:?}", self.id, input);
-                match input {
-                    FnResult::Ok(input) => {
-                        let enable = enable.map_or(true, |enable| enable.value.0);
-                        if enable {
+                match enable {
+                    FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
+                    FnResult::None => return FnResult::None,
+                    FnResult::Err(err) => return FnResult::Err(err),
+                }
+            }
+            None => true,
+        };
+        trace!("{}.out | enable: {:?}", self.id, enable);
+        if enable {
+            match &self.input {
+                Some(input) => {
+                    let input = input.borrow_mut().out();
+                    trace!("{}.out | input: {:?}", self.id, input);
+                    match input {
+                        FnResult::Ok(input) => {
                             if let Err(err) = self.store(&input) {
                                 error!("{}.out | Error: '{:?}'", self.id, err);
                             };
+                            FnResult::Ok(input)
                         }
-                        FnResult::Ok(input)
+                        FnResult::None => FnResult::None,
+                        FnResult::Err(err) => FnResult::Err(err),
                     }
-                    FnResult::None => FnResult::None,
-                    FnResult::Err(err) => FnResult::Err(err),
                 }
-            }
-            None => {
-                let default = match &self.default {
-                    Some(default) => {
-                        let default = default.borrow_mut().out();
-                        trace!("{}.out | default: {:?}", self.id, default);
-                        match default {
-                            FnResult::Ok(default) => default,
-                            FnResult::None => return FnResult::None,
-                            FnResult::Err(err) => return FnResult::Err(err),
-                        }
-                    }
-                    None => panic!("{}.out | The [default] input is not specified", self.id),
-                };
-                if self.every_cycle {
-                    let point = match self.load(default.type_()) {
-                        Some(point) => point,
-                        None => default,
-                    };
-                    trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
-                    FnResult::Ok(point)
-                } else {
-                    let point = match &self.cache {
-                        Some(point) => point.clone(),
-                        None => match self.load(default.type_()) {
-                            Some(point) => {
-                                point
+                None => {
+                    let default = match &self.default {
+                        Some(default) => {
+                            let default = default.borrow_mut().out();
+                            trace!("{}.out | default: {:?}", self.id, default);
+                            match default {
+                                FnResult::Ok(default) => default,
+                                FnResult::None => return FnResult::None,
+                                FnResult::Err(err) => return FnResult::Err(err),
                             }
-                            None => default,
                         }
+                        None => panic!("{}.out | The [default] input is not specified", self.id),
                     };
-                    self.cache = Some(point.clone());
-                    trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
-                    FnResult::Ok(point)
+                    if self.every_cycle {
+                        let point = match self.load(default.type_()) {
+                            Some(point) => point,
+                            None => default,
+                        };
+                        trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
+                        FnResult::Ok(point)
+                    } else {
+                        let point = match &self.cache {
+                            Some(point) => point.clone(),
+                            None => match self.load(default.type_()) {
+                                Some(point) => {
+                                    point
+                                }
+                                None => default,
+                            }
+                        };
+                        self.cache = Some(point.clone());
+                        trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
+                        FnResult::Ok(point)
+                    }
                 }
             }
+        } else {
+            FnResult::None
         }
     }
     //

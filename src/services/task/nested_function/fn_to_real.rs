@@ -5,13 +5,11 @@ use crate::{
     core_::{point::{point::Point, point_type::PointType}, types::{fn_in_out_ref::FnInOutRef, type_of::DebugTypeOf}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
-        fn_kind::FnKind,
+        fn_kind::FnKind, fn_result::FnResult,
     },
 };
-
-use super::fn_result::FnResult;
 ///
-/// Function converts input to Real
+/// Function | Converts input to Real
 ///  - bool: true -> 1.0, false -> 0.0
 ///  - string: try to parse Real
 #[derive(Debug)]

@@ -30,6 +30,7 @@ pub enum Functions {
     ToInt,
     ToReal,
     ToDouble,
+    ToString,
     Export,
     Filter,
     RisingEdge,
@@ -50,6 +51,7 @@ pub enum Functions {
     Max,
     PiecewiseLineApprox,
     IsChangedValue,
+    KeepValid,
     /// Recorder functions
     RecOpCycleMetric,
 }
@@ -79,6 +81,7 @@ impl Functions {
     const TO_INT                        : &'static str = "ToInt";
     const TO_REAL                       : &'static str = "ToReal";
     const TO_DOUBLE                     : &'static str = "ToDouble";
+    const TO_STRING                     : &'static str = "ToString";
     const EXPORT                        : &'static str = "Export";
     const FILTER                        : &'static str = "Filter";
     const RISING_EDGE                   : &'static str = "RisingEdge";
@@ -99,6 +102,7 @@ impl Functions {
     const MAX                           : &'static str = "Max";
     const PIECEWISE_LINE_APPROX         : &'static str = "PiecewiseLineApprox";
     const IS_CHANGED_VALUE              : &'static str = "IsChangedValue";
+    const KEEP_VALID                    : &'static str = "KeepValid";
     /// Recorder functions
     const REC_OP_CYCLE_METRIC           : &'static str = "RecOpCycleMetric";
     ///
@@ -126,6 +130,7 @@ impl Functions {
             Self::ToInt                 => Self::TO_INT,
             Self::ToReal                => Self::TO_REAL,
             Self::ToDouble              => Self::TO_DOUBLE,
+            Self::ToString              => Self::TO_STRING,
             Self::Export                => Self::EXPORT,
             Self::Filter                => Self::FILTER,
             Self::RisingEdge            => Self::RISING_EDGE,
@@ -147,6 +152,7 @@ impl Functions {
             Self::Max                   => Self::MAX,
             Self::PiecewiseLineApprox   => Self::PIECEWISE_LINE_APPROX,
             Self::IsChangedValue        => Self::IS_CHANGED_VALUE,
+            Self::KeepValid             => Self::KEEP_VALID,
         }
     }
     ///
@@ -174,6 +180,7 @@ impl Functions {
             Self::TO_INT                => Ok( Self::ToInt ),
             Self::TO_REAL               => Ok( Self::ToReal ),
             Self::TO_DOUBLE             => Ok( Self::ToDouble ),
+            Self::TO_STRING             => Ok( Self::ToString ),
             Self::EXPORT                => Ok( Self::Export ),
             Self::FILTER                => Ok( Self::Filter ),
             Self::RISING_EDGE           => Ok( Self::RisingEdge ),
@@ -195,6 +202,7 @@ impl Functions {
             Self::MAX                   => Ok( Self::Max ),
             Self::PIECEWISE_LINE_APPROX => Ok( Self::PiecewiseLineApprox ),
             Self::IS_CHANGED_VALUE      => Ok( Self::IsChangedValue ),
+            Self::KEEP_VALID            => Ok( Self::KeepValid ),
             _ => Err(format!("Functions.from_str | Unknown function name '{}'", &input)),
         }
     }

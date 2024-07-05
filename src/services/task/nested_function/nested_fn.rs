@@ -10,22 +10,9 @@ use crate::{
     services::{
         queue_name::QueueName, safe_lock::SafeLock, services::Services, task::{
             nested_function::{
-                comp::{fn_eq::FnEq, fn_ge::FnGe, fn_gt::FnGt, fn_le::FnLe, fn_lt::FnLt, fn_ne::FnNe},
-                edge_detection::{fn_falling_edge::FnFallingEdge, fn_rising_edge::FnRisingEdge},
-                export::{fn_export::FnExport, fn_point::FnPoint, fn_to_api_queue::FnToApiQueue},
-                filter::{fn_filter::FnFilter, fn_smooth::FnSmooth, fn_threshold::FnThreshold},
-                fn_acc::FnAcc, fn_average::FnAverage, fn_const::FnConst, fn_count::FnCount,
-                fn_debug::FnDebug, fn_input::FnInput, fn_is_changed_value::FnIsChangedValue,
-                fn_max::FnMax, fn_piecewise_line_approx::FnPiecewiseLineApprox,
-                fn_point_id::FnPointId, fn_rec_op_cycle_metric::FnRecOpCycleMetric,
-                fn_timer::FnTimer, fn_to_bool::FnToBool, fn_to_double::FnToDouble,
-                fn_to_int::FnToInt, fn_to_real::FnToReal, fn_var::FnVar, functions::Functions,
-                io::fn_retain::FnRetain,
-                ops::{
-                    fn_bit_and::FnBitAnd, fn_bit_not::FnBitNot, fn_bit_or::FnBitOr, fn_bit_xor::FnBitXor,
-                    fn_add::FnAdd, fn_sub::FnSub, fn_mul::FnMul, fn_div::FnDiv, fn_pow::FnPow, 
-                },
-                sql_metric::SqlMetric,
+                comp::{fn_eq::FnEq, fn_ge::FnGe, fn_gt::FnGt, fn_le::FnLe, fn_lt::FnLt, fn_ne::FnNe}, edge_detection::{fn_falling_edge::FnFallingEdge, fn_rising_edge::FnRisingEdge}, export::{fn_export::FnExport, fn_point::FnPoint, fn_to_api_queue::FnToApiQueue}, filter::{fn_filter::FnFilter, fn_smooth::FnSmooth, fn_threshold::FnThreshold}, fn_acc::FnAcc, fn_average::FnAverage, fn_const::FnConst, fn_count::FnCount, fn_debug::FnDebug, fn_input::FnInput, fn_is_changed_value::FnIsChangedValue, fn_keep_valid::FnKeepValid, fn_max::FnMax, fn_piecewise_line_approx::FnPiecewiseLineApprox, fn_point_id::FnPointId, fn_rec_op_cycle_metric::FnRecOpCycleMetric, fn_timer::FnTimer, fn_to_bool::FnToBool, fn_to_double::FnToDouble, fn_to_int::FnToInt, fn_to_real::FnToReal, fn_to_string::FnToString, fn_var::FnVar, functions::Functions, io::fn_retain::FnRetain, ops::{
+                    fn_add::FnAdd, fn_bit_and::FnBitAnd, fn_bit_not::FnBitNot, fn_bit_or::FnBitOr, fn_bit_xor::FnBitXor, fn_div::FnDiv, fn_mul::FnMul, fn_pow::FnPow, fn_sub::FnSub 
+                }, sql_metric::SqlMetric
             },
             task_nodes::TaskNodes,
         }
@@ -617,7 +604,24 @@ impl NestedFn {
                             FnIsChangedValue::new(parent, inputs)
                         )))
                     }
-
+                    //
+                    Functions::KeepValid => {
+                        let name = "input";
+                        let input_conf = conf.input_conf(name).unwrap();
+                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        Rc::new(RefCell::new(Box::new(
+                            FnKeepValid::new(parent, input)
+                        )))
+                    }
+                    //
+                    Functions::ToString => {
+                        let name = "input";
+                        let input_conf = conf.input_conf(name).unwrap();
+                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        Rc::new(RefCell::new(Box::new(
+                            FnToString::new(parent, input)
+                        )))
+                    }
                     //
                     // Add a new function here...
                     _ => panic!("{}.function | Unknown function name: {:?}", self_id, conf.name)

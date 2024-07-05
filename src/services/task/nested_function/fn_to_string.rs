@@ -2,32 +2,29 @@ use log::trace;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::{point::Point, point_type::PointType}, types::{fn_in_out_ref::FnInOutRef, type_of::DebugTypeOf}},
+    core_::{point::{point::Point, point_type::PointType}, types::fn_in_out_ref::FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
     },
 };
 ///
-/// Function | Converts input to Int
-///  - bool: true -> 1, false -> 0
-///  - real: 0.1 -> 0 | 0.5 -> 1 | 0.9 -> 1 | 1.1 -> 1
-///  - string: try to parse int
+/// Function | Converts input to String
 #[derive(Debug)]
-pub struct FnToInt {
+pub struct FnToString {
     id: String,
     kind: FnKind,
     input: FnInOutRef,
 }
 //
 // 
-impl FnToInt {
+impl FnToString {
     ///
-    /// Creates new instance of the FnToInt
+    /// Creates new instance of the FnToString
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
         Self { 
-            id: format!("{}/FnToInt{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
+            id: format!("{}/FnToString{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
             kind: FnKind::Fn,
             input,
         }
@@ -35,10 +32,10 @@ impl FnToInt {
 }
 //
 // 
-impl FnIn for FnToInt {}
+impl FnIn for FnToString {}
 //
 // 
-impl FnOut for FnToInt { 
+impl FnOut for FnToString { 
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -59,26 +56,18 @@ impl FnOut for FnToInt {
         match input {
             FnResult::Ok(input) => {
                 let out = match &input {
-                    PointType::Bool(value) => {
-                        if value.value.0 {1} else {0}
-                    }
-                    PointType::Int(value) => {
-                        value.value
-                    }
-                    PointType::Real(value) => {
-                        value.value.round() as i64
-                    }
-                    PointType::Double(value) => {
-                        value.value.round() as i64
-                    }
-                    _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
+                    PointType::Bool(value) => &value.value.0.to_string(),
+                    PointType::Int(value) => &value.value.to_string(),
+                    PointType::Real(value) => &value.value.to_string(),
+                    PointType::Double(value) => &value.value.to_string(),
+                    PointType::String(value) => &value.value,
                 };
                 trace!("{}.out | out: {:?}", self.id, &out);
-                FnResult::Ok(PointType::Int(
+                FnResult::Ok(PointType::String(
                     Point::new(
                         input.tx_id(),
                         &concat_string!(self.id, ".out"),
-                        out,
+                        out.to_owned(),
                         input.status(),
                         input.cot(),
                         input.timestamp(),
@@ -97,7 +86,7 @@ impl FnOut for FnToInt {
 }
 //
 // 
-impl FnInOut for FnToInt {}
+impl FnInOut for FnToString {}
 ///
-/// Global static counter of FnToInt instances
+/// Global static counter of FnToString instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

@@ -1,9 +1,10 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
-use crate::core_::{
+use concat_string::concat_string;
+use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
     point::{point::Point, point_type::PointType},
     types::fn_in_out_ref::FnInOutRef,
-};
+}};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Returns an average value (in Double) of the input
@@ -70,39 +71,69 @@ impl FnOut for FnAverage {
             }
             None => true,
         };
-        let input = self.input.borrow_mut().out();
-        // trace!("{}.out | input: {:?}", self.id, input);
-        match input {
-            FnResult::Ok(input) => {
-                if enable {
+        if enable {
+            let input = self.input.borrow_mut().out();
+            // trace!("{}.out | input: {:?}", self.id, input);
+            match input {
+                FnResult::Ok(input) => {
                     let value = input.to_double().as_double().value;
                     self.sum += value;
                     self.count += 1;
-                } else {
-                    self.count = 0;
-                    self.sum = 0.0;
+                    let average = if self.count != 0 {
+                        self.sum / (self.count as f64)
+                    } else {
+                        0.0
+                    };
+                    trace!("{}.out | sum: {:?}", self.id, self.sum);
+                    trace!("{}.out | count: {:?}", self.id, self.count);
+                    trace!("{}.out | average: {:?}", self.id, average);
+                    match input.type_() {
+                        PointConfigType::Int => {
+                            FnResult::Ok(PointType::Int(
+                                Point::new(
+                                    input.tx_id(),
+                                    &self.id,
+                                    average.round() as i64,
+                                    input.status(),
+                                    input.cot(),
+                                    input.timestamp(),
+                                )
+                            ))
+                        }
+                        PointConfigType::Real => {
+                            FnResult::Ok(PointType::Real(
+                                Point::new(
+                                    input.tx_id(),
+                                    &self.id,
+                                    average as f32,
+                                    input.status(),
+                                    input.cot(),
+                                    input.timestamp(),
+                                )
+                            ))
+                        }
+                        PointConfigType::Double => {
+                            FnResult::Ok(PointType::Double(
+                                Point::new(
+                                    input.tx_id(),
+                                    &self.id,
+                                    average,
+                                    input.status(),
+                                    input.cot(),
+                                    input.timestamp(),
+                                )
+                            ))
+                        }
+                        _ => FnResult::Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+                    }
                 }
-                let average = if self.count != 0 {
-                    self.sum / (self.count as f64)
-                } else {
-                    0.0
-                };
-                trace!("{}.out | sum: {:?}", self.id, self.sum);
-                trace!("{}.out | count: {:?}", self.id, self.count);
-                trace!("{}.out | average: {:?}", self.id, average);
-                FnResult::Ok(PointType::Double(
-                    Point::new(
-                        input.tx_id(),
-                        &self.id,
-                        average,
-                        input.status(),
-                        input.cot(),
-                        input.timestamp(),
-                    )
-                ))
+                FnResult::None => FnResult::None,
+                FnResult::Err(err) => FnResult::Err(err),
             }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
+        } else {
+            self.count = 0;
+            self.sum = 0.0;
+            FnResult::None
         }
     }
     //

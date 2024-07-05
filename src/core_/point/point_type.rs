@@ -353,6 +353,26 @@ impl PointType {
         ))
     }
     ///
+    /// Returns Point converted to the String
+    pub fn to_string(&self) -> Self {
+        let value = match self {
+            PointType::Bool(p) => p.value.0.to_string(),
+            PointType::Int(p) => p.value.to_string(),
+            PointType::Real(p) => p.value.to_string(),
+            PointType::Double(p) => p.value.to_string(),
+            PointType::String(p) => p.value.to_owned(),
+            // _ => panic!("{}.to_double | Conversion to Double for '{}' - is not supported", self.name(),  self.type_of()),
+        };
+        PointType::String(Point::new(
+            self.tx_id(),
+            &self.name(),
+            value,
+            self.status(),
+            self.cot(),
+            self.timestamp(),
+        ))
+    }
+    ///
     /// Raises self to a [factor] power.
     pub fn pow(&self, exp: Self) -> Self {
         match &self {
