@@ -12,7 +12,7 @@ service Task RecorderTaskOperatingMetric:
     #
     # The nominal load of the crane
     let craneLoadNom:
-        input: point real '/AppTest/Load.Nom' status ok default 150.0
+        input: point real '/AppTest/Load.Nom' status ok #default 150.0
         # input: const real 150.0
     #
     # The nominal load of the Winch1
@@ -70,7 +70,6 @@ service Task RecorderTaskOperatingMetric:
             conf point CraneLoad:
                 type: Real
             input: point real '/AppTest/Load' status ok default 150.0
-
     #
     # Detecting if any Pump is active
     let pumpIsActive:
@@ -107,20 +106,36 @@ service Task RecorderTaskOperatingMetric:
     #
     # Crane Average load in operating cycle, ??? unit ???
     let craneCycleAverageLoad:
-        input fn Export:
-            send-to: /AppTest/TaskTestReceiver.in-queue
-            conf point CraneCycleAverageLoad:
-                type: Real
-            input fn KeepValid:
-                input fn Average:
-                    enable: opCycleIsActive_
-                    input: point real '/AppTest/Load' status ok   # ??? unit ???
+        input fn KeepValid:
+            input fn Average:
+                enable: opCycleIsActive_
+                input: point real '/AppTest/Load' status ok   # ??? unit ???
     #
     # Crane Average load in operating cycle in relative units
     let craneCycleAverageLoadRelative:
         input fn Div:
             input1: craneCycleAverageLoad
             input2: craneLoadNom
+
+    #
+    # ========= DEBUGGING =========
+    fn Export ExportCraneCycleAverageLoad:
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point CraneCycleAverageLoad:
+            type: Real
+        input: craneCycleAverageLoad
+
+    #
+    # ========= PLOTTING =========
+    # fn Plot Plot1:
+    #     craneLoadNom: craneLoadNom
+    #     craneLoad: point real '/AppTest/Load'
+    #     craneLoadRelative: craneLoadRelative
+    #     opCycleIsActive: opCycleIsActive
+    #     opCycleIsDone: opCycleIsDone
+    #     craneCycleAverageLoad: craneCycleAverageLoad
+
+
 
     #
     # Crane Max load in operating cycle, ??? unit ???
@@ -1264,10 +1279,10 @@ service Task RecorderTaskOperatingMetric:
         send-to: /AppTest/TaskTestReceiver.in-queue
         op-cycle: opCycleIsActive
         #
-        ######   FOR DEBUGING   ######
-        input0 fn ToString: 
+        # ========= DEBUGGING =========
+        debug-craneCycleAverageLoadRelative fn ToString: 
             input: craneCycleAverageLoadRelative
-        input1 fn ToString:
+        debug-craneCycleMaxLoad fn ToString:
             input: craneCycleMaxLoad
         #
         #                !!! IN SECONDS

@@ -11,6 +11,9 @@ pub enum Functions {
     Input,
     Const,
     Var,
+    /// debuging functions
+    Debug,
+    Plot,
     /// user defined functions
     Add,
     Count,
@@ -25,7 +28,6 @@ pub enum Functions {
     ToMultiQueue,
     SqlMetric,
     PointId,
-    Debug,
     ToBool,
     ToInt,
     ToReal,
@@ -62,10 +64,12 @@ impl Functions {
     const INPUT                         : &'static str = "input";
     const CONST                         : &'static str = "const";
     const VAR                           : &'static str = "var";
+    /// debuging functions
+    const DEBUG                         : &'static str = "Debug";
+    const PLOT                          : &'static str = "Plot";
     /// user defined functions
     const ADD                           : &'static str = "Add";
     const COUNT                         : &'static str = "Count";
-    const DEBUG                         : &'static str = "Debug";
     const GT                            : &'static str = "Gt";
     const GE                            : &'static str = "Ge";
     const EQ                            : &'static str = "Eq";
@@ -126,6 +130,7 @@ impl Functions {
             Self::SqlMetric             => Self::SQL_METRIC,
             Self::PointId               => Self::POINT_ID,
             Self::Debug                 => Self::DEBUG,
+            Self::Plot                  => Self::PLOT,
             Self::ToBool                => Self::TO_BOOL,
             Self::ToInt                 => Self::TO_INT,
             Self::ToReal                => Self::TO_REAL,
@@ -176,6 +181,7 @@ impl Functions {
             Self::SQL_METRIC            => Ok( Self::SqlMetric ),
             Self::POINT_ID              => Ok( Self::PointId ),
             Self::DEBUG                 => Ok( Self::Debug ),
+            Self::PLOT                  => Ok( Self::Plot ),
             Self::TO_BOOL               => Ok( Self::ToBool ),
             Self::TO_INT                => Ok( Self::ToInt ),
             Self::TO_REAL               => Ok( Self::ToReal ),

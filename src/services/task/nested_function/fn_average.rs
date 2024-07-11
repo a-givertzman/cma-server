@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use log::trace;
+use log::{debug, trace};
 use concat_string::concat_string;
 use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
     point::{point::Point, point_type::PointType},
@@ -62,7 +62,6 @@ impl FnOut for FnAverage {
         let enable = match &self.enable {
             Some(enable) => {
                 let enable = enable.borrow_mut().out();
-                trace!("{}.out | enable: {:?}", self.id, enable);
                 match enable {
                     FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
                     FnResult::None => return FnResult::None,
@@ -71,6 +70,7 @@ impl FnOut for FnAverage {
             }
             None => true,
         };
+        debug!("{}.out | enable: {:?}", self.id, enable);
         if enable {
             let input = self.input.borrow_mut().out();
             // trace!("{}.out | input: {:?}", self.id, input);
