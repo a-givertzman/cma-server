@@ -256,7 +256,7 @@ mod fn_average {
     }
     ///
     /// Double points on input, enable - is variable during the test
-    // #[test]
+    #[test]
     fn test_double_enable() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
