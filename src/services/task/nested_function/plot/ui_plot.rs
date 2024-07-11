@@ -20,10 +20,7 @@ pub struct UiPlot {
     // renderDelay: Duration,
     real_input_min_y: f64,
     real_input_max_y: f64,
-    // real_input_len: usize,
-    // realInputAutoscroll: bool,
     real_input_autoscale_y: bool,
-    // send: Sender<(String, Point)>,
     show_events: bool,
     input: Receiver<(String, Point)>,
     plot_style: IndexMap<String, Rc<RefCell<PlotStyle>>>,
@@ -39,7 +36,6 @@ impl UiPlot {
     pub fn new(
         parent: impl Into<String>,
         cc: &CreationContext,
-        // send: Sender<(String, Point)>,
         recv: Receiver<(String, Point)>,
         // renderDelay: Duration,
     ) -> Self {
@@ -70,11 +66,6 @@ impl UiPlot {
             status,
         }
     }
-    // ///
-    // /// Returns Sender, to provide async points transmitting to the UiPlot
-    // pub fn send(&self) -> Sender<(String, Point)> {
-    //     self.send.clone()
-    // }
     ///
     /// 
     fn setup_custom_fonts(ctx: &egui::Context) {
@@ -136,7 +127,6 @@ impl UiPlot {
 ///
 impl eframe::App for UiPlot {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // let window_size = ctx.input(|i: &egui::InputState| i.screen_rect);
         let window_size = match ctx.input(|i| i.viewport().inner_rect) {
             Some(rect) => rect,
             None => ctx.input(|i: &egui::InputState| i.screen_rect),
@@ -242,10 +232,6 @@ impl eframe::App for UiPlot {
                     ui.separator();
                     ui.checkbox(&mut self.real_input_autoscale_y, "Autoscale Y");
                     ui.separator();
-                    // if ui.button("\u{e802}").clicked() {
-                    //     // inputSignal.restart();
-                    // }
-                    // ui.separator();
                 });
                 ui.separator();
                 let mut min = format!("{}", self.real_input_min_y);
