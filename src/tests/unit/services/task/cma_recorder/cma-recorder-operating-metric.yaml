@@ -127,13 +127,13 @@ service Task RecorderTaskOperatingMetric:
 
     #
     # ========= PLOTTING =========
-    fn Plot Plot1:
-        craneLoadNom: craneLoadNom
-        craneLoad: point real '/AppTest/Load'
-        craneLoadRelative: craneLoadRelative
-        opCycleIsActive: opCycleIsActive
-        opCycleIsDone: opCycleIsDone
-        craneCycleAverageLoad: craneCycleAverageLoad
+    # fn Plot Plot1:
+    #     craneLoadNom: craneLoadNom
+    #     craneLoad: point real '/AppTest/Load'
+    #     craneLoadRelative: craneLoadRelative
+    #     opCycleIsActive: opCycleIsActive
+    #     opCycleIsDone: opCycleIsDone
+    #     craneCycleAverageLoad: craneCycleAverageLoad
 
 
 
