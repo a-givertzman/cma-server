@@ -570,7 +570,7 @@ impl NestedFn {
                         let name = "op-cycle";
                         let input_conf = conf.input_conf(name).unwrap();
                         let op_cycle = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
-                        let mut inputs = vec![];
+                        let mut inputs = IndexMap::new();
                         let conf_inputs = conf.inputs
                             .iter_mut()
                             .filter(|(name, _)| {
@@ -578,7 +578,7 @@ impl NestedFn {
                             });
                         for (name, input_conf) in conf_inputs {
                             let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
-                            inputs.push(input);
+                            inputs.insert(name.to_owned(), input);
                         }
                         Rc::new(RefCell::new(Box::new(
                             FnRecOpCycleMetric::new(parent, enable, tx_send, op_cycle, inputs)
@@ -741,7 +741,7 @@ impl NestedFn {
                 )))
             }
             FnConfKind::Param(conf) => {
-                panic!("{}.function | Custom parameters are not supported in the nested functions, \n\tparameter: {:#?}", self_id, conf);
+                panic!("{}.function | Undefined variable or unknown custom parameters in the function conf: {:#?}", self_id, conf);
             }
         }
     }

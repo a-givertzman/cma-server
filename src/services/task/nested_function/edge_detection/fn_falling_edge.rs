@@ -70,8 +70,14 @@ impl FnOut for FnFallingEdge {
                 trace!("{}.out | value: {:#?}", self.id, value);
                 FnResult::Ok(value)
             }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
+            FnResult::None => {
+                self.prev = false;
+                FnResult::None
+            }
+            FnResult::Err(err) => {
+                self.prev = false;
+                FnResult::Err(err)
+            }
         }
     }
     //

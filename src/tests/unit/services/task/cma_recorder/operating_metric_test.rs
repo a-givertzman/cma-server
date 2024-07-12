@@ -396,9 +396,9 @@ mod cma_recorder {
             assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
         };
         test_duration.exit();
-        loop {
-            thread::sleep(Duration::from_millis(100));
-        }
+        // loop {
+        //     thread::sleep(Duration::from_millis(100));
+        // }
     }
     ///
     /// Values must to be in the 'received'

@@ -1,8 +1,9 @@
 use std::sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender};
+use chrono::Utc;
+use indexmap::IndexMap;
 use log::{debug, error, trace, warn};
 use crate::core_::{
-    point::{point::Point, point_type::PointType},
-    types::{bool::Bool, fn_in_out_ref::FnInOutRef},
+    cot::cot::Cot, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}
 };
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
@@ -22,7 +23,7 @@ pub struct FnRecOpCycleMetric {
     enable: Option<FnInOutRef>,
     send_to: Option<Sender<PointType>>,
     op_cycle: FnInOutRef,
-    inputs: Vec<FnInOutRef>,
+    inputs: IndexMap<String, FnInOutRef>,
     values: Vec<PointType>,
     prev: bool,
     rising: bool,
@@ -34,7 +35,7 @@ impl FnRecOpCycleMetric {
     ///
     /// Creates new instance of the FnRecOpCycleMetric
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, send_to: Option<Sender<PointType>>, op_cycle: FnInOutRef, inputs: Vec<FnInOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, send_to: Option<Sender<PointType>>, op_cycle: FnInOutRef, inputs: IndexMap<String, FnInOutRef>) -> Self {
         Self { 
             id: format!("{}/FnRecOpCycleMetric{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
@@ -85,41 +86,35 @@ impl FnOut for FnRecOpCycleMetric {
             inputs.append(&mut enable.borrow().inputs());
         }
         inputs.append(&mut self.op_cycle.borrow().inputs());
-        for input in &self.inputs {
+        for (_, input) in &self.inputs {
             inputs.append(&mut input.borrow().inputs());
         }
         inputs
     }
     //
     fn out(&mut self) -> FnResult<PointType, String> {
-        let enable = match &mut self.enable {
+        let (enable, tx_id, status, cot, timestamp) = match &mut self.enable {
             Some(en) => match en.borrow_mut().out() {
-                FnResult::Ok(en) => en.to_bool().as_bool().value.0,
+                FnResult::Ok(en) => (en.to_bool().as_bool().value.0, en.tx_id(), en.status(), en.cot(), en.timestamp()),
                 FnResult::None => return FnResult::None,
                 FnResult::Err(err) => return FnResult::Err(err),
             }
-            None => true,
+            None => (true, PointTxId::from_str(&self.id), Status::Ok, Cot::Inf, Utc::now()),
         };
-        let (op_cycle, tx_id, status, cot, timestamp) = {
+        let op_cycle = {
             let op_cycle = self.op_cycle.borrow_mut().out();
             match op_cycle {
-                FnResult::Ok(op_cycle) => (
-                    op_cycle.to_bool().as_bool().value.0,
-                    op_cycle.tx_id(),
-                    op_cycle.status(),
-                    op_cycle.cot(),
-                    op_cycle.timestamp(),
-                ),
+                FnResult::Ok(op_cycle) => op_cycle.to_bool().as_bool().value.0,
                 FnResult::None => return FnResult::None,
                 FnResult::Err(err) => return FnResult::Err(err),
             }
         };
-        if op_cycle & (! self.prev) {
+        if op_cycle && (! self.prev) {
             warn!("{}.out | Operating Cycle - STARTED", self.id);
             self.rising = true;
             self.falling = false
         };
-        if (! op_cycle) & self.prev {
+        if (! op_cycle) && self.prev {
             warn!("{}.out | Operating Cycle - FINISHED", self.id);
             self.falling = true;
             self.rising = false;
@@ -135,16 +130,39 @@ impl FnOut for FnRecOpCycleMetric {
             for value in &self.values {
                 self.send(value);
             }
+            self.values.clear();
         }
         if self.rising && enable {
             trace!("{}.out | Operating Cycle - values", self.id);
             self.values.clear();
-            for input in &self.inputs {
+            for (input_name, input) in &self.inputs {
                 let input = input.borrow_mut().out();
                 match input {
                     FnResult::Ok(input) => {
-                        trace!("{}.out | Input '{}': {:?}", self.id, input.name(), input.value());
-                        self.values.push(input)
+                        trace!("{}.out | Input '{}': {:?}", self.id, input_name, input.value());
+                        let value = match input {
+                            PointType::Bool(mut p) => {
+                                p.name = input_name.to_owned();
+                                PointType::Bool(p)
+                            }
+                            PointType::Int(mut p) => {
+                                p.name = input_name.to_owned();
+                                PointType::Int(p)
+                            }
+                            PointType::Real(mut p) => {
+                                p.name = input_name.to_owned();
+                                PointType::Real(p)
+                            }
+                            PointType::Double(mut p) => {
+                                p.name = input_name.to_owned();
+                                PointType::Double(p)
+                            }
+                            PointType::String(mut p) => {
+                                p.name = input_name.to_owned();
+                                PointType::String(p)
+                            }
+                        };
+                        self.values.push(value)
                     }
                     FnResult::None => {}
                     FnResult::Err(err) => return FnResult::Err(err),
@@ -167,7 +185,8 @@ impl FnOut for FnRecOpCycleMetric {
         if let Some(enable) = &self.enable {
             enable.borrow_mut().reset();
         }
-        for input in &self.inputs {
+        self.op_cycle.borrow_mut().reset();
+        for (_, input) in &self.inputs {
             input.borrow_mut().reset();
         }
 

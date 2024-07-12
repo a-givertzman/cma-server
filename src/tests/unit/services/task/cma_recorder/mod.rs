@@ -6,3 +6,4 @@ mod task_op_cycle_metric_test;
 mod fn_rec_op_cycle_metric_test;
 mod op_cycle_live_data_test;
 mod operating_metric_test;
+mod operating_metric_cycles_distribution_by_load_test;

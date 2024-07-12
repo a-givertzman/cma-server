@@ -3,12 +3,7 @@ use eframe::CreationContext;
 use egui_plot::{Line, Plot, Points};
 use hsl::HSL;
 use indexmap::IndexMap;
-use log::{
-    // info,
-    // trace,
-    error, info, warn
-    // warn,
-};
+use log::{error, info, warn};
 use egui::{
     accesskit::Point, vec2, Align2, Color32, FontFamily, FontId, TextStyle 
 };
@@ -26,6 +21,7 @@ pub struct UiPlot {
     plot_style: IndexMap<String, Rc<RefCell<PlotStyle>>>,
     points: IndexMap<String, Vec<[f64; 2]>>,
     events: Vec<String>,
+    #[allow(unused)]
     status: Rc<RefCell<ChangeNotify<UiStatus>>>,
 }
 //
@@ -132,20 +128,29 @@ impl eframe::App for UiPlot {
             None => ctx.input(|i: &egui::InputState| i.screen_rect),
         };
         let head_hight = 34.0;
-        match self.input.try_recv() {
-            Ok((name, value)) => {
-                self.points.entry(name.clone())
-                    .or_insert(vec![[value.x, value.y]])
-                    .push([value.x, value.y]);
-                self.events.push(format!("{}: {:.3} ", name, value.y));
-                let color = self.different_color(self.plot_style.len());
-                self.plot_style.entry(name)
-                    .or_insert(Rc::new(RefCell::new(PlotStyle { show: true, square: true, width: 1.0, color, line: PlotLineStyle::Dots, scale: Scale::default() })));
-            }
-            Err(err) => {
-                self.status.borrow_mut().add(UiStatus::Err, &format!("{}.update | self.input.recv error: {:?}", self.id, err));
-            }
-        };
+        while let Ok((name, value)) = self.input.try_recv() {
+            self.points.entry(name.clone())
+                .or_insert(vec![[value.x, value.y]])
+                .push([value.x, value.y]);
+            self.events.push(format!("{}: {:.3} ", name, value.y));
+            let color = self.different_color(self.plot_style.len());
+            self.plot_style.entry(name)
+                .or_insert(Rc::new(RefCell::new(PlotStyle { show: true, square: true, width: 1.0, color, line: PlotLineStyle::Dots, scale: Scale::default() })));
+        }
+        // match self.input.try_recv() {
+        //     Ok((name, value)) => {
+        //         self.points.entry(name.clone())
+        //             .or_insert(vec![[value.x, value.y]])
+        //             .push([value.x, value.y]);
+        //         self.events.push(format!("{}: {:.3} ", name, value.y));
+        //         let color = self.different_color(self.plot_style.len());
+        //         self.plot_style.entry(name)
+        //             .or_insert(Rc::new(RefCell::new(PlotStyle { show: true, square: true, width: 1.0, color, line: PlotLineStyle::Dots, scale: Scale::default() })));
+        //     }
+        //     Err(err) => {
+        //         self.status.borrow_mut().add(UiStatus::Err, &format!("{}.update | self.input.recv error: {:?}", self.id, err));
+        //     }
+        // };
         egui::Window::new("Settings")
             .anchor(Align2::RIGHT_TOP, [0.0, 0.0])
             .default_size(vec2(0.4 * window_size.width(), 0.5 * (window_size.height() - head_hight)))
@@ -345,6 +350,7 @@ impl Default for Scale {
     }
 }
 impl Scale {
+    #[allow(unused)]
     pub fn scale_x(&self, x: f64) -> f64 {
         x * self.x
     }

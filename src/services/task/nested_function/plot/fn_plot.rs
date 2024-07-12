@@ -2,7 +2,7 @@ use chrono::Utc;
 use eframe::EventLoopBuilderHook;
 use egui::ViewportBuilder;
 use indexmap::IndexMap;
-use log::{debug, error, trace};
+use log::{error, trace};
 use winit::platform::x11::EventLoopBuilderExtX11;
 use std::{mem::MaybeUninit, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Once}, thread};
 use crate::{
