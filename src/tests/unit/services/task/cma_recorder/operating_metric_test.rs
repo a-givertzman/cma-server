@@ -101,11 +101,10 @@ mod cma_recorder {
         services.wlock(self_id).insert(api_client.clone());
         let test_data = vec![
         //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth
-            ("00.-5",    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            // ("00.-4",    format!("/{}/Winch2.Load.Nom", self_id),   Value::Real(  50.00),     0,       00.0000,                0.0f32),
-            // ("00.-3",    format!("/{}/Winch1.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            // ("00.-2",    format!("/{}/Winch2.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            // ("00.-1",    format!("/{}/Winch3.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.-4",    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.-3",    format!("/{}/Winch1.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.-2",    format!("/{}/Winch2.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.-1",    format!("/{}/Winch3.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
             ("00.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.0),
             ("01.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.0),
             ("02.0",    format!("/{}/Load", self_id),       Value::Real(  3.30),       0,       00.0000,                0.4125),
@@ -245,7 +244,7 @@ mod cma_recorder {
             // ("127.0",    format!("/{}/Load", self_id),       Value::Real(  0.30),       0,       6.98828058431894,       6.15224551127907),
             // ("128.0",    format!("/{}/Exit", self_id),       Value::String("exit".to_owned()),       0,       6.98828058431894,       2.78124897825802),
 
-            // ("64.0",    format!("/{}/Exit", self_id),       Value::String("exit".to_owned()),       0,       6.98828058431894,       2.78124897825802),
+            ("64.0",    format!("/{}/Exit", self_id),       Value::String("exit".to_owned()),       0,       6.98828058431894,       2.78124897825802),
         ];
         let total_count = test_data.len();
         let (len, sum) = test_data.iter().fold((0, 0.0), |(mut len, mut sum), (i, _name, value, _op_cycle, _thrd, _smooth)| {
@@ -299,19 +298,19 @@ mod cma_recorder {
             task_handles.push(handle);
         }
         info!("task runing - ok");
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(600));
         let producer_handle = producer.lock().unwrap().run().unwrap();
         info!("producer runing - ok");
-        thread::sleep(Duration::from_millis(1500));
-        let exit_producer = Arc::new(Mutex::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/TaskTestReceiver.in-queue", self_id),
-            Duration::ZERO,
-            services.clone(),
-            &[(format!("/{}/Exit", self_id),       Value::String("exit".to_owned()))],
-        )));
         thread::sleep(Duration::from_millis(300));
-        let exit_producer_handle = exit_producer.lock().unwrap().run().unwrap();
+        // let exit_producer = Arc::new(Mutex::new(TaskTestProducer::new(
+        //     self_id,
+        //     &format!("/{}/TaskTestReceiver.in-queue", self_id),
+        //     Duration::ZERO,
+        //     services.clone(),
+        //     &[(format!("/{}/Exit", self_id),       Value::String("exit".to_owned()))],
+        // )));
+        // thread::sleep(Duration::from_millis(300));
+        // let exit_producer_handle = exit_producer.lock().unwrap().run().unwrap();
 
         let time = Instant::now();
         receiver_handle.wait().unwrap();
@@ -327,7 +326,7 @@ mod cma_recorder {
         api_client.lock().unwrap().exit();
         api_client_handle.wait().unwrap();
         producer_handle.wait().unwrap();
-        exit_producer_handle.wait().unwrap();
+        // exit_producer_handle.wait().unwrap();
         multi_queue_handle.wait().unwrap();
         services_handle.wait().unwrap();
         let sent = producer.lock().unwrap().sent().lock().unwrap().len();
