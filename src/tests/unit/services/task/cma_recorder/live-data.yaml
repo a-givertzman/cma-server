@@ -145,6 +145,21 @@ service Task RecorderTask:
         conf point craneLoadFiltered:
             type: Real
         input: craneLoadFiltered
+    #
+    fn Export:
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        input: point string /AppTest/Exit status ok
+
+    #
+    # ========= PLOTTING =========
+    fn Plot Plot1:
+        # craneLoadNom: craneLoadNom
+        craneLoad: point real '/AppTest/Load'
+        # craneLoadRelative: craneLoadRelative
+        opCycleIsActive: opCycleIsActive
+        opCycleIsDone: opCycleIsDone
+        craneLoadFiltered: craneLoadFiltered
+
 
     # #
     # # Returns true only when craneLoadFiltered value changed

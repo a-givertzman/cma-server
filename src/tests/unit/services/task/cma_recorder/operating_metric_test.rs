@@ -68,13 +68,6 @@ mod cma_recorder {
             }
             Err(err) => panic!("{}.read | File {} reading error: {:?}", self_id, path, err),
         }
-
-        // let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/cma-recorder-live-data.yaml");
-        // trace!("config: {:?}", config);
-        // debug!("Task config points: {:#?}", config.points());
-        // let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
-        // debug!("Task points: {:#?}", task.lock().unwrap().points());
-        // services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -317,7 +310,6 @@ mod cma_recorder {
         api_client.lock().unwrap().exit();
         api_client_handle.wait().unwrap();
         producer_handle.wait().unwrap();
-        // exit_producer_handle.wait().unwrap();
         multi_queue_handle.wait().unwrap();
         services_handle.wait().unwrap();
         let sent = producer.lock().unwrap().sent().lock().unwrap().len();

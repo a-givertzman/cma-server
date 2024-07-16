@@ -67,19 +67,12 @@ mod cma_recorder {
             }
             Err(err) => panic!("{}.read | File {} reading error: {:?}", self_id, path, err),
         }
-
-        // let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/cma-recorder-live-data.yaml");
-        // trace!("config: {:?}", config);
-        // debug!("Task config points: {:#?}", config.points());
-        // let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
-        // debug!("Task points: {:#?}", task.lock().unwrap().points());
-        // services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -141,7 +134,7 @@ mod cma_recorder {
             ("26.0",    format!("/{}/Load", self_id),       Value::Real(120.00),       1,       37.5331129585166,       37.5331129585166),
             ("27.0",    format!("/{}/Load", self_id),       Value::Real(133.00),       1,       49.466473838702,       49.466473838702),
             ("28.0",    format!("/{}/Load", self_id),       Value::Real(121.00),       1,       58.4081646088643,       58.4081646088643),
-            // ("29.0",    format!("/{}/Load", self_id),       Value::Real(330.00),       1,       67.3571440327563,       67.3571440327563),
+            ("28.1",    format!("/{}/Load", self_id),       Value::Real(141.00),       1,       58.4081646088643,       58.4081646088643),
             ("29.0",    format!("/{}/Load", self_id),       Value::Real(130.00),       1,       67.3571440327563,       67.3571440327563),
             ("30.0",    format!("/{}/Load", self_id),       Value::Real(127.00),       1,       67.3571440327563,       74.8125010286617),
             ("31.0",    format!("/{}/Load", self_id),       Value::Real(123.00),       1,       80.835938400079,       80.835938400079),
@@ -299,11 +292,10 @@ mod cma_recorder {
             task_handles.push(handle);
         }
         info!("task runing - ok");
-        thread::sleep(Duration::from_millis(300));
+        thread::sleep(Duration::from_millis(600));
         let producer_handle = producer.lock().unwrap().run().unwrap();
         info!("producer runing - ok");
         thread::sleep(Duration::from_millis(100));
-
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         producer.lock().unwrap().exit();
@@ -377,6 +369,9 @@ mod cma_recorder {
             assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
         };
         test_duration.exit();
+        loop {
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 }
 
