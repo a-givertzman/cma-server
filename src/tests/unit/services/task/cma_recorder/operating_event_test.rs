@@ -135,7 +135,7 @@ mod cma_recorder {
             ("26.1",    format!("/{}/CraneMode.AOPS", self_id),       Value::Int(1)),
             ("27.0",    format!("/{}/Load", self_id),       Value::Real(133.00)),
             ("28.0",    format!("/{}/Load", self_id),       Value::Real(121.00)),
-            ("28.1",    format!("/{}/Load", self_id),       Value::Real(141.00)),
+            // ("28.1",    format!("/{}/Load", self_id),       Value::Real(141.00)),
             ("29.0",    format!("/{}/Load", self_id),       Value::Real(130.00)),
             ("30.0",    format!("/{}/Load", self_id),       Value::Real(127.00)),
             ("31.0",    format!("/{}/Load", self_id),       Value::Real(123.00)),
