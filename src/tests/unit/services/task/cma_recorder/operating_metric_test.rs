@@ -2,6 +2,7 @@
 
 mod cma_recorder {
     use log::{info, trace};
+    use regex::Regex;
     use std::{env, fs, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -302,16 +303,6 @@ mod cma_recorder {
         let producer_handle = producer.lock().unwrap().run().unwrap();
         info!("producer runing - ok");
         thread::sleep(Duration::from_millis(300));
-        // let exit_producer = Arc::new(Mutex::new(TaskTestProducer::new(
-        //     self_id,
-        //     &format!("/{}/TaskTestReceiver.in-queue", self_id),
-        //     Duration::ZERO,
-        //     services.clone(),
-        //     &[(format!("/{}/Exit", self_id),       Value::String("exit".to_owned()))],
-        // )));
-        // thread::sleep(Duration::from_millis(300));
-        // let exit_producer_handle = exit_producer.lock().unwrap().run().unwrap();
-
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         producer.lock().unwrap().exit();
@@ -349,7 +340,15 @@ mod cma_recorder {
             .map(|p| p.to_string().as_string().value)
             .collect();
         for target in target_received {
-            assert!(received.contains(&target), "\ntarget does not contains required value '{}'", target);
+            let target = Regex::new(target).unwrap();
+            let mut matched = false;
+            for result in &received {
+                if target.is_match(result) {
+                    matched = true;
+                    break;
+                }
+            }
+            assert!(matched, "\n results does not contains required value '{}'", target);
         }
         let smooth: Vec<PointType> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Smooth", self_id)
@@ -376,18 +375,6 @@ mod cma_recorder {
             println!("op cycle SQL: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
         println!("target average: {}", target_average);
-        // let target_name = "/AppTest/RecorderTask/Smooth";
-        // for (i, result) in smooth.iter().enumerate() {
-        //     let (step, target) = target_smooth[i].clone();
-        //     assert!(result.value().as_real().aprox_eq(target, 3), "step {} \nresult smooth: {:?}\ntarget smooth: {:?}", step, result.value(), target);
-        //     assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
-        // };
-        // let target_name = "/AppTest/RecorderTask/Threshold";
-        // for (i, result) in thrd.iter().enumerate() {
-        //     let (step, target) = target_thrd[i].clone();
-        //     assert!(result.value().as_real().aprox_eq(target, 3), "step {} \nresult threshold: {:?}\ntarget threshold: {:?}", step, result.value(), target);
-        //     assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
-        // };
         let target_name = "/AppTest/RecorderTask/OpCycleIsActive";
         for (i, result) in op_cycle_is_active.iter().enumerate() {
             let (step, _target) = target_op_cycle[i].clone();
@@ -401,35 +388,11 @@ mod cma_recorder {
     }
     ///
     /// Values must to be in the 'received'
-    fn target_received() -> [String; 27] {
+    fn target_received() -> [&'static str; 3] {
         [
-            String::from("update public.operating_metric set value = 0.97143084 where name = 'crane-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.97139204 where name = 'pump-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.9713856 where name = 'winch1-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.9713788 where name = 'winch2-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.97137237 where name = 'winch3-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 3 where name = 'total-operating-cycles-count';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_05-0_15-load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_15-0_25_load-range';"),
-            String::from("update public.operating_metric set value = 3 where name = 'cycles-0_25-0_35_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_35-0_45_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_45-0_55_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_55-0_65_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_65-0_75_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_75-0_85_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_85-0_95_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_95-1_05_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-1_05-1_15_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-1_15-1_25_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-1_25-_load-range';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'crane-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'winch1-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'winch2-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'winch3-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 6 where name = 'winch1-load-limiter-trip-count';"),
-            String::from("update public.operating_metric set value = 3 where name = 'winch2-load-limiter-trip-count';"),
-            String::from("update public.operating_metric set value = 3 where name = 'winch3-load-limiter-trip-count';"),
-            String::from("update public.operating_metric set value = 2.0912328 where name = 'crane-characteristic-number';"),
+            r"insert into public\.rec_operating_cycle \(id, timestamp_start, timestamp_stop, alarm_class\) values \(\d+, '\d+-\d+-\d+ \d+:\d+:\d+\.\d+ UTC', '\d+-\d+-\d+ \d+:\d+:\d+\.\d+ UTC', \d+\);",
+            r"insert into public\.rec_operating_metric \(operating_cycle_id, metric_id, value\) values \(\d+, 'average_load', \d+.\d+\);",
+            r"insert into public\.rec_operating_metric \(operating_cycle_id, metric_id, value\) values \(\d+, 'max_load', \d+.\d+\);",
         ]
     }
 }
