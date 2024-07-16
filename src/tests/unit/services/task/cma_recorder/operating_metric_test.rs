@@ -342,15 +342,15 @@ mod cma_recorder {
         };
         // assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         // assert!(result >= total_count, "\nresult: {:?}\ntarget: {:?}", result, total_count);
-        // let target_received = target_received();
-        // let received: Vec<String> = receiver
-        //     .lock().unwrap().received()
-        //     .lock().unwrap().clone().iter()
-        //     .map(|p| p.to_string().as_string().value)
-        //     .collect();
-        // for target in target_received {
-        //     assert!(received.contains(&target), "\ntarget does not contains required value '{}'", target);
-        // }
+        let target_received = target_received();
+        let received: Vec<String> = receiver
+            .lock().unwrap().received()
+            .lock().unwrap().clone().iter()
+            .map(|p| p.to_string().as_string().value)
+            .collect();
+        for target in target_received {
+            assert!(received.contains(&target), "\ntarget does not contains required value '{}'", target);
+        }
         let smooth: Vec<PointType> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Smooth", self_id)
         }).collect();

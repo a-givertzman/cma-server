@@ -245,8 +245,8 @@ service Task RecorderTaskOperatingMetric:
     #   table:      rec_operating_metric
     #
     fn RecOpCycleMetric:
-        send-to: /AppTest/ApiClient.in-queue
-        # send-to: /AppTest/TaskTestReceiver.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
         op-cycle: opCycleIsActive
         # conf point OpCycleSql:
         #     type: 'String'
