@@ -19,10 +19,20 @@ CREATE TABLE public.rec_operating_cycle (
 	CONSTRAINT operating_cycle_pkey PRIMARY KEY (id)
 );
 
-CREATE TABLE public."rec_operating_event" (
-	uid bigserial PRIMARY KEY,
+-- drop table public.rec_event_name;
+CREATE TABLE public.rec_event_name (
+	id serial PRIMARY KEY,
+	"name" varchar(255) NOT NULL,
+	description varchar(255) DEFAULT ''::character varying NOT NULL,
+	CONSTRAINT rec_event_name_name UNIQUE (name)
+);
+-- drop index idx_rec_operating_event_timestamp;
+-- drop table public.rec_operating_event;
+CREATE TABLE public.rec_operating_event (
+	id bigserial PRIMARY KEY,
+	operating_cycle_id int8 NOT NULL,
 	"timestamp" timestamp NOT NULL,
-	pid int2 NOT NULL,
+	name_id int4 NOT NULL,
 	value numeric(16, 8) NOT NULL,
 	status int2 NOT NULL
 );
@@ -44,3 +54,16 @@ CREATE TABLE public.rec_operating_metric_dict (
 	description varchar(255) NOT NULL,
 	CONSTRAINT operating_cycle_metric_pkey PRIMARY KEY (id)
 );
+
+-- drop view public.operating_metric_view
+CREATE OR REPLACE VIEW public.operating_metric_view
+AS SELECT ocmv.operating_cycle_id,
+--    ocmv.pid AS point_id,
+--    tag.name AS point_name,
+    ocmv.metric_id,
+    ocm.name AS metric_name,
+    ocm.description AS metric_description,
+    ocmv.value
+   FROM rec_operating_metric ocmv
+--     LEFT JOIN tags tag ON ocmv.pid = tag.id
+     LEFT JOIN rec_operating_metric_dict ocm ON ocmv.metric_id = ocm.id;
