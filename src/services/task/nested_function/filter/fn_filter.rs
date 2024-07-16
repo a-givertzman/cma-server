@@ -71,19 +71,21 @@ impl FnOut for FnFilter {
             FnResult::None => return FnResult::None,
             FnResult::Err(err) => return FnResult::Err(err),
         };
-        let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, input);
-        match input {
-            FnResult::Ok(input) => if pass {
-                trace!("{}.out | Passed: {:?}", self.id, input);
-                self.state = Some(input.clone());
-                FnResult::Ok(input)
-            } else {
-                FnResult::None
+        if pass {
+            let input = self.input.borrow_mut().out();
+            trace!("{}.out | input: {:?}", self.id, input);
+            match input {
+                FnResult::Ok(input) => {
+                    trace!("{}.out | Passed: {:?}", self.id, input);
+                    self.state = Some(input.clone());
+                    FnResult::Ok(input)
+                }
+                FnResult::None => FnResult::None,
+                FnResult::Err(err) => FnResult::Err(err),
             }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
-        }
+        } else {
+            FnResult::None
+        }        
     }
     //
     fn reset(&mut self) {

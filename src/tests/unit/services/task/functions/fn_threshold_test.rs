@@ -61,6 +61,7 @@ mod fn_threshold {
         let input = init_each(&self_id, Value::Int(0));
         let mut fn_threshold = FnThreshold::new(
             self_id,
+            None,
             threshold.clone(),
             None,
             input.clone(),
@@ -106,6 +107,7 @@ mod fn_threshold {
         let input = init_each(&self_id, Value::Real(0.0));
         let mut fn_threshold = FnThreshold::new(
             self_id,
+            None,
             threshold.clone(),
             None,
             input.clone(),
@@ -151,6 +153,7 @@ mod fn_threshold {
         let input = init_each(&self_id, Value::Double(0.0));
         let mut fn_threshold = FnThreshold::new(
             self_id,
+            None,
             threshold.clone(),
             None,
             input.clone(),

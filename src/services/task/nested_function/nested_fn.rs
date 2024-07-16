@@ -488,6 +488,12 @@ impl NestedFn {
                     }
                     //
                     Functions::Threshold => {
+                        let name = "enable";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let enable = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            None => None,
+                        };
                         let name = "threshold";
                         let input_conf = conf.input_conf(name).unwrap();
                         let threshold = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
@@ -501,7 +507,7 @@ impl NestedFn {
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
-                            FnThreshold::new(parent, threshold, factor, input)
+                            FnThreshold::new(parent, enable, threshold, factor, input)
                         )))
                     }
                     //

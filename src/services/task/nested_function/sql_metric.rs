@@ -67,7 +67,7 @@ impl SqlMetric {
             debug!("{}.new | input name: {:?}", self_id, name);
             let input_conf = conf.input_conf(name).unwrap();
             inputs.insert(
-                name.to_string(), 
+                name.to_owned(), 
                 NestedFn::new(&self_name, tx_id, input_conf, task_nodes, services.clone()),
             );
         }
