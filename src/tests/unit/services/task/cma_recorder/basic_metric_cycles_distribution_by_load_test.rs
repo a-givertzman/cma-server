@@ -46,7 +46,7 @@ mod cma_recorder {
         let services = Arc::new(RwLock::new(Services::new(self_id)));
         let mut tasks = vec![];
         let mut task_handles = vec![];
-        let path = "./src/tests/unit/services/task/cma_recorder/cma-recorder-operating-metric-cycles-distribution-by-load.yaml";
+        let path = "./src/tests/unit/services/task/cma_recorder/basic-metric-cycles-distribution-by-load.yaml";
         match fs::read_to_string(path) {
             Ok(yaml_string) => {
                 match serde_yaml::from_str(&yaml_string) {
