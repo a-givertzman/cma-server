@@ -91,19 +91,6 @@ service Task RecorderTaskOperatingMetric:
         input fn BitOr:
             input1: opCycleIsActive_
             input2: opCycleIsDone
-    let pumpIsActive:
-        input: opCycleIsActive
-    let winch1IsActive:
-        input: opCycleIsActive
-    let winch2IsActive:
-        input: opCycleIsActive
-    let winch3IsActive:
-        input: opCycleIsActive
-    #
-    # Alarm class of the operating cycle
-    # Must be >0 if one of metric is alarmed
-    let alarmClass:
-        input: const int 0
     #
     # Count the operating cycle ID (retained localy)
     let opCycleId:
@@ -120,8 +107,6 @@ service Task RecorderTaskOperatingMetric:
         input fn Add:
             input1: opCycleId
             input2: const int 0
-
-
     #
     # Crane Average load in operating cycle, ??? unit ???
     let craneCycleAverageLoad:
@@ -180,6 +165,11 @@ service Task RecorderTaskOperatingMetric:
         input fn Div:
             input1: winch3CycleAverageLoad
             input2: winch3LoadNom
+    #
+    # Alarm class of the operating cycle
+    # Must be >0 if one of metric is alarmed
+    let alarmClass:
+        input: const int 0
 
     #
     # ========= DEBUGGING =========

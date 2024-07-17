@@ -2707,69 +2707,41 @@ service Task RecorderTask:
         # 3.8.3 	real	winch3-load-spectrum-factor	коэффициент распределения нагрузок лебедка 3
 
 
-    ###############   Operating Cycle Metrics   ###############
+    ###############   Operating Cycle + Metrics   ###############
     #
-    #   table:      operating_cycle
-    #   table:      operating_cycle_metric_value
+    #   table:      rec_operating_cycle
+    #   table:      rec_operating_metric
     #
     fn RecOpCycleMetric:
-        # send-to: /App/ApiClient.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
         send-to: /AppTest/TaskTestReceiver.in-queue
         op-cycle: opCycleIsActive
         # conf point OpCycleSql:
         #     type: 'String'
-
         #
         # Operating cycle
         input1 fn SqlMetric:
-            table: public.operating_cycle
+            table: public.rec_operating_cycle
             sql: insert into {table} (id, timestamp_start, timestamp_stop, alarm_class) values ({opCycleId.value}, '{start.timestamp}', '{stop.timestamp}', {alarmClass.value});
             opCycleId: opCycleId
-            start fn Filter:
-                pass fn RisingEdge:
-                    input: opCycleIsActive
-                input: point real '/AppTest/Load'
-            stop: point real '/AppTest/Load'
+            start fn KeepValid:
+                input fn Filter:
+                    pass fn RisingEdge:
+                        input: opCycleIsActive
+                    input: point real '/AppTest/Load' status ok
+            stop: point real '/AppTest/Load' status ok
             alarmClass: alarmClass
-
         #
-        # Operating cycle metric Average Load
+        # Operating cycle metric 'Average Load'
         input2 fn SqlMetric:
-            table: public.operating_cycle_metric_value
-            sql: insert into {table} (operating_cycle_id, pid, metric_id, value) values ({opCycleId.value}, 0, 'average_load', {input.value});
+            table: public.rec_operating_metric
+            sql: insert into {table} (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'average_load', {input.value});
             opCycleId: opCycleId
             input: craneCycleAverageLoad
         #
-        # Operating cycle metric Max Load
+        # Operating cycle metric 'Max Load'
         input3 fn SqlMetric:
-            table: public.operating_cycle_metric_value
-            sql: insert into {table} (operating_cycle_id, pid, metric_id, value) values ({opCycleId.value}, 0, 'max_load', {input.value});
+            table: public.rec_operating_metric
+            sql: insert into {table} (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'max_load', {input.value});
             opCycleId: opCycleId
             input: craneCycleMaxLoad
-
-
-
-    ###############   Operating Cycle Live Data   ###############
-    #
-    #   table:      operating_cycle_value
-    #
-    # fn Debug:
-    #     input point OpCycleLoad:
-    #         type: String
-    #         send-to: /AppTest/TaskTestReceiver.in-queue
-    #         input fn SqlMetric:
-    #             table: public.operating_cycle_value
-    #             sql: insert into {table} () values ({pid.value}, {input.value}, {input.timestamp});
-    #             pid fn PointId:
-    #                 input point real '/AppTest/Load'
-    #             input fn PiecewiseLineApprox:
-    #                 input: point real '/AppTest/Load'
-    #                 piecewise:
-    #                     0.0: 0.3
-    #                     0.7: 0.1
-    #                     0.85: 0.05
-    #                     0.95: 0.01
-    #                     1.0: 0.005
-    #                     1.1: 0.001
-                    
-
