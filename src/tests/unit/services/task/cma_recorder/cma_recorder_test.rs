@@ -29,9 +29,9 @@ mod cma_recorder {
     ///  - ...
     fn init_each() -> () {}
     ///
-    /// Testing the Recorder | Basic metric - 'distribution by load' metric only (count & load per cycle)
+    /// Testing the complette configuration of the Recorder
     #[test]
-    fn operating_metric_cycles_distribution_by_load_test() {
+    fn test() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();

@@ -30,7 +30,12 @@ mod cma_recorder {
     ///  - ...
     fn init_each() -> () {}
     ///
-    /// Testing the Recorder's SQL generated after detected operating cycle finished
+    /// Testing the Recorder | Operating metric
+    ///  - SQL of the operating cycle
+    ///  - SQL of the operating cycle metrics
+    ///     - avaerage load
+    ///     - max load  
+    ///     ...to be extended
     #[test]
     fn operating_metric() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);

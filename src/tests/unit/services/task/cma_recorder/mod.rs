@@ -8,3 +8,4 @@ mod basic_metric_test;
 mod basic_metric_cycles_distribution_by_load_test;
 mod operating_metric_test;
 mod operating_event_test;
+mod cma_recorder_test;

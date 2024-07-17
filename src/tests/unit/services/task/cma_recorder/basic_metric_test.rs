@@ -30,7 +30,7 @@ mod cma_recorder {
     ///  - ...
     fn init_each() -> () {}
     ///
-    /// Testing the Recorder's SQL generated after detected operating cycle finished
+    /// Testing the Recorder | Basic metric - all basic metrics
     #[test]
     fn operating_cycle_live_data() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -68,13 +68,6 @@ mod cma_recorder {
             }
             Err(err) => panic!("{}.read | File {} reading error: {:?}", self_id, path, err),
         }
-
-        // let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/cma-recorder-live-data.yaml");
-        // trace!("config: {:?}", config);
-        // debug!("Task config points: {:#?}", config.points());
-        // let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
-        // debug!("Task points: {:#?}", task.lock().unwrap().points());
-        // services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -303,16 +296,6 @@ mod cma_recorder {
         let producer_handle = producer.lock().unwrap().run().unwrap();
         info!("producer runing - ok");
         thread::sleep(Duration::from_millis(300));
-        // let exit_producer = Arc::new(Mutex::new(TaskTestProducer::new(
-        //     self_id,
-        //     &format!("/{}/TaskTestReceiver.in-queue", self_id),
-        //     Duration::ZERO,
-        //     services.clone(),
-        //     &[(format!("/{}/Exit", self_id),       Value::String("exit".to_owned()))],
-        // )));
-        // thread::sleep(Duration::from_millis(300));
-        // let exit_producer_handle = exit_producer.lock().unwrap().run().unwrap();
-
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         producer.lock().unwrap().exit();
@@ -327,7 +310,6 @@ mod cma_recorder {
         api_client.lock().unwrap().exit();
         api_client_handle.wait().unwrap();
         producer_handle.wait().unwrap();
-        // exit_producer_handle.wait().unwrap();
         multi_queue_handle.wait().unwrap();
         services_handle.wait().unwrap();
         let sent = producer.lock().unwrap().sent().lock().unwrap().len();

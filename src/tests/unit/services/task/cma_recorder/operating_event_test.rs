@@ -29,9 +29,14 @@ mod cma_recorder {
     ///  - ...
     fn init_each() -> () {}
     ///
-    /// Testing the Recorder's SQL generated after detected operating cycle finished
+    /// Testing the Recorder | Operating event
+    ///  - SQL of the Crane.Load live monitoring events per cycle
+    ///  - SQL of the Winch1.Load live monitoring events per cycle
+    ///  - SQL of the Winch2.Load live monitoring events per cycle
+    ///  - SQL of the Winch3.Load live monitoring events per cycle  
+    ///  ...to be extended
     #[test]
-    fn live_data() {
+    fn operating_event() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
