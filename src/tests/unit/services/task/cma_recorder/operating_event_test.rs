@@ -482,9 +482,9 @@ mod cma_recorder {
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         // assert!(result >= total_count, "\nresult: {:?}\ntarget: {:?}", result, total_count);
         test_duration.exit();
-        // loop {
-        //     thread::sleep(Duration::from_millis(100));
-        // }
+        loop {
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 }
 
