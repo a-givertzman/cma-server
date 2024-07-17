@@ -185,9 +185,9 @@ mod cma_recorder {
         // };
         // assert!(index == targets.len(), "result: {:?}\ntarget: {:?}", index, targets.len());
         test_duration.exit();
-        // loop {
-        //     thread::sleep(Duration::from_millis(100));
-        // }
+        loop {
+            thread::sleep(Duration::from_millis(100));
+        }
     }
     ///
     /// Returns test data

@@ -1992,13 +1992,6 @@ service Task RecorderTask:
                 input2: const real 2.0
 
 
-    # ========= DEBUGGING =========
-    fn Export ExportExit:
-        send-to: /AppTest/TaskTestReceiver.in-queue
-        conf point CraneMopsEvent:
-            type: String
-        input: point string /AppTest/Exit
-
     ###############   Basic Metrics   ###############
     #
     #   table:      basic_metric
@@ -2944,3 +2937,31 @@ service Task RecorderTask:
             sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch3LoadEvent', {input.value}, 0);
             opCycleId: opCycleId
             input: winch3LoadFiltered
+
+
+    #
+    # ========= DEBUGGING =========
+    fn Export ExportExit:
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point CraneMopsEvent:
+            type: String
+        input: point string /AppTest/Exit
+
+
+    #
+    # ========= PLOTTING =========
+    fn Plot Plot1:
+        # craneLoadNom: craneLoadNom
+        craneLoad: point real '/AppTest/Load'
+        # craneLoadRelative: craneLoadRelative
+        craneLoadFiltered: craneLoadFiltered
+        winch1LoadRelative: winch1LoadRelative
+        winch1LoadFiltered: winch1LoadFiltered
+        winch2LoadRelative: winch2LoadRelative
+        winch2LoadFiltered: winch2LoadFiltered
+        winch3LoadRelative: winch3LoadRelative
+        winch3LoadFiltered: winch3LoadFiltered
+        craneMopsTriggered: craneMopsTriggered
+        craneAopsTriggered: craneAopsTriggered
+        opCycleIsActive: opCycleIsActive
+        opCycleIsDone: opCycleIsDone
