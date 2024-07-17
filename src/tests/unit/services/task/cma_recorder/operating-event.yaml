@@ -257,6 +257,16 @@ service Task RecorderTask:
     #
     # Export operating events into the database
     #
+    fn Export ExportCraneMopsEvent:
+        send-to: /AppTest/ApiClient.in-queue
+        conf point CraneMopsEvent:
+            type: String
+        input fn SqlMetric: 
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneMOPSEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: craneMopsTriggered
+
     fn Export ExportCraneLoadEvent:
         send-to: /AppTest/ApiClient.in-queue
         conf point CraneLoadEvent:

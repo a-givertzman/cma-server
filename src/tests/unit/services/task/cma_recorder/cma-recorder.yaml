@@ -26,22 +26,22 @@ service Task RecorderTask:
     # Crane load in relative units
     let craneLoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Load' status ok default 0
+            input1: point real '/AppTest/Load' status ok default 0.0
             input2: craneLoadNom
     # Winch1 load in relative units
     let winch1LoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Winch1.Load' status ok default 0
+            input1: point real '/AppTest/Winch1.Load' status ok default 0.0
             input2: winch1LoadNom
     # Winch2 load in relative units
     let winch2LoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Winch2.Load' status ok default 0
+            input1: point real '/AppTest/Winch2.Load' status ok default 0.0
             input2: winch2LoadNom
     # Winch3 load in relative units
     let winch3LoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Winch3.Load' status ok default 0
+            input1: point real '/AppTest/Winch3.Load' status ok default 0.0
             input2: winch3LoadNom
     #
     # 5 % of the nominal crane load - used for Op Cycle detection
