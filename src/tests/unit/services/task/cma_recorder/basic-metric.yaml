@@ -1,4 +1,4 @@
-service Task RecorderTaskOperatingMetric:
+service Task RecorderTaskBasicMetric:
     cycle: 1 ms
     in queue recv-queue:
         max-length: 10000
