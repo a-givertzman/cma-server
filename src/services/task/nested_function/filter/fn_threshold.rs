@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use log::trace;
+use log::{debug, trace};
 use crate::{
     conf::point_config::point_config_type::PointConfigType, core_::{
         point::{point::Point, point_type::PointType}, 
@@ -131,7 +131,7 @@ impl FnOut for FnThreshold {
                             } else {
                                 if let Some(factor) = factor {
                                     self.delta = self.delta.clone() + (delta * factor);
-                                    trace!("{}.out | Integral delta: {}", self.id, self.delta.value);
+                                    debug!("{}.out | Integral delta: {}", self.id, self.delta.value);
                                     if self.delta >= threshold {
                                         self.value = Some(PointType::Double(input));
                                         self.delta = Point::new_double(0, "", 0.0);

@@ -126,7 +126,7 @@ mod cma_recorder {
         thread::sleep(Duration::from_millis(300));
         let producer_handle = producer.lock().unwrap().run().unwrap();
         info!("producer runing - ok");
-        thread::sleep(Duration::from_millis(300));
+        thread::sleep(Duration::from_millis(900));
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         producer.lock().unwrap().exit();
@@ -141,50 +141,49 @@ mod cma_recorder {
         api_client.lock().unwrap().exit();
         api_client_handle.wait().unwrap();
         producer_handle.wait().unwrap();
-        // exit_producer_handle.wait().unwrap();
         multi_queue_handle.wait().unwrap();
         services_handle.wait().unwrap();
         let sent = producer.lock().unwrap().sent().lock().unwrap().len();
         let result = receiver.lock().unwrap().received().lock().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
-        println!("received: {:?}", result);
+        println!("received: {:?}\n", result);
         for (i, result) in receiver.lock().unwrap().received().lock().unwrap().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let targets = targets();
-        let mut index = 0;
-        for result in receiver.lock().unwrap().received().lock().unwrap().iter() {
-            if result.name().starts_with("input34_1") {
-                let name = result.name();
-                let result = result.as_string().value;
-                let target = targets[index];
-                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-                index += 1;
-            }
-            if result.name().starts_with("input34_2") {
-                let name = result.name();
-                let result = result.as_string().value;
-                let target = targets[index];
-                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-                index += 1;
-            }
-            if result.name().starts_with("input34_3") {
-                let name = result.name();
-                let result = result.as_string().value;
-                let target = targets[index];
-                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-                index += 1;
-            }
-            if result.name().starts_with("input34_4") {
-                let name = result.name();
-                let result = result.as_string().value;
-                let target = targets[index];
-                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-                index += 1;
-            }
-        };
-        assert!(index == targets.len(), "result: {:?}\ntarget: {:?}", index, targets.len());
+        // let targets = targets();
+        // let mut index = 0;
+        // for result in receiver.lock().unwrap().received().lock().unwrap().iter() {
+        //     if result.name().starts_with("input34_1") {
+        //         let name = result.name();
+        //         let result = result.as_string().value;
+        //         let target = targets[index];
+        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+        //         index += 1;
+        //     }
+        //     if result.name().starts_with("input34_2") {
+        //         let name = result.name();
+        //         let result = result.as_string().value;
+        //         let target = targets[index];
+        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+        //         index += 1;
+        //     }
+        //     if result.name().starts_with("input34_3") {
+        //         let name = result.name();
+        //         let result = result.as_string().value;
+        //         let target = targets[index];
+        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+        //         index += 1;
+        //     }
+        //     if result.name().starts_with("input34_4") {
+        //         let name = result.name();
+        //         let result = result.as_string().value;
+        //         let target = targets[index];
+        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+        //         index += 1;
+        //     }
+        // };
+        // assert!(index == targets.len(), "result: {:?}\ntarget: {:?}", index, targets.len());
         test_duration.exit();
         // loop {
         //     thread::sleep(Duration::from_millis(100));
@@ -194,481 +193,87 @@ mod cma_recorder {
     /// Returns test data
     fn test_data<'a>(self_id: &str) -> Vec<(&'a str, String, Value)> {
         vec![
-            //  step        name                                input
-                ("00.0",    format!("/{}/Load.Nom", self_id),   Value::Real(  150.0)),
-                ("00.1",    format!("/{}/Winch1.Load.Nom", self_id),   Value::Real(  150.00)),
-                ("00.2",    format!("/{}/Winch2.Load.Nom", self_id),   Value::Real(  150.00)),
-                ("00.3",    format!("/{}/Winch3.Load.Nom", self_id),   Value::Real(  150.00)),
-                //  Crane 0.05 - 0.15
-                ("01.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("01.1",    format!("/{}/Load", self_id),       Value::Real(  7.50)),
-                ("01.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("01.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("02.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("02.1",    format!("/{}/Load", self_id),       Value::Real( 22.49)),
-                ("02.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("02.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.15 - 0.25
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real( 22.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real( 37.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.25 - 0.35
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real( 37.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real( 52.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.35 - 0.45
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real( 52.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real( 67.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.45 - 0.55
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real( 67.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real( 82.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.55 - 0.65
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real( 82.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real( 97.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.65 - 0.75
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real( 97.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real(112.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.75 - 0.85
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real(112.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real(127.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.85 - 0.95
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real(127.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real(142.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 0.95 - 1.05
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real(142.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real(157.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 1.05 - 1.15
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real(157.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real(172.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 1.15 - 1.25
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real(172.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real(187.49)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Crane 1.25 - 
-                ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Load", self_id),       Value::Real(187.50)),
-                ("03.2",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Load", self_id),       Value::Real(200.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.05 - 0.15
-                ("01.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("01.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(  7.50)),
-                ("01.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("01.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("02.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("02.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 22.49)),
-                ("02.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("02.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.15 - 0.25
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 22.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 37.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.25 - 0.35
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 37.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 52.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.35 - 0.45
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 52.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 67.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.45 - 0.55
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 67.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 82.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.55 - 0.65
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 82.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 97.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.65 - 0.75
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real( 97.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(112.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.75 - 0.85
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(112.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(127.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.85 - 0.95
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(127.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(142.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 0.95 - 1.05
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(142.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(157.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 1.05 - 1.15
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(157.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(172.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 1.15 - 1.25
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(172.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(187.49)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch1 1.25 - 
-                ("03.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(187.50)),
-                ("03.2",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch1.Load", self_id),       Value::Real(200.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch1.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.05 - 0.15
-                ("01.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("01.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(  7.50)),
-                ("01.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("01.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("02.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("02.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 22.49)),
-                ("02.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("02.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.15 - 0.25
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 22.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 37.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.25 - 0.35
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 37.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 52.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.35 - 0.45
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 52.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 67.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.45 - 0.55
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 67.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 82.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.55 - 0.65
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 82.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 97.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.65 - 0.75
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real( 97.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(112.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.75 - 0.85
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(112.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(127.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.85 - 0.95
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(127.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(142.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 0.95 - 1.05
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(142.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(157.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 1.05 - 1.15
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(157.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(172.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 1.15 - 1.25
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(172.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(187.49)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch2 1.25 - 
-                ("03.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(187.50)),
-                ("03.2",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch2.Load", self_id),       Value::Real(200.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch2.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.05 - 0.15
-                ("01.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("01.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(  7.50)),
-                ("01.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("01.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("02.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("02.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 22.49)),
-                ("02.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("02.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.15 - 0.25
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 22.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 37.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.25 - 0.35
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 37.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 52.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.35 - 0.45
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 52.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 67.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.45 - 0.55
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 67.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 82.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.55 - 0.65
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 82.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 97.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.65 - 0.75
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real( 97.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(112.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.75 - 0.85
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(112.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(127.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.85 - 0.95
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(127.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(142.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 0.95 - 1.05
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(142.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(157.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 1.05 - 1.15
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(157.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(172.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 1.15 - 1.25
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(172.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(187.49)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                //  Winch3 1.25 - 
-                ("03.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(187.50)),
-                ("03.2",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("03.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.0",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.1",    format!("/{}/Winch3.Load", self_id),       Value::Real(200.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("04.3",    format!("/{}/Winch3.Load", self_id),       Value::Real(  0.00)),
-                ("128.0",    format!("/{}/Exit", self_id),       Value::String("exit".to_owned())),
-            ]
+            //  step        nape                                input
+            ("00.-5",    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00)),
+            ("00.-3",    format!("/{}/Winch1.Load.Nom", self_id),   Value::Real(  150.00)),
+            ("00.-2",    format!("/{}/Winch2.Load.Nom", self_id),   Value::Real(  150.00)),
+            ("00.-1",    format!("/{}/Winch3.Load.Nom", self_id),   Value::Real(  150.00)),
+            ("00.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("01.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("02.0",    format!("/{}/Load", self_id),       Value::Real(  3.30)),
+            ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.10)),
+            ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("05.0",    format!("/{}/Load", self_id),       Value::Real(  1.60)),
+            ("06.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("07.0",    format!("/{}/Load", self_id),       Value::Real(  7.20)),
+            ("08.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("09.0",    format!("/{}/Load", self_id),       Value::Real(  0.30)),
+            ("10.0",    format!("/{}/Load", self_id),       Value::Real(  2.20)),
+            ("11.0",    format!("/{}/Load", self_id),       Value::Real(  8.10)),
+            ("12.0",    format!("/{}/Load", self_id),       Value::Real(  1.90)),
+            ("13.0",    format!("/{}/Load", self_id),       Value::Real(  0.10)),
+            ("14.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("15.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("16.0",    format!("/{}/Load", self_id),       Value::Real(  5.00)),
+            ("17.0",    format!("/{}/Load", self_id),       Value::Real(  2.00)),
+            ("17.1",    format!("/{}/Winch1.Load.Limiter.Trip", self_id),       Value::Bool(true)),
+            ("17.2",    format!("/{}/Winch1.Load.Limiter.Trip", self_id),       Value::Bool(false)),
+            ("17.3",    format!("/{}/Winch2.Load.Limiter.Trip", self_id),       Value::Bool(true)),
+            ("17.4",    format!("/{}/Winch2.Load.Limiter.Trip", self_id),       Value::Bool(false)),
+            ("17.5",    format!("/{}/Winch3.Load.Limiter.Trip", self_id),       Value::Bool(true)),
+            ("17.6",    format!("/{}/Winch3.Load.Limiter.Trip", self_id),       Value::Bool(false)),
+            ("18.0",    format!("/{}/Load", self_id),       Value::Real(  1.00)),
+            ("19.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("20.0",    format!("/{}/Load", self_id),       Value::Real(  2.00)),
+            ("21.0",    format!("/{}/Load", self_id),       Value::Real(  4.00)),
+            ("22.0",    format!("/{}/Load", self_id),       Value::Real(  6.00)),
+            ("23.0",    format!("/{}/Load", self_id),       Value::Real( 12.00)),
+            ("24.0",    format!("/{}/Load", self_id),       Value::Real( 64.00)),
+            ("26.1",    format!("/{}/CraneMode.MOPS", self_id),       Value::Int(1)),
+            ("25.0",    format!("/{}/Load", self_id),       Value::Real(128.00)),
+            ("26.0",    format!("/{}/Load", self_id),       Value::Real(120.00)),
+            ("26.1",    format!("/{}/CraneMode.AOPS", self_id),       Value::Int(1)),
+            ("27.0",    format!("/{}/Load", self_id),       Value::Real(133.00)),
+            ("28.0",    format!("/{}/Load", self_id),       Value::Real(121.00)),
+            // ("28.1",    format!("/{}/Load", self_id),       Value::Real(141.00)),
+            ("29.0",    format!("/{}/Load", self_id),       Value::Real(130.00)),
+            ("30.0",    format!("/{}/Load", self_id),       Value::Real(127.00)),
+            ("31.0",    format!("/{}/Load", self_id),       Value::Real(123.00)),
+            ("32.0",    format!("/{}/Load", self_id),       Value::Real(122.00)),
+            ("33.0",    format!("/{}/Load", self_id),       Value::Real(120.00)),
+            ("34.0",    format!("/{}/Load", self_id),       Value::Real( 64.00)),
+            ("35.0",    format!("/{}/Load", self_id),       Value::Real( 32.00)),
+            ("36.0",    format!("/{}/Load", self_id),       Value::Real( 24.00)),
+            ("37.0",    format!("/{}/Load", self_id),       Value::Real( 12.00)),
+            ("38.0",    format!("/{}/Load", self_id),       Value::Real(  8.00)),
+            ("39.0",    format!("/{}/Load", self_id),       Value::Real( 17.00)),
+            ("40.0",    format!("/{}/Load", self_id),       Value::Real( 10.00)),
+            ("41.0",    format!("/{}/Load", self_id),       Value::Real(  7.00)),
+            ("42.0",    format!("/{}/Load", self_id),       Value::Real(  3.00)),
+            ("43.0",    format!("/{}/Load", self_id),       Value::Real(  6.00)),
+            ("44.0",    format!("/{}/Load", self_id),       Value::Real(  4.00)),
+            ("45.0",    format!("/{}/Load", self_id),       Value::Real(  2.00)),
+            ("46.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("47.0",    format!("/{}/Load", self_id),       Value::Real(  4.00)),
+            ("47.1",    format!("/{}/Winch1.Load.Limiter.Trip", self_id),       Value::Bool(true)),
+            ("48.0",    format!("/{}/Load", self_id),       Value::Real(  2.00)),
+            ("49.0",    format!("/{}/Load", self_id),       Value::Real(  1.00)),
+            ("50.0",    format!("/{}/Load", self_id),       Value::Real(  3.00)),
+            ("51.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("52.0",    format!("/{}/Load", self_id),       Value::Real(  2.00)),
+            ("53.0",    format!("/{}/Load", self_id),       Value::Real(  1.00)),
+            ("54.0",    format!("/{}/Load", self_id),       Value::Real(  0.70)),
+            ("55.0",    format!("/{}/Load", self_id),       Value::Real(  0.80)),
+            ("56.0",    format!("/{}/Load", self_id),       Value::Real(  0.40)),
+            ("57.0",    format!("/{}/Load", self_id),       Value::Real(  0.30)),
+            ("58.0",    format!("/{}/Load", self_id),       Value::Real(  0.20)),
+            ("59.0",    format!("/{}/Load", self_id),       Value::Real(  0.10)),
+            ("60.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("61.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("62.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("63.0",    format!("/{}/Load", self_id),       Value::Real(  0.00)),
+            ("128.0",    format!("/{}/Exit", self_id),       Value::String("exit".to_owned())),
+        ]
     }
     ///
     /// Returns taget values

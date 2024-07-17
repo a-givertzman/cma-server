@@ -208,26 +208,28 @@ service Task RecorderTask:
                 # Alarm class 1 - Emergency Event
                 input1 fn Mul:
                     input1: const int 1
-                    input2 fn BitOr:
-                        input1: point bool '/AppTest/Winch1.Load.Limiter.Trip'
-                        input2: point bool '/AppTest/Winch2.Load.Limiter.Trip'
-                        input3: point bool '/AppTest/Winch3.Load.Limiter.Trip'
-                        # Overload > 25 %
-                        input1 fn Ge:
-                            input1: craneCycleMaxLoad
-                            input2 fn Mul:
-                                input1: const real 1.25
-                                input2: craneLoadNom
+                    input2 fn ToInt:
+                        input fn BitOr:
+                            input1: point bool '/AppTest/Winch1.Load.Limiter.Trip'
+                            input2: point bool '/AppTest/Winch2.Load.Limiter.Trip'
+                            input3: point bool '/AppTest/Winch3.Load.Limiter.Trip'
+                            # Overload > 25 %
+                            input1 fn Ge:
+                                input1: craneCycleMaxLoad
+                                input2 fn Mul:
+                                    input1: const real 1.25
+                                    input2: craneLoadNom
                 # Alarm class 2 - Warning Event
                 input2 fn Mul:
                     input1: const int 10
-                    input2 fn BitOr:
-                        # Overload in 10..25 %
-                        input1 fn Ge:
-                            input1: craneCycleMaxLoad
-                            input2 fn Mul:
-                                input1: const real 1.10
-                                input2: craneLoadNom
+                    input2 fn ToInt:
+                        input fn BitOr:
+                            # Overload in 10..25 %
+                            input1 fn Ge:
+                                input1: craneCycleMaxLoad
+                                input2 fn Mul:
+                                    input1: const real 1.10
+                                    input2: craneLoadNom
                 # Alarm class 2 - Importent Event
                 # ...to be extended
     #
@@ -1989,6 +1991,14 @@ service Task RecorderTask:
                     input2: winch3CycleAverageLoadRelative
                 input2: const real 2.0
 
+
+    # ========= DEBUGGING =========
+    fn Export ExportExit:
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point CraneMopsEvent:
+            type: String
+        input: point string /AppTest/Exit
+
     ###############   Basic Metrics   ###############
     #
     #   table:      basic_metric
@@ -2865,7 +2875,8 @@ service Task RecorderTask:
     fn Export ExportCraneMopsEvent:
         enable fn RisingEdge:
             input: point int '/AppTest/CraneMode.MOPS' status ok
-        send-to: /AppTest/ApiClient.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
         conf point CraneMopsEvent:
             type: String
         input fn SqlMetric: 
@@ -2880,7 +2891,8 @@ service Task RecorderTask:
     fn Export ExportCraneAopsEvent:
         enable fn RisingEdge:
             input: point int '/AppTest/CraneMode.AOPS' status ok
-        send-to: /AppTest/ApiClient.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
         conf point CraneMopsEvent:
             type: String
         input fn SqlMetric: 
@@ -2890,7 +2902,8 @@ service Task RecorderTask:
             input: point int '/AppTest/CraneMode.AOPS' status ok
     #
     fn Export ExportCraneLoadEvent:
-        send-to: /AppTest/ApiClient.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
         conf point CraneLoadEvent:
             type: String
         input fn SqlMetric: 
@@ -2900,7 +2913,8 @@ service Task RecorderTask:
             input: craneLoadFiltered
     #
     fn Export ExportWinch1LoadEvent:
-        send-to: /AppTest/ApiClient.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
         conf point Winch1LoadEvent:
             type: String
         input fn SqlMetric: 
@@ -2910,7 +2924,8 @@ service Task RecorderTask:
             input: winch1LoadFiltered
     #
     fn Export ExportWinch2LoadEvent:
-        send-to: /AppTest/ApiClient.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
         conf point Winch2LoadEvent:
             type: String
         input fn SqlMetric: 
@@ -2920,7 +2935,8 @@ service Task RecorderTask:
             input: winch2LoadFiltered
     #
     fn Export ExportWinch3LoadEvent:
-        send-to: /AppTest/ApiClient.in-queue
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
         conf point Winch3LoadEvent:
             type: String
         input fn SqlMetric: 

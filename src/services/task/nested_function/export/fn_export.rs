@@ -1,5 +1,5 @@
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
-use log::{debug, error};
+use log::{error, trace};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType},
     core_::{
@@ -132,7 +132,7 @@ impl FnExport {
             };
             match tx_send.send(point.clone()) {
                 Ok(_) => {
-                    debug!("{}.out | Point sent: {:#?}", self.id, point);
+                    trace!("{}.out | Point sent: {:#?}", self.id, point);
                 }
                 Err(err) => {
                     error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
@@ -175,7 +175,7 @@ impl FnOut for FnExport {
             None => true,
         };
         let input = self.input.borrow_mut().out();
-        debug!("{}.out | input: {:?}", self.id, input);
+        trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 if enable {

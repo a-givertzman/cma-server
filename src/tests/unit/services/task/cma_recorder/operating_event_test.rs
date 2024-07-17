@@ -98,7 +98,7 @@ mod cma_recorder {
         let api_client = Arc::new(Mutex::new(ApiClient::new(conf)));
         services.wlock(self_id).insert(api_client.clone());
         let test_data = vec![
-        //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth
+        //  step        nape                                input
             ("00.-5",    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00)),
             ("00.-3",    format!("/{}/Winch1.Load.Nom", self_id),   Value::Real(  150.00)),
             ("00.-2",    format!("/{}/Winch2.Load.Nom", self_id),   Value::Real(  150.00)),
