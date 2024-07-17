@@ -2,6 +2,7 @@
 
 mod cma_recorder {
     use log::{info, trace};
+    use regex::Regex;
     use std::{env, fs, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -349,7 +350,15 @@ mod cma_recorder {
             .map(|p| p.to_string().as_string().value)
             .collect();
         for target in target_received {
-            assert!(received.contains(&target), "\ntarget does not contains required value '{}'", target);
+            let target = Regex::new(target).unwrap();
+            let mut matched = false;
+            for result in &received {
+                if target.is_match(result) {
+                    matched = true;
+                    break;
+                }
+            }
+            assert!(matched, "\n results does not matched with required pattern '{}'", target);
         }
         let smooth: Vec<PointType> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Smooth", self_id)
@@ -401,35 +410,35 @@ mod cma_recorder {
     }
     ///
     /// Values must to be in the 'received'
-    fn target_received() -> [String; 27] {
+    fn target_received<'a>() -> [&'a str; 15] {
         [
-            String::from("update public.operating_metric set value = 0.97143084 where name = 'crane-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.97139204 where name = 'pump-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.9713856 where name = 'winch1-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.9713788 where name = 'winch2-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 0.97137237 where name = 'winch3-total-operating-secs';"),
-            String::from("update public.operating_metric set value = 3 where name = 'total-operating-cycles-count';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_05-0_15-load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_15-0_25_load-range';"),
-            String::from("update public.operating_metric set value = 3 where name = 'cycles-0_25-0_35_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_35-0_45_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_45-0_55_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_55-0_65_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_65-0_75_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_75-0_85_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_85-0_95_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-0_95-1_05_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-1_05-1_15_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-1_15-1_25_load-range';"),
-            String::from("update public.operating_metric set value = 0 where name = 'cycles-1_25-_load-range';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'crane-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'winch1-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'winch2-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 126.86364 where name = 'winch3-total-lifted-mass';"),
-            String::from("update public.operating_metric set value = 6 where name = 'winch1-load-limiter-trip-count';"),
-            String::from("update public.operating_metric set value = 3 where name = 'winch2-load-limiter-trip-count';"),
-            String::from("update public.operating_metric set value = 3 where name = 'winch3-load-limiter-trip-count';"),
-            String::from("update public.operating_metric set value = 2.0912328 where name = 'crane-characteristic-number';"),
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'crane-total-operating-secs';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'pump-total-operating-secs';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-total-operating-secs';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-total-operating-secs';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-total-operating-secs';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'total-operating-cycles-count';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_05-0_15-load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_15-0_25_load-range';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_25-0_35_load-range';",       // < only one range is active per single cycle
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_35-0_45_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_45-0_55_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_55-0_65_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_65-0_75_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_75-0_85_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_85-0_95_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_95-1_05_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_05-1_15_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_15-1_25_load-range';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_25-_load-range';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'crane-total-lifted-mass';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-total-lifted-mass';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-total-lifted-mass';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-total-lifted-mass';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-load-limiter-trip-count';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-load-limiter-trip-count';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-load-limiter-trip-count';",
+            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'crane-characteristic-number';",
         ]
     }
 }

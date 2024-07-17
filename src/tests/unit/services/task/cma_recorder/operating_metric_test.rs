@@ -380,7 +380,7 @@ mod cma_recorder {
     }
     ///
     /// Values must to be in the 'received'
-    fn target_received() -> [&'static str; 6] {
+    fn target_received<'a>() -> [&'a str; 6] {
         [
             r"insert into public\.rec_operating_cycle \(id, timestamp_start, timestamp_stop, alarm_class\) values \(\d+, '\d+-\d+-\d+ \d+:\d+:\d+\.\d+ UTC', '\d+-\d+-\d+ \d+:\d+:\d+\.\d+ UTC', \d+\);",
             r"insert into public\.rec_operating_metric \(operating_cycle_id, metric_id, value\) values \(\d+, 'average_load', \d+.\d+\);",
