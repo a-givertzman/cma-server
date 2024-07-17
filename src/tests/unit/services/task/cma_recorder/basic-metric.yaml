@@ -26,7 +26,7 @@ service Task RecorderTaskBasicMetric:
     # Crane load in relative units
     let craneLoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Load' status ok
+            input1: point real '/AppTest/Load' status ok default 0.0
             input2: craneLoadNom
     #
     # 5 % of the nominal crane load - used for Op Cycle detection
