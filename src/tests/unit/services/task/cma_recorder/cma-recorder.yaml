@@ -2791,13 +2791,13 @@ service Task RecorderTask:
                     0.95: 0.01
                     1.0: 0.005
                     1.1: 0.001
-    #
-    # Winch1 load leve data compressed
     let winch1LoadFiltered_:
         input fn Threshold:
             threshold: winch1LoadThreshold
             factor: const real 0.05
             input: point real '/AppTest/Winch1.Load' status ok
+    #
+    # Winch1 load leve data compressed
     let winch1LoadFiltered:
         input fn Filter:
             pass fn IsChangedValue:
@@ -2817,13 +2817,13 @@ service Task RecorderTask:
                     0.95: 0.01
                     1.0: 0.005
                     1.1: 0.001
-    #
-    # Winch2 load leve data compressed
     let winch2LoadFiltered_:
         input fn Threshold:
             threshold: winch2LoadThreshold
             factor: const real 0.05
             input: point real '/AppTest/Winch2.Load' status ok
+    #
+    # Winch2 load leve data compressed
     let winch2LoadFiltered:
         input fn Filter:
             pass fn IsChangedValue:
@@ -2843,38 +2843,51 @@ service Task RecorderTask:
                     0.95: 0.01
                     1.0: 0.005
                     1.1: 0.001
-    #
-    # Winch3 load leve data compressed
     let winch3LoadFiltered_:
         input fn Threshold:
             threshold: winch3LoadThreshold
             factor: const real 0.05
             input: point real '/AppTest/Winch3.Load' status ok
+    #
+    # Winch3 load leve data compressed
     let winch3LoadFiltered:
         input fn Filter:
             pass fn IsChangedValue:
                 input: winch3LoadFiltered_
             input: winch3LoadFiltered_
     #
-    # Crane MOPS truggered
-    let craneMopsTriggered:
-        input: point int '/AppTest/CraneMode.MOPS' status ok default 0
-        # input fn Filter:
-        #     enable fn Gt:
-        #         input1: point int '/AppTest/CraneMode.MOPS' status ok
-        #         input2: const int 0
-        #     input: const int 1
-    #
-    # Crane AOPS truggered
-    let craneAopsTriggered:
-        input: point int '/AppTest/CraneMode.AOPS' status ok default 0
-        # input fn Filter:
-        #     enable fn Gt:
-        #         input1: point int '/AppTest/CraneMode.AOPS' status ok
-        #         input2: const int 0
-        #     input: const int 1
-    #
     # Export operating events into the database
+    #
+    #
+    # Crane MOPS triggered
+    let craneMopsTriggered:
+        input: point int '/AppTest/CraneMode.MOPS' status ok
+    fn Export ExportCraneMopsEvent:
+        enable fn RisingEdge:
+            input: point int '/AppTest/CraneMode.MOPS' status ok
+        send-to: /AppTest/ApiClient.in-queue
+        conf point CraneMopsEvent:
+            type: String
+        input fn SqlMetric: 
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneMOPSEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: point int '/AppTest/CraneMode.MOPS' status ok
+    #
+    # Crane AOPS triggered
+    let craneAopsTriggered:
+        input: point int '/AppTest/CraneMode.AOPS' status ok
+    fn Export ExportCraneAopsEvent:
+        enable fn RisingEdge:
+            input: point int '/AppTest/CraneMode.AOPS' status ok
+        send-to: /AppTest/ApiClient.in-queue
+        conf point CraneMopsEvent:
+            type: String
+        input fn SqlMetric: 
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneAOPSEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: point int '/AppTest/CraneMode.AOPS' status ok
     #
     fn Export ExportCraneLoadEvent:
         send-to: /AppTest/ApiClient.in-queue
