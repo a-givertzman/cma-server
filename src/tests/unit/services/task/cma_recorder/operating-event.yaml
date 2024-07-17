@@ -240,7 +240,7 @@ service Task RecorderTask:
     # Export operating events into the database
     #
     #
-    # Crane MOPS truggered
+    # Crane MOPS triggered
     let craneMopsTriggered:
         input: point int '/AppTest/CraneMode.MOPS' status ok
     fn Export ExportCraneMopsEvent:
@@ -255,7 +255,7 @@ service Task RecorderTask:
             opCycleId: opCycleId
             input: point int '/AppTest/CraneMode.MOPS' status ok
     #
-    # Crane AOPS truggered
+    # Crane AOPS triggered
     let craneAopsTriggered:
         input: point int '/AppTest/CraneMode.AOPS' status ok
     fn Export ExportCraneAopsEvent:
