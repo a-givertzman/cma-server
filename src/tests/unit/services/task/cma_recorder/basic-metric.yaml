@@ -46,42 +46,50 @@ service Task RecorderTaskBasicMetric:
         input fn Mul:
             input1: const real 0.05
             input2: winch3LoadNom
+    let craneIsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Load' status ok default 0.0
+            input2: opCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: opCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Load' status ok default 0.0
+    let winch1IsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Winch1.Load' status ok default 0.0
+            input2: winch1OpCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: winch1OpCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Winch1.Load' status ok default 0.0
+    let winch2IsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Winch2.Load' status ok default 0.0
+            input2: winch2OpCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: winch2OpCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Winch2.Load' status ok default 0.0
+    let winch3IsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Winch3.Load' status ok default 0.0
+            input2: winch3OpCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: winch3OpCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Winch3.Load' status ok default 0.0
     #
     # Detect if operating cycle is active (true - isActive, false - isNotActive)
     let opCycleIsActive_:
         input fn BitOr:
-            input0 fn Ge:
-                # input1: point real '/AppTest/Load' status ok default 0.0
-                input2: opCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: opCycleThreshold
-                    input fn Smooth:
-                        factor: const real 0.125
-                        input: point real '/AppTest/Load' status ok default 0.0
-            input1 fn Ge:
-                # input1: point real '/AppTest/Winch1.Load' status ok default 0.0
-                input2: winch1OpCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: winch1OpCycleThreshold
-                    input fn Smooth:
-                        factor: const real 0.125
-                        input: point real '/AppTest/Winch1.Load' status ok default 0.0
-            input2 fn Ge:
-                # input1: point real '/AppTest/Winch2.Load' status ok default 0.0
-                input2: winch2OpCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: winch2OpCycleThreshold
-                    input fn Smooth:
-                        factor: const real 0.125
-                        input: point real '/AppTest/Winch2.Load' status ok default 0.0
-            input3 fn Ge:
-                # input1: point real '/AppTest/Winch3.Load' status ok default 0.0
-                input2: winch3OpCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: winch3OpCycleThreshold
-                    input fn Smooth:
-                        factor: const real 0.125
-                        input: point real '/AppTest/Winch3.Load' status ok default 0.0
+            input0: craneIsActive
+            input1: winch1IsActive
+            input2: winch2IsActive
+            input3: winch3IsActive
     #
     # Returns one tic true if operating cycle is finished (isActive true -> false)
     let opCycleIsDone:
@@ -93,17 +101,6 @@ service Task RecorderTaskBasicMetric:
             input2: opCycleIsDone
     let pumpIsActive:
         input: opCycleIsActive
-    let winch1IsActive:
-        input: opCycleIsActive
-    let winch2IsActive:
-        input: opCycleIsActive
-    let winch3IsActive:
-        input: opCycleIsActive
-    #
-    # Alarm class of the operating cycle
-    # Must be >0 if one of metric is alarmed
-    let alarmClass:
-        input: const int 0
     #
     # Count the operating cycle ID (retained localy)
     let opCycleId:
@@ -178,6 +175,11 @@ service Task RecorderTaskBasicMetric:
         input fn Div:
             input1: winch3CycleAverageLoad
             input2: winch3LoadNom
+    #
+    # Alarm class of the operating cycle
+    # Must be >0 if one of metric is alarmed
+    let alarmClass:
+        input: const int 0
 
     #
     # ========= DEBUGGING =========
