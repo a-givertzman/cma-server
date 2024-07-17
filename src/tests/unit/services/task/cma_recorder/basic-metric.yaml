@@ -120,8 +120,6 @@ service Task RecorderTaskOperatingMetric:
         input fn Add:
             input1: opCycleId
             input2: const int 0
-
-
     #
     # Crane Average load in operating cycle, ??? unit ???
     let craneCycleAverageLoad:
@@ -1999,7 +1997,7 @@ service Task RecorderTaskOperatingMetric:
     #
     #   table:      basic_metric
     #
-    fn RecOpCycleMetric:
+    fn RecOpCycleMetric BasicMetric:
         # send-to: /AppTest/ApiClient.in-queue
         send-to: /AppTest/TaskTestReceiver.in-queue
         op-cycle: opCycleIsActive
