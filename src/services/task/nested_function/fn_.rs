@@ -5,8 +5,15 @@ use super::{fn_kind::FnKind, fn_result::FnResult};
 /// Used for generic access to the different kinde of functions
 /// for adding new value on input side
 pub trait FnIn: std::fmt::Debug {
-    fn add(&mut self, _point: PointType) {
+    ///
+    /// Adds new value into Input
+    fn add(&mut self, _point: &PointType) {
         panic!("FnIn.add | don't use this method, used only for FnInput")
+    }
+    ///
+    /// Returns 'Options hash' to identify unique set of options of the Input
+    fn hash(&self) -> String {
+        panic!("FnIn.hash | don't use this method, used only for FnInput")
     }
 }
 ///

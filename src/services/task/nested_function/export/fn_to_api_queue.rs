@@ -31,14 +31,9 @@ impl FnToApiQueue {
         }
     }
 }
-///
-///  += 1
-impl FnIn for FnToApiQueue {
-    //
-    fn add(&mut self, _: PointType) {
-        panic!("{}.add | method is not used", self.id);
-    }
-}
+//
+//
+impl FnIn for FnToApiQueue {}
 //
 // 
 impl FnOut for FnToApiQueue {

@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
+use std::{hash::{DefaultHasher, Hash, Hasher}, str::FromStr};
 use log::{trace, warn};
 use regex::RegexBuilder;
-
 use crate::core_::status::status::Status;
 ///
 /// Optional parameters of the [FnConf]
@@ -10,6 +8,22 @@ use crate::core_::status::status::Status;
 pub struct FnConfOptions {
     pub default: Option<String>,
     pub status: Option<Status>,
+}
+//
+//
+impl FnConfOptions {
+    ///
+    /// Returns 'Options hash' to identify unique set of options
+    pub fn hash(&self) -> String {
+        format!("default:{}-status:{}", Self::hash_(&self.default), Self::hash_(&self.status))
+    }
+    ///
+    /// Returns hash for T
+    fn hash_<T: Hash>(value: &T) -> u64 {
+        let mut state = DefaultHasher::new();
+        value.hash(&mut state);
+        state.finish()
+    }    
 }
 //
 //

@@ -64,7 +64,7 @@ mod fn_piecewise_line_approx {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_line_approx.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -110,7 +110,7 @@ mod fn_piecewise_line_approx {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_line_approx.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -156,7 +156,7 @@ mod fn_piecewise_line_approx {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_line_approx.out().unwrap();
             // debug!("input: {:?}", &mut input);

@@ -81,7 +81,7 @@ mod fn_rising_edge {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -121,7 +121,7 @@ mod fn_rising_edge {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -161,7 +161,7 @@ mod fn_rising_edge {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -201,7 +201,7 @@ mod fn_rising_edge {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);

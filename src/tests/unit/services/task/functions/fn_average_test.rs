@@ -85,8 +85,8 @@ mod fn_average {
         for (step, en, value, _) in &test_data {
             let en = en.to_point(0, "enable");
             let point = value.to_point(0, "input");
-            enable.borrow_mut().add(en);
-            input.borrow_mut().add(point);
+            enable.borrow_mut().add(&en);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_average.out();
             match result {
@@ -135,8 +135,8 @@ mod fn_average {
         for (step, en, value, target) in test_data {
             let en = en.to_point(0, "enable");
             let point = value.to_point(0, "input");
-            enable.borrow_mut().add(en);
-            input.borrow_mut().add(point);
+            enable.borrow_mut().add(&en);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_average.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -179,8 +179,8 @@ mod fn_average {
         for (step, en, value, target) in test_data {
             let en = en.to_point(0, "enable");
             let point = value.to_point(0, "input");
-            enable.borrow_mut().add(en);
-            input.borrow_mut().add(point);
+            enable.borrow_mut().add(&en);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_average.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -234,8 +234,8 @@ mod fn_average {
         for (step, en_val, value, target) in &test_data {
             let en = en_val.to_point(0, "enable");
             let point = value.to_point(0, "input");
-            enable.borrow_mut().add(en);
-            input.borrow_mut().add(point);
+            enable.borrow_mut().add(&en);
+            input.borrow_mut().add(&point);
             debug!("step {} \t input: {:?}", step, input);
             let result = fn_average.out();
             match &result {
@@ -300,8 +300,8 @@ mod fn_average {
         for (step, en_val, value, target) in &test_data {
             let en = en_val.to_point(0, "enable");
             let point = value.to_point(0, "input");
-            enable.borrow_mut().add(en);
-            input.borrow_mut().add(point);
+            enable.borrow_mut().add(&en);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_average.out();
             match &result {

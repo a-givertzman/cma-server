@@ -77,19 +77,19 @@ mod fn_is_changed_value {
         for (step, name, value, target) in test_data {
             match &value {
                 Value::Bool(value) => {
-                    input1.borrow_mut().add(value.to_point(0, &name))
+                    input1.borrow_mut().add(&value.to_point(0, &name))
                 }
                 Value::Int(value) => {
-                    input2.borrow_mut().add(value.to_point(0, &name))
+                    input2.borrow_mut().add(&value.to_point(0, &name))
                 }
                 Value::Real(value) => {
-                    input3.borrow_mut().add(value.to_point(0, &name))
+                    input3.borrow_mut().add(&value.to_point(0, &name))
                 }
                 Value::Double(value) => {
-                    input4.borrow_mut().add(value.to_point(0, &name))
+                    input4.borrow_mut().add(&value.to_point(0, &name))
                 }
                 Value::String(value) => {
-                    input5.borrow_mut().add(value.to_point(0, &name))
+                    input5.borrow_mut().add(&value.to_point(0, &name))
                 }
             };
             // debug!("input: {:?}", &input);

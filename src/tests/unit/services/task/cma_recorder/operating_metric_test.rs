@@ -326,7 +326,6 @@ mod cma_recorder {
         println!("target threshold: {:?}", target_thrd_count);
         for (i, result) in receiver.lock().unwrap().received().lock().unwrap().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
-            // assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
         };
         // assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         // assert!(result >= total_count, "\nresult: {:?}\ntarget: {:?}", result, total_count);

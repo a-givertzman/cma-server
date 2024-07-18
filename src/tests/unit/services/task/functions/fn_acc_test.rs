@@ -60,7 +60,7 @@ mod fn_acc {
         ];
         for (value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -100,7 +100,7 @@ mod fn_acc {
         ];
         for (value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -143,7 +143,7 @@ mod fn_acc {
                 fn_count.reset();
             }
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -183,7 +183,7 @@ mod fn_acc {
         ];
         for (value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -223,7 +223,7 @@ mod fn_acc {
         ];
         for (value, target) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);

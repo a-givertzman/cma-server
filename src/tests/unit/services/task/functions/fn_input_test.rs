@@ -54,7 +54,7 @@ mod fn_input {
         ];
         for value in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -90,7 +90,7 @@ mod fn_input {
         ];
         for value in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -126,7 +126,7 @@ mod fn_input {
         ];
         for value in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -162,7 +162,7 @@ mod fn_input {
         ];
         for value in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -196,7 +196,7 @@ mod fn_input {
         ];
         for value in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);

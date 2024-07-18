@@ -709,14 +709,12 @@ impl NestedFn {
             FnConfKind::Point(conf) => {
                 trace!("{}.function | Input (Point<{:?}>): {:?} ({:?})...", self_id, conf.type_, input_name, conf.name);
                 let point_name = conf.name.clone();
-                task_nodes.add_input(
+                let input = task_nodes.add_input(
                     &point_name,
                     Rc::new(RefCell::new(Box::new(
-                        // FnInput::new(&point_name, &point_name, initial, conf.type_.clone())
                         FnInput::new(&point_name, tx_id, conf)
                     ))),
                 );
-                let input = task_nodes.get_input(&point_name).unwrap();
                 trace!("{}.function | input (Point): {:?}", self_id, input);
                 input
             }

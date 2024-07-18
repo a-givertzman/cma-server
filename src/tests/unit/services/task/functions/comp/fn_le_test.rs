@@ -52,8 +52,8 @@ mod fn_le {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             let result = fn_le.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} <= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 <= value2;
@@ -92,8 +92,8 @@ mod fn_le {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             let result = fn_le.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} <= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 <= value2;
@@ -141,8 +141,8 @@ mod fn_le {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             let result = fn_le.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} <= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 <= value2;
@@ -190,8 +190,8 @@ mod fn_le {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             let result = fn_le.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} <= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 <= value2;

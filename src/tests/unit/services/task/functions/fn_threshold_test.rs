@@ -86,8 +86,8 @@ mod fn_threshold {
         for (step, thrh, value, target) in test_data {
             let thrh = thrh.to_point(0, "threshold");
             let point = value.to_point(0, &format!("input step {}", step));
-            threshold.borrow_mut().add(thrh);
-            input.borrow_mut().add(point);
+            threshold.borrow_mut().add(&thrh);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_threshold.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -132,8 +132,8 @@ mod fn_threshold {
         for (step, thrh, value, target) in test_data {
             let thrh = thrh.to_point(0, "threshold");
             let point = value.to_point(0, &format!("input step {}", step));
-            threshold.borrow_mut().add(thrh);
-            input.borrow_mut().add(point);
+            threshold.borrow_mut().add(&thrh);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_threshold.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -178,8 +178,8 @@ mod fn_threshold {
         for (step, thrh, value, target) in test_data {
             let thrh = thrh.to_point(0, "threshold");
             let point = value.to_point(0, &format!("input step {}", step));
-            threshold.borrow_mut().add(thrh);
-            input.borrow_mut().add(point);
+            threshold.borrow_mut().add(&thrh);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_threshold.out().unwrap();
             // debug!("input: {:?}", &mut input);

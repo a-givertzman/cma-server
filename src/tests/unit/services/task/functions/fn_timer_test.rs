@@ -84,7 +84,7 @@ mod fn_timer {
             }
             target = elapsed_total + elapsed;
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);
@@ -145,7 +145,7 @@ mod fn_timer {
             }
             target = elapsed_total + elapsed;
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);
@@ -213,7 +213,7 @@ mod fn_timer {
             }
             target = elapsed_total + elapsed_session;
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);
@@ -275,7 +275,7 @@ mod fn_timer {
             }
             target = elapsed_total + elapsed;
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);

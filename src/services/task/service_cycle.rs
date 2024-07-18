@@ -26,6 +26,7 @@ impl ServiceCycle {
     }
     ///
     /// Returns the specified cycle interval
+    #[allow(unused)]
     pub fn interval(&self) -> Duration {
         self.interval
     }

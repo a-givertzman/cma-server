@@ -151,43 +151,43 @@ mod cma_recorder {
         for (i, result) in receiver.lock().unwrap().received().lock().unwrap().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        // let targets = targets();
-        // let mut index = 0;
-        // for result in receiver.lock().unwrap().received().lock().unwrap().iter() {
-        //     if result.name().starts_with("input34_1") {
-        //         let name = result.name();
-        //         let result = result.as_string().value;
-        //         let target = targets[index];
-        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-        //         index += 1;
-        //     }
-        //     if result.name().starts_with("input34_2") {
-        //         let name = result.name();
-        //         let result = result.as_string().value;
-        //         let target = targets[index];
-        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-        //         index += 1;
-        //     }
-        //     if result.name().starts_with("input34_3") {
-        //         let name = result.name();
-        //         let result = result.as_string().value;
-        //         let target = targets[index];
-        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-        //         index += 1;
-        //     }
-        //     if result.name().starts_with("input34_4") {
-        //         let name = result.name();
-        //         let result = result.as_string().value;
-        //         let target = targets[index];
-        //         assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-        //         index += 1;
-        //     }
-        // };
+        let targets = targets();
+        let mut index = 0;
+        for result in receiver.lock().unwrap().received().lock().unwrap().iter() {
+            if result.name().starts_with("input34_1") {
+                let name = result.name();
+                let result = result.as_string().value;
+                let target = targets[index];
+                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+                index += 1;
+            }
+            if result.name().starts_with("input34_2") {
+                let name = result.name();
+                let result = result.as_string().value;
+                let target = targets[index];
+                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+                index += 1;
+            }
+            if result.name().starts_with("input34_3") {
+                let name = result.name();
+                let result = result.as_string().value;
+                let target = targets[index];
+                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+                index += 1;
+            }
+            if result.name().starts_with("input34_4") {
+                let name = result.name();
+                let result = result.as_string().value;
+                let target = targets[index];
+                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+                index += 1;
+            }
+        };
         // assert!(index == targets.len(), "result: {:?}\ntarget: {:?}", index, targets.len());
         test_duration.exit();
-        loop {
-            thread::sleep(Duration::from_millis(100));
-        }
+        // loop {
+        //     thread::sleep(Duration::from_millis(100));
+        // }
     }
     ///
     /// Returns test data
@@ -277,267 +277,267 @@ mod cma_recorder {
     }
     ///
     /// Returns taget values
-    fn targets<'a>() -> [&'a str; 208] {
+    fn targets<'a>() -> [&'a str; 4] {
         [
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_05-0_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_05-0_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_15-0_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_15-0_25-load';"),
 
             (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_25-0_35_load-range';"),
             (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_25-0_35-load';"),
             (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_25-0_35_load-range';"),
             (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_25-0_35-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_35-0_45-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_35-0_45-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_45-0_55-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_45-0_55-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_55-0_65-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_55-0_65-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_65-0_75-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_65-0_75-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_75-0_85-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_75-0_85-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_85-0_95-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_85-0_95-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_95-1_05-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '0_95-1_05-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_05-1_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_05-1_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_15-1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_15-1_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = '1_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_05-0_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_05-0_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_15-0_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_15-0_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_25-0_35_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_25-0_35-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_25-0_35_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_25-0_35-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_25-0_35_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_25-0_35-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_25-0_35_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_25-0_35-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_35-0_45-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_35-0_45-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_45-0_55-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_45-0_55-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_55-0_65-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_55-0_65-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_65-0_75-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_65-0_75-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_75-0_85-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_75-0_85-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_85-0_95-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_85-0_95-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_95-1_05-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-0_95-1_05-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_05-1_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_05-1_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_15-1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_15-1_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-1_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_05-0_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_05-0_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_15-0_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_15-0_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_25-0_35_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_25-0_35-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_25-0_35_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_25-0_35-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_25-0_35_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_25-0_35-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_25-0_35_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_25-0_35-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_35-0_45-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_35-0_45-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_45-0_55-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_45-0_55-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_55-0_65-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_55-0_65-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_65-0_75-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_65-0_75-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_75-0_85-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_75-0_85-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_85-0_95-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_85-0_95-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_95-1_05-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-0_95-1_05-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_05-1_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_05-1_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_15-1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_15-1_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-1_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_05-0_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_05-0_15-load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_05-0_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_05-0_15-load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_05-0_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_15-0_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_15-0_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_15-0_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_15-0_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_15-0_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_25-0_35_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_25-0_35-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_25-0_35_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_25-0_35-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_25-0_35_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_25-0_35-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_25-0_35_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_25-0_35-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_35-0_45-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_35-0_45_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_35-0_45-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_35-0_45_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_35-0_45-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_45-0_55-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_45-0_55_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_45-0_55-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_45-0_55_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_45-0_55-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_55-0_65-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_55-0_65_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_55-0_65-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_55-0_65_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_55-0_65-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_65-0_75-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_65-0_75_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_65-0_75-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_65-0_75_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_65-0_75-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_75-0_85-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_75-0_85_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_75-0_85-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_75-0_85_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_75-0_85-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_85-0_95-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_85-0_95_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_85-0_95-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_85-0_95_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_85-0_95-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_95-1_05-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_95-1_05_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_95-1_05-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-0_95-1_05_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-0_95-1_05-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_05-1_15-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_05-1_15_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_05-1_15-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_05-1_15_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_05-1_15-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_15-1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_15-1_25_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_15-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_15-1_25_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_15-1_25-load';"),
 
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_25-load';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_25-_load-range';"),
-            (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_25-load';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-cycles-1_25-_load-range';"),
+            // (r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-1_25-load';"),
         ]        
     }
 }

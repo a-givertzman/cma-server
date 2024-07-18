@@ -60,8 +60,8 @@ mod fn_trip {
         for (value1, value2, target_state) in test_data {
             let point1 = value1.to_point(0, "point1");
             let point2 = value2.to_point(0, "point2");
-            input1.borrow_mut().add(point1);
-            input2.borrow_mut().add(point2);
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -106,8 +106,8 @@ mod fn_trip {
         for (value1, value2, target_dtate) in test_data {
             let point1 = value1.to_point(0, "point1");
             let point2 = value2.to_point(0, "point2");
-            input1.borrow_mut().add(point1);
-            input2.borrow_mut().add(point2);
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -151,8 +151,8 @@ mod fn_trip {
         for (value1, value2, target_state) in test_data {
             let point1 = value1.to_point(0, "point1");
             let point2 = value2.to_point(0, "point2");
-            input1.borrow_mut().add(point1);
-            input2.borrow_mut().add(point2);
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -196,8 +196,8 @@ mod fn_trip {
         for (value1, value2, target_state) in test_data {
             let point1 = value1.to_point(0, "point1");
             let point2 = value2.to_point(0, "point2");
-            input1.borrow_mut().add(point1);
-            input2.borrow_mut().add(point2);
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);

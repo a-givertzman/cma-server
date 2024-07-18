@@ -92,7 +92,7 @@ mod fn_point_id {
         ];
         for (value, name, target_id) in test_data {
             let point = value.to_point(0, &name);
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let state = fn_point_id.out().unwrap();
             // debug!("input: {:?}", &mut input);
