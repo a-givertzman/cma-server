@@ -8,7 +8,7 @@ service Task RecorderTask:
     #
     # The nominal load of the crane
     let craneLoadNom:
-        input: point real '/AppTest/Load.Nom' status ok #default 150.0
+        input: point real '/AppTest/Load.Nom' status ok # default 150.0
         # input: const real 150.0
     #
     # The nominal load of the Winch1
