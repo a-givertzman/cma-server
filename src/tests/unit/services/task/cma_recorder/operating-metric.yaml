@@ -46,6 +46,11 @@ service Task RecorderTaskOperatingMetric:
         input fn Mul:
             input1: const real 0.05
             input2: winch3LoadNom
+    let smooth:
+        input fn Smooth:
+            factor: const real 0.125
+            input: point real '/AppTest/Load' status ok default 0.0
+
     let craneIsActive:
         input fn Ge:
             # input1: point real '/AppTest/Load' status ok default 0.0
@@ -185,7 +190,7 @@ service Task RecorderTaskOperatingMetric:
         send-to: /AppTest/TaskTestReceiver.in-queue
         conf point CraneLoad:
             type: Real
-        input: point real '/AppTest/Load' status ok default 150.0
+        input: point real '/AppTest/Load' status ok # default 150.0
     #
     fn Export ExportOpCycleIsActive:
         send-to: /AppTest/TaskTestReceiver.in-queue
@@ -230,7 +235,11 @@ service Task RecorderTaskOperatingMetric:
     fn Plot Plot1:
         craneLoadNom: craneLoadNom
         craneLoad: point real '/AppTest/Load'
+        craneLoadDefault: point real '/AppTest/Load' status ok default 0.0
         craneLoadRelative: craneLoadRelative
+        opCycleThreshold: opCycleThreshold
+        smooth: smooth
+        craneIsActive: craneIsActive
         opCycleIsActive: opCycleIsActive
         opCycleIsDone: opCycleIsDone
         craneCycleAverageLoad: craneCycleAverageLoad

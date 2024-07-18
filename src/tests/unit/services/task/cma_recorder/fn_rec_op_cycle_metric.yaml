@@ -1,0 +1,514 @@
+service Task RecorderTask:
+    cycle: 1 ms
+    in queue recv-queue:
+        max-length: 10000
+    subscribe:
+        /AppTest/MultiQueue:                    # - multicast subscription to the MultiQueue
+            {cot: Inf}: []                      #   - on all points having Cot::Inf
+
+    fn Export:
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        input: point string /AppTest/Exit
+    #
+    # The nominal load of the crane
+    let craneLoadNom:
+        input: point real '/AppTest/Load.Nom'
+    #
+    # The nominal load of the Winch1
+    let winch1LoadNom:
+        # input: point real '/AppTest/Winch1.Load.Nom'
+        input: point real '/AppTest/Load.Nom'
+    #
+    # The nominal load of the Winch2
+    let winch2LoadNom:
+        # input: point real '/AppTest/Winch2.Load.Nom'
+        input: point real '/AppTest/Load.Nom'
+    #
+    # The nominal load of the Winch3
+    let winch3LoadNom:
+        # input: point real '/AppTest/Winch3.Load.Nom'
+        input: point real '/AppTest/Load.Nom'
+
+    #
+    # 5 % of the nominal crane load - used for Op Cycle detection
+    let opCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: craneLoadNom
+
+    #
+    # Detect if operating cycle is active (true - isActive, false - isNotActive)
+    let opCycleIsActive:
+        input fn Export:
+            send-to: /AppTest/TaskTestReceiver.in-queue
+            conf point OpCycle:
+                type: 'Bool'
+            input fn Ge:
+                input2: opCycleThreshold
+                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                    threshold: opCycleThreshold
+                    input fn Smooth:
+                        factor: const real 0.125
+                        input: point real '/AppTest/Load'
+    #
+    # Detecting if any Pump is active
+    let pumpIsActive:
+        input: opCycleIsActive
+    #
+    # Detecting if any Winch is active
+    let winch1IsActive:
+        input: opCycleIsActive
+    let winch2IsActive:
+        input: opCycleIsActive
+    let winch3IsActive:
+        input: opCycleIsActive
+    #
+    # Alarm class of the operating cycle
+    # Must be >0 if one of metric is alarmed
+    let alarmClass:
+        input: const int 0
+
+    #
+    # Count the operating cycle ID (retained localy)
+    let opCycleId:
+        input fn Retain:
+            key: 'OperatingCycleId'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'OperatingCycleId'
+                input fn FallingEdge:
+                    input: opCycleIsActive
+    #
+    # Crane Average load in operating cycle, ??? unit ???
+    let craneCycleAverageLoad:
+        input fn ToReal:
+            input fn Average:
+                enable fn Add:
+                    input1: opCycleIsActive
+                    input2 fn FallingEdge:
+                        input: opCycleIsActive
+                input: point real '/AppTest/Load'   # ??? unit ???
+    #
+    # Crane Max load in operating cycle, ??? unit ???
+    let craneCycleMaxLoad:
+        input fn ToReal:
+            input fn Max:
+                enable fn Add:
+                    input1: opCycleIsActive
+                    input2 fn FallingEdge:
+                        input: opCycleIsActive
+                input: point real '/AppTest/Load'   # ??? unit ???
+    #
+    # Winch1 Average load in operating cycle, ??? unit ???
+    let winch1CycleAverageLoad:
+        input fn ToReal:
+            input fn Average:
+                enable fn Add:
+                    input1: opCycleIsActive
+                    input2 fn FallingEdge:
+                        input: opCycleIsActive
+                input: point real '/AppTest/Load'   # ??? unit ???
+    #
+    # Winch2 Average load in operating cycle, ??? unit ???
+    let winch2CycleAverageLoad:
+        input fn ToReal:
+            input fn Average:
+                enable fn Add:
+                    input1: opCycleIsActive
+                    input2 fn FallingEdge:
+                        input: opCycleIsActive
+                input: point real '/AppTest/Load'   # ??? unit ???
+    #
+    # Winch3 Average load in operating cycle, ??? unit ???
+    let winch3CycleAverageLoad:
+        input fn ToReal:
+            input fn Average:
+                enable fn Add:
+                    input1: opCycleIsActive
+                    input2 fn FallingEdge:
+                        input: opCycleIsActive
+                input: point real '/AppTest/Load'   # ??? unit ???
+    #
+    # Winch1 load-limiter-trip-count
+    let winch1LoadLimiterTripCount:
+        input fn Retain:
+            key: 'winch1-load-limiter-trip-count'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'winch1-load-limiter-trip-count'
+                input fn RisingEdge:
+                    input: point bool '/AppTest/Winch1.Load.Limiter.Trip'
+    #
+    # Winch2 load-limiter-trip-count
+    let winch2LoadLimiterTripCount:
+        input fn Retain:
+            key: 'winch2-load-limiter-trip-count'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'winch2-load-limiter-trip-count'
+                input fn RisingEdge:
+                    input: point bool '/AppTest/Winch2.Load.Limiter.Trip'
+    #
+    # Winch3 load-limiter-trip-count
+    let winch3LoadLimiterTripCount:
+        input fn Retain:
+            key: 'winch3-load-limiter-trip-count'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'winch3-load-limiter-trip-count'
+                input fn RisingEdge:
+                    input: point bool '/AppTest/Winch3.Load.Limiter.Trip'
+    #
+    # crane-characteristic-number	текущее характеристическое число для крана
+    let craneEigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'crane-characteristic-number'
+            input fn Add:
+                input1 fn Pow:
+                    input1 fn Div:
+                        input1: craneCycleMaxLoad
+                        input2: craneLoadNom
+                    input2: const real 3.0
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'crane-characteristic-number'
+    #
+    # The duration of the crane operation cycle in seconds
+    let craneOperatingCycleSecs:
+        input fn Timer:
+            enable: opCycleIsActive
+            initial: const real 0.0
+            input: opCycleIsActive
+    #
+    # winch1-characteristic-number	текущее характеристическое число лебедка 1
+    let winch1EigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'winch1-characteristic-number'
+            input fn Add:
+                input1 fn Mul:
+                    input1 fn Pow:
+                        input1 fn Div:
+                            input1: winch1CycleAverageLoad
+                            input2: winch1LoadNom
+                        input2: const real 3.0
+                    input2: craneOperatingCycleSecs
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'winch1-characteristic-number'
+    #
+    # winch2-characteristic-number	текущее характеристическое число лебедка 2
+    let winch2EigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'winch2-characteristic-number'
+            input fn Add:
+                input1 fn Mul:
+                    input1 fn Pow:
+                        input1 fn Div:
+                            input1: winch2CycleAverageLoad
+                            input2: winch2LoadNom
+                        input2: const real 3.0
+                    input2: craneOperatingCycleSecs
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'winch2-characteristic-number'
+    #
+    # winch3-characteristic-number	текущее характеристическое число лебедка 3
+    let winch3EigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'winch3-characteristic-number'
+            input fn Add:
+                input1 fn Mul:
+                    input1 fn Pow:
+                        input1 fn Div:
+                            input1: winch3CycleAverageLoad
+                            input2: winch3LoadNom
+                        input2: const real 3.0
+                    input2: craneOperatingCycleSecs
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'winch3-characteristic-number'
+
+
+
+    ###############   Operating Cycle Metrics   ###############
+    #
+    #   table:      operating_cycle
+    #   table:      operating_cycle_metric_value
+    #
+    fn RecOpCycleMetric:
+        # send-to: /App/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        op-cycle: opCycleIsActive
+        # conf point OpCycleSql:
+        #     type: 'String'
+
+        #
+        # Operating cycle
+        input1 fn SqlMetric:
+            table: public.operating_cycle
+            sql: insert into {table} (id, timestamp_start, timestamp_stop, alarm_class) values ({opCycleId.value}, '{start.timestamp}', '{stop.timestamp}', {alarmClass.value});
+            opCycleId: opCycleId
+            start fn Filter:
+                pass fn RisingEdge:
+                    input: opCycleIsActive
+                input: point real '/AppTest/Load'
+            stop: point real '/AppTest/Load'
+            alarmClass: alarmClass
+
+        #
+        # Operating cycle metric Average Load
+        input2 fn SqlMetric:
+            table: public.operating_cycle_metric_value
+            sql: insert into {table} (operating_cycle_id, pid, metric_id, value) values ({opCycleId.value}, 0, 'average_load', {input.value});
+            opCycleId: opCycleId
+            input: craneCycleAverageLoad
+        #
+        # Operating cycle metric Max Load
+        input3 fn SqlMetric:
+            table: public.operating_cycle_metric_value
+            sql: insert into {table} (operating_cycle_id, pid, metric_id, value) values ({opCycleId.value}, 0, 'max_load', {input.value});
+            opCycleId: opCycleId
+            input: craneCycleMaxLoad
+
+    ###############   Operating Metrics   ###############
+    #
+    #   table:      operating_metric
+    #
+        #
+        #                !!! IN SECONDS
+        # 3.1   | real | crane-total-operating-secs  | общее количество часов работы крана
+        input31 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'crane-total-operating-secs';
+            input fn Retain:
+                key: 'crane-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'crane-total-operating-secs'
+                    input: opCycleIsActive
+        #
+        # 3.2.0 | real | pump-total-operating-secs   | общее количество часов работы насосной станции (мото-секунды)
+        input320 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'pump-total-operating-secs';
+            input fn Retain:
+                key: 'pump-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'pump-total-operating-secs'
+                    input: pumpIsActive
+        #
+        # 3.2.1 | real | winch1-total-operating-secs | общее количество часов работы лебедки 1 (мото-секунды)
+        input321 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-total-operating-secs';
+            input fn Retain:
+                key: 'winch1-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'winch1-total-operating-secs'
+                    input: winch1IsActive
+        #
+        # 3.2.2 | real | winch2-total-operating-secs | общее количество часов работы лебедки 2 (мото-секунды)
+        input322 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-total-operating-secs';
+            input fn Retain:
+                key: 'winch2-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'winch2-total-operating-secs'
+                    input: winch2IsActive
+        #
+        # 3.2.3 | real | winch3-total-operating-secs | общее количество часов работы лебедки 3 (мото-секунды)
+        input323 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-total-operating-secs';
+            input fn Retain:
+                key: 'winch3-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'winch3-total-operating-secs'
+                    input: winch3IsActive
+        #
+        # 3.3 | int | total-operating-cycles-count | суммарное число рабочих циклов
+        input33 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'total-operating-cycles-count';
+            input: opCycleId
+        #
+        # 3.4   	real	cycles-distribution-by-load-ranges	распределение циклов по диапазонам нагрузки	0.0
+        #
+        # 3.4.1 	real	cycles-0_05-0_15-load-range	циклов в диапазоне загрузки 0,05 - 0,15	0.0
+        #
+        # 3.4.2 	real	cycles-0_15-0_25_load-range	циклов в диапазоне загрузки 0,15 - 0,25	0.0
+        #
+        # 3.4.3 	real	cycles-0_25-0_35_load-range	циклов в диапазоне загрузки 0,25 - 0,35	0.0
+        #
+        # 3.4.4 	real	cycles-0_35-0_45_load-range	циклов в диапазоне загрузки 0,35 - 0,45	0.0
+        #
+        # 3.4.5 	real	cycles-0_45-0_55_load-range	циклов в диапазоне загрузки 0,45 - 0,55	0.0
+        #
+        # 3.4.6 	real	cycles-0_55-0_65_load-range	циклов в диапазоне загрузки 0,55 - 0,65	0.0
+        #
+        # 3.4.7 	real	cycles-0_65-0_75_load-range	циклов в диапазоне загрузки 0,65 - 0,75	0.0
+        #
+        # 3.4.8 	real	cycles-0_75-0_85_load-range	циклов в диапазоне загрузки 0,75 - 0,85	0.0
+        #
+        # 3.4.9 	real	cycles-0_85-0_95_load-range	циклов в диапазоне загрузки 0,85 - 0,95	0.0
+        #
+        # 3.4.10	real	cycles-0_95-1_05_load-range	циклов в диапазоне загрузки 0,95 - 1,05	0.0
+        #
+        # 3.4.11	real	cycles-1_05-1_15_load-range	циклов в диапазоне загрузки 1,05 - 1,15	0.0
+        #
+        # 3.4.12	real	cycles-1_15-1_25_load-range	циклов в диапазоне загрузки 1,15 - 1,25	0.0                     
+        #
+        # 3.4.13	real	cycles-1_15-_load-range	циклов в диапазоне загрузки 1,25 -	0.0
+        #
+        # 3.5   	real	crane-total-lifted-mass	суммарная масса поднятых грузов. тонн	0.0
+        input35 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'crane-total-lifted-mass';
+            input fn Retain:
+                key: 'crane-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: craneCycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'crane-total-lifted-mass'
+
+        #
+        # 3.5.1 	real	winch1-total-lifted-mass	суммарная масса поднятых грузов лебедка 1	0.0
+        input351 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-total-lifted-mass';
+            input fn Retain:
+                key: 'winch1-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: winch1CycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'winch1-total-lifted-mass'
+        #
+        # 3.5.2 	real	winch2-total-lifted-mass	суммарная масса поднятых грузов лебедка 2	0.0
+        input352 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-total-lifted-mass';
+            input fn Retain:
+                key: 'winch2-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: winch2CycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'winch2-total-lifted-mass'
+        #
+        # 3.5.3 	real	winch3-total-lifted-mass	суммарная масса поднятых грузов лебедка 3	0.0
+        input353 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-total-lifted-mass';
+            input fn Retain:
+                key: 'winch3-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: winch3CycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'winch3-total-lifted-mass'
+        #
+        # 3.6.1 	int	winch1-load-limiter-trip-count	количество срабатываний ограничителя грузоподъемности лебедка 1	0
+        input361 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-load-limiter-trip-count';
+            input: winch1LoadLimiterTripCount
+        #
+        # 3.6.2 	int	winch2-load-limiter-trip-count	количество срабатываний ограничителя грузоподъемности лебедка 2	0
+        input362 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-load-limiter-trip-count';
+            input: winch2LoadLimiterTripCount
+        #
+        # 3.6.3 	int	winch3-load-limiter-trip-count	количество срабатываний ограничителя грузоподъемности лебедка 3	0
+        input363 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-load-limiter-trip-count';
+            input: winch3LoadLimiterTripCount
+        #
+        # 3.7   	real	crane-characteristic-number	текущее характеристическое число для крана	0.0
+        input37 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'crane-characteristic-number';
+            input: craneEigenValue
+        #
+        # 3.7.1 	real	winch1-characteristic-number	текущее характеристическое число лебедка 1	0.0
+        input371 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-characteristic-number';
+            input: winch1EigenValue
+        #
+        # 3.7.2 	real	winch2-characteristic-number	текущее характеристическое число лебедка 2	0.0
+        input372 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-characteristic-number';
+            input: winch2EigenValue
+        #
+        # 3.7.3 	real	winch3-characteristic-number	текущее характеристическое число лебедка 3	0.0
+        input373 fn SqlMetric:
+            table: public.operating_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-characteristic-number';
+            input: winch3EigenValue
+        #
+        # 3.8   	real	crane-load-spectrum-factor	коэффициент распределения нагрузок для крана	0.0
+        #
+        # 3.8.1 	real	winch1-load-spectrum-factor	коэффициент распределения нагрузок лебедка 1	0.0
+        #
+        # 3.8.2 	real	winch2-load-spectrum-factor	коэффициент распределения нагрузок лебедка 2	0.0
+        #
+        # 3.8.3 	real	winch3-load-spectrum-factor	коэффициент распределения нагрузок лебедка 3	0.0
+
+    ###############   Operating Cycle Live Data   ###############
+    #
+    #   table:      operating_cycle_value
+    #
+    # fn Debug:
+    #     input point OpCycleLoad:
+    #         type: String
+    #         send-to: /AppTest/TaskTestReceiver.in-queue
+    #         input fn SqlMetric:
+    #             table: public.operating_cycle_value
+    #             sql: insert into {table} () values ({pid.value}, {input.value}, {input.timestamp});
+    #             pid fn PointId:
+    #                 input point real '/AppTest/Load'
+    #             input fn PiecewiseLineApprox:
+    #                 input: point real '/AppTest/Load'
+    #                 piecewise:
+    #                     0.0: 0.3
+    #                     0.7: 0.1
+    #                     0.85: 0.05
+    #                     0.95: 0.01
+    #                     1.0: 0.005
+    #                     1.1: 0.001
+                    

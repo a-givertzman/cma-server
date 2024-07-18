@@ -49,7 +49,7 @@ mod fn_bit_not {
         ];
         for (step, value) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point.clone());
+            input.borrow_mut().add(&point);
             let result = fn_bit_not.out().unwrap().as_bool().value.0;
             debug!("step {}  |  ! value: {:?} | result: {:?}", step, value, result);
             target = ! value;
@@ -85,7 +85,7 @@ mod fn_bit_not {
         ];
         for (step, value) in test_data {
             let point = value.to_point(0, "test");
-            input.borrow_mut().add(point.clone());
+            input.borrow_mut().add(&point);
             let result = fn_bit_not.out().unwrap().as_int().value;
             debug!("step {}  |  ! value1: {:?} | result: {:?}", step, value, result);
             target = ! value;

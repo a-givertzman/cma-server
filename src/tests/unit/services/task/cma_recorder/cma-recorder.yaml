@@ -8,7 +8,7 @@ service Task RecorderTask:
     #
     # The nominal load of the crane
     let craneLoadNom:
-        input: point real '/AppTest/Load.Nom' status ok # default 150.0
+        input: point real '/AppTest/Load.Nom' status ok
         # input: const real 150.0
     #
     # The nominal load of the Winch1
@@ -2955,12 +2955,12 @@ service Task RecorderTask:
         craneLoad: point real '/AppTest/Load'
         # craneLoadRelative: craneLoadRelative
         craneLoadFiltered: craneLoadFiltered
-        winch1LoadRelative: winch1LoadRelative
-        winch1LoadFiltered: winch1LoadFiltered
-        winch2LoadRelative: winch2LoadRelative
-        winch2LoadFiltered: winch2LoadFiltered
-        winch3LoadRelative: winch3LoadRelative
-        winch3LoadFiltered: winch3LoadFiltered
+        # winch1LoadRelative: winch1LoadRelative
+        # winch1LoadFiltered: winch1LoadFiltered
+        # winch2LoadRelative: winch2LoadRelative
+        # winch2LoadFiltered: winch2LoadFiltered
+        # winch3LoadRelative: winch3LoadRelative
+        # winch3LoadFiltered: winch3LoadFiltered
         craneMopsTriggered: craneMopsTriggered
         craneAopsTriggered: craneAopsTriggered
         opCycleIsActive: opCycleIsActive

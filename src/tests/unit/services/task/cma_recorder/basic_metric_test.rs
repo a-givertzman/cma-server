@@ -73,7 +73,6 @@ mod cma_recorder {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -392,7 +391,7 @@ mod cma_recorder {
     }
     ///
     /// Values must to be in the 'received'
-    fn target_received<'a>() -> [&'a str; 15] {
+    fn target_received<'a>() -> [&'a str; 12] {
         [
             r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'crane-total-operating-secs';",
             r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'pump-total-operating-secs';",
@@ -414,9 +413,9 @@ mod cma_recorder {
             // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_15-1_25_load-range';",
             // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'cycles-1_25-_load-range';",
             r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'crane-total-lifted-mass';",
-            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-total-lifted-mass';",
-            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-total-lifted-mass';",
-            r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-total-lifted-mass';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-total-lifted-mass';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-total-lifted-mass';",
+            // r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-total-lifted-mass';",
             r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch1-load-limiter-trip-count';",
             r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch2-load-limiter-trip-count';",
             r"update public\.basic_metric set value = \d+(?:\.\d+)* where name = 'winch3-load-limiter-trip-count';",

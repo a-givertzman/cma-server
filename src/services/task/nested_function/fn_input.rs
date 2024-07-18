@@ -14,6 +14,7 @@ pub struct FnInput {
     point: Option<PointType>,
     initial: Option<PointType>,
     status: Option<Status>,
+    options_hash: String,
 }
 //
 // 
@@ -50,14 +51,17 @@ impl FnInput {
             type_: conf.type_.clone(),
             point: initial.clone(), 
             initial,
-            status: conf.options.status
+            status: conf.options.status,
+            options_hash: conf.options.hash(),
         }
     }
 }
 //
 // 
 impl FnIn for FnInput {
-    fn add(&mut self, point: PointType) {
+    //
+    //
+    fn add(&mut self, point: &PointType) {
         trace!("{}.add | value: {:?}", self.id, &self.point);
         if let Some(status) = self.status {
             if point.status() != status {
@@ -67,7 +71,7 @@ impl FnIn for FnInput {
         let point = match self.type_ {
             FnConfPointType::Bool => {
                 match point {
-                    PointType::Bool(_) => point,
+                    PointType::Bool(_) => point.clone(),
                     PointType::Int(p) => PointType::Bool(Point::new(p.tx_id, &p.name, Bool(p.value > 0), p.status, p.cot, p.timestamp)),
                     PointType::Real(p) => PointType::Bool(Point::new(p.tx_id, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
                     PointType::Double(p) => PointType::Bool(Point::new(p.tx_id, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
@@ -164,18 +168,23 @@ impl FnIn for FnInput {
                         PointType::String(Point::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
                     }
                     PointType::String(p) => {
-                        PointType::String(Point::new(p.tx_id, &p.name, p.value, p.status, p.cot, p.timestamp))
+                        PointType::String(Point::new(p.tx_id, &p.name, p.value.clone(), p.status, p.cot, p.timestamp))
                     }
                 }
             }
             FnConfPointType::Any => {
-                point
+                point.clone()
             }
             FnConfPointType::Unknown => {
                 panic!("{}.add | Error. FnInput does not supports unknown type, but configured in: {:#?}", self.id, self);
             }
         };
         self.point = Some(point)
+    }
+    //
+    //
+    fn hash(&self) -> String {
+        self.options_hash.clone()
     }
 }
 //

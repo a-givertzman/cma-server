@@ -133,7 +133,7 @@ mod fn_smooth {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, &format!("input step {}", step));
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_smooth.out().unwrap();
             // debug!("input: {:?}", &mut input);
@@ -226,7 +226,7 @@ mod fn_smooth {
         ];
         for (step, value, target) in test_data {
             let point = value.to_point(0, &format!("input step {}", step));
-            input.borrow_mut().add(point);
+            input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             let result = fn_smooth.out().unwrap();
             // debug!("input: {:?}", &mut input);

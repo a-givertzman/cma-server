@@ -2,7 +2,7 @@ use std::{cmp::Ordering, str::FromStr};
 use concat_string::concat_string;
 ///
 ///
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(u32)]
 pub enum Status {
     Ok              = Self::OK as u32,

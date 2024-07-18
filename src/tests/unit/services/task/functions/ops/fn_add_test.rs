@@ -59,13 +59,13 @@ mod fn_add {
         for (value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
+            input1.borrow_mut().add(&point1);
             let state = fn_add.out().unwrap();
             debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
             target = PointType::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state.as_bool().value, target.as_bool().value);
-            input2.borrow_mut().add(point2.clone());
+            input2.borrow_mut().add(&point2);
             let state = fn_add.out().unwrap();
             debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
@@ -109,14 +109,14 @@ mod fn_add {
         for (value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
+            input1.borrow_mut().add(&point1);
             let state = fn_add.out().unwrap();
             debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_int().value + value2_stored.as_int().value;
             let result = state.as_int().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
-            input2.borrow_mut().add(point2.clone());
+            input2.borrow_mut().add(&point2);
             let state = fn_add.out().unwrap();
             debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
@@ -169,14 +169,14 @@ mod fn_add {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
+            input1.borrow_mut().add(&point1);
             let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_real().value + value2_stored.as_real().value;
             let result = state.as_real().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
-            input2.borrow_mut().add(point2.clone());
+            input2.borrow_mut().add(&point2);
             let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
@@ -229,14 +229,14 @@ mod fn_add {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
+            input1.borrow_mut().add(&point1);
             let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_double().value + value2_stored.as_double().value;
             let result = state.as_double().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
-            input2.borrow_mut().add(point2.clone());
+            input2.borrow_mut().add(&point2);
             let state = fn_mul.out().unwrap();
             debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();

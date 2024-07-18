@@ -30,7 +30,7 @@ use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
 #[derive(Debug)]
 pub struct TaskNodes {
     id: String,
-    inputs: IndexMap<String, TaskEvalNode>,
+    nodes: IndexMap<String, TaskEvalNode>,
     vars: IndexMap<String, FnInOutRef>,
     new_node_vars: Option<TaskNodeVars>,
 }
@@ -42,7 +42,7 @@ impl TaskNodes {
     pub fn new(parent: impl Into<String>) ->Self {
         Self {
             id: format!("{}/TaskNodes", parent.into()),
-            inputs: IndexMap::new(),
+            nodes: IndexMap::new(),
             vars: IndexMap::new(),
             new_node_vars: None,
         }
@@ -50,13 +50,13 @@ impl TaskNodes {
     ///
     /// Returns input by it's name
     pub fn get_eval_node(&mut self, name: &str) -> Option<&mut TaskEvalNode> {
-        self.inputs.get_mut(name)
+        self.nodes.get_mut(name)
     }
-    ///
-    /// Returns input by it's name
-    pub fn get_input(&self, name: &str) -> Option<FnInOutRef> {
-        self.inputs.get(name).map(|node| node.getInput())
-    }
+    // ///
+    // /// Returns input by it's name
+    // pub fn get_input(&self, name: &str) -> Option<FnInOutRef> {
+    //     self.inputs.get(name).map(|node| node.get_input())
+    // }
     ///
     /// Returns variable by it's name
     pub fn get_var(&self, name: &str) -> Option<&FnInOutRef> {
@@ -64,23 +64,31 @@ impl TaskNodes {
         self.vars.get(name)
     }
     ///
-    /// Adding new input refeerence
-    pub fn add_input(&mut self, name: impl Into<String> + std::fmt::Debug + Clone, input: FnInOutRef) {
+    /// Adding new input reference
+    pub fn add_input(&mut self, name: impl Into<String> + std::fmt::Debug + Clone, input: FnInOutRef) -> FnInOutRef {
+        let name = name.into();
         match self.new_node_vars {
             Some(_) => {
-                if self.inputs.contains_key(&name.clone().into()) {
-                    trace!("{}.addInput | input {:?} - already added", self.id, &name);
-                } else {
-                    trace!("{}.addInput | adding input {:?}", self.id, &name);
-                    trace!("{}.addInput | adding input {:?}: {:?}", self.id, &name, &input);
-                    self.inputs.insert(
-                        name.clone().into(), 
-                        TaskEvalNode::new(self.id.clone(), name, input),
-                    );
+                match self.nodes.get_mut(&name) {
+                    // Same name - adding to the existing node, if input has different 'options hash'
+                    Some(node) => {
+                        trace!("{}.add_input | input {:?}:{} - adding to the existing node if has different 'options hash'", self.id, name, input.borrow().hash());
+                        node.add_input(input)
+                    }
+                    // New name - adding new TaskEvalNode
+                    None => {
+                        trace!("{}.add_input | adding input {:?}:{}", self.id, name, input.borrow().hash());
+                        trace!("{}.add_input | adding input {:?}:{}: {:?}", self.id, name, input.borrow().hash(), input);
+                        self.nodes.insert(
+                            name.clone(), 
+                            TaskEvalNode::new(&self.id, name, vec![input.clone()]),
+                        );
+                        input
+                    }
                 }
             }
             None => {
-                panic!("{}.addInput | Call beginNewNode first, then you can add inputs", self.id)
+                panic!("{}.add_input | Call beginNewNode first, then you can add inputs", self.id)
             }
         }
     }
@@ -136,13 +144,13 @@ impl TaskNodes {
                 let inputs = out.borrow().inputs();
                 trace!("{}.finishNewNode | out {:#?} \n\tdipending on inputs:: {:#?}\n", self.id, &out, inputs);
                 for input_name in inputs {
-                    match self.inputs.get_mut(&input_name) {
+                    match self.nodes.get_mut(&input_name) {
                         Some(eval_node) => {
                             trace!("{}.finishNewNode | updating input: {:?}", self.id, input_name);
                             let len = vars.len();
-                            eval_node.addVars(&vars.clone());
+                            eval_node.add_vars(&vars.clone());
                             if out.borrow().kind() != &FnKind::Var {
-                                eval_node.addOut(out.clone());
+                                eval_node.add_out(out.clone());
                             }
                             trace!("{}.finishNewNode | evalNode '{}' appended: {:?}", self.id, eval_node.name(), len);
                         }
@@ -150,7 +158,7 @@ impl TaskNodes {
                     };
                 };
                 self.new_node_vars = None;
-                trace!("\n{}.finishNewNode | self.inputs: {:?}\n", self.id, self.inputs);
+                trace!("\n{}.finishNewNode | self.inputs: {:?}\n", self.id, self.nodes);
             }
             None => panic!("{}.finishNewNode | Call beginNewNode first, then you can add inputs & vars, then finish node", self.id),
         }
@@ -162,7 +170,7 @@ impl TaskNodes {
         let tx_id = PointTxId::from_str(&parent.join());
         for (idx, (_node_name, mut node_conf)) in conf.nodes.into_iter().enumerate() {
             let node_name = node_conf.name();
-            trace!("{}.buildNodes | node[{}]: {:?}", self.id, idx, node_name);
+            trace!("{}.build_nodes | node[{}]: {:?}", self.id, idx, node_name);
             self.new_node_vars = Some(TaskNodeVars::new());
             let out = match node_conf {
                 FnConfKind::Fn(_) => {
@@ -172,26 +180,26 @@ impl TaskNodes {
                     NestedFn::new(parent, tx_id, &mut node_conf, self, services.clone())
                 }
                 FnConfKind::Const(conf) => {
-                    panic!("{}.buildNodes | Const is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
+                    panic!("{}.build_nodes | Const is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
                 }
                 FnConfKind::Point(conf) => {
-                    panic!("{}.buildNodes | Point is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
+                    panic!("{}.build_nodes | Point is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
                 }
                 FnConfKind::PointConf(conf) => {
-                    panic!("{}.buildNodes | PointConf is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
+                    panic!("{}.build_nodes | PointConf is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
                 }
                 FnConfKind::Param(conf) => {
-                    panic!("{}.buildNodes | Param (custom parameter) is not supported in the root of the Task, config: {:?}: {:?} - ", self.id, node_name, conf);
+                    panic!("{}.build_nodes | Param (custom parameter) is not supported in the root of the Task, config: {:?}: {:?} - ", self.id, node_name, conf);
                 }
             };
             self.finish_new_node(out);
         }
         if let Some(eval_node) = self.get_eval_node("every") {
             let eval_node_name = eval_node.name();
-            for (_name, input) in &self.inputs {
-                let len = input.getOuts().len();
+            for (_name, input) in &self.nodes {
+                let len = input.get_outs().len();
                 if len > 1 {
-                    panic!("{}.buildNodes | evalNode '{}' - contains {} Out's, but single Out allowed when 'point [type] every' was used", self.id, eval_node_name, len);
+                    panic!("{}.build_nodes | evalNode '{}' - contains {} Out's, but single Out allowed when 'point [type] every' was used", self.id, eval_node_name, len);
                 }
             }
         }
@@ -205,12 +213,12 @@ impl TaskNodes {
         let point_name = point.name();
         if let Some(eval_node) = self.get_eval_node("every") {
             trace!("{}.eval | evalNode '{}' - adding point...", self_id, &eval_node.name());
-            eval_node.add(point.clone());
+            eval_node.add(&point);
         };
         match self.get_eval_node(&point_name) {
             Some(eval_node) => {
                 trace!("{}.eval | evalNode '{}' - adding point...", self_id, &eval_node.name());
-                eval_node.add(point.clone());
+                eval_node.add(&point);
                 trace!("{}.eval | evalNode '{}' - evaluating...", self_id, &eval_node.name());
                 eval_node.eval();
             }

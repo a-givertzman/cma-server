@@ -68,16 +68,15 @@ mod sql_metric {
         for (value, name, target_value) in test_data {
             let point = value.to_point(0, name);
             let input_name = &point.name();
-            match &nodes.get_eval_node(&input_name) {
+            match nodes.get_eval_node(&input_name) {
                 Some(eval_node) => {
-                    let input = eval_node.getInput();
-                    input.borrow_mut().add(point.clone());
-                    for eval_node_var in eval_node.getVars() {
+                    eval_node.add(&point);
+                    for eval_node_var in eval_node.get_vars() {
                         trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
                         eval_node_var.borrow_mut().eval();
                         debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
                     };
-                    for eval_node_out in eval_node.getOuts() {
+                    for eval_node_out in eval_node.get_outs() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
                         match out {
@@ -144,14 +143,13 @@ mod sql_metric {
             let input_name = &point.name();
             match nodes.get_eval_node(&input_name) {
                 Some(eval_node) => {
-                    let input = eval_node.getInput();
-                    input.borrow_mut().add(point.clone());
-                    for eval_node_var in eval_node.getVars() {
+                    eval_node.add(&point);
+                    for eval_node_var in eval_node.get_vars() {
                         trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
                         eval_node_var.borrow_mut().eval();
                         debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
                     };
-                    for eval_node_out in eval_node.getOuts() {
+                    for eval_node_out in eval_node.get_outs() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
                         match out {
@@ -228,14 +226,13 @@ mod sql_metric {
             let input_name = &point.name();
             match nodes.get_eval_node(&input_name) {
                 Some(eval_node) => {
-                    let input = eval_node.getInput();
-                    input.borrow_mut().add(point.clone());
-                    for eval_node_var in eval_node.getVars() {
+                    eval_node.add(&point);
+                    for eval_node_var in eval_node.get_vars() {
                         trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
                         eval_node_var.borrow_mut().eval();
                         debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
                     };
-                    for eval_node_out in eval_node.getOuts() {
+                    for eval_node_out in eval_node.get_outs() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
                         match out {

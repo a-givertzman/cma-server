@@ -187,7 +187,7 @@ service Task RecorderTaskBasicMetric:
         send-to: /AppTest/TaskTestReceiver.in-queue
         conf point CraneLoad:
             type: Real
-        input: point real '/AppTest/Load' status ok default 150.0
+        input: point real '/AppTest/Load' status ok
     #
     fn Export ExportOpCycleIsActive:
         send-to: /AppTest/TaskTestReceiver.in-queue

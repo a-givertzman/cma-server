@@ -110,23 +110,23 @@ impl FnOut for FnRecOpCycleMetric {
             }
         };
         if op_cycle && (! self.prev) {
-            warn!("{}.out | Operating Cycle - STARTED", self.id);
+            debug!("{}.out | Operating Cycle - STARTED", self.id);
             self.rising = true;
             self.falling = false
         };
         if (! op_cycle) && self.prev {
-            warn!("{}.out | Operating Cycle - FINISHED", self.id);
+            debug!("{}.out | Operating Cycle - FINISHED", self.id);
             self.falling = true;
             self.rising = false;
         };
         self.prev = op_cycle;
         if self.falling {
             self.falling = false;
-            warn!("{}.out | Operating Cycle - SENDING...", self.id);
+            debug!("{}.out | Operating Cycle - SENDING...", self.id);
             let log_values: Vec<String> = self.values.iter().map(|point| {
                 format!("{}: {}", point.name(), point.value().to_string())
             }).collect();
-            warn!("{}.out | Operating Cycle - values ({}): {:#?}", self.id, self.values.len(), log_values);
+            debug!("{}.out | Operating Cycle - values ({}): {:#?}", self.id, self.values.len(), log_values);
             for value in &self.values {
                 self.send(value);
             }

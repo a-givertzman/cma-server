@@ -54,8 +54,8 @@ mod fn_bit_xor {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             let result = fn_bit_xor.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} ^ value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 ^ value2;
@@ -96,9 +96,9 @@ mod fn_bit_xor {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
             let point3 = value3.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
-            input3.borrow_mut().add(point3.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
+            input3.borrow_mut().add(&point3);
             let result = fn_bit_xor.out().unwrap().as_bool().value.0;
             debug!("step {}  |  value1: {:?} ^ value2: {:?} ^ value3: {:?} | result: {:?}", step, value1, value2, value3, result);
             target = value1 ^ value2 ^ value3;
@@ -139,8 +139,8 @@ mod fn_bit_xor {
         for (step, value1, value2) in test_data {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
             let result = fn_bit_xor.out().unwrap().as_int().value;
             debug!("step {}  |  value1: {:?} ^ value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 ^ value2;
@@ -184,9 +184,9 @@ mod fn_bit_xor {
             let point1 = value1.to_point(0, "test");
             let point2 = value2.to_point(0, "test");
             let point3 = value3.to_point(0, "test");
-            input1.borrow_mut().add(point1.clone());
-            input2.borrow_mut().add(point2.clone());
-            input3.borrow_mut().add(point3.clone());
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
+            input3.borrow_mut().add(&point3);
             let result = fn_bit_xor.out().unwrap().as_int().value;
             debug!("step {}  |  value1: {:?} ^ value2: {:?} ^ value3: {:?} | result: {:?}", step, value1, value2, value3, result);
             target = value1 ^ value2 ^ value3;

@@ -106,18 +106,17 @@ mod task_nodes {
             let point = value.to_point(0, name);
             // let inputName = &point.name();
             debug!("input point name: {:?}  value: {:?}", name, value);
-            match &task_nodes.get_eval_node(&name) {
+            match task_nodes.get_eval_node(&name) {
                 Some(eval_node) => {
-                    let input = eval_node.getInput();
-                    input.borrow_mut().add(point.clone());
+                    eval_node.add(&point);
                     debug!("evalNode: {:?}", eval_node.name());
-                    // debug!("evalNode outs: {:?}", evalNode.getOuts());
-                    for eval_node_var in eval_node.getVars() {
+                    debug!("evalNode outs: {:?}", eval_node.get_outs());
+                    for eval_node_var in eval_node.get_vars() {
                         trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
                         eval_node_var.borrow_mut().eval();
                         debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
                     };
-                    for eval_node_out in eval_node.getOuts() {
+                    for eval_node_out in eval_node.get_outs() {
                         trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
                         match out {

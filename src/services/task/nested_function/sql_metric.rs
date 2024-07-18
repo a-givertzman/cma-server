@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc, RwLock}};
 use indexmap::IndexMap;
-use log::{debug, trace};
+use log::trace;
 use crate::{
     conf::{fn_::fn_config::FnConfig, point_config::name::Name},
     core_::{
@@ -64,7 +64,7 @@ impl SqlMetric {
             !delete
         });
         for name in input_conf_names {
-            debug!("{}.new | input name: {:?}", self_id, name);
+            trace!("{}.new | input name: {:?}", self_id, name);
             let input_conf = conf.input_conf(name).unwrap();
             inputs.insert(
                 name.to_owned(), 
@@ -99,13 +99,6 @@ impl SqlMetric {
             sql,
             sql_names,
         }
-    }
-}
-//
-// 
-impl FnIn for SqlMetric {
-    fn add(&mut self, _point: PointType) {
-        panic!("{}.add | method is not used", self.id)
     }
 }
 //
@@ -163,6 +156,9 @@ impl FnOut for SqlMetric {
         }
     }
 }
+//
+// 
+impl FnIn for SqlMetric {}
 //
 // 
 impl FnInOut for SqlMetric {}
