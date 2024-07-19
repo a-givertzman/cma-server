@@ -123,7 +123,7 @@ mod cma_recorder {
             task_handles.push(handle);
         }
         info!("task runing - ok");
-        thread::sleep(Duration::from_millis(300));
+        thread::sleep(Duration::from_millis(600));
         let producer_handle = producer.lock().unwrap().run().unwrap();
         info!("producer runing - ok");
         thread::sleep(Duration::from_millis(900));
@@ -185,9 +185,9 @@ mod cma_recorder {
         };
         // assert!(index == targets.len(), "result: {:?}\ntarget: {:?}", index, targets.len());
         test_duration.exit();
-        // loop {
-        //     thread::sleep(Duration::from_millis(100));
-        // }
+        loop {
+            thread::sleep(Duration::from_millis(100));
+        }
     }
     ///
     /// Returns test data
@@ -230,6 +230,7 @@ mod cma_recorder {
             ("23.0",    format!("/{}/Load", self_id),       Value::Real( 12.00)),
             ("24.0",    format!("/{}/Load", self_id),       Value::Real( 64.00)),
             ("26.1",    format!("/{}/CraneMode.MOPS", self_id),       Value::Int(1)),
+            ("26.1",    format!("/{}/CraneMode.MOPS", self_id),       Value::Int(0)),
             ("25.0",    format!("/{}/Load", self_id),       Value::Real(128.00)),
             ("26.0",    format!("/{}/Load", self_id),       Value::Real(120.00)),
             ("26.1",    format!("/{}/CraneMode.AOPS", self_id),       Value::Int(1)),
@@ -247,6 +248,7 @@ mod cma_recorder {
             ("37.0",    format!("/{}/Load", self_id),       Value::Real( 12.00)),
             ("38.0",    format!("/{}/Load", self_id),       Value::Real(  8.00)),
             ("39.0",    format!("/{}/Load", self_id),       Value::Real( 17.00)),
+            ("26.1",    format!("/{}/CraneMode.MOPS", self_id),       Value::Int(1)),
             ("40.0",    format!("/{}/Load", self_id),       Value::Real( 10.00)),
             ("41.0",    format!("/{}/Load", self_id),       Value::Real(  7.00)),
             ("42.0",    format!("/{}/Load", self_id),       Value::Real(  3.00)),

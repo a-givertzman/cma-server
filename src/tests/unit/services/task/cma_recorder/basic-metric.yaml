@@ -253,7 +253,7 @@ service Task RecorderTaskBasicMetric:
                 input fn RisingEdge:
                     input: point bool '/AppTest/Winch3.Load.Limiter.Trip' status ok
     #
-    # crane-characteristic-number	текущее характеристическое число для крана
+    # crane-characteristic-number  |  текущее характеристическое число для крана
     let craneEigenValue:
         input fn Retain:
             enable: opCycleIsActive
@@ -275,7 +275,7 @@ service Task RecorderTaskBasicMetric:
             initial: const real 0.0
             input: opCycleIsActive
     #
-    # winch1-characteristic-number	текущее характеристическое число лебедка 1
+    # winch1-characteristic-number  |  текущее характеристическое число лебедка 1
     let winch1EigenValue:
         input fn Retain:
             enable: opCycleIsActive
@@ -292,7 +292,7 @@ service Task RecorderTaskBasicMetric:
                     default: const real 0.0
                     key: 'winch1-characteristic-number'
     #
-    # winch2-characteristic-number	текущее характеристическое число лебедка 2
+    # winch2-characteristic-number  |  текущее характеристическое число лебедка 2
     let winch2EigenValue:
         input fn Retain:
             enable: opCycleIsActive
@@ -309,7 +309,7 @@ service Task RecorderTaskBasicMetric:
                     default: const real 0.0
                     key: 'winch2-characteristic-number'
     #
-    # winch3-characteristic-number	текущее характеристическое число лебедка 3
+    # winch3-characteristic-number  |  текущее характеристическое число лебедка 3
     let winch3EigenValue:
         input fn Retain:
             enable: opCycleIsActive
@@ -2077,9 +2077,9 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'total-operating-cycles-count';
             input: craneOperatingCyclesTotal
         #
-        # 3.4   	cycles-distribution-by-load-ranges	распределение циклов по диапазонам нагрузки
+        # 3.4  |  cycles-distribution-by-load-ranges  |  распределение циклов по диапазонам нагрузки
         #
-        # 3.4.1.1 	int	cycles-0_05-0_15-load-range	циклов в диапазоне загрузки 0,05 - 0,15
+        # 3.4.1.1  |  int  |  cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
         input34_1_01 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_05-0_15-load-range';
@@ -2089,7 +2089,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_05-0_15-load';
             input: craneAverageLoadInRabge_0_05_0_15_Relative
         #
-        # 3.4.1.2 	int	cycles-0_15-0_25_load-range	циклов в диапазоне загрузки 0,15 - 0,25
+        # 3.4.1.2  |  int  |  cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
         input34_1_02 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_15-0_25_load-range';
@@ -2099,7 +2099,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_15-0_25-load';
             input: craneAverageLoadInRabge_0_15_0_25_Relative
         #
-        # 3.4.1.3 	int	cycles-0_25-0_35_load-range	циклов в диапазоне загрузки 0,25 - 0,35
+        # 3.4.1.3  |  int  |  cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
         input34_1_03 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_25-0_35_load-range';
@@ -2109,7 +2109,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_25-0_35-load';
             input: craneAverageLoadInRabge_0_25_0_35_Relative
         #
-        # 3.4.1.4 	int	cycles-0_35-0_45_load-range	циклов в диапазоне загрузки 0,35 - 0,45
+        # 3.4.1.4  |  int  |  cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
         input34_1_04 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_35-0_45_load-range';
@@ -2119,7 +2119,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_35-0_45-load';
             input: craneAverageLoadInRabge_0_35_0_45_Relative
         #
-        # 3.4.1.5 	int	cycles-0_45-0_55_load-range	циклов в диапазоне загрузки 0,45 - 0,55
+        # 3.4.1.5  |  int  |  cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
         input34_1_05 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_45-0_55_load-range';
@@ -2129,7 +2129,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_45-0_55-load';
             input: craneAverageLoadInRabge_0_45_0_55_Relative
         #
-        # 3.4.1.6 	int	cycles-0_55-0_65_load-range	циклов в диапазоне загрузки 0,55 - 0,65
+        # 3.4.1.6  |  int  |  cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
         input34_1_06 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_55-0_65_load-range';
@@ -2139,7 +2139,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_55-0_65-load';
             input: craneAverageLoadInRabge_0_55_0_65_Relative
         #
-        # 3.4.1.7 	int	cycles-0_65-0_75_load-range	циклов в диапазоне загрузки 0,65 - 0,75
+        # 3.4.1.7  |  int  |  cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
         input34_1_07 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_65-0_75_load-range';
@@ -2149,7 +2149,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_65-0_75-load';
             input: craneAverageLoadInRabge_0_65_0_75_Relative
         #
-        # 3.4.1.8 	int	cycles-0_75-0_85_load-range	циклов в диапазоне загрузки 0,75 - 0,85
+        # 3.4.1.8  |  int  |  cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
         input34_1_08 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_75-0_85_load-range';
@@ -2159,7 +2159,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_75-0_85-load';
             input: craneAverageLoadInRabge_0_75_0_85_Relative
         #
-        # 3.4.1.9 	int	cycles-0_85-0_95_load-range	циклов в диапазоне загрузки 0,85 - 0,95
+        # 3.4.1.9  |  int  |  cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
         input34_1_09 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_85-0_95_load-range';
@@ -2169,7 +2169,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_85-0_95-load';
             input: craneAverageLoadInRabge_0_85_0_95_Relative
         #
-        # 3.4.1.10	int	cycles-0_95-1_05_load-range	циклов в диапазоне загрузки 0,95 - 1,05
+        # 3.4.1.10  |  int  |  cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
         input34_1_10 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-0_95-1_05_load-range';
@@ -2179,7 +2179,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '0_95-1_05-load';
             input: craneAverageLoadInRabge_0_95_1_05_Relative
         #
-        # 3.4.1.11	int	cycles-1_05-1_15_load-range	циклов в диапазоне загрузки 1,05 - 1,15
+        # 3.4.1.11  |  int  |  cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
         input34_1_11 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-1_05-1_15_load-range';
@@ -2189,7 +2189,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '1_05-1_15-load';
             input: craneAverageLoadInRabge_1_05_1_15_Relative
         #
-        # 3.4.1.12	int	cycles-1_15-1_25_load-range	циклов в диапазоне загрузки 1,15 - 1,25
+        # 3.4.1.12  |  int  |  cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
         input34_1_12 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-1_15-1_25_load-range';
@@ -2199,7 +2199,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '1_15-1_25-load';
             input: craneAverageLoadInRabge_1_15_1_25_Relative
         #
-        # 3.4.1.13	int	cycles-1_25-_load-range	циклов в диапазоне загрузки 1,25 и выше
+        # 3.4.1.13  |  int  |  cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
         input34_1_13 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'cycles-1_25-_load-range';
@@ -2209,7 +2209,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = '1_25-load';
             input: craneAverageLoadInRabge_1_25_Relative
         #
-        # 3.4.2.1 	int	winch1-cycles-0_05-0_15-load-range	циклов в диапазоне загрузки 0,05 - 0,15
+        # 3.4.2.1  |  int  |  winch1-cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
         input34_2_01 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_05-0_15-load-range';
@@ -2219,7 +2219,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_05-0_15-load';
             input: winch1AverageLoadInRabge_0_05_0_15_Relative
         #
-        # 3.4.2.2 	int	winch1-cycles-0_15-0_25_load-range	циклов в диапазоне загрузки 0,15 - 0,25
+        # 3.4.2.2  |  int  |  winch1-cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
         input34_2_02 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_15-0_25_load-range';
@@ -2229,7 +2229,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_15-0_25-load';
             input: winch1AverageLoadInRabge_0_15_0_25_Relative
         #
-        # 3.4.2.3 	int	winch1-cycles-0_25-0_35_load-range	циклов в диапазоне загрузки 0,25 - 0,35
+        # 3.4.2.3  |  int  |  winch1-cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
         input34_2_03 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_25-0_35_load-range';
@@ -2239,7 +2239,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_25-0_35-load';
             input: winch1AverageLoadInRabge_0_25_0_35_Relative
         #
-        # 3.4.2.4 	int	winch1-cycles-0_35-0_45_load-range	циклов в диапазоне загрузки 0,35 - 0,45
+        # 3.4.2.4  |  int  |  winch1-cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
         input34_2_04 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_35-0_45_load-range';
@@ -2249,7 +2249,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_35-0_45-load';
             input: winch1AverageLoadInRabge_0_35_0_45_Relative
         #
-        # 3.4.2.5 	int	winch1-cycles-0_45-0_55_load-range	циклов в диапазоне загрузки 0,45 - 0,55
+        # 3.4.2.5  |  int  |  winch1-cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
         input34_2_05 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_45-0_55_load-range';
@@ -2259,7 +2259,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_45-0_55-load';
             input: winch1AverageLoadInRabge_0_45_0_55_Relative
         #
-        # 3.4.2.6 	int	winch1-cycles-0_55-0_65_load-range	циклов в диапазоне загрузки 0,55 - 0,65
+        # 3.4.2.6  |  int  |  winch1-cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
         input34_2_06 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_55-0_65_load-range';
@@ -2269,7 +2269,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_55-0_65-load';
             input: winch1AverageLoadInRabge_0_55_0_65_Relative
         #
-        # 3.4.2.7 	int	winch1-cycles-0_65-0_75_load-range	циклов в диапазоне загрузки 0,65 - 0,75
+        # 3.4.2.7  |  int  |  winch1-cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
         input34_2_07 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_65-0_75_load-range';
@@ -2279,7 +2279,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_65-0_75-load';
             input: winch1AverageLoadInRabge_0_65_0_75_Relative
         #
-        # 3.4.2.8 	int	winch1-cycles-0_75-0_85_load-range	циклов в диапазоне загрузки 0,75 - 0,85
+        # 3.4.2.8  |  int  |  winch1-cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
         input34_2_08 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_75-0_85_load-range';
@@ -2289,7 +2289,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_75-0_85-load';
             input: winch1AverageLoadInRabge_0_75_0_85_Relative
         #
-        # 3.4.2.9 	int	winch1-cycles-0_85-0_95_load-range	циклов в диапазоне загрузки 0,85 - 0,95
+        # 3.4.2.9  |  int  |  winch1-cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
         input34_2_09 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_85-0_95_load-range';
@@ -2299,7 +2299,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_85-0_95-load';
             input: winch1AverageLoadInRabge_0_85_0_95_Relative
         #
-        # 3.4.2.10	int	winch1-cycles-0_95-1_05_load-range	циклов в диапазоне загрузки 0,95 - 1,05
+        # 3.4.2.10  |  int  |  winch1-cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
         input34_2_10 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_95-1_05_load-range';
@@ -2309,7 +2309,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-0_95-1_05-load';
             input: winch1AverageLoadInRabge_0_95_1_05_Relative
         #
-        # 3.4.2.11	int	winch1-cycles-1_05-1_15_load-range	циклов в диапазоне загрузки 1,05 - 1,15
+        # 3.4.2.11  |  int  |  winch1-cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
         input34_2_11 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-1_05-1_15_load-range';
@@ -2319,7 +2319,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-1_05-1_15-load';
             input: winch1AverageLoadInRabge_1_05_1_15_Relative
         #
-        # 3.4.2.12	int	winch1-cycles-1_15-1_25_load-range	циклов в диапазоне загрузки 1,15 - 1,25
+        # 3.4.2.12  |  int  |  winch1-cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
         input34_2_12 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-1_15-1_25_load-range';
@@ -2329,7 +2329,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-1_15-1_25-load';
             input: winch1AverageLoadInRabge_1_15_1_25_Relative
         #
-        # 3.4.2.13	int	winch1-cycles-1_25-_load-range	циклов в диапазоне загрузки 1,25 и выше
+        # 3.4.2.13  |  int  |  winch1-cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
         input34_2_13 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-cycles-1_25-_load-range';
@@ -2339,7 +2339,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch1-1_25-load';
             input: winch1AverageLoadInRabge_1_25_Relative
         #
-        # 3.4.3.1 	int	winch2-cycles-0_05-0_15-load-range	циклов в диапазоне загрузки 0,05 - 0,15
+        # 3.4.3.1  |  int  |  winch2-cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
         input34_3_01 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_05-0_15-load-range';
@@ -2349,7 +2349,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_05-0_15-load';
             input: winch2AverageLoadInRabge_0_05_0_15_Relative
         #
-        # 3.4.3.2 	int	winch2-cycles-0_15-0_25_load-range	циклов в диапазоне загрузки 0,15 - 0,25
+        # 3.4.3.2  |  int  |  winch2-cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
         input34_3_02 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_15-0_25_load-range';
@@ -2359,7 +2359,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_15-0_25-load';
             input: winch2AverageLoadInRabge_0_15_0_25_Relative
         #
-        # 3.4.3.3 	int	winch2-cycles-0_25-0_35_load-range	циклов в диапазоне загрузки 0,25 - 0,35
+        # 3.4.3.3  |  int  |  winch2-cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
         input34_3_03 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_25-0_35_load-range';
@@ -2369,7 +2369,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_25-0_35-load';
             input: winch2AverageLoadInRabge_0_25_0_35_Relative
         #
-        # 3.4.3.4 	int	winch2-cycles-0_35-0_45_load-range	циклов в диапазоне загрузки 0,35 - 0,45
+        # 3.4.3.4  |  int  |  winch2-cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
         input34_3_04 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_35-0_45_load-range';
@@ -2379,7 +2379,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_35-0_45-load';
             input: winch2AverageLoadInRabge_0_35_0_45_Relative
         #
-        # 3.4.3.5 	int	winch2-cycles-0_45-0_55_load-range	циклов в диапазоне загрузки 0,45 - 0,55
+        # 3.4.3.5  |  int  |  winch2-cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
         input34_3_05 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_45-0_55_load-range';
@@ -2389,7 +2389,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_45-0_55-load';
             input: winch2AverageLoadInRabge_0_45_0_55_Relative
         #
-        # 3.4.3.6 	int	winch2-cycles-0_55-0_65_load-range	циклов в диапазоне загрузки 0,55 - 0,65
+        # 3.4.3.6  |  int  |  winch2-cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
         input34_3_06 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_55-0_65_load-range';
@@ -2399,7 +2399,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_55-0_65-load';
             input: winch2AverageLoadInRabge_0_55_0_65_Relative
         #
-        # 3.4.3.7 	int	winch2-cycles-0_65-0_75_load-range	циклов в диапазоне загрузки 0,65 - 0,75
+        # 3.4.3.7  |  int  |  winch2-cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
         input34_3_07 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_65-0_75_load-range';
@@ -2409,7 +2409,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_65-0_75-load';
             input: winch2AverageLoadInRabge_0_65_0_75_Relative
         #
-        # 3.4.3.8 	int	winch2-cycles-0_75-0_85_load-range	циклов в диапазоне загрузки 0,75 - 0,85
+        # 3.4.3.8  |  int  |  winch2-cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
         input34_3_08 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_75-0_85_load-range';
@@ -2419,7 +2419,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_75-0_85-load';
             input: winch2AverageLoadInRabge_0_75_0_85_Relative
         #
-        # 3.4.3.9 	int	winch2-cycles-0_85-0_95_load-range	циклов в диапазоне загрузки 0,85 - 0,95
+        # 3.4.3.9  |  int  |  winch2-cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
         input34_3_09 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_85-0_95_load-range';
@@ -2429,7 +2429,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_85-0_95-load';
             input: winch2AverageLoadInRabge_0_85_0_95_Relative
         #
-        # 3.4.3.10	int	winch2-cycles-0_95-1_05_load-range	циклов в диапазоне загрузки 0,95 - 1,05
+        # 3.4.3.10  |  int  |  winch2-cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
         input34_3_10 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_95-1_05_load-range';
@@ -2439,7 +2439,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-0_95-1_05-load';
             input: winch2AverageLoadInRabge_0_95_1_05_Relative
         #
-        # 3.4.3.11	int	winch2-cycles-1_05-1_15_load-range	циклов в диапазоне загрузки 1,05 - 1,15
+        # 3.4.3.11  |  int  |  winch2-cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
         input34_3_11 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-1_05-1_15_load-range';
@@ -2449,7 +2449,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-1_05-1_15-load';
             input: winch2AverageLoadInRabge_1_05_1_15_Relative
         #
-        # 3.4.3.12	int	winch2-cycles-1_15-1_25_load-range	циклов в диапазоне загрузки 1,15 - 1,25
+        # 3.4.3.12  |  int  |  winch2-cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
         input34_3_12 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-1_15-1_25_load-range';
@@ -2459,7 +2459,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-1_15-1_25-load';
             input: winch2AverageLoadInRabge_1_15_1_25_Relative
         #
-        # 3.4.3.13	int	winch2-cycles-1_25-_load-range	циклов в диапазоне загрузки 1,25 и выше
+        # 3.4.3.13  |  int  |  winch2-cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
         input34_3_13 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-cycles-1_25-_load-range';
@@ -2469,7 +2469,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch2-1_25-load';
             input: winch2AverageLoadInRabge_1_25_Relative
         #
-        # 3.4.4.1 	int	winch3-cycles-0_05-0_15-load-range	циклов в диапазоне загрузки 0,05 - 0,15
+        # 3.4.4.1  |  int  |  winch3-cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
         input34_4_01 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_05-0_15-load-range';
@@ -2479,7 +2479,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_05-0_15-load';
             input: winch3AverageLoadInRabge_0_05_0_15_Relative
         #
-        # 3.4.4.2 	int	winch3-cycles-0_15-0_25_load-range	циклов в диапазоне загрузки 0,15 - 0,25
+        # 3.4.4.2  |  int  |  winch3-cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
         input34_4_02 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_15-0_25_load-range';
@@ -2489,7 +2489,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_15-0_25-load';
             input: winch3AverageLoadInRabge_0_15_0_25_Relative
         #
-        # 3.4.4.3 	int	winch3-cycles-0_25-0_35_load-range	циклов в диапазоне загрузки 0,25 - 0,35
+        # 3.4.4.3  |  int  |  winch3-cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
         input34_4_03 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_25-0_35_load-range';
@@ -2499,7 +2499,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_25-0_35-load';
             input: winch3AverageLoadInRabge_0_25_0_35_Relative
         #
-        # 3.4.4.4 	int	winch3-cycles-0_35-0_45_load-range	циклов в диапазоне загрузки 0,35 - 0,45
+        # 3.4.4.4  |  int  |  winch3-cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
         input34_4_04 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_35-0_45_load-range';
@@ -2509,7 +2509,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_35-0_45-load';
             input: winch3AverageLoadInRabge_0_35_0_45_Relative
         #
-        # 3.4.4.5 	int	winch3-cycles-0_45-0_55_load-range	циклов в диапазоне загрузки 0,45 - 0,55
+        # 3.4.4.5  |  int  |  winch3-cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
         input34_4_05 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_45-0_55_load-range';
@@ -2519,7 +2519,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_45-0_55-load';
             input: winch3AverageLoadInRabge_0_45_0_55_Relative
         #
-        # 3.4.4.6 	int	winch3-cycles-0_55-0_65_load-range	циклов в диапазоне загрузки 0,55 - 0,65
+        # 3.4.4.6  |  int  |  winch3-cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
         input34_4_06 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_55-0_65_load-range';
@@ -2529,7 +2529,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_55-0_65-load';
             input: winch3AverageLoadInRabge_0_55_0_65_Relative
         #
-        # 3.4.4.7 	int	winch3-cycles-0_65-0_75_load-range	циклов в диапазоне загрузки 0,65 - 0,75
+        # 3.4.4.7  |  int  |  winch3-cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
         input34_4_07 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_65-0_75_load-range';
@@ -2539,7 +2539,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_65-0_75-load';
             input: winch3AverageLoadInRabge_0_65_0_75_Relative
         #
-        # 3.4.4.8 	int	winch3-cycles-0_75-0_85_load-range	циклов в диапазоне загрузки 0,75 - 0,85
+        # 3.4.4.8  |  int  |  winch3-cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
         input34_4_08 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_75-0_85_load-range';
@@ -2549,7 +2549,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_75-0_85-load';
             input: winch3AverageLoadInRabge_0_75_0_85_Relative
         #
-        # 3.4.4.9 	int	winch3-cycles-0_85-0_95_load-range	циклов в диапазоне загрузки 0,85 - 0,95
+        # 3.4.4.9  |  int  |  winch3-cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
         input34_4_09 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_85-0_95_load-range';
@@ -2559,7 +2559,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_85-0_95-load';
             input: winch3AverageLoadInRabge_0_85_0_95_Relative
         #
-        # 3.4.4.10	int	winch3-cycles-0_95-1_05_load-range	циклов в диапазоне загрузки 0,95 - 1,05
+        # 3.4.4.10  |  int  |  winch3-cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
         input34_4_10 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_95-1_05_load-range';
@@ -2569,7 +2569,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-0_95-1_05-load';
             input: winch3AverageLoadInRabge_0_95_1_05_Relative
         #
-        # 3.4.4.11	int	winch3-cycles-1_05-1_15_load-range	циклов в диапазоне загрузки 1,05 - 1,15
+        # 3.4.4.11  |  int  |  winch3-cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
         input34_4_11 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-1_05-1_15_load-range';
@@ -2579,7 +2579,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-1_05-1_15-load';
             input: winch3AverageLoadInRabge_1_05_1_15_Relative
         #
-        # 3.4.4.12	int	winch3-cycles-1_15-1_25_load-range	циклов в диапазоне загрузки 1,15 - 1,25
+        # 3.4.4.12  |  int  |  winch3-cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
         input34_4_12 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-1_15-1_25_load-range';
@@ -2589,7 +2589,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-1_15-1_25-load';
             input: winch3AverageLoadInRabge_1_15_1_25_Relative
         #
-        # 3.4.4.13	int	winch3-cycles-1_25-_load-range	циклов в диапазоне загрузки 1,25 и выше
+        # 3.4.4.13  |  int  |  winch3-cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
         input34_4_13 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-cycles-1_25-_load-range';
@@ -2599,7 +2599,7 @@ service Task RecorderTaskBasicMetric:
             sql: update {table} set value = {input.value} where name = 'winch3-1_25-load';
             input: winch3AverageLoadInRabge_1_25_Relative
         #
-        # 3.5   	real	crane-total-lifted-mass	суммарная масса поднятых грузов. тонн	0.0
+        # 3.5  |  real  |  crane-total-lifted-mass  |  суммарная масса поднятых грузов. тонн  |  0.0
         input35 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'crane-total-lifted-mass';
@@ -2614,7 +2614,7 @@ service Task RecorderTaskBasicMetric:
                         default: const real 0.0
                         key: 'crane-total-lifted-mass'
         #
-        # 3.5.1 	real	winch1-total-lifted-mass	суммарная масса поднятых грузов лебедка 1	0.0
+        # 3.5.1  |  real  |  winch1-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 1  |  0.0
         input351 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-total-lifted-mass';
@@ -2629,7 +2629,7 @@ service Task RecorderTaskBasicMetric:
                         default: const real 0.0
                         key: 'winch1-total-lifted-mass'
         #
-        # 3.5.2 	real	winch2-total-lifted-mass	суммарная масса поднятых грузов лебедка 2	0.0
+        # 3.5.2  |  real  |  winch2-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 2  |  0.0
         input352 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-total-lifted-mass';
@@ -2644,7 +2644,7 @@ service Task RecorderTaskBasicMetric:
                         default: const real 0.0
                         key: 'winch2-total-lifted-mass'
         #
-        # 3.5.3 	real	winch3-total-lifted-mass	суммарная масса поднятых грузов лебедка 3
+        # 3.5.3  |  real  |  winch3-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 3
         input353 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-total-lifted-mass';
@@ -2659,55 +2659,55 @@ service Task RecorderTaskBasicMetric:
                         default: const real 0.0
                         key: 'winch3-total-lifted-mass'
         #
-        # 3.6.1 	int	winch1-load-limiter-trip-count	количество срабатываний ограничителя грузоподъемности лебедка 1
+        # 3.6.1  |  int  |  winch1-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 1
         input361 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-load-limiter-trip-count';
             input: winch1LoadLimiterTripCount
         #
-        # 3.6.2 	int	winch2-load-limiter-trip-count	количество срабатываний ограничителя грузоподъемности лебедка 2
+        # 3.6.2  |  int  |  winch2-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 2
         input362 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-load-limiter-trip-count';
             input: winch2LoadLimiterTripCount
         #
-        # 3.6.3 	int	winch3-load-limiter-trip-count	количество срабатываний ограничителя грузоподъемности лебедка 3
+        # 3.6.3  |  int  |  winch3-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 3
         input363 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-load-limiter-trip-count';
             input: winch3LoadLimiterTripCount
         #
-        # 3.7   	real	crane-characteristic-number	текущее характеристическое число для крана
+        # 3.7  |  real  |  crane-characteristic-number  |  текущее характеристическое число для крана
         input37 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'crane-characteristic-number';
             input: craneEigenValue
         #
-        # 3.7.1 	real	winch1-characteristic-number	текущее характеристическое число лебедка 1
+        # 3.7.1  |  real  |  winch1-characteristic-number  |  текущее характеристическое число лебедка 1
         input371 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch1-characteristic-number';
             input: winch1EigenValue
         #
-        # 3.7.2 	real	winch2-characteristic-number	текущее характеристическое число лебедка 2
+        # 3.7.2  |  real  |  winch2-characteristic-number  |  текущее характеристическое число лебедка 2
         input372 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch2-characteristic-number';
             input: winch2EigenValue
         #
-        # 3.7.3 	real	winch3-characteristic-number	текущее характеристическое число лебедка 3
+        # 3.7.3  |  real  |  winch3-characteristic-number  |  текущее характеристическое число лебедка 3
         input373 fn SqlMetric:
             table: public.basic_metric
             sql: update {table} set value = {input.value} where name = 'winch3-characteristic-number';
             input: winch3EigenValue
         #
-        # 3.8   	real	crane-load-spectrum-factor	коэффициент распределения нагрузок для крана
+        # 3.8  |  real  |  crane-load-spectrum-factor  |  коэффициент распределения нагрузок для крана
         # implemented in the database
         #
-        # 3.8.1 	real	winch1-load-spectrum-factor	коэффициент распределения нагрузок лебедка 1
+        # 3.8.1  |  real  |  winch1-load-spectrum-factor  |  коэффициент распределения нагрузок лебедка 1
         # implemented in the database
         #
-        # 3.8.2 	real	winch2-load-spectrum-factor	коэффициент распределения нагрузок лебедка 2
+        # 3.8.2  |  real  |  winch2-load-spectrum-factor  |  коэффициент распределения нагрузок лебедка 2
         # implemented in the database
         #
-        # 3.8.3 	real	winch3-load-spectrum-factor	коэффициент распределения нагрузок лебедка 3
+        # 3.8.3  |  real  |  winch3-load-spectrum-factor  |  коэффициент распределения нагрузок лебедка 3
