@@ -37,440 +37,508 @@ service ProfinetClient ied12:
     db db902_panel_controls:
         number: 902
         offset: 0
-        size: 204
-        point Settings.CraneMode.MainMode: 
+        size: 244
+        point Settings.CraneMode.MainMode:
             type: Int
             address:
                 offset: 0
-        point Settings.CraneMode.ActiveWinch: 
+        point Settings.CraneMode.ActiveWinch:
             type: Int
             address:
                 offset: 2
-        point Settings.CraneMode.Winch1Mode: 
+        point Settings.CraneMode.WaveHeightLevel:
             type: Int
             address:
                 offset: 4
-        point Settings.CraneMode.WaveHeightLevel: 
+        point Settings.CraneMode.ConstantTensionLevel:
             type: Int
             address:
                 offset: 6
-        point Settings.CraneMode.ConstantTensionLevel: 
-            type: Int
-            address:
-                offset: 8
-        point Settings.CraneMode.SetRelativeDepth:
-            type: Int
-            address:
-                offset: 10
-            comment: 'Установить относительную глубтну'
-        point Settings.CraneMode.ResetRelativeDepth: 
-            type: Int
-            address:
-                offset: 12
-            comment: 'Сбросить относительную глубтну'
         point Settings.CraneMode.Rsrv4: 
             type: Int
             address:
-                offset: 14
+                offset: 8
         point Settings.CraneMode.Rsrv5: 
             type: Int
             address:
-                offset: 16
+                offset: 10
         point Settings.CraneMode.Rsrv6: 
             type: Int
             address:
-                offset: 18
+                offset: 12
         point Settings.HPU.Operate: 
             type: Int
             address:
-                offset: 20
+                offset: 14
         point Settings.HPU.Pump1InUse: 
             type: Int
             address:
-                offset: 22
+                offset: 16
             comment: 'Ввод насоса в работу 1/2 (не включение, включает оператор c пульта)'
         point Settings.HPU.Pump2InUse: 
             type: Int
             address:
-                offset: 24
+                offset: 18
             comment: 'Ввод насоса в работу 1/2 (не включение, включает оператор c пульта)'
         point Settings.HPU.Reserv1: 
             type: Int
             address:
-                offset: 26
+                offset: 20
         point Settings.HPU.Reserv2: 
             type: Int
             address:
-                offset: 28
+                offset: 22
         point Settings.HPU.Reserv3: 
             type: Int
             address:
-                offset: 30
+                offset: 24
         point Settings.HPU.OilType: 
             type: Int
             address:
-                offset: 32
+                offset: 26
             comment: 'Тип масла'
         point Settings.HPU.LowOilLevel: 
             type: Int
             address:
-                offset: 34
+                offset: 28
             comment: 'Низкий уровень масла'
         point Settings.HPU.AlarmLowOilLevel: 
             type: Int
             address:
-                offset: 36
+                offset: 30
             comment: 'Аварийно низкий уровень масла'
         point Settings.HPU.HighOilTemp: 
             type: Int
             address:
-                offset: 38
+                offset: 32
             comment: 'Высокая температура масла'
         point Settings.HPU.AlarmHighOilTemp: 
             type: Int
             address:
-                offset: 40
+                offset: 34
             comment: 'Аварийно высокая температура масла'
         point Settings.HPU.LowOilTemp: 
             type: Int
             address:
-                offset: 42
+                offset: 36
             comment: 'Низкая температура масла'
         point Settings.HPU.OilCooling: 
             type: Int
             address:
-                offset: 44
+                offset: 38
             comment: 'Охлаждение масла'
         point Settings.HPU.OilTempHysteresis: 
             type: Int
             address:
-                offset: 46
+                offset: 40
             comment: 'Гистерезис температуры масла'
         point Settings.HPU.WhaterFlowTrackingTimeout: 
             type: Int
             address:
-                offset: 48
+                offset: 42
             comment: 'Таймаут отслеживания потока воды'
         point Settings.HPU.Reserv5: 
             type: Int
             address:
-                offset: 50
+                offset: 44
         point ettings.HPU.Reserv6: 
             type: Int
             address:
-                offset: 52
+                offset: 46
         point Settings.HPU.Reserv7: 
             type: Int
             address:
-                offset: 54
+                offset: 48
         point Settings.Art.TorqueLimit: 
             type: Real
             address:
-                offset: 56
+                offset: 50
             comment: 'ART Ограничение крутящего момента'
         point Settings.Art.Reserv1: 
             type: Real
             address:
-                offset: 60
+                offset: 54
         point Settings.Art.Reserv2: 
             type: Real
             address:
-                offset: 64
+                offset: 58
         point Settings.Art.Reserv3: 
             type: Real
             address:
-                offset: 68
+                offset: 62
         point Settings.AOPS.RotationLimit1: 
             type: Real
             address:
-                offset: 72
+                offset: 66
         point Settings.AOPS.RotationLimit2: 
             type: Real
             address:
-                offset: 76
+                offset: 70
         point Settings.AOPS.Reserv1: 
             type: Real
             address:
-                offset: 80
+                offset: 74
         point Settings.AOPS.Reserv2: 
             type: Real
             address:
-                offset: 84
+                offset: 78
         point Settings.AOPS.Reserv3: 
             type: Real
             address:
-                offset: 88
-        point Settings.MainWinch.SpeedDown1PumpFactor: 
-            type: Int
-            address:
-                offset: 92
-            comment: 'Замедление скорости на одном насосе, %'
-        point Settings.MainWinch.SlowSpeedFactor: 
-            type: Int
-            address:
-                offset: 94
-            comment: 'Ограничение скорости при медленных видах работ, %'
-        point Settings.MainWinch.SpeedDown2AxisFactor: 
-            type: Int
-            address:
-                offset: 96
-            comment: 'Ограничение скорости при > 2 движ, %'
-        point Settings.MainWinch.SpeedAccelerationTime: 
-            type: Int
-            address:
-                offset: 98
-            comment: 'Время линейного ускорения, ms'
-        point Settings.MainWinch.SpeedDecelerationTime: 
-            type: Int
-            address:
-                offset: 100
-            comment: 'Время линейного замедления, ms'
-        point Settings.MainWinch.FastStoppingTime: 
-            type: Int
-            address:
-                offset: 102
-            comment: 'Время быстрой остановки, ms'
-        point Settings.MainWinch.SpeedDownMaxPos: 
-            type: Int
-            address:
-                offset: 104
-            comment: 'Позиция понижения скорости, mm'
-        point Settings.MainWinch.SpeedDownMaxPosFactor: 
-            type: Int
-            address:
-                offset: 106
-            comment: 'Ограничение скорости до, %'
-        point Settings.MainWinch.SpeedDownMinPos: 
-            type: Int
-            address:
-                offset: 108
-            comment: 'Позиция понижение скорости, mm'
-        point Settings.MainWinch.SpeedDownMinPosFactor: 
-            type: Int
-            address:
-                offset: 110
-            comment: 'Ограничение скорости до, %'
-        point Settings.MainWinch.Reserv1: 
-            type: Int
-            address:
-                offset: 112
-        point Settings.MainWinch.Reserv2: 
-            type: Int
-            address:
-                offset: 114
-        point Settings.MainWinch.Reserv3: 
-            type: Int
-            address:
-                offset: 116
+                offset: 82
         point Settings.MainBoom.SpeedDown1PumpFactor: 
             type: Int
             address:
-                offset: 118
+                offset: 86
             comment: 'Замедление скорости на одном насосе, %'
         point Settings.MainBoom.SlowSpeedFactor: 
             type: Int
             address:
-                offset: 120
+                offset: 88
             comment: 'Ограничение скорости при медленных видах работ, %'
         point Settings.MainBoom.SpeedDown2AxisFactor: 
             type: Int
             address:
-                offset: 122
+                offset: 90
             comment: 'Ограничение скорости при > 2 движ, %'
         point Settings.MainBoom.SpeedAccelerationTime: 
             type: Int
             address:
-                offset: 124
+                offset: 92
             comment: 'Время линейного ускорения, ms'
         point Settings.MainBoom.SpeedDecelerationTime: 
             type: Int
             address:
-                offset: 126
+                offset: 94
             comment: 'Время линейного замедления, ms'
         point Settings.MainBoom.FastStoppingTime: 
             type: Int
             address:
-                offset: 128
+                offset: 96
             comment: 'Время быстрой остановки, ms'
         point Settings.MainBoom.PositionOffshore: 
             type: Int
             address:
-                offset: 130
+                offset: 98
             comment: 'Положение перехода в режим За бортом, град'
         point Settings.MainBoom.SpeedDownMaxPos: 
             type: Int
             address:
-                offset: 132
+                offset: 100
             comment: 'Позиция понижения скорости, град'
         point Settings.MainBoom.SpeedDownMaxPosFactor: 
             type: Int
             address:
-                offset: 134
+                offset: 102
             comment: 'Ограничение скорости до, %'
         point Settings.MainBoom.SpeedDownMinPos: 
             type: Int
             address:
-                offset: 136
+                offset: 104
             comment: 'Позиция понижение скорости, град'
         point Settings.MainBoom.SpeedDownMinPosFactor: 
             type: Int
             address:
-                offset: 138
+                offset: 106
             comment: 'Ограничение скорости до, %'
         point Settings.MainBoom.Reserv1: 
             type: Int
             address:
-                offset: 140
+                offset: 108
         point Settings.MainBoom.Reserv2: 
             type: Int
             address:
-                offset: 142
+                offset: 110
         point Settings.MainBoom.Reserv3: 
             type: Int
             address:
-                offset: 144
+                offset: 112
         point Settings.RotaryBoom.SpeedDown1PumpFactor: 
             type: Int
             address:
-                offset: 146
+                offset: 114
             comment: 'Замедление скорости на одном насосе, %'
         point Settings.RotaryBoom.SlowSpeedFactor: 
             type: Int
             address:
-                offset: 148
+                offset: 116
             comment: 'Ограничение скорости при медленных видах работ, %'
         point Settings.RotaryBoom.SpeedDown2AxisFactor: 
             type: Int
             address:
-                offset: 150
+                offset: 118
             comment: 'Ограничение скорости при > 2 движ, %'
         point Settings.RotaryBoom.SpeedAccelerationTime: 
             type: Int
             address:
-                offset: 152
+                offset: 120
             comment: 'Время линейного ускорения, ms'
         point Settings.RotaryBoom.SpeedDecelerationTime: 
             type: Int
             address:
-                offset: 154
+                offset: 122
             comment: 'Время линейного замедления, ms'
         point Settings.RotaryBoom.FastStoppingTime: 
             type: Int
             address:
-                offset: 156
+                offset: 124
             comment: 'Время быстрой остановки, ms'
         point Settings.RotaryBoom.SpeedDownMaxPos: 
             type: Int
             address:
-                offset: 158
+                offset: 126
             comment: 'Позиция понижения скорости, град'
         point Settings.RotaryBoom.SpeedDownMaxPosFactor: 
             type: Int
             address:
-                offset: 160
+                offset: 128
             comment: 'Ограничение скорости до, %'
         point Settings.RotaryBoom.SpeedDownMinPos: 
             type: Int
             address:
-                offset: 162
+                offset: 130
             comment: 'Позиция понижение скорости, град'
         point Settings.RotaryBoom.SpeedDownMinPosFactor: 
             type: Int
             address:
-                offset: 164
+                offset: 132
             comment: 'Ограничение скорости до, %'
         point Settings.RotaryBoom.Reserv1: 
             type: Int
             address:
-                offset: 166
+                offset: 134
         point Settings.RotaryBoom.Reserv2: 
             type: Int
             address:
-                offset: 168
+                offset: 136
         point Settings.RotaryBoom.Reserv3: 
             type: Int
             address:
-                offset: 170
+                offset: 138
         point Settings.Rotation.SpeedDown1PumpFactor: 
             type: Int
             address:
-                offset: 172
+                offset: 140
             comment: 'Замедление скорости на одном насосе, %'
         point Settings.Rotation.SlowSpeedFactor: 
             type: Int
             address:
-                offset: 174
+                offset: 142
             comment: 'Ограничение скорости при медленных видах работ, %'
         point Settings.Rotation.SpeedDown2AxisFactor: 
             type: Int
             address:
-                offset: 176
+                offset: 144
             comment: 'Ограничение скорости при > 2 движ, %'
         point Settings.Rotation.SpeedAccelerationTime: 
             type: Int
             address:
-                offset: 178
+                offset: 146
             comment: 'Время линейного ускорения, ms'
         point Settings.Rotation.SpeedDecelerationTime: 
             type: Int
             address:
-                offset: 180
+                offset: 148
             comment: 'Время линейного замедления, ms'
         point Settings.Rotation.FastStoppingTime: 
             type: Int
             address:
-                offset: 182
+                offset: 150
             comment: 'Время быстрой остановки, ms'
         point Settings.Rotation.PositionDefault: 
             type: Int
             address:
-                offset: 184
+                offset: 152
             comment: 'Предустановленное положение, град'
         point Settings.Rotation.PositionReset: 
             type: Int
             address:
-                offset: 186
+                offset: 154
             comment: 'Положение сброса, град'
         point Settings.Rotation.PositionOffshore: 
             type: Int
             address:
-                offset: 188
+                offset: 156
             comment: "Положение 'За палубой', град"
         point Settings.Rotation.PositionMarchingMode: 
             type: Int
             address:
-                offset: 190
+                offset: 158
             comment: "Положение 'По походному', град"
         point Settings.Rotation.SpeedDownMaxPos: 
             type: Int
             address:
-                offset: 192
+                offset: 160
             comment: 'Позиция понижения скорости, град'
         point Settings.Rotation.SpeedDownMaxPosFactor: 
             type: Int
             address:
-                offset: 194
+                offset: 162
             comment: 'Ограничение скорости до, %'
         point Settings.Rotation.Reserv1: 
             type: Int
             address:
-                offset: 196
+                offset: 164
         point Settings.Rotation.Reserv2: 
             type: Int
             address:
-                offset: 198
+                offset: 166
         point Settings.Rotation.Reserv3: 
             type: Int
             address:
+                offset: 168
+        point Settings.Winch1.SetRelativeDepth:
+            type: Int
+            address:
+                offset: 170
+        point Settings.Winch1.ResetRelativeDepth:
+            type: Int
+            address:
+                offset: 172
+        point Settings.Winch1.FastStoppingTime:
+            type: Int
+            address:
+                offset: 174
+        point Settings.Winch1.SlowSpeedFactor:
+            type: Int
+            address:
+                offset: 176
+        point Settings.Winch1.SpeedAccelerationTime:
+            type: Int
+            address:
+                offset: 178
+        point Settings.Winch1.SpeedDecelerationTime:
+            type: Int
+            address:
+                offset: 180
+        point Settings.Winch1.SpeedDown1PumpFactor:
+            type: Int
+            address:
+                offset: 182
+        point Settings.Winch1.SpeedDown2AxisFactor:
+            type: Int
+            address:
+                offset: 184
+        point Settings.Winch1.SpeedDownMaxPos:
+            type: Int
+            address:
+                offset: 186
+        point Settings.Winch1.SpeedDownMaxPosFactor:
+            type: Int
+            address:
+                offset: 188
+        point Settings.Winch1.SpeedDownMinPos:
+            type: Int
+            address:
+                offset: 190
+        point Settings.Winch1.SpeedDownMinPosFactor:
+            type: Int
+            address:
+                offset: 192
+        point Settings.Winch2.SetRelativeDepth:
+            type: Int
+            address:
+                offset: 194
+        point Settings.Winch2.ResetRelativeDepth:
+            type: Int
+            address:
+                offset: 196
+        point Settings.Winch2.FastStoppingTime:
+            type: Int
+            address:
+                offset: 198
+        point Settings.Winch2.SlowSpeedFactor:
+            type: Int
+            address:
                 offset: 200
-        point Control.Common.ResetAlarms: 
+        point Settings.Winch2.SpeedAccelerationTime:
             type: Int
             address:
                 offset: 202
+        point Settings.Winch2.SpeedDecelerationTime:
+            type: Int
+            address:
+                offset: 204
+        point Settings.Winch2.SpeedDown1PumpFactor:
+            type: Int
+            address:
+                offset: 206
+        point Settings.Winch2.SpeedDown2AxisFactor:
+            type: Int
+            address:
+                offset: 208
+        point Settings.Winch2.SpeedDownMaxPos:
+            type: Int
+            address:
+                offset: 210
+        point Settings.Winch2.SpeedDownMaxPosFactor:
+            type: Int
+            address:
+                offset: 212
+        point Settings.Winch2.SpeedDownMinPos:
+            type: Int
+            address:
+                offset: 214
+        point Settings.Winch2.SpeedDownMinPosFactor:
+            type: Int
+            address:
+                offset: 216
+        point Settings.Winch3.SetRelativeDepth:
+            type: Int
+            address:
+                offset: 218
+        point Settings.Winch3.ResetRelativeDepth:
+            type: Int
+            address:
+                offset: 220
+        point Settings.Winch3.FastStoppingTime:
+            type: Int
+            address:
+                offset: 222
+        point Settings.Winch3.SlowSpeedFactor:
+            type: Int
+            address:
+                offset: 224
+        point Settings.Winch3.SpeedAccelerationTime:
+            type: Int
+            address:
+                offset: 226
+        point Settings.Winch3.SpeedDecelerationTime:
+            type: Int
+            address:
+                offset: 228
+        point Settings.Winch3.SpeedDown1PumpFactor:
+            type: Int
+            address:
+                offset: 230
+        point Settings.Winch3.SpeedDown2AxisFactor:
+            type: Int
+            address:
+                offset: 232
+        point Settings.Winch3.SpeedDownMaxPos:
+            type: Int
+            address:
+                offset: 234
+        point Settings.Winch3.SpeedDownMaxPosFactor:
+            type: Int
+            address:
+                offset: 236
+        point Settings.Winch3.SpeedDownMinPos:
+            type: Int
+            address:
+                offset: 238
+        point Settings.Winch3.SpeedDownMinPosFactor:
+            type: Int
+            address:
+                offset: 240
+        point Control.Common.ResetAlarms: 
+            type: Int
+            address:
+                offset: 242
 
 
 service ProfinetClient ied13:
-    cycle: 7 ms
+    cycle: 10 ms
     subscribe: /App/MultiQueue
     out queue: /App/MultiQueue.in-queue
     protocol: 'profinet'
@@ -489,326 +557,484 @@ service ProfinetClient ied13:
         number: 905
         offset: 0
         size: 148
-        point Winch.ValveEV1: 
+        point Winch1.ValveEV1: 
             type: Bool
             address:
                 offset: 0
                 bit: 0
             history: rw
-        point Winch.ValveEV2: 
+        point Winch1.ValveEV2: 
             type: Bool
             address:
                 offset: 0
                 bit: 1
             history: rw
-        point Winch.LimitSwitchDown: 
+        point Winch1.LimitSwitchDown: 
             type: Bool
             address:
                 offset: 0
                 bit: 2
             history: rw
-        point Winch.Hydromotor1Active: 
+        point Winch1.Hydromotor1Active: 
             type: Bool
             address:
                 offset: 0
                 bit: 3
             history: rw
-        point Winch.Hydromotor2Active: 
+        point Winch1.Hydromotor2Active: 
             type: Bool
             address:
                 offset: 0
                 bit: 4
             history: rw
-        point Winch.EncoderBR1: 
+        point Winch1.EncoderBR1: 
             type: Int
             address:
                 offset: 2
             comment: 'Скорость об/мин'
-        point Winch.EncoderBR2: 
+        point Winch1.EncoderBR2: 
             type: Int
             address:
                 offset: 4
             comment: 'Длина каната, см'
-        point Winch.LVDT1: 
+        point Winch1.LVDT1: 
             type: Real
             address:
                 offset: 6
             comment: 'Датчик угла наклона шайбы гидромотора 1, ॰'
-        point Winch.LVDT2: 
+        point Winch1.LVDT2: 
             type: Real
             address:
                 offset: 10
             comment: 'Датчик угла наклона шайбы гидромотора 2, ॰'
-        point Winch.PressureLineA_1: 
+        point Winch1.PressureLineA_1: 
             type: Real
             address:
                 offset: 14
-        point Winch.PressureLineA_2: 
+        point Winch1.PressureLineA_2: 
             type: Real
             address:
                 offset: 18
-        point Winch.PressureBrakeA: 
+        point Winch1.PressureBrakeA: 
             type: Real
             address:
                 offset: 22
-        point Winch.PressureBrakeB: 
+        point Winch1.PressureBrakeB: 
             type: Real
             address:
                 offset: 26
-        point Winch.TempLine1: 
+        point Winch1.TempLine1: 
             type: Real
             address:
                 offset: 30
-        point Winch.TempLine2: 
+        point Winch1.TempLine2: 
             type: Real
             address:
                 offset: 34
-        point Winch.LoadR0: 
+        point Winch1.LoadR0: 
             type: Real
             address:
                 offset: 38
             comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
-        point Jib.LimitSwitchUp: 
+        point Winch2.ValveEV1: 
             type: Bool
             address:
                 offset: 42
                 bit: 0
-        point Jib.SensorAngle: 
-            type: Real
+            history: rw
+        point Winch2.ValveEV2: 
+            type: Bool
+            address:
+                offset: 42
+                bit: 1
+            history: rw
+        point Winch2.LimitSwitchDown: 
+            type: Bool
+            address:
+                offset: 42
+                bit: 2
+            history: rw
+        point Winch2.Hydromotor1Active: 
+            type: Bool
+            address:
+                offset: 42
+                bit: 3
+            history: rw
+        point Winch2.Hydromotor2Active: 
+            type: Bool
+            address:
+                offset: 42
+                bit: 4
+            history: rw
+        point Winch2.EncoderBR1: 
+            type: Int
             address:
                 offset: 44
-            comment: 'Угод хобота'
-        point Jib.WeightSensor: 
+            comment: 'Скорость об/мин'
+        point Winch2.EncoderBR2: 
+            type: Int
+            address:
+                offset: 46
+            comment: 'Длина каната, см'
+        point Winch2.LVDT1: 
             type: Real
             address:
                 offset: 48
-        point Boom.SensorAngle: 
+            comment: 'Датчик угла наклона шайбы гидромотора 1, ॰'
+        point Winch2.LVDT2: 
             type: Real
             address:
                 offset: 52
+            comment: 'Датчик угла наклона шайбы гидромотора 2, ॰'
+        point Winch2.PressureLineA_1: 
+            type: Real
+            address:
+                offset: 56
+        point Winch2.PressureLineA_2: 
+            type: Real
+            address:
+                offset: 60
+        point Winch2.PressureBrakeA: 
+            type: Real
+            address:
+                offset: 64
+        point Winch2.PressureBrakeB: 
+            type: Real
+            address:
+                offset: 68
+        point Winch2.TempLine1: 
+            type: Real
+            address:
+                offset: 72
+        point Winch2.TempLine2: 
+            type: Real
+            address:
+                offset: 76
+        point Winch2.LoadR0:
+            type: Real
+            address:
+                offset: 80
+            comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+        point Winch3.ValveEV1: 
+            type: Bool
+            address:
+                offset: 84
+                bit: 0
+            history: rw
+        point Winch3.ValveEV2: 
+            type: Bool
+            address:
+                offset: 84
+                bit: 1
+            history: rw
+        point Winch3.LimitSwitchDown: 
+            type: Bool
+            address:
+                offset: 84
+                bit: 2
+            history: rw
+        point Winch3.Hydromotor1Active: 
+            type: Bool
+            address:
+                offset: 84
+                bit: 3
+            history: rw
+        point Winch3.Hydromotor2Active: 
+            type: Bool
+            address:
+                offset: 84
+                bit: 4
+            history: rw
+        point Winch3.EncoderBR1: 
+            type: Int
+            address:
+                offset: 86
+            comment: 'Скорость об/мин'
+        point Winch3.EncoderBR2: 
+            type: Int
+            address:
+                offset: 88
+            comment: 'Длина каната, см'
+        point Winch3.LVDT1: 
+            type: Real
+            address:
+                offset: 90
+            comment: 'Датчик угла наклона шайбы гидромотора 1, ॰'
+        point Winch3.LVDT2: 
+            type: Real
+            address:
+                offset: 94
+            comment: 'Датчик угла наклона шайбы гидромотора 2, ॰'
+        point Winch3.PressureLineA_1: 
+            type: Real
+            address:
+                offset: 98
+        point Winch3.PressureLineA_2: 
+            type: Real
+            address:
+                offset: 102
+        point Winch3.PressureBrakeA: 
+            type: Real
+            address:
+                offset: 106
+        point Winch3.PressureBrakeB: 
+            type: Real
+            address:
+                offset: 110
+        point Winch3.TempLine1: 
+            type: Real
+            address:
+                offset: 114
+        point Winch3.TempLine2: 
+            type: Real
+            address:
+                offset: 118
+        point Winch3.LoadR0: 
+            type: Real
+            address:
+                offset: 122
+            comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+        point Jib.LimitSwitchUp:
+            type: Bool
+            address:
+                offset: 126
+                bit: 0
+        point Jib.SensorAngle:
+            type: Real
+            address:
+                offset: 128
+            comment: 'Угод хобота'
+        point Jib.WeightSensor:
+            type: Real
+            address:
+                offset: 132
+        point Boom.SensorAngle: 
+            type: Real
+            address:
+                offset: 136
             comment: 'Угол стрелы'
         point Rotate.PressureLowM1: 
             type: Bool
             address:
-                offset: 56
+                offset: 140
                 bit: 0
             alarm: 1
         point Rotate.PressureLowM2: 
             type: Bool
             address:
-                offset: 56
+                offset: 140
                 bit: 1
             alarm: 1
         point Rotate.PressureLowSystem: 
             type: Bool
             address:
-                offset: 56
+                offset: 140
                 bit: 2
             alarm: 1
         point Rotate.Pump1Active: 
             type: Bool
             address:
-                offset: 56
+                offset: 140
                 bit: 3
         point Rotate.Pump2Active: 
             type: Bool
             address:
-                offset: 56
+                offset: 140
                 bit: 4
         point Rotate.Encoder: 
             type: Int
             address:
-                offset: 58
+                offset: 142
         point Rotate.PressureSafetyValve: 
             type: Real
             address:
-                offset: 60
+                offset: 144
         point Platform.PressureOilLow: 
             type: Bool
             address:
-                offset: 64
+                offset: 148
                 bit: 0
             alarm: 1
         point Platform.PressureOilHigh: 
             type: Bool
             address:
-                offset: 64
+                offset: 148
                 bit: 1
             alarm: 4
         point Platform.PressureNitrogenLow: 
             type: Bool
             address:
-                offset: 64
+                offset: 148
                 bit: 2
             alarm: 4
         point Platform.PressureNitrogenHigh: 
             type: Bool
             address:
-                offset: 64
+                offset: 148
                 bit: 3
             alarm: 4
         point Platform.SensorMRU: 
             type: Real
             address:
-                offset: 66
+                offset: 150
             comment: 'Датчик МРУ'
         point point HPU.HighOilLevel: 
             type: Bool
             address:
-                offset: 70
+                offset: 154
                 bit: 0
             alarm: 4
         point point HPU.LowOilLevel: 
             type: Bool
             address:
-                offset: 70
+                offset: 154
                 bit: 1
             alarm: 4
         point point HPU.AlarmLowOilLevel: 
             type: Bool
             address:
-                offset: 70
+                offset: 154
                 bit: 2
             alarm: 1
         point point HPU.HighOilTemp: 
             type: Bool
             address:
-                offset: 70
+                offset: 154
                 bit: 3
             alarm: 4
         point point HPU.AlarmHighOilTemp: 
             type: Bool
             address:
-                offset: 70
+                offset: 154
                 bit: 4
             alarm: 1
         point point HPU.LowOilTemp: 
             type: Bool
             address:
-                offset: 70
+                offset: 154
                 bit: 5
             alarm: 4
         point point HPU.OilLevel: 
             type: Real
             address:
-                offset: 72
+                offset: 156
         point point HPU.PressureOutPump1: 
             type: Real
             address:
-                offset: 76
+                offset: 160
         point point HPU.PressureOutPump2: 
             type: Real
             address:
-                offset: 80
+                offset: 164
         point point HPU.PressureInPump1: 
             type: Real
             address:
-                offset: 84
+                offset: 168
         point point HPU.PressureInPump2: 
             type: Real
             address:
-                offset: 88
+                offset: 172
         point point HPU.CoolerTemperatureIn: 
             type: Real
             address:
-                offset: 92
+                offset: 176
         point point HPU.CoolerTemperatureOut: 
             type: Real
             address:
-                offset: 96
+                offset: 180
         point point HPU.CoolerPressureIn: 
             type: Real
             address:
-                offset: 100
+                offset: 184
         point point HPU.CoolerPressureOut: 
             type: Real
             address:
-                offset: 104
+                offset: 188
         point HPA.PistonMaxLimit: 
             type: Bool
             address:
-                offset: 108
+                offset: 192
                 bit: 0
             alarm: 4
         point HPA.PistonMinLimit: 
             type: Bool
             address:
-                offset: 108
+                offset: 192
                 bit: 1
             alarm: 4
         point HPA.NitroPressure: 
             type: Int
             address:
-                offset: 110
+                offset: 194
         point HPA.AlarmNitroPressure: 
             type: Bool
             address:
-                offset: 112
+                offset: 196
                 bit: 0
             alarm: 1
         point LPA.PistonMaxLimit: 
             type: Bool
             address:
-                offset: 114
+                offset: 198
                 bit: 0
             alarm: 4
         point LPA.PistonMinLimit: 
             type: Bool
             address:
-                offset: 114
+                offset: 198
                 bit: 1
             alarm: 4
         point LPA.NitroPressure: 
             type: Int
             address:
-                offset: 116
+                offset: 200
         point LPA.AlarmNitroPressure: 
             type: Bool
             address:
-                offset: 118
+                offset: 202
                 bit: 0
             alarm: 1
         point Load.boomAngle: 
             type: Real
             address:
-                offset: 120
+                offset: 204
         point Load.jibAngle: 
             type: Real
             address:
-                offset: 124
+                offset: 208
         point Load.swl0: 
             type: Real
             address:
-                offset: 128
+                offset: 212
             comment: 'Абсолютная номинальная нагрузка из диаграммы'
         point Load.swl: 
             type: Real
             address:
-                offset: 132
+                offset: 216
             comment: 'Номинальная нагрузка из диаграммы'
         point Load.nom: 
             type: Real
             address:
-                offset: 136
+                offset: 220
             # fr: 
                 # nom: 50
             comment: 'Приведенная номинальная нагрузка из диаграммы'
         point Load.boomFirst: 
             type: Int
             address:
-                offset: 140
+                offset: 224
         point Load.boomLast: 
             type: Int
             address:
-                offset: 142
+                offset: 226
         point Load.jibFirst: 
             type: Int
             address:
-                offset: 144
+                offset: 228
         point Load.jibLast: 
             type: Int
             address:
-                offset: 146
+                offset: 230
 
 
 service ProfinetClient ied14:
@@ -830,7 +1056,7 @@ service ProfinetClient ied14:
     db db906_visual_data:
         number: 906
         offset: 0
-        size: 200
+        size: 246
         point CraneMovement.RotateLeft: 
             type: Int
             address:
@@ -891,11 +1117,6 @@ service ProfinetClient ied14:
             address:
                 offset: 22
             comment: 'Номер выбраной лебедки'
-        point CraneMode.Winch1Mode: 
-            type: Int
-            address:
-                offset: 24
-            comment: 'Режим работы лебедки 1'
         point CraneMode.WaveHeightLevel: 
             type: Int
             address:
@@ -917,301 +1138,339 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 30
-            # fr: 
-            #     trip: 
-            #         - 0
             comment: 'Состояние системы MOPS 0/1'
         point CraneMode.AOPS: 
             type: Int
             address:
                 offset: 32
-            # fr: 
-            #     trip: 
-            #         - 0
             comment: 'Состояние системы AOPS 0/1'
         point CraneMode.AHC: 
             type: Int
             address:
                 offset: 34
-            # fr: 
-            #     trip: 
-            #         - 0
             comment: 'Состояние системы AHC 0/1'
-        point CraneMode.WinchBrake: 
-            type: Int
-            address:
-                offset: 36
-            comment: 'Состояние тормоза лебедки 0/1'
-        point CraneMode.LoadIndex: 
-            type: Int
-            address:
-                offset: 38
-            comment: 'Индекс нагрузки 0/1'
-        point CraneMode.SWLProtection: 
-            type: Bool
-            address:
-                offset: 40
-                bit: 0
-            comment: 'NEW  |  Блокировка по грузоподьемности'
         point CraneMode.Reserve1: 
             type: Int
             address:
-                offset: 42
+                offset: 36
         point CraneMode.Reserve2: 
             type: Int
             address:
-                offset: 44
+                offset: 38
         point CraneMode.Reserve3: 
             type: Int
             address:
-                offset: 46
-        point ConstantTension.Level: 
-            type: Int
-            address:
-                offset: 48
-            comment: 'Уровень постоянного натяжения'
-        point ConstantTension.Active: 
-            type: Bool
-            address:
-                offset: 50
-                bit: 0
-            comment: 'Постоянное натяжение вкл.'
-        point ConstantTension.Reserve1: 
-            type: Bool
-            address:
-                offset: 50
-                bit: 1
-        point ConstantTension.Reserve2: 
-            type: Bool
-            address:
-                offset: 50
-                bit: 2
-        point ConstantTension.Reserve3: 
-            type: Bool
-            address:
-                offset: 50
-                bit: 3
-        point Hook.X: 
-            type: Real
-            address:
-                offset: 52
-            comment: 'Положение крюка по X'
-        point Hook.Y: 
-            type: Real
-            address:
-                offset: 56
-            comment: 'Положение крюка по Y'
-        point Hook.Speed: 
-            type: Real
-            address:
-                offset: 60
-            comment: 'Скорость крюка (м/минуту)'
-        point Hook.Reserve1: 
-            type: Real
-            address:
-                offset: 64
-        point Hook.Reserve2: 
-            type: Real
-            address:
-                offset: 68
-        point Hook.Reserve3: 
-            type: Real
-            address:
-                offset: 72
+                offset: 40
         point Crane.Radius: 
             type: Real
             address:
-                offset: 76
+                offset: 42
             comment: 'Вылет (метры)'
-        point Crane.Depth: 
-            type: Real
-            address:
-                offset: 80
-            comment: 'Глубина абсолютная (метры)'
-        point Crane.DeckDepth: 
-            type: Real
-            address:
-                offset: 84
             comment: 'Глубина от палубы (метры)'
         point Crane.Wind: 
             type: Real
             address:
-                offset: 88
+                offset: 46
             comment: 'Скорость ветра (м/секунду)'
         point Crane.Pitch: 
             type: Real
             address:
-                offset: 92
+                offset: 50
             comment: 'Дифферент (градусы)'
         point Crane.Roll: 
             type: Real
             address:
-                offset: 96
+                offset: 54
             comment: 'Крен (градусы)'
         point Crane.Slewing: 
             type: Real
             address:
-                offset: 100
+                offset: 58
             comment: 'Угол поворота стрелы (градусы)'
         point Crane.BoomAngle: 
             type: Real
             address:
-                offset: 104
+                offset: 62
             comment: 'Положение рукояти (градусы)'
         point Crane.JibAngle: 
             type: Real
             address:
-                offset: 108
+                offset: 66
             comment: 'Положение хобота (градусы)'
         point Crane.Reserve1: 
             type: Real
             address:
-                offset: 112
+                offset: 70
         point Crane.Reserve2: 
             type: Real
             address:
-                offset: 116
+                offset: 74
         point Crane.Reserve3: 
             type: Real
             address:
+                offset: 78
+        point Winch1.SWL0:
+            type: Real
+            address:
+                offset: 82
+        point Winch1.SWL:
+            type: Real
+            address:
+                offset: 86
+        point Winch1.Load:
+            type: Real
+            address:
+                offset: 90
+        point Winch1.Overload:
+            type: Bool
+            address:
+                offset: 94
+                bit: 0
+        point Winch1.ConstantTension.Level: 
+            type: Int
+            address:
+                offset: 96
+            comment: 'Уровень постоянного натяжения'
+        point Winch1.ConstantTension.Active: 
+            type: Bool
+            address:
+                offset: 98
+                bit: 0
+            comment: 'Постоянное натяжение вкл.'
+        point Winch1.DeckDepth: 
+            type: Real
+            address:
+                offset: 100
+        point Winch1.Depth: 
+            type: Real
+            address:
+                offset: 104
+            comment: 'Глубина абсолютная (метры)'
+        point Winch1.LoadIndex: 
+            type: Int
+            address:
+                offset: 108
+        point Winch1.SWLProtection: 
+            type: Bool
+            address:
+                offset: 110
+                bit: 0
+        point Winch1.Mode: 
+            type: Int
+            address:
+                offset: 112
+        point Winch1.Brake: 
+            type: Bool
+            address:
+                offset: 114
+                bit: 0
+        point Winch1.Hook.X: 
+            type: Real
+            address:
+                offset: 116
+            comment: 'Положение крюка по X'
+        point Winch1.Hook.Y: 
+            type: Real
+            address:
                 offset: 120
-        point Winch1.SWL0: 
+            comment: 'Положение крюка по Y'
+        point Winch1.Hook.Speed: 
             type: Real
             address:
                 offset: 124
-            comment: 'SWL0, тонны - Абсолютная номинальная нагрузка'
-        point Winch1.SWL: 
+            comment: 'Скорость крюка (м/минуту)'
+        point Winch2.SWL0:
             type: Real
             address:
                 offset: 128
-            comment: 'SWL, тонны - Номинальная нагрузка'
-        point Winch1.Load: 
+        point Winch2.SWL:
             type: Real
             address:
                 offset: 132
-            # filters:
-                # threshold: 
-                #     0.0: 0.3
-                #     0.7: 0.1
-                #     0.85: 0.05
-                #     0.95: 0.01
-                #     1.0: 0.005
-                #     1.1: 0.001
-                # factor: 0.05
-            # fr: 
-            #     nom: '/line1/ied13/db905_visual_data_fast/Load.nom'
-            #     threshold: 
-            #         0.0: 0.3
-            #         0.7: 0.1
-            #         0.85: 0.05
-            #         0.95: 0.01
-            #         1.0: 0.005
-            #         1.1: 0.001
-            #     integralFactor: 0.05
-            comment: 'Нагрузка, тонны'
-        point Winch1.Reserve1: 
+        point Winch2.Load:
             type: Real
             address:
                 offset: 136
-        point Winch1.Reserve2: 
-            type: Real
+        point Winch2.Overload:
+            type: Bool
             address:
                 offset: 140
-        point Winch1.Reserve3: 
-            type: Real
+                bit: 0
+        point Winch2.ConstantTension.Level: 
+            type: Int
+            address:
+                offset: 142
+            comment: 'Уровень постоянного натяжения'
+        point Winch2.ConstantTension.Active: 
+            type: Bool
             address:
                 offset: 144
-        point Winch2.SWL0: 
+                bit: 0
+            comment: 'Постоянное натяжение вкл.'
+        point Winch2.DeckDepth: 
             type: Real
             address:
-                offset: 148
-            comment: 'SWL0, тонны - Абсолютная номинальная нагрузка'
-        point Winch2.SWL: 
+                offset: 146
+        point Winch2.Depth: 
             type: Real
             address:
-                offset: 152
-            comment: 'SWL, тонны - Номинальная нагрузка'
-        point Winch2.Load: 
-            type: Real
+                offset: 150
+            comment: 'Глубина абсолютная (метры)'
+        point Winch2.LoadIndex: 
+            type: Int
+            address:
+                offset: 154
+        point Winch2.SWLProtection: 
+            type: Bool
             address:
                 offset: 156
-            # filters: 
-            #     threshold: 
-            #         0.0: 0.3
-            #         1.0: 0.3
-            # fr: 
-            #     nom: 50
-            #     threshold: 
-            #         0.0: 0.3
-            #         1.0: 0.3
-            comment: 'Нагрузка, тонны'
-        point Winch3.SWL0: 
-            type: Real
+                bit: 0
+        point Winch2.Mode: 
+            type: Int
+            address:
+                offset: 158
+        point Winch2.Brake: 
+            type: Bool
             address:
                 offset: 160
-            comment: 'SWL0, тонны - Абсолютная номинальная нагрузка'
-        point Winch3.SWL: 
+                bit: 0
+        point Winch2.Hook.X: 
+            type: Real
+            address:
+                offset: 162
+            comment: 'Положение крюка по X'
+        point Winch2.Hook.Y: 
             type: Real
             address:
                 offset: 164
-            comment: 'SWL, тонны - Номинальная нагрузка'
-        point Winch3.Load: 
+            comment: 'Положение крюка по Y'
+        point Winch2.Hook.Speed: 
             type: Real
             address:
                 offset: 168
-            comment: 'Нагрузка, тонны'
-        point HPU.Pump1.State: 
-            type: Int
+            comment: 'Скорость крюка (м/минуту)'
+        point Winch3.SWL0:
+            type: Real
             address:
                 offset: 172
-        point HPU.Pump1.Reserve1: 
-            type: Int
-            address:
-                offset: 174
-        point HPU.Pump1.Reserve2: 
-            type: Int
+        point Winch3.SWL:
+            type: Real
             address:
                 offset: 176
-        point HPU.Pump1.Reserve3: 
-            type: Int
-            address:
-                offset: 178
-        point HPU.Pump2.State: 
-            type: Int
+        point Winch3.Load:
+            type: Real
             address:
                 offset: 180
-        point HPU.Pump2.Reserve1: 
-            type: Int
-            address:
-                offset: 182
-        point HPU.Pump2.Reserve2: 
-            type: Int
+        point Winch3.Overload:
+            type: Bool
             address:
                 offset: 184
-        point HPU.Pump2.Reserve3: 
+                bit: 0
+        point Winch3.ConstantTension.Level: 
             type: Int
             address:
                 offset: 186
+            comment: 'Уровень постоянного натяжения'
+        point Winch3.ConstantTension.Active: 
+            type: Bool
+            address:
+                offset: 188
+                bit: 0
+            comment: 'Постоянное натяжение вкл.'
+        point Winch3.DeckDepth: 
+            type: Real
+            address:
+                offset: 190
+        point Winch3.Depth: 
+            type: Real
+            address:
+                offset: 194
+            comment: 'Глубина абсолютная (метры)'
+        point Winch3.LoadIndex: 
+            type: Int
+            address:
+                offset: 198
+        point Winch3.SWLProtection: 
+            type: Bool
+            address:
+                offset: 200
+                bit: 0
+        point Winch3.Mode: 
+            type: Int
+            address:
+                offset: 202
+        point Winch3.Brake: 
+            type: Bool
+            address:
+                offset: 204
+                bit: 0
+        point Winch3.Hook.X: 
+            type: Real
+            address:
+                offset: 206
+            comment: 'Положение крюка по X'
+        point Winch3.Hook.Y: 
+            type: Real
+            address:
+                offset: 210
+            comment: 'Положение крюка по Y'
+        point Winch3.Hook.Speed: 
+            type: Real
+            address:
+                offset: 214
+            comment: 'Скорость крюка (м/минуту)'
+        point HPU.Pump1.State: 
+            type: Int
+            address:
+                offset: 218
+        point HPU.Pump1.Reserve1:
+            type: Int
+            address:
+                offset: 220
+        point HPU.Pump1.Reserve2: 
+            type: Int
+            address:
+                offset: 222
+        point HPU.Pump1.Reserve3: 
+            type: Int
+            address:
+                offset: 224
+        point HPU.Pump2.State: 
+            type: Int
+            address:
+                offset: 226
+        point HPU.Pump2.Reserve1: 
+            type: Int
+            address:
+                offset: 228
+        point HPU.Pump2.Reserve2: 
+            type: Int
+            address:
+                offset: 230
+        point HPU.Pump2.Reserve3: 
+            type: Int
+            address:
+                offset: 232
         point HPU.EmergencyHPU.State: 
             type: Int
             address:
-                offset: 188
+                offset: 234
         point HPU.EmergencyHPU.Reserve1: 
             type: Int
             address:
-                offset: 190
+                offset: 236
         point HPU.EmergencyHPU.Reserve2: 
             type: Int
             address:
-                offset: 192
+                offset: 238
         point HPU.EmergencyHPU.Reserve3: 
             type: Int
             address:
-                offset: 194
+                offset: 240
         point HPU.OilTemp: 
             type: Real
             address:
-                offset: 196
+                offset: 242
             comment: 'Температура масла (градусы)'
 
 
@@ -1237,7 +1496,7 @@ service Task HistoryTask:
 
 
 service ApiClient:
-    cycle: 100 ms
+    cycle: 100 s
     reconnect: 1 s  # default 3 s
     address: 127.0.0.1:8080
     database: crane_data_server
