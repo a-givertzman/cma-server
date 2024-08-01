@@ -878,75 +878,75 @@ service ProfinetClient ied13:
             address:
                 offset: 150
             comment: 'Датчик МРУ'
-        point point HPU.HighOilLevel: 
+        point HPU.HighOilLevel: 
             type: Bool
             address:
                 offset: 154
                 bit: 0
             alarm: 4
-        point point HPU.LowOilLevel: 
+        point HPU.LowOilLevel: 
             type: Bool
             address:
                 offset: 154
                 bit: 1
             alarm: 4
-        point point HPU.AlarmLowOilLevel: 
+        point HPU.AlarmLowOilLevel: 
             type: Bool
             address:
                 offset: 154
                 bit: 2
             alarm: 1
-        point point HPU.HighOilTemp: 
+        point HPU.HighOilTemp: 
             type: Bool
             address:
                 offset: 154
                 bit: 3
             alarm: 4
-        point point HPU.AlarmHighOilTemp: 
+        point HPU.AlarmHighOilTemp: 
             type: Bool
             address:
                 offset: 154
                 bit: 4
             alarm: 1
-        point point HPU.LowOilTemp: 
+        point HPU.LowOilTemp: 
             type: Bool
             address:
                 offset: 154
                 bit: 5
             alarm: 4
-        point point HPU.OilLevel: 
+        point HPU.OilLevel: 
             type: Real
             address:
                 offset: 156
-        point point HPU.PressureOutPump1: 
+        point HPU.PressureOutPump1: 
             type: Real
             address:
                 offset: 160
-        point point HPU.PressureOutPump2: 
+        point HPU.PressureOutPump2: 
             type: Real
             address:
                 offset: 164
-        point point HPU.PressureInPump1: 
+        point HPU.PressureInPump1: 
             type: Real
             address:
                 offset: 168
-        point point HPU.PressureInPump2: 
+        point HPU.PressureInPump2: 
             type: Real
             address:
                 offset: 172
-        point point HPU.CoolerTemperatureIn: 
+        point HPU.CoolerTemperatureIn: 
             type: Real
             address:
                 offset: 176
-        point point HPU.CoolerTemperatureOut: 
+        point HPU.CoolerTemperatureOut: 
             type: Real
             address:
                 offset: 180
-        point point HPU.CoolerPressureIn: 
+        point HPU.CoolerPressureIn: 
             type: Real
             address:
                 offset: 184
-        point point HPU.CoolerPressureOut: 
+        point HPU.CoolerPressureOut: 
             type: Real
             address:
                 offset: 188
