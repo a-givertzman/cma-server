@@ -1166,7 +1166,6 @@ service ProfinetClient ied14:
             address:
                 offset: 42
             comment: 'Вылет (метры)'
-            comment: 'Глубина от палубы (метры)'
         point Crane.Wind: 
             type: Real
             address:
