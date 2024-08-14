@@ -1,0 +1,2967 @@
+service Task RecorderTask:
+    cycle: 1 ms
+    in queue recv-queue:
+        max-length: 10000
+    subscribe:
+        /AppTest/MultiQueue:                    # - multicast subscription to the MultiQueue
+            {cot: Inf}: []                      #   - on all points having Cot::Inf
+    #
+    # The nominal load of the crane
+    let craneLoadNom:
+        input: point real '/AppTest/Load.Nom' status ok
+        # input: const real 150.0
+    #
+    # The nominal load of the Winch1
+    let winch1LoadNom:
+        input: point real '/AppTest/Winch1.Load.Nom' status ok
+    #
+    # The nominal load of the Winch2
+    let winch2LoadNom:
+        input: point real '/AppTest/Winch2.Load.Nom' status ok
+    #
+    # The nominal load of the Winch3
+    let winch3LoadNom:
+        input: point real '/AppTest/Winch3.Load.Nom' status ok
+    #
+    # Crane load in relative units
+    let craneLoadRelative:
+        input fn Div:
+            input1: point real '/AppTest/Load' status ok default 0.0
+            input2: craneLoadNom
+    # Winch1 load in relative units
+    let winch1LoadRelative:
+        input fn Div:
+            input1: point real '/AppTest/Winch1.Load' status ok default 0.0
+            input2: winch1LoadNom
+    # Winch2 load in relative units
+    let winch2LoadRelative:
+        input fn Div:
+            input1: point real '/AppTest/Winch2.Load' status ok default 0.0
+            input2: winch2LoadNom
+    # Winch3 load in relative units
+    let winch3LoadRelative:
+        input fn Div:
+            input1: point real '/AppTest/Winch3.Load' status ok default 0.0
+            input2: winch3LoadNom
+    #
+    # 5 % of the nominal crane load - used for Op Cycle detection
+    let opCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: craneLoadNom
+    let winch1OpCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: winch1LoadNom
+    let winch2OpCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: winch2LoadNom
+    let winch3OpCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: winch3LoadNom
+    let craneIsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Load' status ok default 0.0
+            input2: opCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: opCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Load' status ok default 0.0
+    let winch1IsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Winch1.Load' status ok default 0.0
+            input2: winch1OpCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: winch1OpCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Winch1.Load' status ok default 0.0
+    let winch2IsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Winch2.Load' status ok default 0.0
+            input2: winch2OpCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: winch2OpCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Winch2.Load' status ok default 0.0
+    let winch3IsActive:
+        input fn Ge:
+            # input1: point real '/AppTest/Winch3.Load' status ok default 0.0
+            input2: winch3OpCycleThreshold
+            input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                threshold: winch3OpCycleThreshold
+                input fn Smooth:
+                    factor: const real 0.125
+                    input: point real '/AppTest/Winch3.Load' status ok default 0.0
+    #
+    # Detect if operating cycle is active (true - isActive, false - isNotActive)
+    let opCycleIsActive_:
+        input fn BitOr:
+            input0: craneIsActive
+            input1: winch1IsActive
+            input2: winch2IsActive
+            input3: winch3IsActive
+    #
+    # Returns one tic true if operating cycle is finished (isActive true -> false)
+    let opCycleIsDone:
+        input fn FallingEdge:
+            input: opCycleIsActive_
+    let opCycleIsActive:
+        input fn BitOr:
+            input1: opCycleIsActive_
+            input2: opCycleIsDone
+    let pumpIsActive:
+        input: opCycleIsActive
+    #
+    # Count the operating cycle ID (retained localy)
+    let opCycleId:
+        input fn Retain:
+            key: 'OperatingCycleId'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'OperatingCycleId'
+                input: opCycleIsDone
+    #
+    # Total operating cycles (retained localy)
+    let craneOperatingCyclesTotal:
+        input fn Add:
+            input1: opCycleId
+            input2: const int 0
+    #
+    # Crane Average load in operating cycle, ??? unit ???
+    let craneCycleAverageLoad:
+        input fn KeepValid:
+            input fn Average:
+                enable: opCycleIsActive_
+                input: point real '/AppTest/Load' status ok   # ??? unit ???
+    #
+    # Crane Average load in operating cycle in relative units
+    let craneCycleAverageLoadRelative:
+        input fn Div:
+            input1: craneCycleAverageLoad
+            input2: craneLoadNom
+    #
+    # Crane Max load in operating cycle, ??? unit ???
+    let craneCycleMaxLoad:
+        input fn KeepValid:
+            input fn Max:
+                enable: opCycleIsActive_
+                input: point real '/AppTest/Load' status ok   # ??? unit ???
+    # Winch1 Average load in operating cycle, ??? unit ???
+    let winch1CycleAverageLoad:
+        input fn KeepValid:
+            input fn Average:
+                enable: opCycleIsActive_
+                input: point real '/AppTest/Winch1.Load' status ok   # ??? unit ???
+    #
+    # Winch1 Average load in operating cycle in relative units
+    let winch1CycleAverageLoadRelative:
+        input fn Div:
+            input1: winch1CycleAverageLoad
+            input2: winch1LoadNom
+    #
+    # Winch2 Average load in operating cycle, ??? unit ???
+    let winch2CycleAverageLoad:
+        input fn KeepValid:
+            input fn Average:
+                enable: opCycleIsActive_
+                input: point real '/AppTest/Winch2.Load' status ok   # ??? unit ???
+    #
+    # Winch2 Average load in operating cycle in relative units
+    let winch2CycleAverageLoadRelative:
+        input fn Div:
+            input1: winch2CycleAverageLoad
+            input2: winch2LoadNom
+    #
+    # Winch3 Average load in operating cycle, ??? unit ???
+    let winch3CycleAverageLoad:
+        input fn KeepValid:
+            input fn Average:
+                enable: opCycleIsActive_
+                input: point real '/AppTest/Winch3.Load' status ok   # ??? unit ???
+    #
+    # Winch3 Average load in operating cycle in relative units
+    let winch3CycleAverageLoadRelative:
+        input fn Div:
+            input1: winch3CycleAverageLoad
+            input2: winch3LoadNom
+    #
+    # Alarm class of the operating cycle
+    # Must be >0 if one of metric is alarmed
+    let alarmClass:
+        input fn PiecewiseLineApprox:
+            piecewise:
+                000.00: 0
+                000.99: 0
+                001.00: 1
+                009.99: 1
+                010.00: 2
+                099.99: 2
+                100.00: 4
+                999.99: 4
+            input fn Add:
+                # Alarm class 1 - Emergency Event
+                input1 fn Mul:
+                    input1: const int 1
+                    input2 fn ToInt:
+                        input fn BitOr:
+                            input1: point bool '/AppTest/Winch1.Load.Limiter.Trip'
+                            input2: point bool '/AppTest/Winch2.Load.Limiter.Trip'
+                            input3: point bool '/AppTest/Winch3.Load.Limiter.Trip'
+                            # Overload > 25 %
+                            input1 fn Ge:
+                                input1: craneCycleMaxLoad
+                                input2 fn Mul:
+                                    input1: const real 1.25
+                                    input2: craneLoadNom
+                # Alarm class 2 - Warning Event
+                input2 fn Mul:
+                    input1: const int 10
+                    input2 fn ToInt:
+                        input fn BitOr:
+                            # Overload in 10..25 %
+                            input1 fn Ge:
+                                input1: craneCycleMaxLoad
+                                input2 fn Mul:
+                                    input1: const real 1.10
+                                    input2: craneLoadNom
+                # Alarm class 2 - Importent Event
+                # ...to be extended
+    #
+    # Winch1 load-limiter-trip-count
+    let winch1LoadLimiterTripCount:
+        input fn Retain:
+            key: 'winch1-load-limiter-trip-count'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'winch1-load-limiter-trip-count'
+                input fn RisingEdge:
+                    input: point bool '/AppTest/Winch1.Load.Limiter.Trip' status ok
+    #
+    # Winch2 load-limiter-trip-count
+    let winch2LoadLimiterTripCount:
+        input fn Retain:
+            key: 'winch2-load-limiter-trip-count'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'winch2-load-limiter-trip-count'
+                input fn RisingEdge:
+                    input: point bool '/AppTest/Winch2.Load.Limiter.Trip' status ok
+    #
+    # Winch3 load-limiter-trip-count
+    let winch3LoadLimiterTripCount:
+        input fn Retain:
+            key: 'winch3-load-limiter-trip-count'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'winch3-load-limiter-trip-count'
+                input fn RisingEdge:
+                    input: point bool '/AppTest/Winch3.Load.Limiter.Trip' status ok
+    #
+    # crane-characteristic-number  |  текущее характеристическое число для крана
+    let craneEigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'crane-characteristic-number'
+            input fn Add:
+                input1 fn Pow:
+                    input1 fn Div:
+                        input1: craneCycleMaxLoad
+                        input2: craneLoadNom
+                    input2: const real 3.0
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'crane-characteristic-number'
+    #
+    # The duration of the crane operation cycle in seconds
+    let craneOperatingCycleSecs:
+        input fn Timer:
+            enable: opCycleIsActive
+            initial: const real 0.0
+            input: opCycleIsActive
+    #
+    # winch1-characteristic-number  |  текущее характеристическое число лебедка 1
+    let winch1EigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'winch1-characteristic-number'
+            input fn Add:
+                input1 fn Mul:
+                    input1 fn Pow:
+                        input1 fn Div:
+                            input1: winch1CycleAverageLoad
+                            input2: winch1LoadNom
+                        input2: const real 3.0
+                    input2: craneOperatingCycleSecs
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'winch1-characteristic-number'
+    #
+    # winch2-characteristic-number  |  текущее характеристическое число лебедка 2
+    let winch2EigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'winch2-characteristic-number'
+            input fn Add:
+                input1 fn Mul:
+                    input1 fn Pow:
+                        input1 fn Div:
+                            input1: winch2CycleAverageLoad
+                            input2: winch2LoadNom
+                        input2: const real 3.0
+                    input2: craneOperatingCycleSecs
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'winch2-characteristic-number'
+    #
+    # winch3-characteristic-number  |  текущее характеристическое число лебедка 3
+    let winch3EigenValue:
+        input fn Retain:
+            enable: opCycleIsActive
+            key: 'winch3-characteristic-number'
+            input fn Add:
+                input1 fn Mul:
+                    input1 fn Pow:
+                        input1 fn Div:
+                            input1: winch3CycleAverageLoad
+                            input2: winch3LoadNom
+                        input2: const real 3.0
+                    input2: craneOperatingCycleSecs
+                input2 fn Retain:
+                    default: const real 0.0
+                    key: 'winch3-characteristic-number'
+    #
+    # Count of Crane cycles in load-range 0.05-0.15
+    let craneLoadInRange_0_05_0_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.05
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.15
+    let cyclesInLoadRange_0_05_0_15:
+        input fn Retain:
+            enable: craneLoadInRange_0_05_0_15
+            key: 'CraneCyclesInLoadRange_0.05_0.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.05_0.15'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_05_0_15_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_05_0_15
+            key: 'CraneAverageLoadInRange_0.05_0.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_05_0_15
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.05_0.15'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.15-0.25
+    let craneLoadInRange_0_15_0_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.15
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.25
+    let cyclesInLoadRange_0_15_0_25:
+        input fn Retain:
+            enable: craneLoadInRange_0_15_0_25
+            key: 'CraneCyclesInLoadRange_0.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.15_0.25'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_15_0_25_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_15_0_25
+            key: 'CraneAverageLoadInRange_0.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_15_0_25
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.15_0.25'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.25-0.35
+    let craneLoadInRange_0_25_0_35:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.25
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.35
+    let cyclesInLoadRange_0_25_0_35:
+        input fn Retain:
+            enable: craneLoadInRange_0_25_0_35
+            key: 'CraneCyclesInLoadRange_0.25_0.35'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.25_0.35'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_25_0_35_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_25_0_35
+            key: 'CraneAverageLoadInRange_0.25_0.35'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_25_0_35
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.25_0.35'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.35-0.45
+    let craneLoadInRange_0_35_0_45:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.35
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.45
+    let cyclesInLoadRange_0_35_0_45:
+        input fn Retain:
+            enable: craneLoadInRange_0_35_0_45
+            key: 'CraneCyclesInLoadRange_0.35_0.45'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.35_0.45'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_35_0_45_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_35_0_45
+            key: 'CraneAverageLoadInRange_0.35_0.45'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_35_0_45
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.35_0.45'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.45-0.55
+    let craneLoadInRange_0_45_0_55:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.45
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.55
+    let cyclesInLoadRange_0_45_0_55:
+        input fn Retain:
+            enable: craneLoadInRange_0_45_0_55
+            key: 'CraneCyclesInLoadRange_0.45_0.55'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.45_0.55'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_45_0_55_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_45_0_55
+            key: 'CraneAverageLoadInRange_0.45_0.55'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_45_0_55
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.45_0.55'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.55-0.65
+    let craneLoadInRange_0_55_0_65:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.55
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.65
+    let cyclesInLoadRange_0_55_0_65:
+        input fn Retain:
+            enable: craneLoadInRange_0_55_0_65
+            key: 'CraneCyclesInLoadRange_0.55_0.65'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.55_0.65'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_55_0_65_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_55_0_65
+            key: 'CraneAverageLoadInRange_0.55_0.65'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_55_0_65
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.55_0.65'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.65-0.75
+    let craneLoadInRange_0_65_0_75:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.65
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.75
+    let cyclesInLoadRange_0_65_0_75:
+        input fn Retain:
+            enable: craneLoadInRange_0_65_0_75
+            key: 'CraneCyclesInLoadRange_0.65_0.75'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.65_0.75'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_65_0_75_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_65_0_75
+            key: 'CraneAverageLoadInRange_0.65_0.75'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_65_0_75
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.65_0.75'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.75-0.85
+    let craneLoadInRange_0_75_0_85:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.75
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.85
+    let cyclesInLoadRange_0_75_0_85:
+        input fn Retain:
+            enable: craneLoadInRange_0_75_0_85
+            key: 'CraneCyclesInLoadRange_0.75_0.85'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.75_0.85'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_75_0_85_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_75_0_85
+            key: 'CraneAverageLoadInRange_0.75_0.85'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_75_0_85
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.75_0.85'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.85-0.95
+    let craneLoadInRange_0_85_0_95:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.85
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.95
+    let cyclesInLoadRange_0_85_0_95:
+        input fn Retain:
+            enable: craneLoadInRange_0_85_0_95
+            key: 'CraneCyclesInLoadRange_0.85_0.95'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.85_0.95'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_85_0_95_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_85_0_95
+            key: 'CraneAverageLoadInRange_0.85_0.95'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_85_0_95
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.85_0.95'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 0.95-1.05
+    let craneLoadInRange_0_95_1_05:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 0.95
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 1.05
+    let cyclesInLoadRange_0_95_1_05:
+        input fn Retain:
+            enable: craneLoadInRange_0_95_1_05
+            key: 'CraneCyclesInLoadRange_0.95_1.05'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_0.95_1.05'
+                input2: const int 1
+    let craneAverageLoadInRabge_0_95_1_05_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_0_95_1_05
+            key: 'CraneAverageLoadInRange_0.95_1.05'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_0_95_1_05
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_0.95_1.05'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 1.05-1.15
+    let craneLoadInRange_1_05_1_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 1.05
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 1.15
+    let cyclesInLoadRange_1_05_1_15:
+        input fn Retain:
+            enable: craneLoadInRange_1_05_1_15
+            key: 'CraneCyclesInLoadRange_1.05_1.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_1.05_1.15'
+                input2: const int 1
+    let craneAverageLoadInRabge_1_05_1_15_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_1_05_1_15
+            key: 'CraneAverageLoadInRange_1.05_1.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_1_05_1_15
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_1.05_1.15'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 1.15-1.25
+    let craneLoadInRange_1_15_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 1.15
+            input3 fn Lt:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 1.25
+    let cyclesInLoadRange_1_15_1_25:
+        input fn Retain:
+            enable: craneLoadInRange_1_15_1_25
+            key: 'CraneCyclesInLoadRange_1.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_1.15_0.25'
+                input2: const int 1
+    let craneAverageLoadInRabge_1_15_1_25_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_1_15_1_25
+            key: 'CraneAverageLoadInRange_1.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_1_15_1_25
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_1.15_0.25'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Crane cycles in load-range 1.25-
+    let craneLoadInRange_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: craneCycleAverageLoadRelative
+                input2: const real 1.25
+    let cyclesInLoadRange_1_25:
+        input fn Retain:
+            enable: craneLoadInRange_1_25
+            key: 'CraneCyclesInLoadRange_1.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'CraneCyclesInLoadRange_1.25'
+                input2: const int 1
+    let craneAverageLoadInRabge_1_25_Relative:
+        input fn Retain:
+            enable: craneLoadInRange_1_25
+            key: 'CraneAverageLoadInRange_1.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: craneLoadInRange_1_25
+                        default: craneCycleAverageLoadRelative
+                        key: 'CraneAverageLoadInRange_1.25'
+                    input2: craneCycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.05-0.15
+    let winch1LoadInRange_0_05_0_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.05
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.15
+    let winch1CyclesInLoadRange_0_05_0_15:
+        input fn Retain:
+            enable: winch1LoadInRange_0_05_0_15
+            key: 'Winch1CyclesInLoadRange_0.05_0.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.05_0.15'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_05_0_15_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_05_0_15
+            key: 'Winch1AverageLoadInRange_0.05_0.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_05_0_15
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.05_0.15'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.15-0.25
+    let winch1LoadInRange_0_15_0_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.15
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.25
+    let winch1CyclesInLoadRange_0_15_0_25:
+        input fn Retain:
+            enable: winch1LoadInRange_0_15_0_25
+            key: 'Winch1CyclesInLoadRange_0.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.15_0.25'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_15_0_25_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_15_0_25
+            key: 'Winch1AverageLoadInRange_0.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_15_0_25
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.15_0.25'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.25-0.35
+    let winch1LoadInRange_0_25_0_35:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.25
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.35
+    let winch1CyclesInLoadRange_0_25_0_35:
+        input fn Retain:
+            enable: winch1LoadInRange_0_25_0_35
+            key: 'Winch1CyclesInLoadRange_0.25_0.35'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.25_0.35'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_25_0_35_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_25_0_35
+            key: 'Winch1AverageLoadInRange_0.25_0.35'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_25_0_35
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.25_0.35'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.35-0.45
+    let winch1LoadInRange_0_35_0_45:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.35
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.45
+    let winch1CyclesInLoadRange_0_35_0_45:
+        input fn Retain:
+            enable: winch1LoadInRange_0_35_0_45
+            key: 'Winch1CyclesInLoadRange_0.35_0.45'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.35_0.45'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_35_0_45_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_35_0_45
+            key: 'Winch1AverageLoadInRange_0.35_0.45'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_35_0_45
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.35_0.45'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.45-0.55
+    let winch1LoadInRange_0_45_0_55:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.45
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.55
+    let winch1CyclesInLoadRange_0_45_0_55:
+        input fn Retain:
+            enable: winch1LoadInRange_0_45_0_55
+            key: 'Winch1CyclesInLoadRange_0.45_0.55'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.45_0.55'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_45_0_55_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_45_0_55
+            key: 'Winch1AverageLoadInRange_0.45_0.55'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_45_0_55
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.45_0.55'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.55-0.65
+    let winch1LoadInRange_0_55_0_65:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.55
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.65
+    let winch1CyclesInLoadRange_0_55_0_65:
+        input fn Retain:
+            enable: winch1LoadInRange_0_55_0_65
+            key: 'Winch1CyclesInLoadRange_0.55_0.65'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.55_0.65'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_55_0_65_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_55_0_65
+            key: 'Winch1AverageLoadInRange_0.55_0.65'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_55_0_65
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.55_0.65'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.65-0.75
+    let winch1LoadInRange_0_65_0_75:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.65
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.75
+    let winch1CyclesInLoadRange_0_65_0_75:
+        input fn Retain:
+            enable: winch1LoadInRange_0_65_0_75
+            key: 'Winch1CyclesInLoadRange_0.65_0.75'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.65_0.75'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_65_0_75_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_65_0_75
+            key: 'Winch1AverageLoadInRange_0.65_0.75'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_65_0_75
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.65_0.75'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.75-0.85
+    let winch1LoadInRange_0_75_0_85:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.75
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.85
+    let winch1CyclesInLoadRange_0_75_0_85:
+        input fn Retain:
+            enable: winch1LoadInRange_0_75_0_85
+            key: 'Winch1CyclesInLoadRange_0.75_0.85'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.75_0.85'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_75_0_85_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_75_0_85
+            key: 'Winch1AverageLoadInRange_0.75_0.85'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_75_0_85
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.75_0.85'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.85-0.95
+    let winch1LoadInRange_0_85_0_95:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.85
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.95
+    let winch1CyclesInLoadRange_0_85_0_95:
+        input fn Retain:
+            enable: winch1LoadInRange_0_85_0_95
+            key: 'Winch1CyclesInLoadRange_0.85_0.95'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.85_0.95'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_85_0_95_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_85_0_95
+            key: 'Winch1AverageLoadInRange_0.85_0.95'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_85_0_95
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.85_0.95'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 0.95-1.05
+    let winch1LoadInRange_0_95_1_05:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 0.95
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 1.05
+    let winch1CyclesInLoadRange_0_95_1_05:
+        input fn Retain:
+            enable: winch1LoadInRange_0_95_1_05
+            key: 'Winch1CyclesInLoadRange_0.95_1.05'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_0.95_1.05'
+                input2: const int 1
+    let winch1AverageLoadInRabge_0_95_1_05_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_0_95_1_05
+            key: 'Winch1AverageLoadInRange_0.95_1.05'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_0_95_1_05
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_0.95_1.05'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 1.05-1.15
+    let winch1LoadInRange_1_05_1_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 1.05
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 1.15
+    let winch1CyclesInLoadRange_1_05_1_15:
+        input fn Retain:
+            enable: winch1LoadInRange_1_05_1_15
+            key: 'Winch1CyclesInLoadRange_1.05_1.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_1.05_1.15'
+                input2: const int 1
+    let winch1AverageLoadInRabge_1_05_1_15_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_1_05_1_15
+            key: 'Winch1AverageLoadInRange_1.05_1.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_1_05_1_15
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_1.05_1.15'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 1.15-1.25
+    let winch1LoadInRange_1_15_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 1.15
+            input3 fn Lt:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 1.25
+    let winch1CyclesInLoadRange_1_15_1_25:
+        input fn Retain:
+            enable: winch1LoadInRange_1_15_1_25
+            key: 'Winch1CyclesInLoadRange_1.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_1.15_0.25'
+                input2: const int 1
+    let winch1AverageLoadInRabge_1_15_1_25_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_1_15_1_25
+            key: 'Winch1AverageLoadInRange_1.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_1_15_1_25
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_1.15_0.25'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch1 cycles in load-range 1.25-
+    let winch1LoadInRange_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch1CycleAverageLoadRelative
+                input2: const real 1.25
+    let winch1CyclesInLoadRange_1_25:
+        input fn Retain:
+            enable: winch1LoadInRange_1_25
+            key: 'Winch1CyclesInLoadRange_1.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch1CyclesInLoadRange_1.25'
+                input2: const int 1
+    let winch1AverageLoadInRabge_1_25_Relative:
+        input fn Retain:
+            enable: winch1LoadInRange_1_25
+            key: 'Winch1AverageLoadInRange_1.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch1LoadInRange_1_25
+                        default: winch1CycleAverageLoadRelative
+                        key: 'Winch1AverageLoadInRange_1.25'
+                    input2: winch1CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.05-0.15
+    let winch2LoadInRange_0_05_0_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.05
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.15
+    let winch2CyclesInLoadRange_0_05_0_15:
+        input fn Retain:
+            enable: winch2LoadInRange_0_05_0_15
+            key: 'Winch2CyclesInLoadRange_0.05_0.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.05_0.15'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_05_0_15_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_05_0_15
+            key: 'Winch2AverageLoadInRange_0.05_0.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_05_0_15
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.05_0.15'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.15-0.25
+    let winch2LoadInRange_0_15_0_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.15
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.25
+    let winch2CyclesInLoadRange_0_15_0_25:
+        input fn Retain:
+            enable: winch2LoadInRange_0_15_0_25
+            key: 'Winch2CyclesInLoadRange_0.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.15_0.25'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_15_0_25_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_15_0_25
+            key: 'Winch2AverageLoadInRange_0.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_15_0_25
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.15_0.25'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.25-0.35
+    let winch2LoadInRange_0_25_0_35:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.25
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.35
+    let winch2CyclesInLoadRange_0_25_0_35:
+        input fn Retain:
+            enable: winch2LoadInRange_0_25_0_35
+            key: 'Winch2CyclesInLoadRange_0.25_0.35'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.25_0.35'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_25_0_35_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_25_0_35
+            key: 'Winch2AverageLoadInRange_0.25_0.35'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_25_0_35
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.25_0.35'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.35-0.45
+    let winch2LoadInRange_0_35_0_45:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.35
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.45
+    let winch2CyclesInLoadRange_0_35_0_45:
+        input fn Retain:
+            enable: winch2LoadInRange_0_35_0_45
+            key: 'Winch2CyclesInLoadRange_0.35_0.45'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.35_0.45'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_35_0_45_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_35_0_45
+            key: 'Winch2AverageLoadInRange_0.35_0.45'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_35_0_45
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.35_0.45'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.45-0.55
+    let winch2LoadInRange_0_45_0_55:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.45
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.55
+    let winch2CyclesInLoadRange_0_45_0_55:
+        input fn Retain:
+            enable: winch2LoadInRange_0_45_0_55
+            key: 'Winch2CyclesInLoadRange_0.45_0.55'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.45_0.55'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_45_0_55_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_45_0_55
+            key: 'Winch2AverageLoadInRange_0.45_0.55'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_45_0_55
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.45_0.55'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.55-0.65
+    let winch2LoadInRange_0_55_0_65:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.55
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.65
+    let winch2CyclesInLoadRange_0_55_0_65:
+        input fn Retain:
+            enable: winch2LoadInRange_0_55_0_65
+            key: 'Winch2CyclesInLoadRange_0.55_0.65'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.55_0.65'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_55_0_65_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_55_0_65
+            key: 'Winch2AverageLoadInRange_0.55_0.65'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_55_0_65
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.55_0.65'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.65-0.75
+    let winch2LoadInRange_0_65_0_75:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.65
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.75
+    let winch2CyclesInLoadRange_0_65_0_75:
+        input fn Retain:
+            enable: winch2LoadInRange_0_65_0_75
+            key: 'Winch2CyclesInLoadRange_0.65_0.75'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.65_0.75'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_65_0_75_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_65_0_75
+            key: 'Winch2AverageLoadInRange_0.65_0.75'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_65_0_75
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.65_0.75'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.75-0.85
+    let winch2LoadInRange_0_75_0_85:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.75
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.85
+    let winch2CyclesInLoadRange_0_75_0_85:
+        input fn Retain:
+            enable: winch2LoadInRange_0_75_0_85
+            key: 'Winch2CyclesInLoadRange_0.75_0.85'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.75_0.85'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_75_0_85_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_75_0_85
+            key: 'Winch2AverageLoadInRange_0.75_0.85'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_75_0_85
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.75_0.85'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.85-0.95
+    let winch2LoadInRange_0_85_0_95:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.85
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.95
+    let winch2CyclesInLoadRange_0_85_0_95:
+        input fn Retain:
+            enable: winch2LoadInRange_0_85_0_95
+            key: 'Winch2CyclesInLoadRange_0.85_0.95'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.85_0.95'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_85_0_95_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_85_0_95
+            key: 'Winch2AverageLoadInRange_0.85_0.95'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_85_0_95
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.85_0.95'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 0.95-1.05
+    let winch2LoadInRange_0_95_1_05:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 0.95
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 1.05
+    let winch2CyclesInLoadRange_0_95_1_05:
+        input fn Retain:
+            enable: winch2LoadInRange_0_95_1_05
+            key: 'Winch2CyclesInLoadRange_0.95_1.05'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_0.95_1.05'
+                input2: const int 1
+    let winch2AverageLoadInRabge_0_95_1_05_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_0_95_1_05
+            key: 'Winch2AverageLoadInRange_0.95_1.05'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_0_95_1_05
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_0.95_1.05'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 1.05-1.15
+    let winch2LoadInRange_1_05_1_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 1.05
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 1.15
+    let winch2CyclesInLoadRange_1_05_1_15:
+        input fn Retain:
+            enable: winch2LoadInRange_1_05_1_15
+            key: 'Winch2CyclesInLoadRange_1.05_1.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_1.05_1.15'
+                input2: const int 1
+    let winch2AverageLoadInRabge_1_05_1_15_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_1_05_1_15
+            key: 'Winch2AverageLoadInRange_1.05_1.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_1_05_1_15
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_1.05_1.15'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 1.15-1.25
+    let winch2LoadInRange_1_15_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 1.15
+            input3 fn Lt:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 1.25
+    let winch2CyclesInLoadRange_1_15_1_25:
+        input fn Retain:
+            enable: winch2LoadInRange_1_15_1_25
+            key: 'Winch2CyclesInLoadRange_1.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_1.15_0.25'
+                input2: const int 1
+    let winch2AverageLoadInRabge_1_15_1_25_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_1_15_1_25
+            key: 'Winch2AverageLoadInRange_1.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_1_15_1_25
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_1.15_0.25'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch2 cycles in load-range 1.25-
+    let winch2LoadInRange_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch2CycleAverageLoadRelative
+                input2: const real 1.25
+    let winch2CyclesInLoadRange_1_25:
+        input fn Retain:
+            enable: winch2LoadInRange_1_25
+            key: 'Winch2CyclesInLoadRange_1.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch2CyclesInLoadRange_1.25'
+                input2: const int 1
+    let winch2AverageLoadInRabge_1_25_Relative:
+        input fn Retain:
+            enable: winch2LoadInRange_1_25
+            key: 'Winch2AverageLoadInRange_1.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch2LoadInRange_1_25
+                        default: winch2CycleAverageLoadRelative
+                        key: 'Winch2AverageLoadInRange_1.25'
+                    input2: winch2CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.05-0.15
+    let winch3LoadInRange_0_05_0_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.05
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.15
+    let winch3CyclesInLoadRange_0_05_0_15:
+        input fn Retain:
+            enable: winch3LoadInRange_0_05_0_15
+            key: 'Winch3CyclesInLoadRange_0.05_0.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.05_0.15'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_05_0_15_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_05_0_15
+            key: 'Winch3AverageLoadInRange_0.05_0.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_05_0_15
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.05_0.15'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.15-0.25
+    let winch3LoadInRange_0_15_0_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.15
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.25
+    let winch3CyclesInLoadRange_0_15_0_25:
+        input fn Retain:
+            enable: winch3LoadInRange_0_15_0_25
+            key: 'Winch3CyclesInLoadRange_0.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.15_0.25'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_15_0_25_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_15_0_25
+            key: 'Winch3AverageLoadInRange_0.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_15_0_25
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.15_0.25'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.25-0.35
+    let winch3LoadInRange_0_25_0_35:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.25
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.35
+    let winch3CyclesInLoadRange_0_25_0_35:
+        input fn Retain:
+            enable: winch3LoadInRange_0_25_0_35
+            key: 'Winch3CyclesInLoadRange_0.25_0.35'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.25_0.35'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_25_0_35_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_25_0_35
+            key: 'Winch3AverageLoadInRange_0.25_0.35'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_25_0_35
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.25_0.35'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.35-0.45
+    let winch3LoadInRange_0_35_0_45:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.35
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.45
+    let winch3CyclesInLoadRange_0_35_0_45:
+        input fn Retain:
+            enable: winch3LoadInRange_0_35_0_45
+            key: 'Winch3CyclesInLoadRange_0.35_0.45'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.35_0.45'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_35_0_45_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_35_0_45
+            key: 'Winch3AverageLoadInRange_0.35_0.45'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_35_0_45
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.35_0.45'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.45-0.55
+    let winch3LoadInRange_0_45_0_55:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.45
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.55
+    let winch3CyclesInLoadRange_0_45_0_55:
+        input fn Retain:
+            enable: winch3LoadInRange_0_45_0_55
+            key: 'Winch3CyclesInLoadRange_0.45_0.55'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.45_0.55'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_45_0_55_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_45_0_55
+            key: 'Winch3AverageLoadInRange_0.45_0.55'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_45_0_55
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.45_0.55'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.55-0.65
+    let winch3LoadInRange_0_55_0_65:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.55
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.65
+    let winch3CyclesInLoadRange_0_55_0_65:
+        input fn Retain:
+            enable: winch3LoadInRange_0_55_0_65
+            key: 'Winch3CyclesInLoadRange_0.55_0.65'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.55_0.65'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_55_0_65_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_55_0_65
+            key: 'Winch3AverageLoadInRange_0.55_0.65'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_55_0_65
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.55_0.65'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.65-0.75
+    let winch3LoadInRange_0_65_0_75:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.65
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.75
+    let winch3CyclesInLoadRange_0_65_0_75:
+        input fn Retain:
+            enable: winch3LoadInRange_0_65_0_75
+            key: 'Winch3CyclesInLoadRange_0.65_0.75'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.65_0.75'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_65_0_75_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_65_0_75
+            key: 'Winch3AverageLoadInRange_0.65_0.75'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_65_0_75
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.65_0.75'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.75-0.85
+    let winch3LoadInRange_0_75_0_85:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.75
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.85
+    let winch3CyclesInLoadRange_0_75_0_85:
+        input fn Retain:
+            enable: winch3LoadInRange_0_75_0_85
+            key: 'Winch3CyclesInLoadRange_0.75_0.85'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.75_0.85'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_75_0_85_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_75_0_85
+            key: 'Winch3AverageLoadInRange_0.75_0.85'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_75_0_85
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.75_0.85'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.85-0.95
+    let winch3LoadInRange_0_85_0_95:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.85
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.95
+    let winch3CyclesInLoadRange_0_85_0_95:
+        input fn Retain:
+            enable: winch3LoadInRange_0_85_0_95
+            key: 'Winch3CyclesInLoadRange_0.85_0.95'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.85_0.95'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_85_0_95_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_85_0_95
+            key: 'Winch3AverageLoadInRange_0.85_0.95'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_85_0_95
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.85_0.95'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 0.95-1.05
+    let winch3LoadInRange_0_95_1_05:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 0.95
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 1.05
+    let winch3CyclesInLoadRange_0_95_1_05:
+        input fn Retain:
+            enable: winch3LoadInRange_0_95_1_05
+            key: 'Winch3CyclesInLoadRange_0.95_1.05'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_0.95_1.05'
+                input2: const int 1
+    let winch3AverageLoadInRabge_0_95_1_05_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_0_95_1_05
+            key: 'Winch3AverageLoadInRange_0.95_1.05'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_0_95_1_05
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_0.95_1.05'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 1.05-1.15
+    let winch3LoadInRange_1_05_1_15:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 1.05
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 1.15
+    let winch3CyclesInLoadRange_1_05_1_15:
+        input fn Retain:
+            enable: winch3LoadInRange_1_05_1_15
+            key: 'Winch3CyclesInLoadRange_1.05_1.15'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_1.05_1.15'
+                input2: const int 1
+    let winch3AverageLoadInRabge_1_05_1_15_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_1_05_1_15
+            key: 'Winch3AverageLoadInRange_1.05_1.15'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_1_05_1_15
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_1.05_1.15'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 1.15-1.25
+    let winch3LoadInRange_1_15_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 1.15
+            input3 fn Lt:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 1.25
+    let winch3CyclesInLoadRange_1_15_1_25:
+        input fn Retain:
+            enable: winch3LoadInRange_1_15_1_25
+            key: 'Winch3CyclesInLoadRange_1.15_0.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_1.15_0.25'
+                input2: const int 1
+    let winch3AverageLoadInRabge_1_15_1_25_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_1_15_1_25
+            key: 'Winch3AverageLoadInRange_1.15_0.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_1_15_1_25
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_1.15_0.25'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+    #
+    # Count of Winch3 cycles in load-range 1.25-
+    let winch3LoadInRange_1_25:
+        input fn BitAnd:
+            input1: opCycleIsDone
+            input2 fn Ge:
+                input1: winch3CycleAverageLoadRelative
+                input2: const real 1.25
+    let winch3CyclesInLoadRange_1_25:
+        input fn Retain:
+            enable: winch3LoadInRange_1_25
+            key: 'Winch3CyclesInLoadRange_1.25'
+            input fn Add:
+                input1 fn Retain:
+                    default: const int 0
+                    key: 'Winch3CyclesInLoadRange_1.25'
+                input2: const int 1
+    let winch3AverageLoadInRabge_1_25_Relative:
+        input fn Retain:
+            enable: winch3LoadInRange_1_25
+            key: 'Winch3AverageLoadInRange_1.25'
+            input fn Div:
+                input1 fn Add:
+                    input1 fn Retain:
+                        enable: winch3LoadInRange_1_25
+                        default: winch3CycleAverageLoadRelative
+                        key: 'Winch3AverageLoadInRange_1.25'
+                    input2: winch3CycleAverageLoadRelative
+                input2: const real 2.0
+
+
+    ###############   Basic Metrics   ###############
+    #
+    #   table:      basic_metric
+    #
+    fn RecOpCycleMetric BasicMetric:
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        op-cycle: opCycleIsActive
+        #
+        # ========= DEBUGGING =========
+        debug-craneCycleAverageLoadRelative fn ToString:   
+            input: craneCycleAverageLoadRelative
+        debug-craneCycleMaxLoad fn ToString:
+            input: craneCycleMaxLoad
+        #
+        #                !!! IN SECONDS
+        # 3.1   | real | crane-total-operating-secs  | общее количество часов работы крана
+        input31 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'crane-total-operating-secs';
+            input fn Retain:
+                key: 'crane-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'crane-total-operating-secs'
+                    input: opCycleIsActive
+        #
+        # 3.2.0 | real | pump-total-operating-secs   | общее количество часов работы насосной станции (мото-секунды)
+        input320 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'pump-total-operating-secs';
+            input fn Retain:
+                key: 'pump-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'pump-total-operating-secs'
+                    input: pumpIsActive
+        #
+        # 3.2.1 | real | winch1-total-operating-secs | общее количество часов работы лебедки 1 (мото-секунды)
+        input321 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-total-operating-secs';
+            input fn Retain:
+                key: 'winch1-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'winch1-total-operating-secs'
+                    input: winch1IsActive
+        #
+        # 3.2.2 | real | winch2-total-operating-secs | общее количество часов работы лебедки 2 (мото-секунды)
+        input322 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-total-operating-secs';
+            input fn Retain:
+                key: 'winch2-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'winch2-total-operating-secs'
+                    input: winch2IsActive
+        #
+        # 3.2.3 | real | winch3-total-operating-secs | общее количество часов работы лебедки 3 (мото-секунды)
+        input323 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-total-operating-secs';
+            input fn Retain:
+                key: 'winch3-total-operating-secs'
+                input fn Timer:
+                    initial fn Retain:
+                        default: const real 0.0
+                        key: 'winch3-total-operating-secs'
+                    input: winch3IsActive
+        #
+        # 3.3 | int | total-operating-cycles-count | суммарное число рабочих циклов
+        input33 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'total-operating-cycles-count';
+            input: craneOperatingCyclesTotal
+        #
+        # 3.4  |  cycles-distribution-by-load-ranges  |  распределение циклов по диапазонам нагрузки
+        #
+        # 3.4.1.1  |  int  |  cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
+        input34_1_01 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_05-0_15-load-range';
+            input: cyclesInLoadRange_0_05_0_15
+        input34_1_01_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_05-0_15-load';
+            input: craneAverageLoadInRabge_0_05_0_15_Relative
+        #
+        # 3.4.1.2  |  int  |  cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
+        input34_1_02 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_15-0_25_load-range';
+            input: cyclesInLoadRange_0_15_0_25
+        input34_1_02_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_15-0_25-load';
+            input: craneAverageLoadInRabge_0_15_0_25_Relative
+        #
+        # 3.4.1.3  |  int  |  cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
+        input34_1_03 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_25-0_35_load-range';
+            input: cyclesInLoadRange_0_25_0_35
+        input34_1_03_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_25-0_35-load';
+            input: craneAverageLoadInRabge_0_25_0_35_Relative
+        #
+        # 3.4.1.4  |  int  |  cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
+        input34_1_04 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_35-0_45_load-range';
+            input: cyclesInLoadRange_0_35_0_45
+        input34_1_04_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_35-0_45-load';
+            input: craneAverageLoadInRabge_0_35_0_45_Relative
+        #
+        # 3.4.1.5  |  int  |  cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
+        input34_1_05 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_45-0_55_load-range';
+            input: cyclesInLoadRange_0_45_0_55
+        input34_1_05_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_45-0_55-load';
+            input: craneAverageLoadInRabge_0_45_0_55_Relative
+        #
+        # 3.4.1.6  |  int  |  cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
+        input34_1_06 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_55-0_65_load-range';
+            input: cyclesInLoadRange_0_55_0_65
+        input34_1_06_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_55-0_65-load';
+            input: craneAverageLoadInRabge_0_55_0_65_Relative
+        #
+        # 3.4.1.7  |  int  |  cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
+        input34_1_07 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_65-0_75_load-range';
+            input: cyclesInLoadRange_0_65_0_75
+        input34_1_07_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_65-0_75-load';
+            input: craneAverageLoadInRabge_0_65_0_75_Relative
+        #
+        # 3.4.1.8  |  int  |  cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
+        input34_1_08 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_75-0_85_load-range';
+            input: cyclesInLoadRange_0_75_0_85
+        input34_1_08_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_75-0_85-load';
+            input: craneAverageLoadInRabge_0_75_0_85_Relative
+        #
+        # 3.4.1.9  |  int  |  cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
+        input34_1_09 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_85-0_95_load-range';
+            input: cyclesInLoadRange_0_85_0_95
+        input34_1_09_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_85-0_95-load';
+            input: craneAverageLoadInRabge_0_85_0_95_Relative
+        #
+        # 3.4.1.10  |  int  |  cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
+        input34_1_10 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-0_95-1_05_load-range';
+            input: cyclesInLoadRange_0_95_1_05
+        input34_1_10_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '0_95-1_05-load';
+            input: craneAverageLoadInRabge_0_95_1_05_Relative
+        #
+        # 3.4.1.11  |  int  |  cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
+        input34_1_11 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-1_05-1_15_load-range';
+            input: cyclesInLoadRange_1_05_1_15
+        input34_1_11_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '1_05-1_15-load';
+            input: craneAverageLoadInRabge_1_05_1_15_Relative
+        #
+        # 3.4.1.12  |  int  |  cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
+        input34_1_12 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-1_15-1_25_load-range';
+            input: cyclesInLoadRange_1_15_1_25
+        input34_1_12_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '1_15-1_25-load';
+            input: craneAverageLoadInRabge_1_15_1_25_Relative
+        #
+        # 3.4.1.13  |  int  |  cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
+        input34_1_13 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'cycles-1_25-_load-range';
+            input: cyclesInLoadRange_1_25
+        input34_1_13_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = '1_25-load';
+            input: craneAverageLoadInRabge_1_25_Relative
+        #
+        # 3.4.2.1  |  int  |  winch1-cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
+        input34_2_01 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_05-0_15-load-range';
+            input: winch1CyclesInLoadRange_0_05_0_15
+        input34_2_01_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_05-0_15-load';
+            input: winch1AverageLoadInRabge_0_05_0_15_Relative
+        #
+        # 3.4.2.2  |  int  |  winch1-cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
+        input34_2_02 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_15-0_25_load-range';
+            input: winch1CyclesInLoadRange_0_15_0_25
+        input34_2_02_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_15-0_25-load';
+            input: winch1AverageLoadInRabge_0_15_0_25_Relative
+        #
+        # 3.4.2.3  |  int  |  winch1-cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
+        input34_2_03 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_25-0_35_load-range';
+            input: winch1CyclesInLoadRange_0_25_0_35
+        input34_2_03_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_25-0_35-load';
+            input: winch1AverageLoadInRabge_0_25_0_35_Relative
+        #
+        # 3.4.2.4  |  int  |  winch1-cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
+        input34_2_04 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_35-0_45_load-range';
+            input: winch1CyclesInLoadRange_0_35_0_45
+        input34_2_04_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_35-0_45-load';
+            input: winch1AverageLoadInRabge_0_35_0_45_Relative
+        #
+        # 3.4.2.5  |  int  |  winch1-cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
+        input34_2_05 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_45-0_55_load-range';
+            input: winch1CyclesInLoadRange_0_45_0_55
+        input34_2_05_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_45-0_55-load';
+            input: winch1AverageLoadInRabge_0_45_0_55_Relative
+        #
+        # 3.4.2.6  |  int  |  winch1-cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
+        input34_2_06 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_55-0_65_load-range';
+            input: winch1CyclesInLoadRange_0_55_0_65
+        input34_2_06_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_55-0_65-load';
+            input: winch1AverageLoadInRabge_0_55_0_65_Relative
+        #
+        # 3.4.2.7  |  int  |  winch1-cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
+        input34_2_07 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_65-0_75_load-range';
+            input: winch1CyclesInLoadRange_0_65_0_75
+        input34_2_07_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_65-0_75-load';
+            input: winch1AverageLoadInRabge_0_65_0_75_Relative
+        #
+        # 3.4.2.8  |  int  |  winch1-cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
+        input34_2_08 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_75-0_85_load-range';
+            input: winch1CyclesInLoadRange_0_75_0_85
+        input34_2_08_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_75-0_85-load';
+            input: winch1AverageLoadInRabge_0_75_0_85_Relative
+        #
+        # 3.4.2.9  |  int  |  winch1-cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
+        input34_2_09 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_85-0_95_load-range';
+            input: winch1CyclesInLoadRange_0_85_0_95
+        input34_2_09_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_85-0_95-load';
+            input: winch1AverageLoadInRabge_0_85_0_95_Relative
+        #
+        # 3.4.2.10  |  int  |  winch1-cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
+        input34_2_10 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-0_95-1_05_load-range';
+            input: winch1CyclesInLoadRange_0_95_1_05
+        input34_2_10_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-0_95-1_05-load';
+            input: winch1AverageLoadInRabge_0_95_1_05_Relative
+        #
+        # 3.4.2.11  |  int  |  winch1-cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
+        input34_2_11 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-1_05-1_15_load-range';
+            input: winch1CyclesInLoadRange_1_05_1_15
+        input34_2_11_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-1_05-1_15-load';
+            input: winch1AverageLoadInRabge_1_05_1_15_Relative
+        #
+        # 3.4.2.12  |  int  |  winch1-cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
+        input34_2_12 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-1_15-1_25_load-range';
+            input: winch1CyclesInLoadRange_1_15_1_25
+        input34_2_12_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-1_15-1_25-load';
+            input: winch1AverageLoadInRabge_1_15_1_25_Relative
+        #
+        # 3.4.2.13  |  int  |  winch1-cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
+        input34_2_13 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-cycles-1_25-_load-range';
+            input: winch1CyclesInLoadRange_1_25
+        input34_2_13_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-1_25-load';
+            input: winch1AverageLoadInRabge_1_25_Relative
+        #
+        # 3.4.3.1  |  int  |  winch2-cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
+        input34_3_01 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_05-0_15-load-range';
+            input: winch2CyclesInLoadRange_0_05_0_15
+        input34_3_01_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_05-0_15-load';
+            input: winch2AverageLoadInRabge_0_05_0_15_Relative
+        #
+        # 3.4.3.2  |  int  |  winch2-cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
+        input34_3_02 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_15-0_25_load-range';
+            input: winch2CyclesInLoadRange_0_15_0_25
+        input34_3_02_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_15-0_25-load';
+            input: winch2AverageLoadInRabge_0_15_0_25_Relative
+        #
+        # 3.4.3.3  |  int  |  winch2-cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
+        input34_3_03 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_25-0_35_load-range';
+            input: winch2CyclesInLoadRange_0_25_0_35
+        input34_3_03_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_25-0_35-load';
+            input: winch2AverageLoadInRabge_0_25_0_35_Relative
+        #
+        # 3.4.3.4  |  int  |  winch2-cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
+        input34_3_04 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_35-0_45_load-range';
+            input: winch2CyclesInLoadRange_0_35_0_45
+        input34_3_04_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_35-0_45-load';
+            input: winch2AverageLoadInRabge_0_35_0_45_Relative
+        #
+        # 3.4.3.5  |  int  |  winch2-cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
+        input34_3_05 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_45-0_55_load-range';
+            input: winch2CyclesInLoadRange_0_45_0_55
+        input34_3_05_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_45-0_55-load';
+            input: winch2AverageLoadInRabge_0_45_0_55_Relative
+        #
+        # 3.4.3.6  |  int  |  winch2-cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
+        input34_3_06 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_55-0_65_load-range';
+            input: winch2CyclesInLoadRange_0_55_0_65
+        input34_3_06_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_55-0_65-load';
+            input: winch2AverageLoadInRabge_0_55_0_65_Relative
+        #
+        # 3.4.3.7  |  int  |  winch2-cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
+        input34_3_07 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_65-0_75_load-range';
+            input: winch2CyclesInLoadRange_0_65_0_75
+        input34_3_07_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_65-0_75-load';
+            input: winch2AverageLoadInRabge_0_65_0_75_Relative
+        #
+        # 3.4.3.8  |  int  |  winch2-cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
+        input34_3_08 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_75-0_85_load-range';
+            input: winch2CyclesInLoadRange_0_75_0_85
+        input34_3_08_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_75-0_85-load';
+            input: winch2AverageLoadInRabge_0_75_0_85_Relative
+        #
+        # 3.4.3.9  |  int  |  winch2-cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
+        input34_3_09 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_85-0_95_load-range';
+            input: winch2CyclesInLoadRange_0_85_0_95
+        input34_3_09_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_85-0_95-load';
+            input: winch2AverageLoadInRabge_0_85_0_95_Relative
+        #
+        # 3.4.3.10  |  int  |  winch2-cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
+        input34_3_10 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-0_95-1_05_load-range';
+            input: winch2CyclesInLoadRange_0_95_1_05
+        input34_3_10_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-0_95-1_05-load';
+            input: winch2AverageLoadInRabge_0_95_1_05_Relative
+        #
+        # 3.4.3.11  |  int  |  winch2-cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
+        input34_3_11 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-1_05-1_15_load-range';
+            input: winch2CyclesInLoadRange_1_05_1_15
+        input34_3_11_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-1_05-1_15-load';
+            input: winch2AverageLoadInRabge_1_05_1_15_Relative
+        #
+        # 3.4.3.12  |  int  |  winch2-cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
+        input34_3_12 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-1_15-1_25_load-range';
+            input: winch2CyclesInLoadRange_1_15_1_25
+        input34_3_12_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-1_15-1_25-load';
+            input: winch2AverageLoadInRabge_1_15_1_25_Relative
+        #
+        # 3.4.3.13  |  int  |  winch2-cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
+        input34_3_13 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-cycles-1_25-_load-range';
+            input: winch2CyclesInLoadRange_1_25
+        input34_3_13_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-1_25-load';
+            input: winch2AverageLoadInRabge_1_25_Relative
+        #
+        # 3.4.4.1  |  int  |  winch3-cycles-0_05-0_15-load-range  |  циклов в диапазоне загрузки 0,05 - 0,15
+        input34_4_01 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_05-0_15-load-range';
+            input: winch3CyclesInLoadRange_0_05_0_15
+        input34_4_01_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_05-0_15-load';
+            input: winch3AverageLoadInRabge_0_05_0_15_Relative
+        #
+        # 3.4.4.2  |  int  |  winch3-cycles-0_15-0_25_load-range  |  циклов в диапазоне загрузки 0,15 - 0,25
+        input34_4_02 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_15-0_25_load-range';
+            input: winch3CyclesInLoadRange_0_15_0_25
+        input34_4_02_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_15-0_25-load';
+            input: winch3AverageLoadInRabge_0_15_0_25_Relative
+        #
+        # 3.4.4.3  |  int  |  winch3-cycles-0_25-0_35_load-range  |  циклов в диапазоне загрузки 0,25 - 0,35
+        input34_4_03 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_25-0_35_load-range';
+            input: winch3CyclesInLoadRange_0_25_0_35
+        input34_4_03_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_25-0_35-load';
+            input: winch3AverageLoadInRabge_0_25_0_35_Relative
+        #
+        # 3.4.4.4  |  int  |  winch3-cycles-0_35-0_45_load-range  |  циклов в диапазоне загрузки 0,35 - 0,45
+        input34_4_04 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_35-0_45_load-range';
+            input: winch3CyclesInLoadRange_0_35_0_45
+        input34_4_04_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_35-0_45-load';
+            input: winch3AverageLoadInRabge_0_35_0_45_Relative
+        #
+        # 3.4.4.5  |  int  |  winch3-cycles-0_45-0_55_load-range  |  циклов в диапазоне загрузки 0,45 - 0,55
+        input34_4_05 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_45-0_55_load-range';
+            input: winch3CyclesInLoadRange_0_45_0_55
+        input34_4_05_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_45-0_55-load';
+            input: winch3AverageLoadInRabge_0_45_0_55_Relative
+        #
+        # 3.4.4.6  |  int  |  winch3-cycles-0_55-0_65_load-range  |  циклов в диапазоне загрузки 0,55 - 0,65
+        input34_4_06 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_55-0_65_load-range';
+            input: winch3CyclesInLoadRange_0_55_0_65
+        input34_4_06_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_55-0_65-load';
+            input: winch3AverageLoadInRabge_0_55_0_65_Relative
+        #
+        # 3.4.4.7  |  int  |  winch3-cycles-0_65-0_75_load-range  |  циклов в диапазоне загрузки 0,65 - 0,75
+        input34_4_07 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_65-0_75_load-range';
+            input: winch3CyclesInLoadRange_0_65_0_75
+        input34_4_07_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_65-0_75-load';
+            input: winch3AverageLoadInRabge_0_65_0_75_Relative
+        #
+        # 3.4.4.8  |  int  |  winch3-cycles-0_75-0_85_load-range  |  циклов в диапазоне загрузки 0,75 - 0,85
+        input34_4_08 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_75-0_85_load-range';
+            input: winch3CyclesInLoadRange_0_75_0_85
+        input34_4_08_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_75-0_85-load';
+            input: winch3AverageLoadInRabge_0_75_0_85_Relative
+        #
+        # 3.4.4.9  |  int  |  winch3-cycles-0_85-0_95_load-range  |  циклов в диапазоне загрузки 0,85 - 0,95
+        input34_4_09 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_85-0_95_load-range';
+            input: winch3CyclesInLoadRange_0_85_0_95
+        input34_4_09_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_85-0_95-load';
+            input: winch3AverageLoadInRabge_0_85_0_95_Relative
+        #
+        # 3.4.4.10  |  int  |  winch3-cycles-0_95-1_05_load-range  |  циклов в диапазоне загрузки 0,95 - 1,05
+        input34_4_10 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-0_95-1_05_load-range';
+            input: winch3CyclesInLoadRange_0_95_1_05
+        input34_4_10_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-0_95-1_05-load';
+            input: winch3AverageLoadInRabge_0_95_1_05_Relative
+        #
+        # 3.4.4.11  |  int  |  winch3-cycles-1_05-1_15_load-range  |  циклов в диапазоне загрузки 1,05 - 1,15
+        input34_4_11 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-1_05-1_15_load-range';
+            input: winch3CyclesInLoadRange_1_05_1_15
+        input34_4_11_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-1_05-1_15-load';
+            input: winch3AverageLoadInRabge_1_05_1_15_Relative
+        #
+        # 3.4.4.12  |  int  |  winch3-cycles-1_15-1_25_load-range  |  циклов в диапазоне загрузки 1,15 - 1,25
+        input34_4_12 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-1_15-1_25_load-range';
+            input: winch3CyclesInLoadRange_1_15_1_25
+        input34_4_12_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-1_15-1_25-load';
+            input: winch3AverageLoadInRabge_1_15_1_25_Relative
+        #
+        # 3.4.4.13  |  int  |  winch3-cycles-1_25-_load-range  |  циклов в диапазоне загрузки 1,25 и выше
+        input34_4_13 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-cycles-1_25-_load-range';
+            input: winch3CyclesInLoadRange_1_25
+        input34_4_13_L fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-1_25-load';
+            input: winch3AverageLoadInRabge_1_25_Relative
+        #
+        # 3.5  |  real  |  crane-total-lifted-mass  |  суммарная масса поднятых грузов. тонн  |  0.0
+        input35 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'crane-total-lifted-mass';
+            input fn Retain:
+                key: 'crane-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: craneCycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'crane-total-lifted-mass'
+        #
+        # 3.5.1  |  real  |  winch1-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 1  |  0.0
+        input351 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-total-lifted-mass';
+            input fn Retain:
+                key: 'winch1-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: winch1CycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'winch1-total-lifted-mass'
+        #
+        # 3.5.2  |  real  |  winch2-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 2  |  0.0
+        input352 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-total-lifted-mass';
+            input fn Retain:
+                key: 'winch2-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: winch2CycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'winch2-total-lifted-mass'
+        #
+        # 3.5.3  |  real  |  winch3-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 3
+        input353 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-total-lifted-mass';
+            input fn Retain:
+                key: 'winch3-total-lifted-mass'
+                input fn Add:
+                    input1 fn Filter:
+                        default: const real 0.0
+                        pass: opCycleIsActive
+                        input: winch3CycleAverageLoad
+                    input2 fn Retain:
+                        default: const real 0.0
+                        key: 'winch3-total-lifted-mass'
+        #
+        # 3.6.1  |  int  |  winch1-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 1
+        input361 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-load-limiter-trip-count';
+            input: winch1LoadLimiterTripCount
+        #
+        # 3.6.2  |  int  |  winch2-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 2
+        input362 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-load-limiter-trip-count';
+            input: winch2LoadLimiterTripCount
+        #
+        # 3.6.3  |  int  |  winch3-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 3
+        input363 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-load-limiter-trip-count';
+            input: winch3LoadLimiterTripCount
+        #
+        # 3.7  |  real  |  crane-characteristic-number  |  текущее характеристическое число для крана
+        input37 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'crane-characteristic-number';
+            input: craneEigenValue
+        #
+        # 3.7.1  |  real  |  winch1-characteristic-number  |  текущее характеристическое число лебедка 1
+        input371 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch1-characteristic-number';
+            input: winch1EigenValue
+        #
+        # 3.7.2  |  real  |  winch2-characteristic-number  |  текущее характеристическое число лебедка 2
+        input372 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch2-characteristic-number';
+            input: winch2EigenValue
+        #
+        # 3.7.3  |  real  |  winch3-characteristic-number  |  текущее характеристическое число лебедка 3
+        input373 fn SqlMetric:
+            table: public.basic_metric
+            sql: update {table} set value = {input.value} where name = 'winch3-characteristic-number';
+            input: winch3EigenValue
+        #
+        # 3.8  |  real  |  crane-load-spectrum-factor  |  коэффициент распределения нагрузок для крана
+        # implemented in the database
+        #
+        # 3.8.1  |  real  |  winch1-load-spectrum-factor  |  коэффициент распределения нагрузок лебедка 1
+        # implemented in the database
+        #
+        # 3.8.2  |  real  |  winch2-load-spectrum-factor  |  коэффициент распределения нагрузок лебедка 2
+        # implemented in the database
+        #
+        # 3.8.3  |  real  |  winch3-load-spectrum-factor  |  коэффициент распределения нагрузок лебедка 3
+
+
+    ###############   Operating Cycle + Metrics   ###############
+    #
+    #   table:      rec_operating_cycle
+    #   table:      rec_operating_metric
+    #
+    fn RecOpCycleMetric:
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        op-cycle: opCycleIsActive
+        # conf point OpCycleSql:
+        #     type: 'String'
+        #
+        # Operating cycle
+        input1 fn SqlMetric:
+            table: public.rec_operating_cycle
+            sql: insert into {table} (id, timestamp_start, timestamp_stop, alarm_class) values ({opCycleId.value}, '{start.timestamp}', '{stop.timestamp}', {alarmClass.value});
+            opCycleId: opCycleId
+            start fn KeepValid:
+                input fn Filter:
+                    pass fn RisingEdge:
+                        input: opCycleIsActive
+                    input: point real '/AppTest/Load' status ok
+            stop: point real '/AppTest/Load' status ok
+            alarmClass: alarmClass
+        #
+        # Operating cycle metric 'Average Load'
+        input2 fn SqlMetric:
+            table: public.rec_operating_metric
+            sql: insert into {table} (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'average_load', {input.value});
+            opCycleId: opCycleId
+            input: craneCycleAverageLoad
+        #
+        # Operating cycle metric 'Max Load'
+        input3 fn SqlMetric:
+            table: public.rec_operating_metric
+            sql: insert into {table} (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'max_load', {input.value});
+            opCycleId: opCycleId
+            input: craneCycleMaxLoad
+
+
+    ###############   Operating Cycle Events (Live Data)   ###############
+    #
+    #   table:      operating_event
+    #
+    #
+    # Threshold for Crane load, used to compress leve data
+    let craneLoadThreshold:
+        input fn Mul:
+            input1: craneLoadNom
+            input2 fn PiecewiseLineApprox:
+                input: craneLoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    #
+    # Crane load leve data compressed
+    let craneLoadFiltered_:
+        input fn Threshold:
+            threshold: craneLoadThreshold
+            factor: const real 0.05
+            input: point real '/AppTest/Load' status ok
+    let craneLoadFiltered:
+        input fn Filter:
+            pass fn IsChangedValue:
+                input: craneLoadFiltered_
+            input: craneLoadFiltered_
+    #
+    # Threshold for Winch1 load, used to compress leve data
+    let winch1LoadThreshold:
+        input fn Mul:
+            input1: winch1LoadNom
+            input2 fn PiecewiseLineApprox:
+                input: winch1LoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    let winch1LoadFiltered_:
+        input fn Threshold:
+            threshold: winch1LoadThreshold
+            factor: const real 0.05
+            input: point real '/AppTest/Winch1.Load' status ok
+    #
+    # Winch1 load leve data compressed
+    let winch1LoadFiltered:
+        input fn Filter:
+            pass fn IsChangedValue:
+                input: winch1LoadFiltered_
+            input: winch1LoadFiltered_
+    #
+    # Threshold for Winch2 load, used to compress leve data
+    let winch2LoadThreshold:
+        input fn Mul:
+            input1: winch2LoadNom
+            input2 fn PiecewiseLineApprox:
+                input: winch2LoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    let winch2LoadFiltered_:
+        input fn Threshold:
+            threshold: winch2LoadThreshold
+            factor: const real 0.05
+            input: point real '/AppTest/Winch2.Load' status ok
+    #
+    # Winch2 load leve data compressed
+    let winch2LoadFiltered:
+        input fn Filter:
+            pass fn IsChangedValue:
+                input: winch2LoadFiltered_
+            input: winch2LoadFiltered_
+    #
+    # Threshold for Winch3 load, used to compress leve data
+    let winch3LoadThreshold:
+        input fn Mul:
+            input1: winch3LoadNom
+            input2 fn PiecewiseLineApprox:
+                input: winch3LoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    let winch3LoadFiltered_:
+        input fn Threshold:
+            threshold: winch3LoadThreshold
+            factor: const real 0.05
+            input: point real '/AppTest/Winch3.Load' status ok
+    #
+    # Winch3 load leve data compressed
+    let winch3LoadFiltered:
+        input fn Filter:
+            pass fn IsChangedValue:
+                input: winch3LoadFiltered_
+            input: winch3LoadFiltered_
+    #
+    # Export operating events into the database
+    #
+    #
+    # Crane MOPS triggered
+    let craneMopsTriggered:
+        input: point int '/AppTest/CraneMode.MOPS' status ok
+    fn Export ExportCraneMopsEvent:
+        enable fn IsChangedValue:
+            input: point int '/AppTest/CraneMode.MOPS' status ok
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point CraneMopsEvent:
+            type: String
+        input fn SqlMetric:   
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneMOPSEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: point int '/AppTest/CraneMode.MOPS' status ok
+    #
+    # Crane AOPS triggered
+    let craneAopsTriggered:
+        input: point int '/AppTest/CraneMode.AOPS' status ok
+    fn Export ExportCraneAopsEvent:
+        enable fn IsChangedValue:
+            input: point int '/AppTest/CraneMode.AOPS' status ok
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point CraneAopsEvent:
+            type: String
+        input fn SqlMetric:   
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneAOPSEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: point int '/AppTest/CraneMode.AOPS' status ok
+    #
+    fn Export ExportCraneLoadEvent:
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point CraneLoadEvent:
+            type: String
+        input fn SqlMetric:   
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneLoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: craneLoadFiltered
+    #
+    fn Export ExportWinch1LoadEvent:
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point Winch1LoadEvent:
+            type: String
+        input fn SqlMetric:   
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch1LoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: winch1LoadFiltered
+    #
+    fn Export ExportWinch2LoadEvent:
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point Winch2LoadEvent:
+            type: String
+        input fn SqlMetric:   
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch2LoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: winch2LoadFiltered
+    #
+    fn Export ExportWinch3LoadEvent:
+        # send-to: /AppTest/ApiClient.in-queue
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point Winch3LoadEvent:
+            type: String
+        input fn SqlMetric:   
+            table: public.rec_operating_event
+            sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch3LoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: winch3LoadFiltered
+
+
+    #
+    # ========= DEBUGGING =========
+    fn Export ExportExit:
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        conf point ExitEvent:
+            type: String
+        input: point string /AppTest/Exit
+
+
+    #
+    # ========= PLOTTING =========
+    fn Plot Plot1:
+        # craneLoadNom: craneLoadNom
+        craneLoad: point real '/AppTest/Load'
+        # craneLoadRelative: craneLoadRelative
+        craneLoadFiltered: craneLoadFiltered
+        # winch1LoadRelative: winch1LoadRelative
+        # winch1LoadFiltered: winch1LoadFiltered
+        # winch2LoadRelative: winch2LoadRelative
+        # winch2LoadFiltered: winch2LoadFiltered
+        # winch3LoadRelative: winch3LoadRelative
+        # winch3LoadFiltered: winch3LoadFiltered
+        craneMopsTriggered: craneMopsTriggered
+        craneAopsTriggered: craneAopsTriggered
+        opCycleIsActive: opCycleIsActive
+        opCycleIsDone: opCycleIsDone

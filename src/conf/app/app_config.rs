@@ -112,7 +112,7 @@ impl AppConfig {
     #[allow(dead_code)]
     pub fn read<P>(path: Vec<P>) -> AppConfig where P: AsRef<Path> {
         let self_id = "AppConfig";
-        info!("{}.read | Reading configuration...", self_id);
+        info!("{}.read | Reading configuration files...", self_id);
         let mut files = vec![];
         for p in path {
             match fs::read_to_string(&p) {
@@ -127,7 +127,7 @@ impl AppConfig {
         let yaml_string = files.join("\n");
         match serde_yaml::from_str(&yaml_string) {
             Ok(config) => {
-                info!("{}.read | Reading configuration - ok", self_id);
+                info!("{}.read | Reading configuration files - ok", self_id);
                 AppConfig::from_yaml_value(&config)
             }
             Err(err) => {
