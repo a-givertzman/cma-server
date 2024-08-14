@@ -26,12 +26,12 @@ impl App {
     ///
     /// Creates new instance of the ReatinBuffer
     ///     - path - path to the application configuration
-    pub fn new(path: impl AsRef<Path>) -> Self {
+    pub fn new(path: Vec<impl AsRef<Path>>) -> Self {
         let self_id = "App".to_owned();
-        info!("{}.run | Configuration path: '{}'", self_id, path.as_ref().display());
-        info!("{}.run | Reading configuration...", self_id);
+        path.iter().for_each(|p| {
+            info!("{}.run | Configuration path: '{}'", self_id, p.as_ref().display());
+        });
         let conf: AppConfig = AppConfig::read(path);
-        info!("{}.run | Reading configuration - ok", self_id);
         Self {
             id: self_id,
             handles: LinkedHashMap::new(),

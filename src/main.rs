@@ -16,8 +16,10 @@ fn main() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     let cli = Cli::parse();
     let path = cli.config.map_or_else(
-        || PathBuf::from("config.yaml"),
-        PathBuf::from
+        || vec![PathBuf::from("config.yaml")],
+        |args| {
+            args.into_iter().map(PathBuf::from).collect()
+        }
     );
     let app = App::new(path);
     if let Err(err) = app.run() {

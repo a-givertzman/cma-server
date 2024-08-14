@@ -5,8 +5,8 @@ description: Short explanation / purpose etc.
 service MultiQueue:
     in queue in-queue:
         max-length: 10000
-    send-to:
-        # - TaskTestReceiver.queue
+    # send-to:
+    #     - TaskTestReceiver.queue
 #
 #
 service Task Task1:
@@ -57,7 +57,7 @@ service TcpServer:
         pass: '12345'
     in queue link:
         max-length: 10000
-    send-to: MultiQueue.in-queue
+    send-to: /App/MultiQueue.in-queue
 #
 #
 # service TcpClient:
@@ -66,15 +66,15 @@ service TcpServer:
 #     address: 127.0.0.1:8080
 #     in queue link:
 #         max-length: 10000
-#     send-to: MultiQueue.in-queue
+#     send-to: /App/MultiQueue.in-queue
 #
 #
 service ProfinetClient Ied01:
     cycle: 1000 ms                         # operating cycle time of the module
     # in queue in-queue:
     #     max-length: 10000
-    subscribe: MultiQueue
-    send-to: MultiQueue.in-queue
+    subscribe: /App/MultiQueue
+    send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01'
     ip: '192.168.130.243'
@@ -139,7 +139,7 @@ service ProfinetClient Ied01:
 #     cycle: 1 ms                         # operating cycle time of the module
 #     in queue in-queue:
 #         max-length: 10000
-#     send-to: MultiQueue.in-queue
+#     send-to: /App/MultiQueue.in-queue
 #     protocol: 'profinet'
 #     description: 'S7-IED-02'
 #     ip: '192.168.100.243'

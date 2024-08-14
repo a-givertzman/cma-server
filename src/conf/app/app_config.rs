@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use log::{debug, trace};
+use log::{debug, info, trace};
 use std::{fs, path::Path, str::FromStr};
 use crate::conf::{
     conf_keywd::{ConfKeywd, ConfKind}, conf_tree::ConfTree, service_config::ServiceConfig
@@ -110,20 +110,28 @@ impl AppConfig {
     ///
     /// reads config from path
     #[allow(dead_code)]
-    pub fn read<P>(path: P) -> AppConfig where P: AsRef<Path> {
-        match fs::read_to_string(&path) {
-            Ok(yaml_string) => {
-                match serde_yaml::from_str(&yaml_string) {
-                    Ok(config) => {
-                        AppConfig::from_yaml_value(&config)
-                    }
-                    Err(err) => {
-                        panic!("AppConfig.read | Error in config: {:?}\n\terror: {:?}", yaml_string, err)
-                    }
+    pub fn read<P>(path: Vec<P>) -> AppConfig where P: AsRef<Path> {
+        let self_id = "AppConfig";
+        info!("{}.read | Reading configuration...", self_id);
+        let mut files = vec![];
+        for p in path {
+            match fs::read_to_string(&p) {
+                Ok(f) => {
+                    files.push(f)
+                }
+                Err(err) => {
+                    panic!("{}.read | File '{}' reading error: {:?}", self_id, p.as_ref().display(), err)
                 }
             }
+        }
+        let yaml_string = files.join("\n");
+        match serde_yaml::from_str(&yaml_string) {
+            Ok(config) => {
+                info!("{}.read | Reading configuration - ok", self_id);
+                AppConfig::from_yaml_value(&config)
+            }
             Err(err) => {
-                panic!("AppConfig.read | File {} reading error: {:?}", path.as_ref().display(), err)
+                panic!("{}.read | Error in config: {:?}\n\terror: {:?}", self_id, yaml_string, err)
             }
         }
     }
