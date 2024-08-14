@@ -16,6 +16,8 @@ Handling data on fly
   - [X] TcpServer - released
   - [ ] UdpServer
   - [ ] Additional protocols...
+    -[x] ProfinetClient
+    -[x] SlmpClient
 - [X] [Task service](#1-task-service) - make configured computation
 - [X] API Client service - stores some data into the database
 
