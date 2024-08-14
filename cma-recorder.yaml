@@ -3,45 +3,45 @@ service Task RecorderTask:
     in queue recv-queue:
         max-length: 10000
     subscribe:
-        /AppTest/MultiQueue:                    # - multicast subscription to the MultiQueue
+        /App/MultiQueue:                    # - multicast subscription to the MultiQueue
             {cot: Inf}: []                      #   - on all points having Cot::Inf
     #
     # The nominal load of the crane
     let craneLoadNom:
-        input: point real '/AppTest/Load.Nom' status ok
+        input: point real '/App/Load.Nom' status ok
         # input: const real 150.0
     #
     # The nominal load of the Winch1
     let winch1LoadNom:
-        input: point real '/AppTest/Winch1.Load.Nom' status ok
+        input: point real '/App/Winch1.Load.Nom' status ok
     #
     # The nominal load of the Winch2
     let winch2LoadNom:
-        input: point real '/AppTest/Winch2.Load.Nom' status ok
+        input: point real '/App/Winch2.Load.Nom' status ok
     #
     # The nominal load of the Winch3
     let winch3LoadNom:
-        input: point real '/AppTest/Winch3.Load.Nom' status ok
+        input: point real '/App/Winch3.Load.Nom' status ok
     #
     # Crane load in relative units
     let craneLoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Load' status ok default 0.0
+            input1: point real '/App/Load' status ok default 0.0
             input2: craneLoadNom
     # Winch1 load in relative units
     let winch1LoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Winch1.Load' status ok default 0.0
+            input1: point real '/App/Winch1.Load' status ok default 0.0
             input2: winch1LoadNom
     # Winch2 load in relative units
     let winch2LoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Winch2.Load' status ok default 0.0
+            input1: point real '/App/Winch2.Load' status ok default 0.0
             input2: winch2LoadNom
     # Winch3 load in relative units
     let winch3LoadRelative:
         input fn Div:
-            input1: point real '/AppTest/Winch3.Load' status ok default 0.0
+            input1: point real '/App/Winch3.Load' status ok default 0.0
             input2: winch3LoadNom
     #
     # 5 % of the nominal crane load - used for Op Cycle detection
@@ -63,40 +63,40 @@ service Task RecorderTask:
             input2: winch3LoadNom
     let craneIsActive:
         input fn Ge:
-            # input1: point real '/AppTest/Load' status ok default 0.0
+            # input1: point real '/App/Load' status ok default 0.0
             input2: opCycleThreshold
             input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                 threshold: opCycleThreshold
                 input fn Smooth:
                     factor: const real 0.125
-                    input: point real '/AppTest/Load' status ok default 0.0
+                    input: point real '/App/Load' status ok default 0.0
     let winch1IsActive:
         input fn Ge:
-            # input1: point real '/AppTest/Winch1.Load' status ok default 0.0
+            # input1: point real '/App/Winch1.Load' status ok default 0.0
             input2: winch1OpCycleThreshold
             input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                 threshold: winch1OpCycleThreshold
                 input fn Smooth:
                     factor: const real 0.125
-                    input: point real '/AppTest/Winch1.Load' status ok default 0.0
+                    input: point real '/App/Winch1.Load' status ok default 0.0
     let winch2IsActive:
         input fn Ge:
-            # input1: point real '/AppTest/Winch2.Load' status ok default 0.0
+            # input1: point real '/App/Winch2.Load' status ok default 0.0
             input2: winch2OpCycleThreshold
             input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                 threshold: winch2OpCycleThreshold
                 input fn Smooth:
                     factor: const real 0.125
-                    input: point real '/AppTest/Winch2.Load' status ok default 0.0
+                    input: point real '/App/Winch2.Load' status ok default 0.0
     let winch3IsActive:
         input fn Ge:
-            # input1: point real '/AppTest/Winch3.Load' status ok default 0.0
+            # input1: point real '/App/Winch3.Load' status ok default 0.0
             input2: winch3OpCycleThreshold
             input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                 threshold: winch3OpCycleThreshold
                 input fn Smooth:
                     factor: const real 0.125
-                    input: point real '/AppTest/Winch3.Load' status ok default 0.0
+                    input: point real '/App/Winch3.Load' status ok default 0.0
     #
     # Detect if operating cycle is active (true - isActive, false - isNotActive)
     let opCycleIsActive_:
@@ -138,7 +138,7 @@ service Task RecorderTask:
         input fn KeepValid:
             input fn Average:
                 enable: opCycleIsActive_
-                input: point real '/AppTest/Load' status ok   # ??? unit ???
+                input: point real '/App/Load' status ok   # ??? unit ???
     #
     # Crane Average load in operating cycle in relative units
     let craneCycleAverageLoadRelative:
@@ -151,13 +151,13 @@ service Task RecorderTask:
         input fn KeepValid:
             input fn Max:
                 enable: opCycleIsActive_
-                input: point real '/AppTest/Load' status ok   # ??? unit ???
+                input: point real '/App/Load' status ok   # ??? unit ???
     # Winch1 Average load in operating cycle, ??? unit ???
     let winch1CycleAverageLoad:
         input fn KeepValid:
             input fn Average:
                 enable: opCycleIsActive_
-                input: point real '/AppTest/Winch1.Load' status ok   # ??? unit ???
+                input: point real '/App/Winch1.Load' status ok   # ??? unit ???
     #
     # Winch1 Average load in operating cycle in relative units
     let winch1CycleAverageLoadRelative:
@@ -170,7 +170,7 @@ service Task RecorderTask:
         input fn KeepValid:
             input fn Average:
                 enable: opCycleIsActive_
-                input: point real '/AppTest/Winch2.Load' status ok   # ??? unit ???
+                input: point real '/App/Winch2.Load' status ok   # ??? unit ???
     #
     # Winch2 Average load in operating cycle in relative units
     let winch2CycleAverageLoadRelative:
@@ -183,7 +183,7 @@ service Task RecorderTask:
         input fn KeepValid:
             input fn Average:
                 enable: opCycleIsActive_
-                input: point real '/AppTest/Winch3.Load' status ok   # ??? unit ???
+                input: point real '/App/Winch3.Load' status ok   # ??? unit ???
     #
     # Winch3 Average load in operating cycle in relative units
     let winch3CycleAverageLoadRelative:
@@ -210,9 +210,9 @@ service Task RecorderTask:
                     input1: const int 1
                     input2 fn ToInt:
                         input fn BitOr:
-                            input1: point bool '/AppTest/Winch1.Load.Limiter.Trip'
-                            input2: point bool '/AppTest/Winch2.Load.Limiter.Trip'
-                            input3: point bool '/AppTest/Winch3.Load.Limiter.Trip'
+                            input1: point bool '/App/Winch1.Load.Limiter.Trip'
+                            input2: point bool '/App/Winch2.Load.Limiter.Trip'
+                            input3: point bool '/App/Winch3.Load.Limiter.Trip'
                             # Overload > 25 %
                             input1 fn Ge:
                                 input1: craneCycleMaxLoad
@@ -242,7 +242,7 @@ service Task RecorderTask:
                     default: const int 0
                     key: 'winch1-load-limiter-trip-count'
                 input fn RisingEdge:
-                    input: point bool '/AppTest/Winch1.Load.Limiter.Trip' status ok
+                    input: point bool '/App/Winch1.Load.Limiter.Trip' status ok
     #
     # Winch2 load-limiter-trip-count
     let winch2LoadLimiterTripCount:
@@ -253,7 +253,7 @@ service Task RecorderTask:
                     default: const int 0
                     key: 'winch2-load-limiter-trip-count'
                 input fn RisingEdge:
-                    input: point bool '/AppTest/Winch2.Load.Limiter.Trip' status ok
+                    input: point bool '/App/Winch2.Load.Limiter.Trip' status ok
     #
     # Winch3 load-limiter-trip-count
     let winch3LoadLimiterTripCount:
@@ -264,7 +264,7 @@ service Task RecorderTask:
                     default: const int 0
                     key: 'winch3-load-limiter-trip-count'
                 input fn RisingEdge:
-                    input: point bool '/AppTest/Winch3.Load.Limiter.Trip' status ok
+                    input: point bool '/App/Winch3.Load.Limiter.Trip' status ok
     #
     # crane-characteristic-number  |  текущее характеристическое число для крана
     let craneEigenValue:
@@ -1997,8 +1997,7 @@ service Task RecorderTask:
     #   table:      basic_metric
     #
     fn RecOpCycleMetric BasicMetric:
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+        send-to: /App/ApiClient.in-queue
         op-cycle: opCycleIsActive
         #
         # ========= DEBUGGING =========
@@ -2716,8 +2715,7 @@ service Task RecorderTask:
     #   table:      rec_operating_metric
     #
     fn RecOpCycleMetric:
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+        send-to: /App/ApiClient.in-queue
         op-cycle: opCycleIsActive
         # conf point OpCycleSql:
         #     type: 'String'
@@ -2731,8 +2729,8 @@ service Task RecorderTask:
                 input fn Filter:
                     pass fn RisingEdge:
                         input: opCycleIsActive
-                    input: point real '/AppTest/Load' status ok
-            stop: point real '/AppTest/Load' status ok
+                    input: point real '/App/Load' status ok
+            stop: point real '/App/Load' status ok
             alarmClass: alarmClass
         #
         # Operating cycle metric 'Average Load'
@@ -2774,7 +2772,7 @@ service Task RecorderTask:
         input fn Threshold:
             threshold: craneLoadThreshold
             factor: const real 0.05
-            input: point real '/AppTest/Load' status ok
+            input: point real '/App/Load' status ok
     let craneLoadFiltered:
         input fn Filter:
             pass fn IsChangedValue:
@@ -2798,7 +2796,7 @@ service Task RecorderTask:
         input fn Threshold:
             threshold: winch1LoadThreshold
             factor: const real 0.05
-            input: point real '/AppTest/Winch1.Load' status ok
+            input: point real '/App/Winch1.Load' status ok
     #
     # Winch1 load leve data compressed
     let winch1LoadFiltered:
@@ -2824,7 +2822,7 @@ service Task RecorderTask:
         input fn Threshold:
             threshold: winch2LoadThreshold
             factor: const real 0.05
-            input: point real '/AppTest/Winch2.Load' status ok
+            input: point real '/App/Winch2.Load' status ok
     #
     # Winch2 load leve data compressed
     let winch2LoadFiltered:
@@ -2850,7 +2848,7 @@ service Task RecorderTask:
         input fn Threshold:
             threshold: winch3LoadThreshold
             factor: const real 0.05
-            input: point real '/AppTest/Winch3.Load' status ok
+            input: point real '/App/Winch3.Load' status ok
     #
     # Winch3 load leve data compressed
     let winch3LoadFiltered:
@@ -2864,39 +2862,36 @@ service Task RecorderTask:
     #
     # Crane MOPS triggered
     let craneMopsTriggered:
-        input: point int '/AppTest/CraneMode.MOPS' status ok
+        input: point int '/App/CraneMode.MOPS' status ok
     fn Export ExportCraneMopsEvent:
         enable fn IsChangedValue:
-            input: point int '/AppTest/CraneMode.MOPS' status ok
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+            input: point int '/App/CraneMode.MOPS' status ok
+        send-to: /App/ApiClient.in-queue
         conf point CraneMopsEvent:
             type: String
         input fn SqlMetric:   
             table: public.rec_operating_event
             sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneMOPSEvent', {input.value}, 0);
             opCycleId: opCycleId
-            input: point int '/AppTest/CraneMode.MOPS' status ok
+            input: point int '/App/CraneMode.MOPS' status ok
     #
     # Crane AOPS triggered
     let craneAopsTriggered:
-        input: point int '/AppTest/CraneMode.AOPS' status ok
+        input: point int '/App/CraneMode.AOPS' status ok
     fn Export ExportCraneAopsEvent:
         enable fn IsChangedValue:
-            input: point int '/AppTest/CraneMode.AOPS' status ok
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+            input: point int '/App/CraneMode.AOPS' status ok
+        send-to: /App/ApiClient.in-queue
         conf point CraneAopsEvent:
             type: String
         input fn SqlMetric:   
             table: public.rec_operating_event
             sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneAOPSEvent', {input.value}, 0);
             opCycleId: opCycleId
-            input: point int '/AppTest/CraneMode.AOPS' status ok
+            input: point int '/App/CraneMode.AOPS' status ok
     #
     fn Export ExportCraneLoadEvent:
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+        send-to: /App/ApiClient.in-queue
         conf point CraneLoadEvent:
             type: String
         input fn SqlMetric:   
@@ -2906,8 +2901,7 @@ service Task RecorderTask:
             input: craneLoadFiltered
     #
     fn Export ExportWinch1LoadEvent:
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+        send-to: /App/ApiClient.in-queue
         conf point Winch1LoadEvent:
             type: String
         input fn SqlMetric:   
@@ -2917,8 +2911,7 @@ service Task RecorderTask:
             input: winch1LoadFiltered
     #
     fn Export ExportWinch2LoadEvent:
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+        send-to: /App/ApiClient.in-queue
         conf point Winch2LoadEvent:
             type: String
         input fn SqlMetric:   
@@ -2928,8 +2921,7 @@ service Task RecorderTask:
             input: winch2LoadFiltered
     #
     fn Export ExportWinch3LoadEvent:
-        # send-to: /AppTest/ApiClient.in-queue
-        send-to: /AppTest/TaskTestReceiver.in-queue
+        send-to: /App/ApiClient.in-queue
         conf point Winch3LoadEvent:
             type: String
         input fn SqlMetric:   
@@ -2939,29 +2931,21 @@ service Task RecorderTask:
             input: winch3LoadFiltered
 
 
-    #
-    # ========= DEBUGGING =========
-    fn Export ExportExit:
-        send-to: /AppTest/TaskTestReceiver.in-queue
-        conf point ExitEvent:
-            type: String
-        input: point string /AppTest/Exit
-
 
     #
     # ========= PLOTTING =========
-    fn Plot Plot1:
-        # craneLoadNom: craneLoadNom
-        craneLoad: point real '/AppTest/Load'
-        # craneLoadRelative: craneLoadRelative
-        craneLoadFiltered: craneLoadFiltered
-        # winch1LoadRelative: winch1LoadRelative
-        # winch1LoadFiltered: winch1LoadFiltered
-        # winch2LoadRelative: winch2LoadRelative
-        # winch2LoadFiltered: winch2LoadFiltered
-        # winch3LoadRelative: winch3LoadRelative
-        # winch3LoadFiltered: winch3LoadFiltered
-        craneMopsTriggered: craneMopsTriggered
-        craneAopsTriggered: craneAopsTriggered
-        opCycleIsActive: opCycleIsActive
-        opCycleIsDone: opCycleIsDone
+    # fn Plot Plot1:
+    #     # craneLoadNom: craneLoadNom
+    #     craneLoad: point real '/App/Load'
+    #     # craneLoadRelative: craneLoadRelative
+    #     craneLoadFiltered: craneLoadFiltered
+    #     # winch1LoadRelative: winch1LoadRelative
+    #     # winch1LoadFiltered: winch1LoadFiltered
+    #     # winch2LoadRelative: winch2LoadRelative
+    #     # winch2LoadFiltered: winch2LoadFiltered
+    #     # winch3LoadRelative: winch3LoadRelative
+    #     # winch3LoadFiltered: winch3LoadFiltered
+    #     craneMopsTriggered: craneMopsTriggered
+    #     craneAopsTriggered: craneAopsTriggered
+    #     opCycleIsActive: opCycleIsActive
+    #     opCycleIsDone: opCycleIsDone
