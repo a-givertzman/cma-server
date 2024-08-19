@@ -30,6 +30,7 @@ mod cma_recorder {
     fn init_each() -> () {}
     ///
     /// Testing the complette configuration of the CMA Recorder
+    #[ignore = "Manual test"]
     #[test]
     fn test() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
