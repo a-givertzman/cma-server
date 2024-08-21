@@ -42,3 +42,5 @@ pub mod cache;
 pub mod diagnosis;
 
 pub mod slmp_client;
+
+pub mod udp_client;
