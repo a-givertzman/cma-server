@@ -25,7 +25,6 @@ grcov target/coverage -s . --binary-path target/release -o target/coverage --kee
 ############ REPORT ############
 
 lines=$(jq -r --stream 'select(.[0]|contains(["coveragePercent"])) | "\(.[1]) \t \(.[0]|join("."))"' ./target/coverage/covdir)
-regex='([0-9]+(\.[0-9]+)*)[ \t]+([^ \t].+)'
 
 # FOR DEBUG
 # while IFS= read -r line; do
@@ -33,6 +32,7 @@ regex='([0-9]+(\.[0-9]+)*)[ \t]+([^ \t].+)'
 # done <<< "$lines"
 # echo 
 
+regex='([0-9]+(\.[0-9]+)*)[ \t]+([^ \t].+)'
 while IFS= read -r line; do
     [[ $line =~ $regex ]]
     percent=${BASH_REMATCH[1]:=""}
@@ -41,10 +41,10 @@ while IFS= read -r line; do
     path="${path//children.}"
     path="${path//[[:space:]]}"
     if (( $(echo "$percent >= 30.0" |bc -l) )); then
-        echo -e "${GRAY} ${percent} '$path' ${NC}"
+        echo -e " ${percent} '$path'"
         passed=$passed && true
     else
-        echo -e "${RED} $(printf %3.2f $percent) ${GRAY} '$path' ${NC}"
+        echo -e "${RED} $(printf %3.2f $percent)${NC} '$path'"
         passed=false
     fi
     if [[ $path == 'src' ]]; then
