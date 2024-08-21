@@ -9,6 +9,7 @@ totalCoverage='not initialized'     # all project percentage
 
 RED='\033[0;31m'
 BLUE='\033[0;34m'
+GREEN='\033[0;32m'
 GRAY='\033[1;30m'
 NC='\033[0m' # No Color
 
@@ -51,8 +52,10 @@ while IFS= read -r line; do
         totalCoverage=$percent
     fi
 done <<< "$lines"
-echo "totalCoverage: $totalCoverage"
-echo "passed: $passed"
+echo "TotalCoverage: $totalCoverage"
 if ! $passed; then
+    echo -e "Coverage passed: ${RED}$passed${NC}"
     exit 1
+else
+    echo -e "Coverage passed: ${GREEN}$passed${NC}"
 fi
