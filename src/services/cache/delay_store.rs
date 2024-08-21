@@ -8,8 +8,8 @@ pub struct DelyStore {
     time: Instant,
     stored: bool,
 }
-///
-/// 
+//
+// 
 impl DelyStore {
     ///
     /// Creates new instance of the [DelyStore]

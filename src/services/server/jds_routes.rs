@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, Mutex, RwLock}};
+use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, RwLock}};
 use log::{error, warn, LevelFilter};
 use crate::{
     conf::point_config::name::Name, core_::{
@@ -36,21 +36,21 @@ pub struct JdsRoutes<F> {
     parent_id: String,
     id: String,
     name: Name,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     jds_deserialize: JdsDeserialize,
     req_reply_send: Sender<PointType>,
     rautes: F,
     shared: Arc<RwLock<Shared>>,
 }
-///
-/// 
+//
+// 
 impl<F> JdsRoutes<F> {
     ///
     /// 
     pub fn new(
         parent_id: &str,
         parent: &Name, 
-        services: Arc<Mutex<Services>>, 
+        services: Arc<RwLock<Services>>, 
         jds_deserialize: JdsDeserialize, 
         req_reply_send: Sender<PointType>, 
         rautes: F, 
@@ -75,8 +75,8 @@ impl<F> Debug for JdsRoutes<F> {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl<F> Object for JdsRoutes<F> {
     fn id(&self) -> &str {
         &self.id
@@ -85,11 +85,11 @@ impl<F> Object for JdsRoutes<F> {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl<F> TcpStreamRead for JdsRoutes<F> where
     //    parent_id, name
-    F: Fn(String, Name, PointType, Arc<Mutex<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
+    F: Fn(String, Name, PointType, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
     F: Send + Sync {
     ///
     /// Reads single point from source

@@ -18,8 +18,8 @@ pub struct S7Client {
     // isConnected: bool,
     // reconnectDelay: Duration,
 }
-///
-/// 
+//
+// 
 impl S7Client {
     ///
     /// Creates new instance of the S7Client
@@ -123,8 +123,8 @@ impl S7Client {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Drop for S7Client {
     fn drop(&mut self) {
         unsafe {

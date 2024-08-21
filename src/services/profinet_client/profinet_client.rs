@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug, hash::BuildHasherDefault,
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Sender}, Arc, Mutex},
+    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Sender}, Arc, Mutex, RwLock},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -15,13 +15,7 @@ use crate::{
         profinet_client_config::profinet_client_config::ProfinetClientConfig,
     },
     core_::{
-        constants::constants::RECV_TIMEOUT,
-        cot::cot::Cot,
-        failure::errors_limit::ErrorsLimit,
-        object::object::Object,
-        point::{point::Point, point_tx_id::PointTxId, point_type::PointType},
-        status::status::Status,
-        types::map::IndexMapFxHasher,
+        constants::constants::RECV_TIMEOUT, cot::cot::Cot, failure::errors_limit::ErrorLimit, object::object::Object, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, state::change_notify::ChangeNotify, status::status::Status, types::map::IndexMapFxHasher
     },
     services::{
         diagnosis::diag_point::DiagPoint,
@@ -41,17 +35,17 @@ pub struct ProfinetClient {
     id: String,
     name: Name,
     conf: ProfinetClientConfig,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
     exit: Arc<AtomicBool>,
 }
-///
-///
+//
+//
 impl ProfinetClient {
     ///
-    ///
-    pub fn new(conf: ProfinetClientConfig, services: Arc<Mutex<Services>>) -> Self {
-        let tx_id = PointTxId::fromStr(&conf.name.join());
+    /// Creates new instance of the ProfinetClient
+    pub fn new(conf: ProfinetClientConfig, services: Arc<RwLock<Services>>) -> Self {
+        let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))
         }).collect()));
@@ -118,10 +112,13 @@ impl ProfinetClient {
                 if cycle_interval > Duration::ZERO {
                     info!("{}.read | Preparing thread...", self_id);
                     let handle = thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {
-                        let mut is_connected = ConnectionNotify::new(
-                            None,
-                            Box::new(|message| info!("{}", message)),
-                            Box::new(|message| warn!("{}", message)),
+                        let mut is_connected = ChangeNotify::new(
+                            &self_id,
+                            false,
+                            vec![
+                                (true,  Box::new(|message| info!("{}", message))),
+                                (false, Box::new(|message| warn!("{}", message))),
+                            ],
                         );
                         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
                         for (db_name, db_conf) in conf.dbs {
@@ -133,7 +130,7 @@ impl ProfinetClient {
                         let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
                         let mut client = S7Client::new(self_id.clone(), conf.ip.clone());
                         'main: while !exit.load(Ordering::SeqCst) {
-                            let mut error_limit = ErrorsLimit::new(3);
+                            let mut error_limit = ErrorLimit::new(3);
                             let mut status;
                             match client.connect() {
                                 Ok(_) => {
@@ -205,18 +202,21 @@ impl ProfinetClient {
         let diagnosis = self.diagnosis.clone();
         info!("{}.write | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.write", self_id.clone())).spawn(move || {
-            let mut is_connected = ConnectionNotify::new(
-                None,
-                Box::new(|message| info!("{}", message)),
-                Box::new(|message| warn!("{}", message)),
+            let mut is_connected = ChangeNotify::new(
+                &self_id,
+                false,
+                vec![
+                    (true,  Box::new(|message| info!("{}", message))),
+                    (false, Box::new(|message| warn!("{}", message))),
+                ]
             );
             let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
             let mut points: Vec<PointConfig> = vec![];
             for (db_name, db_conf) in conf.dbs {
-                info!("{}.write | configuring DB: {:?}...", self_id, db_name);
+                info!("{}.write | configuring ProfinetDb: {:?}...", self_id, db_name);
                 let db = ProfinetDb::new(&self_id, tx_id, &db_conf);
                 dbs.insert(db_name.clone(), db);
-                info!("{}.write | configuring DB: {:?} - ok", self_id, db_name);
+                info!("{}.write | configuring ProfinetDb: {:?} - ok", self_id, db_name);
                 points.extend(db_conf.points());
             }
             let points = points.iter().map(|point_conf| {
@@ -226,10 +226,10 @@ impl ProfinetClient {
             for name in &points {
                 println!("\t{:?}", name);
             }
-            let (_, rx_recv) = services.slock().subscribe(&conf.subscribe, &self_id, &points);
+            let (_, rx_recv) = services.wlock(&self_id).subscribe(&conf.subscribe, &self_id, &points);
             let mut client = S7Client::new(self_id.clone(), conf.ip.clone());
             'main: while !exit.load(Ordering::SeqCst) {
-                let mut errors_limit = ErrorsLimit::new(3);
+                let mut errors_limit = ErrorLimit::new(3);
                 thread::sleep(conf.reconnect_cycle);
                 match client.connect() {
                     Ok(_) => {
@@ -241,25 +241,25 @@ impl ProfinetClient {
                                     let point_name = point.name();
                                     let point_value = point.value();
                                     let db_name = point_name.split('/').nth(3).unwrap();
-                                    debug!("{}.write | DB '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
+                                    debug!("{}.write | ProfinetDb '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
                                     // let dbName = point_name.split("/").skip(1).collect::<String>();
                                     match dbs.get_mut(db_name) {
                                         Some(db) => {
                                             match db.write(&client, point.clone()) {
                                                 Ok(_) => {
                                                     errors_limit.reset();
-                                                    debug!("{}.write | DB '{}' - writing point '{}'\t({:?}) - ok", self_id, db_name, point_name, point_value);
+                                                    debug!("{}.write | ProfinetDb '{}' - writing point '{}'\t({:?}) - ok", self_id, db_name, point_name, point_value);
                                                     let reply = Self::reply_point(tx_id, point);
                                                     match tx_send.send(reply.clone()) {
-                                                        Ok(_) => debug!("{}.write | DB '{}' - sent reply: {:#?}", self_id, db_name, reply),
+                                                        Ok(_) => debug!("{}.write | ProfinetDb '{}' - sent reply: {:#?}", self_id, db_name, reply),
                                                         Err(err) => error!("{}.write | Error sending to queue: {:?}", self_id, err),
                                                         // break 'main;
                                                     };
                                                 }
                                                 Err(err) => {
-                                                    error!("{}.write | DB '{}' - write - error: {:?}", self_id, db_name, err);
+                                                    warn!("{}.write | ProfinetDb '{}' - write - error: {:?}", self_id, db_name, err);
                                                     if errors_limit.add().is_err() {
-                                                        error!("{}.write | DB '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
+                                                        error!("{}.write | ProfinetDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
                                                         if let Err(err) = tx_send.send(PointType::String(Point::new(
                                                             tx_id,
@@ -281,7 +281,7 @@ impl ProfinetClient {
                                             }
                                         }
                                         None => {
-                                            error!("{}.write | DB '{}' - not found", self_id, db_name);
+                                            error!("{}.write | ProfinetDb '{}' - not found", self_id, db_name);
                                         }
                                     };
                                 }
@@ -369,8 +369,8 @@ impl ProfinetClient {
         }
     }
 }
-///
-///
+//
+//
 impl Object for ProfinetClient {
     fn id(&self) -> &str {
         &self.id
@@ -379,8 +379,8 @@ impl Object for ProfinetClient {
         self.name.clone()
     }
 }
-///
-///
+//
+//
 impl Debug for ProfinetClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -389,13 +389,13 @@ impl Debug for ProfinetClient {
             .finish()
     }
 }
-///
-///
+//
+//
 impl Service for ProfinetClient {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles, String> {
-        let tx_send = self.services.slock().get_link(&self.conf.tx).unwrap_or_else(|err| {
+        let tx_send = self.services.rlock(&self.id).get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
         Self::yield_diagnosis(&self.id, &self.diagnosis.clone(), &DiagKeywd::Status, Status::Ok, &tx_send);
@@ -434,37 +434,5 @@ impl Service for ProfinetClient {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
-    }
-}
-
-///
-/// Logging connection status on changes only
-struct ConnectionNotify {
-    is_connected: Option<bool>,
-    on_connected: Box<dyn Fn(&str)>,
-    on_disconnected: Box<dyn Fn(&str)>,
-}
-///
-///
-impl ConnectionNotify {
-    ///
-    ///
-    pub fn new(initial: Option<bool>, on_connected: Box<dyn Fn(&str)>, on_disconnected: Box<dyn Fn(&str)>) -> Self {
-        Self {
-            is_connected: initial,
-            on_connected,
-            on_disconnected,
-        }
-    }
-    ///
-    /// Add new state
-    pub fn add(&mut self, connected: bool, message: &str) {
-        if Some(connected) != self.is_connected {
-            self.is_connected = Some(connected);
-            match connected {
-                true => (self.on_connected)(message),
-                false => (self.on_disconnected)(message),
-            }
-        }
     }
 }

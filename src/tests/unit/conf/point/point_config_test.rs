@@ -49,7 +49,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("Point.Name.0"),
-                    _type: PointConfigType::Bool,
+                    type_: PointConfigType::Bool,
                     history: PointConfigHistory::None, alarm: Some(0),
                     address: Some(PointConfigAddress { offset: Some(0), bit: Some(0) }),
                     filters: Some(PointConfigFilter { threshold: 5.0, factor: None }),
@@ -70,7 +70,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("Point.Name.0"),
-                    _type: PointConfigType::Bool,
+                    type_: PointConfigType::Bool,
                     history: PointConfigHistory::None, alarm: Some(0),
                     address: Some(PointConfigAddress { offset: Some(0), bit: Some(0) }),
                     filters: Some(PointConfigFilter { threshold: 5.0, factor: Some(0.1) }),
@@ -87,7 +87,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("PointName1"),
-                    _type: PointConfigType::Int,
+                    type_: PointConfigType::Int,
                     history: PointConfigHistory::Read, alarm: None,
                     address: Some(PointConfigAddress { offset: Some(0), bit: None }),
                     filters: None,
@@ -104,7 +104,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("PointName2"),
-                    _type: PointConfigType::Int,
+                    type_: PointConfigType::Int,
                     history: PointConfigHistory::None, alarm: Some(4),
                     address: Some(PointConfigAddress { offset: Some(0), bit: None }),
                     filters: None,
@@ -121,7 +121,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("PointName3"),
-                    _type: PointConfigType::Int,
+                    type_: PointConfigType::Int,
                     history: PointConfigHistory::Write, alarm: None,
                     address: Some(PointConfigAddress { offset: Some(12), bit: None }),
                     filters: None,
@@ -138,7 +138,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("PointName4"),
-                    _type: PointConfigType::Int,
+                    type_: PointConfigType::Int,
                     history: PointConfigHistory::ReadWrite, alarm: None,
                     address: Some(PointConfigAddress { offset: Some(12), bit: None }),
                     filters: None,
@@ -183,7 +183,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("/{}/PointName0", self_id),
-                    _type: PointConfigType::Bool,
+                    type_: PointConfigType::Bool,
                     history: PointConfigHistory::ReadWrite, alarm: Some(0),
                     address: Some(PointConfigAddress { offset: Some(0), bit: Some(0) }),
                     filters: Some(PointConfigFilter { threshold: 5.0, factor: None }),
@@ -200,7 +200,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("/{}/PointName1", self_id),
-                    _type: PointConfigType::Int,
+                    type_: PointConfigType::Int,
                     history: PointConfigHistory::Write, alarm: None,
                     address: Some(PointConfigAddress { offset: Some(0), bit: None }),
                     filters: None,
@@ -217,7 +217,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("/{}/PointName2", self_id),
-                    _type: PointConfigType::Int,
+                    type_: PointConfigType::Int,
                     history: PointConfigHistory::None, alarm: Some(4),
                     address: Some(PointConfigAddress { offset: Some(0), bit: None }),
                     filters: None,
@@ -233,7 +233,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("/{}/PointName3", self_id),
-                    _type: PointConfigType::Int,
+                    type_: PointConfigType::Int,
                     history: PointConfigHistory::None, alarm: None,
                     address: Some(PointConfigAddress { offset: Some(12), bit: None }),
                     filters: None,
@@ -277,7 +277,7 @@ mod point_config {
                 PointConfig {
                     id: 0,
                     name: format!("/{}/PointName0", self_id),
-                    _type: PointConfigType::Bool,
+                    type_: PointConfigType::Bool,
                     history: PointConfigHistory::ReadWrite, alarm: Some(0),
                     address: Some(PointConfigAddress { offset: Some(0), bit: Some(0) }),
                     filters: Some(PointConfigFilter { threshold: 5.0, factor: None }),

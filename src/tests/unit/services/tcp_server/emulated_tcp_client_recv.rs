@@ -28,8 +28,8 @@ pub struct EmulatedTcpClientRecv {
     marker_received: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
-///
-///
+//
+//
 impl EmulatedTcpClientRecv {
     pub fn new(parent: impl Into<String>, addr: &str, recv_limit: Option<usize>, must_received: Option<Value>, disconnect: Vec<i8>) -> Self {
         let name = Name::new(parent, format!("EmulatedTcpClientRecv{}", COUNT.fetch_add(1, Ordering::Relaxed)));
@@ -132,8 +132,8 @@ impl EmulatedTcpClientRecv {
         }
     }
 }
-///
-///
+//
+//
 impl Object for EmulatedTcpClientRecv {
     fn id(&self) -> &str {
         &self.id
@@ -142,8 +142,8 @@ impl Object for EmulatedTcpClientRecv {
         self.name.clone()
     }
 }
-///
-///
+//
+//
 impl Debug for EmulatedTcpClientRecv {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -152,8 +152,8 @@ impl Debug for EmulatedTcpClientRecv {
             .finish()
     }
 }
-///
-///
+//
+//
 impl Service for EmulatedTcpClientRecv {
     //
     //

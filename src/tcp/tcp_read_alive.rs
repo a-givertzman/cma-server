@@ -53,16 +53,16 @@ impl TcpReadAlive {
         let exit_pair = self.exit_pair.clone();
         let mut cycle = self.cycle.map(|cycle| ServiceCycle::new(&self_id, cycle));
         let send = self.send.clone();
-        let jds_stream = self.stream_read.clone();
+        let tcp_stream_read = self.stream_read.clone();
         info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Read", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
             let mut tcp_stream = BufReader::new(tcp_stream);
-            let mut jds_stream = jds_stream.slock();
+            let mut tcp_stream_read = tcp_stream_read.slock(&self_id);
             info!("{}.run | Main loop started", self_id);
             loop {
                 if let Some(cycle) = &mut cycle {cycle.start()}
-                match jds_stream.read(&mut tcp_stream) {
+                match tcp_stream_read.read(&mut tcp_stream) {
                     ConnectionStatus::Active(point) => {
                         match point {
                             OpResult::Ok(point) => {
@@ -100,7 +100,7 @@ impl TcpReadAlive {
         handle
     }
     ///
-    /// 
+    /// Sends exit event into the main loop
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
     }

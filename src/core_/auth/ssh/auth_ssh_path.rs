@@ -4,8 +4,8 @@
 pub struct AuthSshPath {
     path: String,
 }
-///
-/// 
+//
+// 
 impl AuthSshPath {
     ///
     /// Creates new instance of AuthSshPath
@@ -15,7 +15,7 @@ impl AuthSshPath {
         }
     }
     ///
-    /// 
+    /// Returns path to the SSH cert
     pub fn path(&self) -> String {
         self.path.clone()
     }

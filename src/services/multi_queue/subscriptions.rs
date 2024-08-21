@@ -21,8 +21,8 @@ pub struct Subscriptions {
     broadcast: HashMapFxHasher<ReceiverId, Sender<PointType>>,
     empty: HashMapFxHasher<ReceiverId, Sender<PointType>>,
 }
-///
-/// 
+//
+// 
 impl Subscriptions {
     ///
     /// Creates new instance of Subscriptions
@@ -129,9 +129,15 @@ impl Subscriptions {
             Err(messages.join("\n"))
         }
     }
+    ///
+    /// Removes all subscriptions
+    pub fn exit(&mut self) {
+        self.broadcast.clear();
+        self.multicast.clear();
+    }
 }
-///
-/// 
+//
+// 
 impl Debug for Subscriptions {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter

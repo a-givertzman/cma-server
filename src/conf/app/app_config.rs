@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use log::{debug, trace};
+use log::{debug, info, trace};
 use std::{fs, path::Path, str::FromStr};
 use crate::conf::{
     conf_keywd::{ConfKeywd, ConfKind}, conf_tree::ConfTree, service_config::ServiceConfig
@@ -13,8 +13,7 @@ use crate::conf::{
 /// service ProfinetClient Ied01:          # device will be executed in the independent thread, must have unique name
 ///    in queue in-queue:
 ///        max-length: 10000
-///    out queue: MultiQueue.in-queue
-///    name Ied01:                       
+///    send-to: MultiQueue.in-queue
 ///    cycle: 1 ms                     # operating cycle time of the device
 ///    protocol: 'profinet'
 ///    description: 'S7-IED-01.01'
@@ -26,7 +25,6 @@ use crate::conf::{
 ///        number: 899
 ///        offset: 0
 ///        size: 34
-///        delay: 10
 ///        point Drive.Speed: 
 ///            type: 'Real'
 ///            offset: 0
@@ -42,8 +40,8 @@ use crate::conf::{
 ///         in1 point CraneMovement.BoomUp: 
 ///             type: 'Int'
 ///             comment: 'Some indication'
-///             input fn add:
-///                 input1 fn add:
+///             input fn Add:
+///                 input1 fn Add:
 ///                     input1: const real 0.2
 ///                     input2: point real '/path/Point.Name'
 ///     ...
@@ -55,8 +53,8 @@ pub struct AppConfig {
     // pub(crate) cycle: Option<Duration>,
     pub(crate) nodes: IndexMap<ConfKeywd, ConfTree>,
 }
-///
-/// 
+//
+// 
 impl AppConfig {
     ///
     /// Creates new instance of the [AppConfig]:
@@ -112,20 +110,28 @@ impl AppConfig {
     ///
     /// reads config from path
     #[allow(dead_code)]
-    pub fn read<P>(path: P) -> AppConfig where P: AsRef<Path> {
-        match fs::read_to_string(&path) {
-            Ok(yaml_string) => {
-                match serde_yaml::from_str(&yaml_string) {
-                    Ok(config) => {
-                        AppConfig::from_yaml_value(&config)
-                    }
-                    Err(err) => {
-                        panic!("AppConfig.read | Error in config: {:?}\n\terror: {:?}", yaml_string, err)
-                    }
+    pub fn read<P>(path: Vec<P>) -> AppConfig where P: AsRef<Path> {
+        let self_id = "AppConfig";
+        info!("{}.read | Reading configuration files...", self_id);
+        let mut files = vec![];
+        for p in path {
+            match fs::read_to_string(&p) {
+                Ok(f) => {
+                    files.push(f)
+                }
+                Err(err) => {
+                    panic!("{}.read | File '{}' reading error: {:?}", self_id, p.as_ref().display(), err)
                 }
             }
+        }
+        let yaml_string = files.join("\n");
+        match serde_yaml::from_str(&yaml_string) {
+            Ok(config) => {
+                info!("{}.read | Reading configuration files - ok", self_id);
+                AppConfig::from_yaml_value(&config)
+            }
             Err(err) => {
-                panic!("AppConfig.read | File {} reading error: {:?}", path.as_ref().display(), err)
+                panic!("{}.read | Error in config: {:?}\n\terror: {:?}", self_id, yaml_string, err)
             }
         }
     }

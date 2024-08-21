@@ -37,17 +37,17 @@ mod profinet_client_config {
         let config = ProfinetClientConfig::read(&self_name, path);
         let target_points = [
             // 222
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.Speed").join(), _type: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.OutputVoltage").join(), _type: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.DCVoltage").join(), _type: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.Current").join(), _type: PointConfigType::Real, history: PointConfigHistory::Read, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.Torque").join(), _type: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.Speed").join(), type_: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.OutputVoltage").join(), type_: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.DCVoltage").join(), type_: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.Current").join(), type_: PointConfigType::Real, history: PointConfigHistory::Read, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db222/Drive.Torque").join(), type_: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
             // 999
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/Drive.positionFromMru").join(), _type: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/Drive.positionFromHoist").join(), _type: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/Capacitor.Capacity").join(), _type: PointConfigType::Int, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/ChargeIn.On").join(), _type: PointConfigType::Bool, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
-            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/ChargeOut.On").join(), _type: PointConfigType::Bool, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/Drive.positionFromMru").join(), type_: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/Drive.positionFromHoist").join(), type_: PointConfigType::Real, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/Capacitor.Capacity").join(), type_: PointConfigType::Int, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/ChargeIn.On").join(), type_: PointConfigType::Bool, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
+            PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/ChargeOut.On").join(), type_: PointConfigType::Bool, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
         ];
         debug!("result config: {:?}", &config);
         debug!("result points:");

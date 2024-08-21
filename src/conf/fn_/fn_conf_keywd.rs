@@ -1,12 +1,8 @@
-#![allow(non_snake_case)]
-
 use std::{ops::BitOr, str::FromStr};
-use log::{trace, warn};
+use log::{debug, trace, warn};
 use regex::RegexBuilder;
 use serde::Deserialize;
-
-// use super::fn_conf_kind::FnConfKind;
-
+use crate::conf::fn_::fn_conf_options::FnConfOptions;
 ///
 /// Represents type of Point / Const in the configuration
 #[derive(Debug, Deserialize, PartialEq, Clone)]
@@ -19,8 +15,17 @@ pub enum FnConfPointType {
     Any,
     Unknown,
 }
+//
+//
+impl Default for FnConfPointType {
+    ///
+    /// Returns [FnConfPointType::Unknown]
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
 ///
-/// 
+/// The kind of the [FnConfig]
 #[repr(u8)]
 #[derive(Debug, PartialEq, Clone)]
 pub enum FnConfKindName {
@@ -29,7 +34,8 @@ pub enum FnConfKindName {
     Const = 4,
     Point = 6,
 }
-
+//
+//
 impl BitOr<FnConfKindName> for u8 {
     type Output = u8;
 
@@ -38,7 +44,8 @@ impl BitOr<FnConfKindName> for u8 {
         self | (rhs as u8)
     }
 }
-
+//
+//
 impl BitOr<u8> for FnConfKindName {
     type Output = u8;
 
@@ -47,6 +54,8 @@ impl BitOr<u8> for FnConfKindName {
         (self as u8) | rhs
     }
 }
+//
+//
 impl BitOr for FnConfKindName {
     type Output = u8;
 
@@ -55,27 +64,29 @@ impl BitOr for FnConfKindName {
         (self as u8) | (rhs as u8)
     }
 }
-
+///
+/// Contents of the [FnConfKeywd]
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct FnConfKeywdValue {
     pub input: String,
     pub type_: FnConfPointType,
     pub data: String,
+    #[serde(skip)]
+    pub options: FnConfOptions,
 }
-
 ///
 /// keyword konsists of 4 fields:
 /// ```
-/// | input  |  kind  | type  |  data               |
-/// | name   |        |       |                     |
-/// |--------|--------|-------|---------------------|
-/// | opt    | requir | opt   |                     |
-/// |--------|--------|-------|---------------------|
-/// | input  |  point | real  | '/path/Point.name'  |
-/// | input  |  const | int   | 17                  |
-/// |        |  let   |       | varName             |
-/// |        |  fn    |       | fnName              |
-/// ````
+/// | input  |  kind  | type  |  data               |  options    |
+/// | name   |        |       |                     |             |
+/// |--------|--------|-------|---------------------|-------------|
+/// | opt    | requir | opt   |                     | opt         |
+/// |--------|--------|-------|---------------------|-------------|
+/// | input  |  point | real  | '/path/Point.name'  | default 0.1 |
+/// | input  |  const | int   | 17                  |             |
+/// |        |  let   |       | varName             |             |
+/// |        |  fn    |       | fnName              |             |
+/// ```
 #[derive(Debug, Deserialize, PartialEq)]
 pub enum FnConfKeywd {
     Fn(FnConfKeywdValue),
@@ -83,8 +94,8 @@ pub enum FnConfKeywd {
     Const(FnConfKeywdValue),
     Point(FnConfKeywdValue),
 }
-///
-/// 
+//
+// 
 impl FnConfKeywd {
     pub fn input(&self) -> String {
         match self {
@@ -118,38 +129,40 @@ impl FnConfKeywd {
             FnConfKeywd::Point(v) => v.data.clone(),
         }
     }
-    fn matchType(typeName: &str) -> Result<FnConfPointType, String> {
-        match typeName {
+    fn match_type(type_name: &str) -> Result<FnConfPointType, String> {
+        match type_name {
             "bool" => Ok(FnConfPointType::Bool),
             "int" => Ok(FnConfPointType::Int),
             "real" => Ok(FnConfPointType::Real),
             "double" => Ok(FnConfPointType::Double),
             "string" => Ok(FnConfPointType::String),
             "any" => Ok(FnConfPointType::Any),
-            _ => Err(format!("Unknown keyword '{}'", typeName))
+            _ => Err(format!("Unknown keyword '{}'", type_name))
         }
     }
 }
-
+//
+//
 impl FromStr for FnConfKeywd {
     type Err = String;
-    fn from_str(input: &str) -> Result<FnConfKeywd, String> {
+    fn from_str(input: &str) -> Result<Self, String> {
         trace!("FnConfKeywd.from_str | input: {}", input);
-        let re = r#"[ \t]*(?:(\w+)[ \t]+)*(?:(let|fn|const|point){1}(?:[ \t](bool|int|real|double|string|any))*(?:$|(?:[ \t]+['"]*([\w/.]+)['"]*)))"#;
+        let re = r#"[ \t]*(?:(\w+)[ \t]+)*(?:(let|fn|const|point){1}(?:[ \t](bool|int|real|double|string|any))*(?:$|(?:[ \t]+['"]*([\w/.]+)['"]*)))(?:[ \t](.+))?"#;
         let re = RegexBuilder::new(re).multi_line(true).build().unwrap();
-        let groupInput = 1;
-        let groupKind = 2;
-        let groupType = 3;
-        let groupData = 4;
+        let group_input = 1;
+        let group_kind = 2;
+        let group_type = 3;
+        let group_data = 4;
+        let group_options = 5;
         match re.captures(input) {
             Some(caps) => {
-                let input = match &caps.get(groupInput) {
+                let input = match &caps.get(group_input) {
                     Some(first) => String::from(first.as_str()),
                     None => String::new(),
                 };
-                let type_ = match &caps.get(groupType) {
+                let type_ = match &caps.get(group_type) {
                     Some(arg) => {
-                        match FnConfKeywd::matchType(&arg.as_str().to_lowercase()) {
+                        match FnConfKeywd::match_type(&arg.as_str().to_lowercase()) {
                             Ok(type_) => type_,
                             Err(_err) => {
                                 warn!("ConfKeywd.from_str | Error reading type of keyword '{}'", &input);
@@ -159,7 +172,7 @@ impl FromStr for FnConfKeywd {
                     }
                     None => FnConfPointType::Unknown,
                 };
-                let data = match &caps.get(groupData) {
+                let data = match caps.get(group_data) {
                     Some(arg) => {
                         Ok(arg.as_str().to_string())
                     }
@@ -171,15 +184,19 @@ impl FromStr for FnConfKeywd {
                         }
                     }
                 };
+                let options = caps.get(group_options).map_or(FnConfOptions::default(), |options| {
+                    trace!("ConfKeywd.from_str | Options: '{:?}'", options);
+                    FnConfOptions::from_str(options.as_str()).unwrap_or(FnConfOptions::default())
+                });
                 match data {
                     Ok(data) => {
-                        match &caps.get(groupKind) {
+                        match &caps.get(group_kind) {
                             Some(keyword) => {
                                 match keyword.as_str() {
-                                    "fn"  => Ok( FnConfKeywd::Fn( FnConfKeywdValue { input, type_, data } )),
-                                    "let"  => Ok( FnConfKeywd::Var( FnConfKeywdValue { input, type_, data } )),
-                                    "const"  => Ok( FnConfKeywd::Const( FnConfKeywdValue { input, type_, data } )),
-                                    "point" => Ok( FnConfKeywd::Point( FnConfKeywdValue { input, type_, data } )),
+                                    "fn"  => Ok( FnConfKeywd::Fn( FnConfKeywdValue { input, type_, data, options } )),
+                                    "let"  => Ok( FnConfKeywd::Var( FnConfKeywdValue { input, type_, data, options } )),
+                                    "const"  => Ok( FnConfKeywd::Const( FnConfKeywdValue { input, type_, data, options } )),
+                                    "point" => Ok( FnConfKeywd::Point( FnConfKeywdValue { input, type_, data, options } )),
                                     _      => Err(format!("Unknown keyword '{}'", &input)),
                                 }
                             }

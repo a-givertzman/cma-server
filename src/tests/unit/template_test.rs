@@ -31,7 +31,7 @@ mod tests {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
-        assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+        assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         test_duration.exit();
     }
 }

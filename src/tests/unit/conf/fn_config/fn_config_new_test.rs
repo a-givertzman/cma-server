@@ -5,7 +5,7 @@ mod tests {
     use std::sync::Once;
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_config::FnConfig}, point_config::name::Name};
+    use crate::conf::{conf_tree::ConfTree, fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig}, point_config::name::Name};
     ///
     ///
     static INIT: Once = Once::new();
@@ -37,41 +37,41 @@ mod tests {
                     input: const '13.55'
                 "#,
                 FnConfKind::Var( FnConfig { name: "newVar".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                    ("input".to_string(), FnConfKind::Const( FnConfig { name: "13.55".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() })),
-                ]) })
+                    ("input".to_string(), FnConfKind::Const( FnConfig { name: "13.55".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), })),
+                ]), options: FnConfOptions::default() })
             ),
             (
                 r#"let newVar:
-                    input fn count:
+                    input fn Count:
                         inputConst1: const '13.3'
                         inputConst2: const '13.7'
                 "#,
                 FnConfKind::Var( FnConfig { name: "newVar".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                    ("input".to_string(), FnConfKind::Fn( FnConfig { name: "count".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                        ("inputConst1".to_string(), FnConfKind::Const( FnConfig { name: "13.3".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                        ("inputConst2".to_string(), FnConfKind::Const( FnConfig { name: "13.7".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                    ]) } )),
-                ]) } )
+                    ("input".to_string(), FnConfKind::Fn( FnConfig { name: "Count".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
+                        ("inputConst1".to_string(), FnConfKind::Const( FnConfig { name: "13.3".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                        ("inputConst2".to_string(), FnConfKind::Const( FnConfig { name: "13.7".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                    ]), options: FnConfOptions::default(), } )),
+                ]), options: FnConfOptions::default(), } )
             ),
             (
                 r#"let newVar:
-                    input1 fn count:
+                    input1 fn Count:
                         inputConst1: const '11.3'
                         inputConst2: const '12.7'"
-                    input2 fn count:
+                    input2 fn Count:
                         inputConst1: const real '13.3'
                         inputConst2: const int '147'
                 "#,
                 FnConfKind::Var( FnConfig { name: "newVar".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                    ("input1".to_string(), FnConfKind::Fn( FnConfig { name: "count".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                        ("inputConst1".to_string(), FnConfKind::Const( FnConfig { name: "11.3".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                        ("inputConst2".to_string(), FnConfKind::Const( FnConfig { name: "12.7".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                    ]) } )),
-                    ("input2".to_string(), FnConfKind::Fn( FnConfig { name: "count".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                        ("inputConst1".to_string(), FnConfKind::Const( FnConfig { name: "13.3".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::new() } )),
-                        ("inputConst2".to_string(), FnConfKind::Const( FnConfig { name: "147".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new() } )),
-                    ]) } )),
-                ]) } )
+                    ("input1".to_string(), FnConfKind::Fn( FnConfig { name: "Count".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
+                        ("inputConst1".to_string(), FnConfKind::Const( FnConfig { name: "11.3".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                        ("inputConst2".to_string(), FnConfKind::Const( FnConfig { name: "12.7".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                    ]), options: FnConfOptions::default(), } )),
+                    ("input2".to_string(), FnConfKind::Fn( FnConfig { name: "Count".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
+                        ("inputConst1".to_string(), FnConfKind::Const( FnConfig { name: "13.3".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                        ("inputConst2".to_string(), FnConfKind::Const( FnConfig { name: "147".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                    ]), options: FnConfOptions::default(), } )),
+                ]), options: FnConfOptions::default(), } )
             ),
             (
                 r#"let VarName2:
@@ -85,18 +85,18 @@ mod tests {
                                     input: point bool '/path/Point.Name/'
                 "#,
                 FnConfKind::Var( FnConfig { name: "VarName2".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                    ("param".to_string(), FnConfKind::Param( "string param".to_string() )),
+                    ("param".to_string(), FnConfKind::Param( ConfTree::new("param", serde_yaml::from_str("string param").unwrap()) )),
                     ("input".to_string(), FnConfKind::Fn( FnConfig { name: "functionName1".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                        ("initial".to_string(), FnConfKind::Var( FnConfig { name: "VarName2".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
+                        ("initial".to_string(), FnConfKind::Var( FnConfig { name: "VarName2".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
                         ("input".to_string(), FnConfKind::Fn( FnConfig { name: "functionName2".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                            ("input1".to_string(), FnConfKind::Const( FnConfig { name: "someValue".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                            ("input2".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new() } )),
+                            ("input1".to_string(), FnConfKind::Const( FnConfig { name: "someValue".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                            ("input2".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
                             ("input3".to_string(), FnConfKind::Fn( FnConfig { name: "functionName3".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                ("input".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Bool, inputs: IndexMap::new() } )),
-                            ]) } )),
-                        ])} )),
-                    ]) } )),
-                ]) } )
+                                ("input".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Bool, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                            ]), options: FnConfOptions::default(), } )),
+                        ]), options: FnConfOptions::default(), } )),
+                    ]), options: FnConfOptions::default(), } )),
+                ]), options: FnConfOptions::default(), } )
             ),
             (
                 r#"fn metricName1:
@@ -112,20 +112,20 @@ mod tests {
                                     input: point bool '/path/Point.Name/'
                 "#,
                 FnConfKind::Fn( FnConfig { name: "metricName1".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                    ("initial".to_string(), FnConfKind::Param( "0.123".to_string() )),
-                    ("table".to_string(), FnConfKind::Param( "SelectMetric_test_table_name".to_string() )),
-                    ("sql".to_string(), FnConfKind::Param( "UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';".to_string() )),
+                    ("initial".to_string(), FnConfKind::Param( ConfTree::new("initial", serde_yaml::from_str("0.123").unwrap()) )),
+                    ("table".to_string(), FnConfKind::Param( ConfTree::new("table", serde_yaml::from_str("SelectMetric_test_table_name").unwrap()) )),
+                    ("sql".to_string(), FnConfKind::Param( ConfTree::new("sql", serde_yaml::from_str("UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';").unwrap()) )),
                     ("input".to_string(), FnConfKind::Fn( FnConfig { name: "functionName1".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                        ("initial".to_string(), FnConfKind::Const( FnConfig { name: "1234567".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new() } )),
+                        ("initial".to_string(), FnConfKind::Const( FnConfig { name: "1234567".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
                         ("input".to_string(), FnConfKind::Fn( FnConfig { name: "functionName2".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                            ("input1".to_string(), FnConfKind::Const( FnConfig { name: "someValue".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                            ("input2".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new() } )),
+                            ("input1".to_string(), FnConfKind::Const( FnConfig { name: "someValue".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                            ("input2".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Int, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
                             ("input3".to_string(), FnConfKind::Fn( FnConfig { name: "functionName3".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                ("input".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Bool, inputs: IndexMap::new() } )),
-                            ]) } )),
-                        ])} )),
-                    ]) } )),
-                ]) } )
+                                ("input".to_string(), FnConfKind::Point( FnConfig { name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Bool, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
+                            ]), options: FnConfOptions::default(), } )),
+                        ]), options: FnConfOptions::default() } )),
+                    ]), options: FnConfOptions::default(), } )),
+                ]), options: FnConfOptions::default(), } )
             ),
         ];
         for (value, target) in test_data {

@@ -15,8 +15,8 @@ pub struct TcpStreamWrite {
     stream: Box<dyn StreamRead<Vec<u8>, RecvError> + Send>,
     buffer: RetainBuffer<Vec<u8>>,
 }
-///
-/// 
+//
+// 
 impl TcpStreamWrite {
     ///
     /// Creates new instance of [TcpStreamWrite]
@@ -99,8 +99,8 @@ impl TcpStreamWrite {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Debug for TcpStreamWrite {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter

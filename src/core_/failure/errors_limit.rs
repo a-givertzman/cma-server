@@ -2,13 +2,13 @@
 /// Counts errors by calling method 'add()'
 /// - returns Ok if 'limit' of errors is not exceeded
 /// - returns Err if count of errors >= 'limit'
-pub struct ErrorsLimit {
+pub struct ErrorLimit {
     value: usize,
     limit: usize,
 }
-///
-/// 
-impl ErrorsLimit {
+//
+// 
+impl ErrorLimit {
     ///
     /// Creates new instance of the ErrorLimit wir the [limit]
     pub fn new(limit: usize) -> Self {

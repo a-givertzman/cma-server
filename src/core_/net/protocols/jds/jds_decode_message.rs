@@ -1,14 +1,9 @@
-use std::io::{Read, ErrorKind};
+use std::io::Read;
 use log::trace;
-use crate::{core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_define::JDS_END_OF_TRANSMISSION}, tcp::tcp_stream_write::OpResult};
-///
-/// 
-enum Status {
-    Active,
-    Closed,
-    /// Connection is Active, but configured timeout exceeded
-    Timeout,
-}
+use crate::{
+    core_::net::{connection_status::{ConnectionStatus, SocketState}, protocols::jds::jds_define::JDS_END_OF_TRANSMISSION},
+    tcp::tcp_stream_write::OpResult,
+};
 ///
 /// Reads bytes from TcpStream
 /// splits bytes sequence with Jds.endOfTransmission = 4 separator
@@ -19,8 +14,8 @@ pub struct JdsDecodeMessage {
     // tcpStream: BufReader<TcpStream>,
     remainder: Vec<u8>,
 }
-///
-/// 
+//
+// 
 impl JdsDecodeMessage {
     ///
     /// Creates new instance of the JdsDecodeMessage
@@ -77,15 +72,15 @@ impl JdsDecodeMessage {
                 Err(err) => {
                     // warn!("{}.read_all | error reading from socket: {:?}", self_id, err);
                     // warn!("{}.read_all | error kind: {:?}", self_id, err.kind());
-                    match Self::match_error_kind(err.kind()) {
-                        Status::Active => {
-                            return ConnectionStatus::Active(OpResult::Err(format!("{}.read_all | tcp stream is empty", self_id)));
+                    return match SocketState::match_error_kind(err.kind()) {
+                        SocketState::Active => {
+                            ConnectionStatus::Active(OpResult::Err(format!("{}.read_all | tcp stream is empty", self_id)))
                         }
-                        Status::Closed => {
-                            return ConnectionStatus::Closed(format!("{}.read_all | tcp stream is closed, error: {:?}", self_id, err));
+                        SocketState::Closed => {
+                            ConnectionStatus::Closed(format!("{}.read_all | tcp stream is closed, error: {:?}", self_id, err))
                         }
-                        Status::Timeout => {
-                            return ConnectionStatus::Active(OpResult::Timeout())
+                        SocketState::Timeout => {
+                            ConnectionStatus::Active(OpResult::Timeout())
                         }
                     }
                 }
@@ -93,52 +88,5 @@ impl JdsDecodeMessage {
         };
         trace!("{}.read_all | read bytes: {:?}", self_id, bytes);
         ConnectionStatus::Closed(format!("{}.read_all | tcp stream is closed", self_id))
-    }
-    ///
-    /// 
-    fn match_error_kind(kind: ErrorKind) -> Status {
-        match kind {
-            std::io::ErrorKind::NotFound => todo!(),
-            std::io::ErrorKind::PermissionDenied => Status::Closed,
-            std::io::ErrorKind::ConnectionRefused => Status::Closed,
-            std::io::ErrorKind::ConnectionReset => Status::Closed,
-            // std::io::ErrorKind::HostUnreachable => Status::Closed,
-            // std::io::ErrorKind::NetworkUnreachable => Status::Closed,
-            std::io::ErrorKind::ConnectionAborted => Status::Closed,
-            std::io::ErrorKind::NotConnected => Status::Closed,
-            std::io::ErrorKind::AddrInUse => Status::Closed,
-            std::io::ErrorKind::AddrNotAvailable => Status::Closed,
-            // std::io::ErrorKind::NetworkDown => Status::Closed,
-            std::io::ErrorKind::BrokenPipe => Status::Closed,
-            std::io::ErrorKind::AlreadyExists => todo!(),
-            std::io::ErrorKind::WouldBlock => Status::Timeout,
-            // std::io::ErrorKind::NotADirectory => todo!(),
-            // std::io::ErrorKind::IsADirectory => todo!(),
-            // std::io::ErrorKind::DirectoryNotEmpty => todo!(),
-            // std::io::ErrorKind::ReadOnlyFilesystem => todo!(),
-            // std::io::ErrorKind::FilesystemLoop => todo!(),
-            // std::io::ErrorKind::StaleNetworkFileHandle => todo!(),
-            std::io::ErrorKind::InvalidInput => todo!(),
-            std::io::ErrorKind::InvalidData => todo!(),
-            std::io::ErrorKind::TimedOut => todo!(),
-            std::io::ErrorKind::WriteZero => todo!(),
-            // std::io::ErrorKind::StorageFull => todo!(),
-            // std::io::ErrorKind::NotSeekable => todo!(),
-            // std::io::ErrorKind::FilesystemQuotaExceeded => todo!(),
-            // std::io::ErrorKind::FileTooLarge => todo!(),
-            // std::io::ErrorKind::ResourceBusy => todo!(),
-            // std::io::ErrorKind::ExecutableFileBusy => todo!(),
-            // std::io::ErrorKind::Deadlock => todo!(),
-            // std::io::ErrorKind::CrossesDevices => todo!(),
-            // std::io::ErrorKind::TooManyLinks => todo!(),
-            // std::io::ErrorKind::InvalidFilename => todo!(),
-            // std::io::ErrorKind::ArgumentListTooLong => todo!(),
-            std::io::ErrorKind::Interrupted => todo!(),
-            std::io::ErrorKind::Unsupported => todo!(),
-            std::io::ErrorKind::UnexpectedEof => todo!(),
-            std::io::ErrorKind::OutOfMemory => todo!(),
-            std::io::ErrorKind::Other => todo!(),
-            _ => Status::Closed,
-        }
     }
 }

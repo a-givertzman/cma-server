@@ -6,7 +6,7 @@ mod tests {
     use std::{sync::Once, env};
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_config::FnConfig}, point_config::name::Name};
+    use crate::conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig}, point_config::name::Name};
     ///
     ///
     static INIT: Once = Once::new();
@@ -37,28 +37,36 @@ mod tests {
                 ("input".to_string(), FnConfKind::Fn( FnConfig {
                     name: "functionName".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
                         ("initial".to_string(), FnConfKind::Var( FnConfig {
-                            name: "VarName2".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new()
+                            name: "VarName2".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::new(),
+                            options: FnConfOptions::default(),
                         } )),
                         ("input".to_string(), FnConfKind::Fn( FnConfig {
                             name: "functionName".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
                                 ("input".to_string(), FnConfKind::Fn( FnConfig {
                                     name: "functionName".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
                                         ("input".to_string(), FnConfKind::Point( FnConfig {
-                                            name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Bool, inputs: IndexMap::from([])
+                                            name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Bool, inputs: IndexMap::from([]),
+                                            options: FnConfOptions::default(),
                                         } )),
                                     ]),
+                                    options: FnConfOptions::default(),
                                 } )),
                                 ("input2".to_string(), FnConfKind::Point( FnConfig {
-                                    name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::from([])
+                                    name: "/path/Point.Name/".to_string(), type_: FnConfPointType::Real, inputs: IndexMap::from([]),
+                                    options: FnConfOptions::default(),
                                 } )),
                                 ("input1".to_string(), FnConfKind::Const( FnConfig {
-                                    name: "someValue".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([])
+                                    name: "someValue".to_string(), type_: FnConfPointType::Unknown, inputs: IndexMap::from([]),
+                                    options: FnConfOptions::default(),
                                 } )),
                             ]),
+                            options: FnConfOptions::default(),
                         } )),
                     ]),
+                    options: FnConfOptions::default(),
                 } )),
             ]),
+            options: FnConfOptions::default(),
         } );
 
         // let (initial, switches) = init_each();

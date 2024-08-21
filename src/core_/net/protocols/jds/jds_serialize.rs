@@ -13,8 +13,8 @@ pub struct JdsSerialize {
     name: Name,
     stream: Receiver<PointType>,
 }
-///
-/// 
+//
+// 
 impl JdsSerialize {
     ///
     /// Creates new instance of the JdsSerialize
@@ -27,8 +27,8 @@ impl JdsSerialize {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Object for JdsSerialize {
     fn id(&self) -> &str {
         &self.id
@@ -37,8 +37,8 @@ impl Object for JdsSerialize {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl StreamRead<serde_json::Value, RecvError> for JdsSerialize {
     ///
     /// Reads single point from Receiver & serialize it into json string

@@ -21,8 +21,8 @@ pub struct ApiClient {
     conf: ApiClientConfig,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl ApiClient {
     ///
     /// Creates new instance of [ApiClient]
@@ -84,8 +84,8 @@ impl ApiClient {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Object for ApiClient {
     fn id(&self) -> &str {
         &self.id
@@ -94,8 +94,8 @@ impl Object for ApiClient {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Debug for ApiClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -104,8 +104,8 @@ impl Debug for ApiClient {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for ApiClient {
     //
     //

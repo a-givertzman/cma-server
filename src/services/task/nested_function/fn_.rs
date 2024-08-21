@@ -1,15 +1,19 @@
 use crate::core_::point::point_type::PointType;
-
-use super::fn_kind::FnKind;
-
-
+use super::{fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Input side interface for nested function
 /// Used for generic access to the different kinde of functions
 /// for adding new value on input side
 pub trait FnIn: std::fmt::Debug {
-    fn add(&mut self, _point: PointType) {
+    ///
+    /// Adds new value into Input
+    fn add(&mut self, _point: &PointType) {
         panic!("FnIn.add | don't use this method, used only for FnInput")
+    }
+    ///
+    /// Returns 'Options hash' to identify unique set of options of the Input
+    fn hash(&self) -> String {
+        panic!("FnIn.hash | don't use this method, used only for FnInput")
     }
 }
 ///
@@ -28,15 +32,20 @@ pub trait FnOut: std::fmt::Debug {
     /// Returns names of inputs it depending on
     fn inputs(&self) -> Vec<String>;
     ///
-    /// used only for FnVar
-    /// evaluate calculations
+    /// Evaluate calculations
+    /// - Used only for FnVar
     fn eval(&mut self) {
         panic!("FnOut.eval | don't use this method, used only for FnVar")
     }
     ///
-    /// - evaluate calculations
-    /// - returns calculated value
-    fn out(&mut self) -> PointType;
+    /// - Evaluate calculations
+    /// - Returns calculated value
+    /// - Returns error if:
+    ///   - Calculations fails
+    ///   - Input not initialized
+    /// - Returns None if:
+    ///   - Point filtered by any kind of filtering function
+    fn out(&mut self) -> FnResult<PointType, String>;
     ///
     /// resets self state to the initial, calls reset method of all inputs 
     fn reset(&mut self);

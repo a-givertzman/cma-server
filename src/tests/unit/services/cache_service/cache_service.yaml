@@ -5,7 +5,7 @@ description: Short explanation / purpose etc.
 service MultiQueue:
     in queue in-queue:
         max-length: 10000
-    out queue:
+    send-to:
         # - TaskTestReceiver.queue
 
 
@@ -646,7 +646,6 @@ service ProducerService ied14:
 #     database: crane_data_server
 #     in queue in-queue:
 #         max-length: 10000
-#     # out queue: MultiQueue.in-queue
 #     auth_token: 123!@#
 #     # debug: true
 #
@@ -660,5 +659,5 @@ service TcpServer:
         pass: '12345'
     in queue link:
         max-length: 10000
-    out queue: /App/MultiQueue.in-queue
+    send-to: /App/MultiQueue.in-queue
     cache: /App/MainCache

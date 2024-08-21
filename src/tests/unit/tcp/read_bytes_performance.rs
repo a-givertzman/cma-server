@@ -8,8 +8,8 @@ mod socket_read_performance {
     use crate::core_::{
         cot::cot::Cot, net::protocols::jds::jds_define::JDS_END_OF_TRANSMISSION, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool
     };
-    ///
-    ///
+    //
+    //
     static INIT: Once = Once::new();
     ///
     /// once called initialisation
@@ -25,12 +25,12 @@ mod socket_read_performance {
 
     }
     ///
-    ///
+    /// Returns current timestamp
     fn ts() -> DateTime<Utc> {
         chrono::offset::Utc::now()
     }
     ///
-    ///
+    /// Returns timestamp in string
     fn ts_str(ts: DateTime<Utc>) -> String {
         ts.to_rfc3339()
     }
@@ -399,7 +399,7 @@ mod socket_read_performance {
         // }
     }
     ///
-    ///
+    /// Behaves like a TcpServer
     fn mock_tcp_server(addr: String, count: usize, test_data: &[(String, PointType)], received: Arc<AtomicUsize>) {
         let mut sent = 0;
         let test_data = test_data.to_owned().clone();

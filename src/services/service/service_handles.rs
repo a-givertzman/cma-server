@@ -6,8 +6,8 @@ pub struct ServiceHandles {
     // id: String,
     handles: HashMap<String, JoinHandle<()>>
 }
-///
-/// 
+//
+// 
 impl ServiceHandles {
     ///
     /// 
@@ -46,8 +46,8 @@ impl ServiceHandles {
     //     }
     // }
 }
-///
-/// 
+//
+// 
 impl IntoIterator for ServiceHandles {
     type Item = (String, JoinHandle<()>);
 

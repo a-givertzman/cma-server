@@ -50,8 +50,8 @@ pub enum Cot {
     #[serde(skip)]
     All = 0xFF,// cot::INF | cot::ACT_CON | cot::ACT_ERR | cot::REQ_CON | cot::REQ_ERR | cot::ACT | cot::REQ,
 }
-///
-/// 
+//
+// 
 impl Cot {
     ///
     /// Returns true if [self] contains [rhs]
@@ -75,54 +75,54 @@ impl Cot {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Default for Cot {
     fn default() -> Self {
         Self::Inf
     }
 }
-///
-/// 
+//
+// 
 impl AsRef<str> for Cot {
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
-///
-/// 
+//
+// 
 impl std::ops::BitOr for Cot {
     type Output = u32;
     fn bitor(self, rhs: Cot) -> Self::Output {
         self as u32 | rhs as u32
     }
 }
-///
-/// 
+//
+// 
 impl std::ops::BitAnd for Cot {
     type Output = u32;
     fn bitand(self, rhs: Cot) -> Self::Output {
         self as u32 & rhs as u32
     }
 }
-///
-/// 
+//
+// 
 impl std::ops::BitOr<Cot> for u32 {
     type Output = u32;
     fn bitor(self, rhs: Cot) -> Self::Output {
         self | rhs as u32
     }
 }
-///
-/// 
+//
+// 
 impl std::ops::BitAnd<Cot> for u32 {
     type Output = u32;
     fn bitand(self, rhs: Cot) -> Self::Output {
         self & rhs as u32
     }
 }
-///
-/// 
+//
+// 
 impl std::fmt::Binary for Cot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(&format!("{:#08b}",self.to_owned() as u32), f)

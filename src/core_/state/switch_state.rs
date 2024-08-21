@@ -1,11 +1,15 @@
 use log::trace;
 use std::{collections::HashMap, fmt::Debug, hash::Hash};
-
+///
+/// FSM switch
+///  - holds the state 
+///  - contains the conditions that lead to the state
 pub struct Switch<TState, TInput> {
     pub state: TState,
     pub conditions: Vec<SwitchCondition<TState, TInput>>,
 }
-
+//
+//
 impl<TState: Debug, TInput> Debug for Switch<TState, TInput> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Switch")
@@ -14,12 +18,16 @@ impl<TState: Debug, TInput> Debug for Switch<TState, TInput> {
         .finish()
     }
 }
-
+///
+/// FSM switch state condition
+///  - holds condition when to switch
+///  - holds target - where to switch
 pub struct SwitchCondition<TState, TInput> {
     pub condition: Box<dyn Fn(TInput) -> bool>,
     pub target: TState,
 }
-
+//
+//
 impl<TState: Debug, TInput> Debug for SwitchCondition<TState, TInput> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SwitchCondition")
@@ -27,13 +35,16 @@ impl<TState: Debug, TInput> Debug for SwitchCondition<TState, TInput> {
         .finish()
     }
 }
+///
+/// Finit State Machine (FSM) implementation
 #[derive(Debug)]
 pub struct SwitchState<TState, TInput> {
     initial: TState,
     state: TState,
     switches: HashMap<TState, Switch<TState, TInput>>,
 }
-
+//
+//
 impl<TState: Debug + Eq + Ord + Hash + Clone, TInput: Clone> SwitchState<TState, TInput> {
     pub fn new(initial: TState, switches: Vec<Switch<TState, TInput>>) -> Self {
         let mut switches_set = HashMap::new();
@@ -49,6 +60,7 @@ impl<TState: Debug + Eq + Ord + Hash + Clone, TInput: Clone> SwitchState<TState,
         }
     }
     ///
+    /// Adds new value to the current state
     pub fn add(& mut self, value: TInput) {
         let key = self.state.clone(); 
         let switch_ref = &self.switches[&key];
@@ -61,6 +73,7 @@ impl<TState: Debug + Eq + Ord + Hash + Clone, TInput: Clone> SwitchState<TState,
         };
     }
     ///
+    /// Returns current state
     pub fn state(&self) -> TState {
         self.state.clone()
     }
@@ -70,7 +83,7 @@ impl<TState: Debug + Eq + Ord + Hash + Clone, TInput: Clone> SwitchState<TState,
         self.state = self.initial.clone();
     }
     ///
-    /// 
+    /// Returns true if the last state is riched
     pub fn is_max(&self) -> bool {
         match self.switches.keys().max() {
             Some(max) => {

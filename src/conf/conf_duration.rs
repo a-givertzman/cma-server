@@ -22,8 +22,8 @@ pub enum ConfDurationUnit {
     Mins,
     Hours,
 }
-///
-/// 
+//
+// 
 impl FromStr for ConfDurationUnit {
     type Err = String;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -60,8 +60,8 @@ pub struct ConfDuration {
     pub value: u64,
     pub unit: ConfDurationUnit,
 }
-///
-/// 
+//
+// 
 impl ConfDuration {
     ///
     /// New instance if ConfDuration
@@ -84,8 +84,8 @@ impl ConfDuration {
         }
     }
 }
-///
-/// 
+//
+// 
 impl FromStr for ConfDuration {
     type Err = String;
     fn from_str(input: &str) -> Result<ConfDuration, String> {

@@ -1,7 +1,7 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
-use log::{debug, trace};
+use log::trace;
 use crate::core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef};
-use super::{fn_::{FnIn, FnOut, FnInOut}, fn_kind::FnKind};
+use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Specific kinde of function
 /// - has additional method .eval(), 
@@ -15,25 +15,25 @@ pub struct FnVar {
     id: String,
     kind: FnKind,
     input: FnInOutRef,
-    result: Option<PointType>,
+    value: Option<FnResult<PointType, String>>,
 }
-///
-/// 
+//
+// 
 impl FnVar {
     pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
         Self {
             id: format!("{}/FnVar{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Var,
             input,
-            result: None, 
+            value: None, 
         }
     }
 }
-///
-/// 
+//
+// 
 impl FnIn for FnVar {}
-///
-/// 
+//
+// 
 impl FnOut for FnVar {
     //
     fn id(&self) -> String {
@@ -47,36 +47,42 @@ impl FnOut for FnVar {
     fn inputs(&self) -> Vec<String> {
         self.input.borrow().inputs()
     }
+    ///
     /// Returns nothing, 
     /// - Evaluetes all calculations,
     /// - Result stores into inner
     /// - calculated result returns in .out() method
     fn eval(&mut self) {
-        debug!("{}.eval | evaluating...", self.id);
-        self.result = Some(self.input.borrow_mut().out());
+        trace!("{}.eval | evaluating...", self.id);
+        self.value = Some(self.input.borrow_mut().out());
     }
     ///
     /// Do not evaluete calculations, 
-    /// just returns the result if evalueted, else panic
-    fn out(&mut self) -> PointType {
-        match &self.result {
-            Some(result) => {
-                trace!("{}.out | value: {:?}", self.id, &self.result);
-                result.clone()
+    /// just returns the result if evalueted, evaluate
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let value = match &self.value {
+            Some(value) => {
+                trace!("{}.out | value: {:?}", self.id, &self.value);
+                value.clone()
             }
             None => {
-                panic!("{}.out | not initialised", self.id);
+                trace!("{}.eval | evaluating...", self.id);
+                let value = self.input.borrow_mut().out();
+                self.value = Some(value.clone());
+                value
+                // panic!("{}.out | not initialised", self.id);
             }
-        }
+        };
+        value
     }
     //
     fn reset(&mut self) {
-        self.result = None;
+        self.value = None;
         self.input.borrow_mut().reset();
     }
 }
-///
-/// 
+//
+// 
 impl FnInOut for FnVar {}
 ///
 /// Global static counter of FnVar instances

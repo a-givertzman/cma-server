@@ -26,8 +26,8 @@ pub struct MetricConfig {
     pub(crate) inputs: IndexMap<String, FnConfKind>,
     pub(crate) vars: Vec<String>,
 }
-///
-/// 
+//
+// 
 impl MetricConfig {
     ///
     /// creates config from serde_yaml::Value of following format:

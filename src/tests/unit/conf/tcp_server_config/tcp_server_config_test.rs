@@ -39,7 +39,7 @@ mod tests {
                     auth: none      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
                     in queue link:
                         max-length: 10000
-                    out queue: MultiQueue.in-queue
+                    send-to: MultiQueue.in-queue
             "#),
             format!(r#"
                 service TcpServer:
@@ -50,7 +50,7 @@ mod tests {
                         pass: secret-password
                     in queue link:
                         max-length: 10000
-                    out queue: MultiQueue.in-queue
+                    send-to: MultiQueue.in-queue
             "#),
             format!(r#"
                 service TcpServer:
@@ -61,7 +61,7 @@ mod tests {
                         path: /home/scada/.ssh/
                     in queue link:
                         max-length: 10000
-                    out queue: MultiQueue.in-queue
+                    send-to: MultiQueue.in-queue
             "#),
         ];
         for conf in test_data {

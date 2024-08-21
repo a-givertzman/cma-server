@@ -23,15 +23,15 @@ pub struct JdsDeserialize {
     tx_id: usize,
     stream: JdsDecodeMessage,
 }
-///
-/// 
+//
+// 
 impl JdsDeserialize {
     ///
     /// Creates new instance of the JdsDeserialize
     pub fn new(parent: impl Into<String>, stream: JdsDecodeMessage) -> Self {
         let me = Name::new(parent, "JdsDeserialize");
         Self {
-            tx_id: PointTxId::fromStr(&me.join()),
+            tx_id: PointTxId::from_str(&me.join()),
             id: me.join(),
             name: me,
             stream,
@@ -84,7 +84,7 @@ impl JdsDeserialize {
         }
     }
     ///
-    /// 
+    /// Deserialize point from JSON string
     pub fn deserialize(self_id: &str, tx_id: usize, bytes: Vec<u8>) -> Result<PointType, String> {
         match serde_json::from_slice(&bytes) {
             Ok(value) => {
@@ -203,8 +203,8 @@ impl JdsDeserialize {
         }
     }    
 }
-///
-/// 
+//
+// 
 impl Object for JdsDeserialize {
     fn id(&self) -> &str {
         &self.id
@@ -213,8 +213,8 @@ impl Object for JdsDeserialize {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl TcpStreamRead for JdsDeserialize {
     fn read(&mut self, tcp_stream: &mut BufReader<std::net::TcpStream>) -> ConnectionStatus<OpResult<PointType, String>, String> {
         self.read(tcp_stream)

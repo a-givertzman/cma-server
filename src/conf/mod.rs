@@ -35,3 +35,5 @@ pub mod app;
 pub mod cache_service_config;
 
 pub mod diag_keywd;
+
+pub mod slmp_client_config;

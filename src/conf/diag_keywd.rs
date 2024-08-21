@@ -8,8 +8,8 @@ pub enum DiagKeywd {
     Status,
     Connection,
 }
-///
-///
+//
+//
 impl DiagKeywd {
     ///
     /// Creates new DiagKeywd from it string representation
@@ -25,8 +25,8 @@ impl DiagKeywd {
         self.as_ref()
     }
 }
-///
-///
+//
+//
 impl Display for DiagKeywd {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())

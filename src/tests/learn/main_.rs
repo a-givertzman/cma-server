@@ -137,7 +137,7 @@ fn main() {
         //         input1: const 177.3
         //         input2: point '/Path/Point.Name/'
         //         input3:
-        //             fn count:
+        //             fn Count:
         //                 inputConst1: const '13.5'
         //                 inputConst2: newVar1
         // "#),
@@ -263,13 +263,13 @@ fn main() {
 //         (serde_yaml::from_str(r#"
 //             let newVar1:
 //                 input1:
-//                     fn count:
+//                     fn Count:
 //                         inputConst1: const '13.5'
 //                         inputConst2: newVar1
 //         "#), 
 //         FnConfig{ fnType: FnConfigType::Const, name: "".to_string(), inputs: HashMap::new() }),
 //                     // input2:
-//                     //     fn count:
+//                     //     fn Count:
 //                     //         inputConst1: const '13.5'
 //                     //         inputConst2: const '13.5'
 //     ];

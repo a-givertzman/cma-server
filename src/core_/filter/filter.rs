@@ -21,15 +21,15 @@ pub struct FilterEmpty<T> {
     value: T,
     is_changed: bool,
 }
-///
-/// 
+//
+// 
 impl<T> FilterEmpty<T> {
     pub fn new(initial: T) -> Self {
         Self { value: initial, is_changed: true }
     }
 }
-///
-/// 
+//
+// 
 impl<T: Copy + std::fmt::Debug + std::cmp::PartialEq> Filter for FilterEmpty<T> {
     type Item = T;
     //

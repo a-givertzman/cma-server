@@ -19,7 +19,7 @@ mod tests {
     ///  - ...
     fn init_each() -> () {}
     ///
-    /// 
+    /// Testing mpsc receiver behavior on recv_timeout method
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn test_mpsc_receiver() {

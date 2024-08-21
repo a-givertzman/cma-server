@@ -16,8 +16,8 @@ struct Connection {
     handle: JoinHandle<()>,
     send: Sender<Action>,
 }
-///
-/// 
+//
+// 
 impl Connection {
     pub fn new(handle: JoinHandle<()>, send: Sender<Action>,) -> Self {
         Self {
@@ -56,8 +56,8 @@ pub struct TcpServerConnections {
     id: String,
     connections: HashMap<String, Connection>,
 }
-///
-/// 
+//
+// 
 impl TcpServerConnections {
     ///
     /// 

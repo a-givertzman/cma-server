@@ -26,8 +26,8 @@ pub enum PointConfigHistory {
     #[serde(alias = "readwrite", alias = "ReadWrite", alias = "rw")]
     ReadWrite
 }
-///
-/// 
+//
+// 
 impl Default for PointConfigHistory {
     fn default() -> Self {
         Self::None

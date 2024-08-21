@@ -3,12 +3,21 @@ use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, trace, warn};
 use crate::core_::types::map::IndexMapFxHasher;
-
 use super::{
-    conf_duration::ConfDuration, conf_keywd::{ConfKeywd, ConfKind}, conf_subscribe::ConfSubscribe, conf_tree::ConfTree, diag_keywd::DiagKeywd, fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName}, point_config::{name::Name, point_config::PointConfig}
+    conf_duration::ConfDuration,
+    conf_keywd::{ConfKeywd, ConfKind}, conf_subscribe::ConfSubscribe, conf_tree::ConfTree,
+    diag_keywd::DiagKeywd, fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
+    point_config::{name::Name, point_config::PointConfig},
 };
 ///
+/// Result getting parameter
+pub enum ConfParam<T, E> {
+    Ok(T),
+    None,
+    Err(E)
+}
 ///
+/// Common configuration used in the custom service config 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ServiceConfig {
     id: String,
@@ -16,8 +25,8 @@ pub struct ServiceConfig {
     conf: ConfTree,
     pub keys: Vec<String>,
 }
-///
-///
+//
+//
 impl ServiceConfig {
     ///
     /// Creates new instance of ServiceConfig
@@ -36,12 +45,12 @@ impl ServiceConfig {
         self.conf.next()
     }
     ///
-    ///
+    /// Returns ConfTree by key if found or None
     pub fn get(&self, key: &str) -> Option<ConfTree> {
         self.conf.get(key)
     }
     ///
-    ///
+    /// Removes key from self.keys
     fn remove_key(&mut self, name: &str) -> Result<(), String> {
         match self.keys.iter().position(|x| *x == name) {
             Some(index) => {
@@ -52,7 +61,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns name of ConfKeywd if parsed
     pub fn name(&self) -> String {
         match ConfKeywd::from_str(&self.conf.key) {
             Ok(self_keyword) => {
@@ -63,7 +72,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns sufix of ConfKeywd if parsed
     pub fn sufix(&self) -> String {
         match ConfKeywd::from_str(&self.conf.key) {
             Ok(self_keyword) => {
@@ -74,7 +83,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns serde_yaml::Value by key and removes key
     pub fn get_param_value(&mut self, name: &str) -> Result<serde_yaml::Value, String> {
         match self.remove_key(name) {
             Ok(_) => {
@@ -87,7 +96,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns ConfTree by key and removes key
     pub fn get_param_conf(&mut self, name: &str) -> Result<ConfTree, String> {
         match self.remove_key(name) {
             Ok(_) => {
@@ -100,7 +109,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Retuirns duration conf by key or None
     pub fn get_duration(&mut self, name: &str) -> Option<Duration> {
         match self.get_param_value(name) {
             Ok(value) => {
@@ -122,7 +131,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns general parameter by keyword
     pub fn get_param_by_keyword(&mut self, keyword_prefix: &str, keyword_kind: ConfKind) -> Result<(ConfKeywd, ConfTree), String> {
         let self_conf = self.conf.clone();
         for node in self_conf.subNodes().unwrap() {
@@ -138,7 +147,7 @@ impl ServiceConfig {
         Err(format!("{}.get_param_by_keyword | keyword '{} {:?}' - not found", self.id, keyword_prefix, keyword_kind))
     }
     ///
-    ///
+    /// Returns ConfSubscribe by 'subscribe' key
     pub fn subscribe(&mut self) -> Result<ConfSubscribe, String> {
         match self.get_param_value("subscribe") {
             Ok(conf) => {
@@ -148,7 +157,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns in queue name
     pub fn get_in_queue(&mut self) -> Result<(String, i64), String> {
         let prefix = "in";
         let sub_param = "max-length";
@@ -166,7 +175,7 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns out queue name
     pub fn get_out_queue(&mut self) -> Result<String, String> {
         let prefix = "out";
         match self.get_param_by_keyword(prefix, ConfKind::Queue) {
@@ -179,13 +188,39 @@ impl ServiceConfig {
         }
     }
     ///
-    ///
+    /// Returns name of the 'send-to' queue
     pub fn get_send_to(&mut self) -> Result<String, String> {
         match self.get_param_value("send-to") {
             Ok(conf) => {
                 Ok(conf.as_str().unwrap().to_string())
             }
             Err(err) => Err(format!("{}.get_send_to | 'send-to' - not found in: {:#?}\n\terror: {:#?}", self.id, self.conf, err)),
+        }
+    }
+    ///
+    /// Returns vec of names of the 'send-to' queue
+    pub fn get_send_to_many(&mut self) -> ConfParam<Vec<String>, String> {
+        match self.get_param_value("send-to") {
+            Ok(conf) => {
+                match conf {
+                    serde_yaml::Value::Null => {
+                        warn!("{}.get_send_to_many | Parameter 'send-to' - is empty", self.id);
+                        ConfParam::Ok(vec![])
+                    }
+                    serde_yaml::Value::Sequence(conf) => {
+                        let mut items = vec![];
+                        for item in conf.iter() {
+                            match item.as_str() {
+                                Some(item) => items.push(item.to_owned()),
+                                None => return ConfParam::Err(format!("{}.get_send_to_many | Array<String> expected in 'send-to', but found: {:#?}", self.id, conf)),
+                            }
+                        }
+                        ConfParam::Ok(items)
+                    }
+                    _ => ConfParam::Err(format!("{}.get_send_to_many | Array<String> expected in 'send-to', but found: {:#?}", self.id, conf)),
+                }
+            }
+            Err(_) => ConfParam::None,
         }
     }
     ///

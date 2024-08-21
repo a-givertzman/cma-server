@@ -35,7 +35,7 @@ mod history {
         let mut path = env::current_dir().unwrap();
         path.push("src/tests/unit/services/history/history.yaml");
         println!("working path: \n\t{:?}", env::current_dir().unwrap());
-        let app = App::new(path.display().to_string());
+        let app = App::new(vec![path]);
         app.run().unwrap();
         // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         test_duration.exit();

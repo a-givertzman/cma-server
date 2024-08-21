@@ -21,3 +21,9 @@ mod history;
 mod app;
 
 mod cache_service;
+
+mod slmp_client;
+
+mod queue_name;
+
+mod retain_point_id;

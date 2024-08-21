@@ -8,8 +8,8 @@ pub enum TcpServerAuth {
     Secret(AuthSecret),
     Ssh(AuthSshPath),
 }
-///
-/// 
+//
+// 
 impl TcpServerAuth {
     ///
     /// 

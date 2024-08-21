@@ -11,3 +11,5 @@ pub mod point;
 pub mod net;
 
 pub mod cot;
+
+mod future;

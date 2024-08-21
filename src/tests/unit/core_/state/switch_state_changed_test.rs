@@ -1,6 +1,4 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
-
 mod tests {
     use log::info;
     use std::sync::Once;
@@ -42,11 +40,11 @@ mod tests {
         let mut state: u8 = initial;
         let mut switches: Vec<Switch<u8, T>> = steps.into_iter().map(|input| {switch(&mut state, Some(input))}).collect();
         switches.push(switch(&mut state, None));
-        let switchState: SwitchState<u8, T> = SwitchState::new(
+        let switch_state: SwitchState<u8, T> = SwitchState::new(
             initial,
             switches,
         );
-        switchState
+        switch_state
     }
     ///
     ///
@@ -59,26 +57,27 @@ mod tests {
 
         let steps: Vec<f64> = vec![0.25, 0.50, 0.75];
         let initial = 1;
-        let mut switchState = SwitchStateChanged::new(
+        let mut switch_state = SwitchStateChanged::new(
             init_each(initial, steps),
         );
 
-        let mut prevState = initial;
+        let mut prev_state = initial;
         for value in 0..=100 {
             let value = 0.01 * (value as f64);
-            switchState.add(value);
-            let state = switchState.state();
-            let changed = switchState.changed();
-            info!("state: {},\t changed: {},\t isMax: {},\t value: {}", state, changed, switchState.isMax(), value);
-            if state != prevState {
+            switch_state.add(value);
+            let state = switch_state.state();
+            let changed = switch_state.changed();
+            info!("state: {},\t changed: {},\t isMax: {},\t value: {}", state, changed, switch_state.is_max(), value);
+            if state != prev_state {
                 assert!(changed == true, "\nresult: {:?}\ntarget: {:?}", changed, true);
-                prevState = state;
+                prev_state = state;
             } else {
                 assert!(changed == false, "\nresult: {:?}\ntarget: {:?}", changed, false);
             }
         }
     }
-
+    ///
+    /// 
     #[test]
     fn test_state_empty_steps() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -88,16 +87,16 @@ mod tests {
 
         let steps: Vec<f64> = vec![];
         let initial = 1;
-        let mut switchState = SwitchStateChanged::new(
+        let mut switch_state = SwitchStateChanged::new(
             init_each(initial, steps),
         );
 
         for value in 0..=100 {
             let value = 0.01 * (value as f64);
-            switchState.add(value);
-            let state = switchState.state();
-            let changed = switchState.changed();
-            info!("state: {},\t changed: {},\t isMax: {},\t value: {}", state, changed, switchState.isMax(), value);
+            switch_state.add(value);
+            let state = switch_state.state();
+            let changed = switch_state.changed();
+            info!("state: {},\t changed: {},\t isMax: {},\t value: {}", state, changed, switch_state.is_max(), value);
             assert!(changed == false, "\nresult: {:?}\ntarget: {:?}", changed, false);
         }
     }

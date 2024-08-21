@@ -17,22 +17,19 @@ use crate::{
         service::service_handles::ServiceHandles, 
     }, 
 };
-
 ///
-/// Binds TCP socket server
-/// Listening socket for incoming connections
-/// Verified incoming connections handles in the separate thread
+/// Do something ...
 pub struct ServiceName {
     id: String,
     conf: ServiceNameConfig,
     services: Arc<Mutex<Services>>,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+//
 impl ServiceName {
-    ///
-    /// 
+    //
+    /// Crteates new instance of the ServiceName 
     pub fn new(parent: impl Into<String>, conf: ServiceNameConfig, services: Arc<Mutex<Services>>) -> Self {
         Self {
             id: format!("{}/ServiceName({})", parent.into(), conf.name),
@@ -42,15 +39,15 @@ impl ServiceName {
         }
     }
 }
-///
-/// 
+//
+//
 impl Object for ServiceName {
     fn id(&self) -> &str {
         &self.id
     }
 }
-///
-/// 
+//
+// 
 impl Debug for ServiceName {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -59,8 +56,8 @@ impl Debug for ServiceName {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for ServiceName {
     //
     // 
@@ -97,8 +94,8 @@ impl Service for ServiceName {
             }
         }
     }
-    ///
-    /// 
+    //
+    //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
     }    

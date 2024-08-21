@@ -22,8 +22,8 @@ pub struct S7ParseReal {
     pub timestamp: DateTime<Utc>,
     is_changed: bool,
 }
-///
-///
+//
+//
 impl S7ParseReal {
     ///
     ///
@@ -105,8 +105,8 @@ impl S7ParseReal {
         }
     }
 }
-///
-///
+//
+//
 impl ParsePoint for S7ParseReal {
     //
     //

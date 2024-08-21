@@ -23,3 +23,17 @@ pub enum PointConfigType {
     #[serde(alias = "json", alias = "Json")]
     Json,
 }
+//
+//
+impl ToString for PointConfigType {
+    fn to_string(&self) -> String {
+        match self {
+            PointConfigType::Bool => "Bool".to_owned(),
+            PointConfigType::Int => "Int".to_owned(),
+            PointConfigType::Real => "Real".to_owned(),
+            PointConfigType::Double => "Double".to_owned(),
+            PointConfigType::String => "String".to_owned(),
+            PointConfigType::Json => "Json".to_owned(),
+        }
+    }
+}

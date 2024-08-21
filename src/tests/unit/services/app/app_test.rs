@@ -33,7 +33,7 @@ mod services {
         let mut path = env::current_dir().unwrap();
         path.push("src/tests/unit/services/app/app.yaml");
         println!("working path: \n\t{:?}", env::current_dir().unwrap());
-        let app = App::new(path.display().to_string());
+        let app = App::new(vec![path]);
         app.run().unwrap();
         println!();
         // assert!(points_count == target, "\nresult: {:?}\ntarget: {:?}", points_count, target);

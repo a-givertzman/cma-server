@@ -10,8 +10,8 @@ pub struct JdsEncodeMessage {
     name: Name,
     stream: JdsSerialize,
 }
-///
-/// 
+//
+// 
 impl JdsEncodeMessage {
     ///
     /// Creates new instance of the JdsEncodeMessage
@@ -24,8 +24,8 @@ impl JdsEncodeMessage {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Object for JdsEncodeMessage {
     fn id(&self) -> &str {
         &self.id
@@ -34,8 +34,8 @@ impl Object for JdsEncodeMessage {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl StreamRead<Vec<u8>, RecvError> for JdsEncodeMessage {
     ///
     /// Returns sequence of bytes representing encoded single PointType, ends with Jds.endOfTransmission = 4

@@ -1,6 +1,11 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+///
+/// Resets the AtomicXyz value to the given [val]
 pub trait AtomicReset<T> {
+    #[allow(dead_code)]
+    ///
+    /// Resets self to the given [val]
     fn reset(&self, val: T);
 }
 

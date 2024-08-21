@@ -1,4 +1,4 @@
-use crate::conf::{fn_::{fn_config::FnConfig, fn_point_config::FnPointConfig}, point_config::point_config::PointConfig};
+use crate::conf::{conf_tree::ConfTree, fn_::{fn_config::FnConfig, fn_point_config::FnPointConfig}, point_config::point_config::PointConfig};
 
 ///
 /// The kinde of the Function config, incapsulating config it self
@@ -15,10 +15,10 @@ pub enum FnConfKind {
     Const(FnConfig),
     Point(FnConfig),
     PointConf(FnPointConfig),
-    Param(String),
+    Param(ConfTree),
 }
-///
-/// 
+//
+// 
 impl FnConfKind {
     ///
     /// Returns the name of the incapsulated config
@@ -29,7 +29,7 @@ impl FnConfKind {
             FnConfKind::Const(conf) => conf.name.clone(),
             FnConfKind::Point(conf) => conf.name.clone(),
             FnConfKind::PointConf(conf) => conf.conf.name.clone(),
-            FnConfKind::Param(conf) => conf.clone(),
+            FnConfKind::Param(conf) => conf.key.clone(),
         }
     }
     ///
@@ -41,7 +41,15 @@ impl FnConfKind {
             FnConfKind::Const(conf) => conf.points(),
             FnConfKind::Point(conf) => conf.points(),
             FnConfKind::PointConf(conf) => conf.points(),
-            FnConfKind::Param(conf) => panic!("FnConfKind.points | Param {} - does not have points() method", conf),
+            FnConfKind::Param(conf) => panic!("FnConfKind.points | Param {:#?} - does not have points() method", conf),
+        }
+    }
+    ///
+    /// Returns as custom parameter
+    pub fn as_param(&self) -> ConfTree {
+        match self {
+            FnConfKind::Param(conf) => conf.to_owned(),
+            _ => panic!("FnConfKind.as_param | as Param requested, but found {:#?}", self),
         }
     }
 }

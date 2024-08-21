@@ -1,5 +1,5 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread, time::Duration};
-use log::{debug, info, warn};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
+use log::{info, warn};
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{point_config::name::Name, tcp_client_config::TcpClientConfig}, core_::{net::protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize, jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, object::object::Object, point::point_type::PointType}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}, tcp::{
@@ -17,18 +17,18 @@ pub struct TcpClient {
     in_send: HashMap<String, Sender<PointType>>,
     in_recv: Vec<Receiver<PointType>>,
     conf: TcpClientConfig,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     tcp_recv_alive: Option<Arc<Mutex<TcpReadAlive>>>,
     tcp_send_alive: Option<Arc<Mutex<TcpWriteAlive>>>,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl TcpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TcpClientConfig, services: Arc<Mutex<Services>>) -> Self {
+    pub fn new(conf: TcpClientConfig, services: Arc<RwLock<Services>>) -> Self {
         let (send, recv) = mpsc::channel();
         Self {
             id: conf.name.join(),
@@ -51,8 +51,8 @@ impl Object for TcpClient {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Debug for TcpClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -61,8 +61,8 @@ impl Debug for TcpClient {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for TcpClient {
     //
     // 
@@ -80,13 +80,9 @@ impl Service for TcpClient {
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let exit_pair = Arc::new(AtomicBool::new(false));
-        info!("{}.run | rx queue name: {:?}", self.id, conf.rx);
-        info!("{}.run | tx queue name: {:?}", self.id, conf.tx);
-        debug!("{}.run | Lock services...", self_id);
-        let tx_send = self.services.slock().get_link(&conf.tx).unwrap_or_else(|err| {
+        let tx_send = self.services.rlock(&self_id).get_link(&conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
-        debug!("{}.run | Lock services - ok", self_id);
         let buffered = conf.rx_buffered; // TODO Read this from config
         let in_recv = self.in_recv.pop().unwrap();
         // let (cyclic, cycleInterval) = match conf.cycle {
@@ -98,6 +94,7 @@ impl Service for TcpClient {
             self_id.clone(), 
             conf.address, 
             reconnect,
+            Some(exit.clone())
         );
         let mut tcp_read_alive = TcpReadAlive::new(
             &self_id,
@@ -147,6 +144,7 @@ impl Service for TcpClient {
                     break;
                 }
             }
+            info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
@@ -166,13 +164,13 @@ impl Service for TcpClient {
         self.exit.store(true, Ordering::SeqCst);
         match &self.tcp_recv_alive {
             Some(tcp_recv_alive) => {
-                tcp_recv_alive.slock().exit()
+                tcp_recv_alive.slock(&self.id).exit()
             }
             None => {}
         }
         match &self.tcp_send_alive {
             Some(tcp_send_alive) => {
-                tcp_send_alive.slock().exit()
+                tcp_send_alive.slock(&self.id).exit()
             }
             None => {}
         }

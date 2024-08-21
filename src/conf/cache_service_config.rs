@@ -21,8 +21,8 @@ pub struct CacheServiceConfig {
     pub(crate) retain_delay: Duration,
     pub(crate) subscribe: ConfSubscribe,
 }
-///
-/// 
+//
+// 
 impl CacheServiceConfig {
     ///
     /// creates config from serde_yaml::Value of following format:

@@ -17,5 +17,9 @@ Cargo.lock
 *.log
 
 #cache files
+assets/cache/
 cache.json
+
+#retain points
+assets/retain/
 retain_points.json

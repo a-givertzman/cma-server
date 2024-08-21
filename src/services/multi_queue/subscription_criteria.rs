@@ -10,8 +10,8 @@ pub struct SubscriptionCriteria {
     cot: Cot,
     dest: String,
 }
-///
-/// 
+//
+//
 impl SubscriptionCriteria {
     ///
     /// Detailed definition of the subscription;
@@ -26,12 +26,12 @@ impl SubscriptionCriteria {
         }
     }
     ///
-    /// 
+    /// The destionation string of the Subscription in the format "Cot:point name"
     pub fn destination(&self) -> String {
         self.dest.clone()
     }
     ///
-    /// 
+    /// The destionation string of the Subscription in the format "Cot:point name"
     pub fn dest(cot: &Cot, name: &str) -> String {
         match cot {
             Cot::All => name.to_owned(),
@@ -39,12 +39,12 @@ impl SubscriptionCriteria {
         }
     }
     ///
-    /// 
+    /// Returns stored name of the Subscription
     pub fn name(&self) -> String {
         self.name.clone()
     }
     ///
-    /// 
+    /// Returns stored cot of the Subscription
     pub fn cot(&self) -> Cot {
         self.cot
     }

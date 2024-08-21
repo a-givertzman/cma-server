@@ -27,16 +27,16 @@ pub enum RequestKind {
     Subscribe,
     Unknown,
 }
-///
-/// 
+//
+// 
 impl RequestKind {
     pub const AUTH_SECRET: &'static str = "Auth.Secret";
     pub const AUTH_SSH: &'static str = "Auth.Ssh";
     pub const POINTS: &'static str = "Points";
     pub const SUBSCRIBE: &'static str = "Subscribe";
 }
-///
-/// 
+//
+// 
 impl From<&str> for RequestKind {
     fn from(value: &str) -> Self {
         let re = r#"(?:/(?:[^/]+))*/(Auth\.Secret|Auth\.Ssh|Points|Subscribe)"#;
@@ -74,15 +74,15 @@ impl From<&str> for RequestKind {
         }
     }
 }
-///
-/// 
+//
+// 
 impl From<String> for RequestKind {
     fn from(value: String) -> Self {
         RequestKind::from(value.as_str())
     }
 }
-///
-/// 
+//
+// 
 impl From<&String> for RequestKind {
     fn from(value: &String) -> Self {
         RequestKind::from(value.as_str())

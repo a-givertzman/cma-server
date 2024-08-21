@@ -14,11 +14,11 @@ pub struct Name {
     me: String,
     joined: RefCell<Option<String>>,
 }
-///
-/// 
+//
+// 
 impl Name {
     ///
-    /// 
+    /// Creates new instance of Name from 'parent' and 'me'
     pub fn new(parent: impl Into<String>, me: impl Into<String>) -> Self {
         Self {
             parent: parent.into(),
@@ -93,15 +93,15 @@ impl Name {
         self.me.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Display for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.join())
     }
 }
-///
-/// 
+//
+// 
 impl Debug for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.join())
@@ -114,29 +114,29 @@ impl PartialEq for Name {
         self.join() == other.join()
     }
 }
-///
-/// 
+//
+// 
 impl From<&Name> for String {
     fn from(value: &Name) -> Self {
         value.join()
     }
 }
-///
-/// 
+//
+// 
 impl From<Name> for String {
     fn from(value: Name) -> Self {
         value.join()
     }
 }
-///
-/// 
+//
+// 
 impl From<String> for Name {
     fn from(value: String) -> Self {
         Name { parent: value, me: String::new(), joined: RefCell::new(None) }
     }
 }
-///
-/// 
+//
+// 
 impl From<&str> for Name {
     fn from(value: &str) -> Self {
         Name { parent: value.to_owned(), me: String::new(), joined: RefCell::new(None) }

@@ -13,8 +13,8 @@ pub struct MockServicePoints {
     name: Name,
     points: Vec<PointConfig>,
 }
-///
-/// 
+//
+// 
 impl MockServicePoints {
     ///
     /// 
@@ -27,8 +27,8 @@ impl MockServicePoints {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Object for MockServicePoints {
     fn id(&self) -> &str {
         &self.id
@@ -37,8 +37,8 @@ impl Object for MockServicePoints {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Debug for MockServicePoints {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -47,8 +47,8 @@ impl Debug for MockServicePoints {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for MockServicePoints {
     //
     //

@@ -12,8 +12,8 @@ pub struct Point<T> {
     pub cot: Cot,
     pub timestamp: DateTime<chrono::Utc>,
 }
-///
-/// 
+//
+// 
 impl<T> Point<T> {
     ///
     /// Creates new instance of the Point
@@ -34,8 +34,8 @@ impl<T> Point<T> {
         }
     }
 }
-///
-/// 
+//
+// 
 impl Point<Bool> {
     ///
     /// creates Point<Bool> with given name & value, taking current timestamp, Status::Ok, Direction::Read
@@ -49,12 +49,85 @@ impl Point<Bool> {
             timestamp: chrono::offset::Utc::now(),
         }
     }
+    ///
+    /// Returns the Point with the absolute value
+    pub fn abs(&self) -> Point<Bool> {
+        Self {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Bool
+    pub fn to_bool(&self) -> Point<Bool> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Int
+    pub fn to_int(&self) -> Point<i64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: if self.value.0 {1} else {0},
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Real
+    pub fn to_real(&self) -> Point<f32> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: if self.value.0 {1.0f32} else {0.0f32},
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Double
+    pub fn to_double(&self) -> Point<f64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: if self.value.0 {1.0f64} else {0.0f64},
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the String
+    pub fn to_string(&self) -> Point<String> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.to_string(),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
 }
-///
-/// 
+//
+// 
 impl Point<i64> {
     ///
-    /// creates Point<i64> with given name & value, taking current timestamp, Status::Ok, Direction::Read
+    /// creates Point<i64> with given name & value,
+    /// taking current timestamp, Status::Ok, Direction::Read
     pub fn new_int(tx_id: usize, name: &str, value: i64) -> Point<i64> {
         Point {
             tx_id,
@@ -65,9 +138,108 @@ impl Point<i64> {
             timestamp: chrono::offset::Utc::now(),
         }
     }
+    ///
+    /// Returns the Point with the absolute value
+    pub fn abs(&self) -> Point<i64> {
+        Self {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.abs(),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Bool
+    pub fn to_bool(&self) -> Point<Bool> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: Bool(self.value > 0),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Int
+    pub fn to_int(&self) -> Point<i64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Real
+    pub fn to_real(&self) -> Point<f32> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value as f32,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Double
+    pub fn to_double(&self) -> Point<f64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value as f64,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the String
+    pub fn to_string(&self) -> Point<String> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.to_string(),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Raises self to a [factor] power.
+    pub fn pow(&self, exp: Self) -> Self {
+        let status = match self.status.cmp(&exp.status) {
+            std::cmp::Ordering::Less => exp.status,
+            std::cmp::Ordering::Equal => self.status,
+            std::cmp::Ordering::Greater => self.status,
+        };
+        let (tx_id, timestamp) = match self.timestamp.cmp(&exp.timestamp) {
+            std::cmp::Ordering::Less => (exp.tx_id, exp.timestamp),
+            std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
+            std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
+        };
+        let cot = if self.cot == exp.cot {
+            self.cot
+        } else {
+            panic!("Point.pow | Cot's are not equals")
+        };
+        Point {
+            tx_id,
+            name: String::from("Point.Pow"),
+            value: self.value.pow(exp.value as u32),
+            status,
+            cot,
+            timestamp,
+        }
+    }
 }
-///
-/// 
+//
+// 
 impl Point<f32> {
     ///
     /// creates Point<f32> with given name & value, taking current timestamp, Status::Ok, Direction::Read
@@ -81,9 +253,108 @@ impl Point<f32> {
             timestamp: chrono::offset::Utc::now(),
         }
     }
+    ///
+    /// Returns the Point with the absolute value
+    pub fn abs(&self) -> Point<f32> {
+        Self {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.abs(),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Bool
+    pub fn to_bool(&self) -> Point<Bool> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: Bool(self.value > 0.0),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Int
+    pub fn to_int(&self) -> Point<i64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.round() as i64,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Real
+    pub fn to_real(&self) -> Point<f32> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Double
+    pub fn to_double(&self) -> Point<f64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value as f64,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the String
+    pub fn to_string(&self) -> Point<String> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.to_string(),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Raises self to a [factor] power.
+    pub fn pow(&self, exp: Self) -> Self {
+        let status = match self.status.cmp(&exp.status) {
+            std::cmp::Ordering::Less => exp.status,
+            std::cmp::Ordering::Equal => self.status,
+            std::cmp::Ordering::Greater => self.status,
+        };
+        let (tx_id, timestamp) = match self.timestamp.cmp(&exp.timestamp) {
+            std::cmp::Ordering::Less => (exp.tx_id, exp.timestamp),
+            std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
+            std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
+        };
+        let cot = if self.cot == exp.cot {
+            self.cot
+        } else {
+            panic!("Point.pow | Cot's are not equals")
+        };
+        Point {
+            tx_id,
+            name: String::from("Point.Pow"),
+            value: self.value.powf(exp.value),
+            status,
+            cot,
+            timestamp,
+        }
+    }
 }
-///
-/// 
+//
+// 
 impl Point<f64> {
     ///
     /// creates Point<f64> with given name & value, taking current timestamp, Status::Ok, Direction::Read
@@ -97,9 +368,108 @@ impl Point<f64> {
             timestamp: chrono::offset::Utc::now(),
         }
     }
+    ///
+    /// Returns the Point with the absolute value
+    pub fn abs(&self) -> Point<f64> {
+        Self {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.abs(),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Bool
+    pub fn to_bool(&self) -> Point<Bool> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: Bool(self.value > 0.0),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Int
+    pub fn to_int(&self) -> Point<i64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.round() as i64,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Real
+    pub fn to_real(&self) -> Point<f32> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value as f32,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the Double
+    pub fn to_double(&self) -> Point<f64> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value,
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Returns Point converted to the String
+    pub fn to_string(&self) -> Point<String> {
+        Point {
+            tx_id: self.tx_id,
+            name: self.name.clone(),
+            value: self.value.to_string(),
+            status: self.status,
+            cot: self.cot,
+            timestamp: self.timestamp,
+        }
+    }
+    ///
+    /// Raises self to a [factor] power.
+    pub fn pow(&self, exp: Self) -> Self {
+        let status = match self.status.cmp(&exp.status) {
+            std::cmp::Ordering::Less => exp.status,
+            std::cmp::Ordering::Equal => self.status,
+            std::cmp::Ordering::Greater => self.status,
+        };
+        let (tx_id, timestamp) = match self.timestamp.cmp(&exp.timestamp) {
+            std::cmp::Ordering::Less => (exp.tx_id, exp.timestamp),
+            std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
+            std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
+        };
+        let cot = if self.cot == exp.cot {
+            self.cot
+        } else {
+            panic!("Point.pow | Cot's are not equals")
+        };
+        Point {
+            tx_id,
+            name: String::from("Point.Pow"),
+            value: self.value.powf(exp.value),
+            status,
+            cot,
+            timestamp,
+        }
+    }
 }
-///
-/// 
+//
+// 
 impl Point<String> {
     ///
     /// creates Point<String> with given name & value, taking current timestamp, Status::Ok, Direction::Read
@@ -114,9 +484,9 @@ impl Point<String> {
         }
     }
 }
-///
-/// 
-impl<T: std::ops::Add<Output = T> + Clone> std::ops::Add for Point<T> {
+//
+// 
+impl<T: std::ops::Add<Output = T>> std::ops::Add for Point<T> {
     type Output = Point<T>;
     fn add(self, rhs: Self) -> Self::Output {
         let status = match self.status.cmp(&rhs.status) {
@@ -129,23 +499,113 @@ impl<T: std::ops::Add<Output = T> + Clone> std::ops::Add for Point<T> {
             std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
             std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
         };
-        let direction = if self.cot == rhs.cot {
+        let cot = if self.cot == rhs.cot {
             self.cot
         } else {
-            panic!("Point.add | Directions are not equals")
+            panic!("Point.add | Cot's are not equals")
         };
         Point {
             tx_id,
             name: String::from("Point.Add"),
             value: self.value + rhs.value,
             status,
-            cot: direction,
+            cot,
             timestamp,
         }
     }
 }
-
-
+//
+//
+impl<T: std::ops::Sub<Output = T>> std::ops::Sub for Point<T> {
+    type Output = Point<T>;
+    fn sub(self, rhs: Self) -> Self::Output {
+        let status = match self.status.cmp(&rhs.status) {
+            std::cmp::Ordering::Less => rhs.status,
+            std::cmp::Ordering::Equal => self.status,
+            std::cmp::Ordering::Greater => self.status,
+        };
+        let (tx_id, timestamp) = match self.timestamp.cmp(&rhs.timestamp) {
+            std::cmp::Ordering::Less => (rhs.tx_id, rhs.timestamp),
+            std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
+            std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
+        };
+        let cot = if self.cot == rhs.cot {
+            self.cot
+        } else {
+            panic!("Point.sub | Cot's are not equals")
+        };
+        Point {
+            tx_id,
+            name: String::from("Point.Sub"),
+            value: self.value - rhs.value,
+            status,
+            cot,
+            timestamp,
+        }
+    }
+}
+//
+//
+impl<T: std::ops::Mul<Output = T>> std::ops::Mul for Point<T> {
+    type Output = Point<T>;
+    fn mul(self, rhs: Self) -> Self::Output {
+        let status = match self.status.cmp(&rhs.status) {
+            std::cmp::Ordering::Less => rhs.status,
+            std::cmp::Ordering::Equal => self.status,
+            std::cmp::Ordering::Greater => self.status,
+        };
+        let (tx_id, timestamp) = match self.timestamp.cmp(&rhs.timestamp) {
+            std::cmp::Ordering::Less => (rhs.tx_id, rhs.timestamp),
+            std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
+            std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
+        };
+        let cot = if self.cot == rhs.cot {
+            self.cot
+        } else {
+            panic!("Point.mul | Cot's are not equals")
+        };
+        Point {
+            tx_id,
+            name: String::from("Point.Mul"),
+            value: self.value * rhs.value,
+            status,
+            cot,
+            timestamp,
+        }
+    }
+}
+//
+//
+impl<T: std::ops::Div<Output = T>> std::ops::Div for Point<T> {
+    type Output = Point<T>;
+    fn div(self, rhs: Self) -> Self::Output {
+        let status = match self.status.cmp(&rhs.status) {
+            std::cmp::Ordering::Less => rhs.status,
+            std::cmp::Ordering::Equal => self.status,
+            std::cmp::Ordering::Greater => self.status,
+        };
+        let (tx_id, timestamp) = match self.timestamp.cmp(&rhs.timestamp) {
+            std::cmp::Ordering::Less => (rhs.tx_id, rhs.timestamp),
+            std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
+            std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
+        };
+        let cot = if self.cot == rhs.cot {
+            self.cot
+        } else {
+            panic!("Point.div | Cot's are not equals")
+        };
+        Point {
+            tx_id,
+            name: String::from("Point.Div"),
+            value: self.value / rhs.value,
+            status,
+            cot,
+            timestamp,
+        }
+    }
+}
+//
+//
 impl<T: std::ops::BitOr<Output = T>> std::ops::BitOr for Point<T> {
     type Output = Point<T>;
     fn bitor(self, rhs: Self) -> Self::Output {
@@ -159,45 +619,55 @@ impl<T: std::ops::BitOr<Output = T>> std::ops::BitOr for Point<T> {
             std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
             std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
         };
-        let direction = if self.cot == rhs.cot {
+        let cot = if self.cot == rhs.cot {
             self.cot
         } else {
-            panic!("Point.add | Directions are not equals")
+            panic!("Point.bitor | Cot's are not equals")
         };
         Point {
             tx_id,
             name: String::from("Point.BitOr"),
             value: self.value | rhs.value,
             status,
-            cot: direction,
+            cot,
             timestamp,
         }        
     }
 }
-
-
+//
+//
+impl<T: std::ops::BitAnd<Output = T>> std::ops::BitAnd for Point<T> {
+    type Output = Point<T>;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        let status = match self.status.cmp(&rhs.status) {
+            std::cmp::Ordering::Less => rhs.status,
+            std::cmp::Ordering::Equal => self.status,
+            std::cmp::Ordering::Greater => self.status,
+        };
+        let (tx_id, timestamp) = match self.timestamp.cmp(&rhs.timestamp) {
+            std::cmp::Ordering::Less => (rhs.tx_id, rhs.timestamp),
+            std::cmp::Ordering::Equal => (self.tx_id, self.timestamp),
+            std::cmp::Ordering::Greater => (self.tx_id, self.timestamp),
+        };
+        let cot = if self.cot == rhs.cot {
+            self.cot
+        } else {
+            panic!("Point.bitor | Cot's are not equals")
+        };
+        Point {
+            tx_id,
+            name: String::from("Point.BitOr"),
+            value: self.value & rhs.value,
+            status,
+            cot,
+            timestamp,
+        }        
+    }
+}
+//
+//
 impl<T: std::cmp::PartialOrd> std::cmp::PartialOrd for Point<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self.tx_id.partial_cmp(&other.tx_id) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        match self.name.partial_cmp(&other.name) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        match self.value.partial_cmp(&other.value) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        match self.status.partial_cmp(&other.status) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        match self.cot.partial_cmp(&other.cot) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        self.timestamp.partial_cmp(&other.timestamp)
+        self.value.partial_cmp(&other.value)
     }
 }

@@ -5,13 +5,13 @@ use crate::{
     core_::{point::{point::Point, point_type::PointType}, types::{fn_in_out_ref::FnInOutRef, type_of::DebugTypeOf}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
-        fn_kind::FnKind,
+        fn_kind::FnKind, fn_result::FnResult,
     },
 };
 ///
-/// Function converts input to Int
+/// Function | Converts input to Int
 ///  - bool: true -> 1, false -> 0
-///  - real: 0.1 -> 0 | 0.5 -> 0 | 0.9 -> 0 | 1.1 -> 1
+///  - real: 0.1 -> 0 | 0.5 -> 1 | 0.9 -> 1 | 1.1 -> 1
 ///  - string: try to parse int
 #[derive(Debug)]
 pub struct FnToInt {
@@ -19,8 +19,8 @@ pub struct FnToInt {
     kind: FnKind,
     input: FnInOutRef,
 }
-///
-/// 
+//
+// 
 impl FnToInt {
     ///
     /// Creates new instance of the FnToInt
@@ -33,11 +33,11 @@ impl FnToInt {
         }
     }    
 }
-///
-/// 
+//
+// 
 impl FnIn for FnToInt {}
-///
-/// 
+//
+// 
 impl FnOut for FnToInt { 
     //
     fn id(&self) -> String {
@@ -53,35 +53,41 @@ impl FnOut for FnToInt {
     }
     //
     //
-    fn out(&mut self) -> PointType {
-        let point = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, point);
-        let out = match &point {
-            PointType::Bool(value) => {
-                if value.value.0 {1} else {0}
+    fn out(&mut self) -> FnResult<PointType, String> {
+        let input = self.input.borrow_mut().out();
+        trace!("{}.out | input: {:?}", self.id, input);
+        match input {
+            FnResult::Ok(input) => {
+                let out = match &input {
+                    PointType::Bool(value) => {
+                        if value.value.0 {1} else {0}
+                    }
+                    PointType::Int(value) => {
+                        value.value
+                    }
+                    PointType::Real(value) => {
+                        value.value.round() as i64
+                    }
+                    PointType::Double(value) => {
+                        value.value.round() as i64
+                    }
+                    _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
+                };
+                trace!("{}.out | out: {:?}", self.id, &out);
+                FnResult::Ok(PointType::Int(
+                    Point::new(
+                        input.tx_id(),
+                        &concat_string!(self.id, ".out"),
+                        out,
+                        input.status(),
+                        input.cot(),
+                        input.timestamp(),
+                    )
+                ))
             }
-            PointType::Int(value) => {
-                value.value
-            }
-            PointType::Real(value) => {
-                value.value.trunc() as i64
-            }
-            PointType::Double(value) => {
-                value.value.trunc() as i64
-            }
-            _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, point.print_type_of(), point),
-        };
-        trace!("{}.out | out: {:?}", self.id, &out);
-        PointType::Int(
-            Point {
-                tx_id: *point.tx_id(),
-                name: concat_string!(self.id, ".out"),
-                value: out,
-                status: point.status(),
-                cot: point.cot(),
-                timestamp: point.timestamp(),
-            }
-        )
+            FnResult::None => FnResult::None,
+            FnResult::Err(err) => FnResult::Err(err),
+        }
     }
     //
     //
@@ -89,8 +95,8 @@ impl FnOut for FnToInt {
         self.input.borrow_mut().reset();
     }
 }
-///
-/// 
+//
+// 
 impl FnInOut for FnToInt {}
 ///
 /// Global static counter of FnToInt instances

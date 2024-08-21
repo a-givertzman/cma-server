@@ -1,5 +1,4 @@
 use serde::{Serialize, Deserialize};
-
 ///
 /// Set of the prefilters - executed during parsing data points from the protocol line
 ///     - [threshold] - float parameter for data points to be filtered

@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
 use log::{debug, info};
 use std::{sync::Once, rc::Rc, cell::RefCell};
@@ -63,7 +62,7 @@ fn test_single() {
     ];
     for (value, targetState) in test_data {
         let point = value.toPoint("test");
-        input.borrow_mut().add(point);
+        input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
         let state = fnCount.out();
         // debug!("input: {:?}", &mut input);
@@ -102,7 +101,7 @@ fn test_multiple() {
     ];
     for (value, targetState) in test_data {
         let point = value.toPoint("test");
-        input.borrow_mut().add(point);
+        input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
         let state = fnCount.out();
         // debug!("input: {:?}", &mut input);
@@ -143,7 +142,7 @@ fn test_multiple_reset() {
             fnCount.reset();
         }
         let point = value.toPoint("test");
-        input.borrow_mut().add(point);
+        input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
         let state = fnCount.out();
         // debug!("input: {:?}", &mut input);

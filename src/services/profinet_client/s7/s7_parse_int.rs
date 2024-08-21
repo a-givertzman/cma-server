@@ -21,8 +21,8 @@ pub struct S7ParseInt {
     pub timestamp: DateTime<Utc>,
     is_changed: bool,
 }
-///
-///
+//
+//
 impl S7ParseInt {
     ///
     ///
@@ -108,8 +108,8 @@ impl S7ParseInt {
         }
     }
 }
-///
-///
+//
+//
 impl ParsePoint for S7ParseInt {
     //
     //

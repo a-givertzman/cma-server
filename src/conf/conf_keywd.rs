@@ -15,8 +15,8 @@ pub enum ConfKind {
     Link,
     Unknown,
 }
-///
-/// 
+//
+// 
 impl FromStr for ConfKind {
     type Err = String;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -29,8 +29,8 @@ impl FromStr for ConfKind {
         }
     }
 }
-///
-/// 
+//
+// 
 impl ToString for ConfKind {
     fn to_string(&self) -> String {
         match self {
@@ -72,8 +72,8 @@ pub enum ConfKeywd {
     Queue(ConfKeywdValue),
     Link(ConfKeywdValue),
 }
-///
-/// 
+//
+// 
 impl ConfKeywd {
     pub fn prefix(&self) -> String {
         match self {
@@ -108,8 +108,8 @@ impl ConfKeywd {
         }
     }
 }
-///
-/// 
+//
+// 
 impl FromStr for ConfKeywd {
     type Err = String;
     fn from_str(input: &str) -> Result<ConfKeywd, String> {

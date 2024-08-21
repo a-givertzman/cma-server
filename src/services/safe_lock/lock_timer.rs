@@ -4,19 +4,21 @@ use log::error;
 /// If maximum test turation will be exceeded - the panics throwed
 pub struct LockTimer {
     id: String,
+    type_: String,
     duration: Duration,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl LockTimer {
     ///
     /// If maximum lock duration exceeded - error message printed
     /// - parent: String - name of the parent entity
     /// - duration - maximum lock duration
-    pub fn new(parent: impl Into<String>, duration: Duration) -> Self {
+    pub fn new(parent: impl Into<String>, type_: impl Into<String>, duration: Duration) -> Self {
         Self {
             id: format!("{}/LockTimer", parent.into()),
+            type_: type_.into(),
             duration,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -25,6 +27,7 @@ impl LockTimer {
     /// The countdown begins, exiting process with error code 70 / error message - if duration exceeded
     pub fn run(&self) -> Result<JoinHandle<()>, std::io::Error> {
         let self_id = self.id.clone();
+        let type_ = self.type_.clone();
         let exit = self.exit.clone();
         let duration = self.duration;
         thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
@@ -38,7 +41,7 @@ impl LockTimer {
                     break;
                 }
                 if timer.elapsed() > duration {
-                    error!("{}.run | Maximum lock duration ({:?}) exceeded", self_id, duration);
+                    error!("{}.run | Maximum lock duration ({:?}) exceeded for type: '{}'", self_id, duration, type_);
                     // std::process::exit(80);   // SOFTWARE: ExitCode = 80
                 }
 

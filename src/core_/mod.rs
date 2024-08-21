@@ -29,3 +29,5 @@ pub mod cot;
 pub mod object;
 
 pub mod cli;
+
+pub mod future;

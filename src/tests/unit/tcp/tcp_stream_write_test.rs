@@ -24,8 +24,8 @@ mod tcp_stream_write {
         time::{Duration, Instant},
     };
     use testing::session::test_session::TestSession;
-    ///
-    ///
+    //
+    //
     static INIT: Once = Once::new();
     ///
     /// once called initialisation
@@ -53,7 +53,7 @@ mod tcp_stream_write {
         bytes
     }
     ///
-    ///
+    /// Testing TcpStreamWrite
     #[test]
     fn test() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -255,8 +255,8 @@ struct MockStreamRead<T> {
     name: Name,
     buffer: Vec<T>,
 }
-///
-///
+//
+//
 impl<T> MockStreamRead<T> {
     pub fn new(parent: &str, buffer: Vec<T>) -> Self {
         let name = Name::new(parent, "MockStreamRead");
@@ -267,8 +267,8 @@ impl<T> MockStreamRead<T> {
         }
     }
 }
-///
-///
+//
+//
 impl<T> Object for MockStreamRead<T> {
     fn id(&self) -> &str {
         &self.id
@@ -277,8 +277,8 @@ impl<T> Object for MockStreamRead<T> {
         self.name.clone()
     }
 }
-///
-///
+//
+//
 impl<T: Sync + std::fmt::Debug> StreamRead<T, RecvError> for MockStreamRead<T> {
     fn read(&mut self) -> Result<T, RecvError> {
         match self.buffer.first() {

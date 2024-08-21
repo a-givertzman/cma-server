@@ -13,8 +13,8 @@ pub struct TcpWriteAlive {
     exit: Arc<AtomicBool>,
     exit_pair: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl TcpWriteAlive {
     ///
     /// Creates new instance of [TcpWriteAlive]
@@ -42,7 +42,7 @@ impl TcpWriteAlive {
         info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Write", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
-            let mut stream_write = stream_write.slock();
+            let mut stream_write = stream_write.slock(&self_id);
             info!("{}.run | Main loop started", self_id);
             'main: loop {
                 if let Some(cycle) = &mut cycle {cycle.start()}

@@ -5,7 +5,7 @@ description: Short explanation / purpose etc.
 service MultiQueue:
     in queue in-queue:
         max-length: 10000
-    out queue:
+    send-to:
         # - TaskTestReceiver.queue
 
 
@@ -17,11 +17,45 @@ service CacheService MainCache:
             Inf: []             # IMPORTENT !!!
 
 
+service SlmpClient Ied15:
+    cycle: 50 ms
+    subscribe: /App/MultiQueue
+    send-to: /App/MultiQueue.in-queue
+    description: 'SLMP-IED-01.01'
+    ip: '192.168.120.200'
+    port: 4999
+    diagnosis:                          # internal diagnosis
+        point Status:                   # Ok(0) / Invalid(10)
+            type: 'Int'
+            # history: r
+        point Connection:               # Ok(0) / Invalid(10)
+            type: 'Int'
+            # history: r
+    db db_test_data:
+        device-code: D
+        offset: 1100
+        size: 12
+        point Lable15.Float: 
+            type: Real
+            address:
+                offset: 0
+            comment: 'Индикация поворота стрелы направо'
+        point CraneMovement.RotateRight: 
+            type: Real
+            address:
+                offset: 4
+            comment: 'Индикация поворота стрелы налево'
+        point CraneMovement.OutreachFwd: 
+            type: Int
+            address:
+                offset: 8
+            comment: 'Индикация вылета стрелы вперед'
+
 
 service ProfinetClient ied12:
     cycle: 500 ms
     subscribe: /App/MultiQueue
-    out queue: /App/MultiQueue.in-queue
+    send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.02'
     ip: '192.168.130.243'
@@ -472,7 +506,7 @@ service ProfinetClient ied12:
 service ProfinetClient ied13:
     cycle: 7 ms
     subscribe: /App/MultiQueue
-    out queue: /App/MultiQueue.in-queue
+    send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.03'
     ip: '192.168.130.243'
@@ -814,7 +848,7 @@ service ProfinetClient ied13:
 service ProfinetClient ied14:
     cycle: 50 ms
     subscribe: /App/MultiQueue
-    out queue: /App/MultiQueue.in-queue
+    send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.04'
     ip: '192.168.130.243'
@@ -1222,7 +1256,7 @@ service Task HistoryTask:
     subscribe: 
         /App/MultiQueue:                     # - multicast subscription to the MultiQueue
             {cot: Inf, history: rw}: []               #   - on all points having Cot::Inf and history::ReadWrite
-    # fn debug:
+    # fn Debug:
     #     input: point any every
     fn ToApiQueue:
         queue: /App/ApiClient.in-queue
@@ -1243,7 +1277,6 @@ service ApiClient:
     database: crane_data_server
     in queue in-queue:
         max-length: 10000
-    # out queue: MultiQueue.in-queue
     auth_token: 123!@#
     # debug: true
 
@@ -1256,5 +1289,5 @@ service TcpServer:
         pass: '12345'
     in queue link:
         max-length: 10000
-    out queue: /App/MultiQueue.in-queue
+    send-to: /App/MultiQueue.in-queue
     cache: /App/MainCache

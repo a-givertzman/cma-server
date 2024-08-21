@@ -10,7 +10,7 @@ use crate::{
 pub struct MockTcpServer {
     id: String,
     name: Name,
-    multiQueue: String,
+    multiQueue: QueueName,
     services: Arc<Mutex<Services>>,
     test_data: Vec<Value>,
     sent: Arc<Mutex<Vec<PointType>>>,
@@ -18,15 +18,15 @@ pub struct MockTcpServer {
     recvLimit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl MockTcpServer {
     pub fn new(parent: impl Into<String>, multiQueue: &str, services: Arc<Mutex<Services>>, test_data: Vec<Value>, recvLimit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockTcpServer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             id: name.join(),
             name,
-            multiQueue: multiQueue.to_string(),
+            multiQueue: QueueName::new(multiQueue),
             services,
             test_data,
             sent: Arc::new(Mutex::new(vec![])),
@@ -51,8 +51,8 @@ impl MockTcpServer {
         self.received.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Object for MockTcpServer {
     fn id(&self) -> &str {
         &self.id
@@ -61,8 +61,8 @@ impl Object for MockTcpServer {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Debug for MockTcpServer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -71,8 +71,8 @@ impl Debug for MockTcpServer {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for MockTcpServer {
     //
     //
@@ -80,11 +80,10 @@ impl Service for MockTcpServer {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let mqServiceName = QueueName::new(&self.multiQueue);
-        let mqServiceName = mqServiceName.service();
+        let mqServiceName = self.multiQueue.service().unwrap();
         debug!("{}.run | Lock services...", self_id);
-        let (_, rxRecv) = self.services.slock().subscribe(mqServiceName, &self_id, &vec![]);
-        let txSend = self.services.slock().get_link(&self.multiQueue).unwrap_or_else(|err| {
+        let (_, rxRecv) = self.services.wlock(&self_id).subscribe(&mqServiceName, &self_id, &vec![]);
+        let txSend = self.services.rlock(&self_id).get_link(&self.multiQueue).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self_id, err);
         });
         debug!("{}.run | Lock services - ok", self_id);
@@ -130,7 +129,7 @@ impl Service for MockTcpServer {
             info!("{}.run | Exit thread Recv", self_id);
         });
         let self_id = self.id.clone();
-        let txId = PointTxId::fromStr(&self_id);
+        let txId = PointTxId::from_str(&self_id);
         let exit = self.exit.clone();
         let test_data = self.test_data.clone();
         let sent = self.sent.clone();

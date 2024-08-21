@@ -1,21 +1,17 @@
-#![allow(non_snake_case)]
-
 use std::{net::TcpStream, io::{Write, BufReader, Read}, sync::atomic::AtomicBool};
-
 use log::{warn, LevelFilter};
-
 use crate::core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_define::JDS_END_OF_TRANSMISSION};
-
 ///
-/// 
+/// Wraper for the TcpStream
+/// - reads all available bytes from stream
 struct TcpSocket {
     id: String,
     tcpStreamR: BufReader<TcpStream>,
     tcpStreamW: TcpStream,
     isConnected: AtomicBool,
 }
-///
-/// 
+//
+// 
 impl TcpSocket {
     pub fn new(parent: impl Into<String>, tcpStream: TcpStream) -> Self {
         Self {

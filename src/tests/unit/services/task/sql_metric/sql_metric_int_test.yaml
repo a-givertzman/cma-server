@@ -11,8 +11,8 @@ service Task task1:
         table: SelectMetric_test_table_name
         sql: "UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';"    
         input1 let VarName2:
-            input fn add:
-                input1 fn add:
+            input fn Add:
+                input1 fn Add:
                     input1: const int 1
                     input2: point int '/path/Point.Name'
                 input2: const int 1

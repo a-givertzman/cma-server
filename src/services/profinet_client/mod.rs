@@ -1,7 +1,10 @@
 //!
-//! Cyclically reads adressess from the PROFINET device and yields changed to the MultiQueue
-//! Writes Point to the protocol (PROFINET device) specific address
+//! Implements communication with Siemens device over PROFINET protocol.
 //!
+//! Cyclically reads adressess from the device 
+//! and yields changed to the specified destination service.
+//! Writes Point to the device specific address.
+
 pub mod profinet_client;
 
 pub mod profinet_db;

@@ -8,7 +8,7 @@ mod jds_decode_message {
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::{
-        cot::cot::Cot, failure::errors_limit::ErrorsLimit, net::{connection_status::ConnectionStatus, protocols::jds::jds_decode_message::JdsDecodeMessage}, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool
+        cot::cot::Cot, failure::errors_limit::ErrorLimit, net::{connection_status::ConnectionStatus, protocols::jds::jds_decode_message::JdsDecodeMessage}, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool
     }, tcp::tcp_stream_write::OpResult};
     ///
     ///
@@ -120,7 +120,7 @@ mod jds_decode_message {
         mock_tcp_server(addr.to_string(), count, &test_data, received.clone());
         thread::sleep(Duration::from_millis(100));
         {
-            let mut errors_limit = ErrorsLimit::new(3);
+            let mut errors_limit = ErrorLimit::new(3);
             println!("\nReading from stream.read(byte)...");
             let time = Instant::now();
             'main: loop {

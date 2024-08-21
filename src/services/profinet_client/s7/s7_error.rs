@@ -62,8 +62,8 @@ pub enum S7Error {
     CliFunctionNotImplemented = 0x02700000,
     Inner(String),
 }
-///
-/// 
+//
+// 
 impl S7Error {
     pub fn text(code: i32) -> String {
         let mut err = vec![0; 1024];
@@ -81,8 +81,8 @@ impl S7Error {
         err.to_owned()
     }    
 }
-///
-/// 
+//
+// 
 impl From<i32> for S7Error {
     fn from(value: i32) -> Self {
         match value {

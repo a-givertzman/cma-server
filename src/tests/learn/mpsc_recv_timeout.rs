@@ -2,6 +2,7 @@
 #[cfg(test)]
 mod tests {
     use log::{info, error};
+    use testing::stuff::wait::WaitTread;
     use std::{sync::{Once, mpsc::{self, RecvTimeoutError}}, time::Duration, thread::{self, JoinHandle}, any::Any};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::core_::constants::constants::RECV_TIMEOUT;
@@ -67,22 +68,7 @@ mod tests {
             };
             // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        waitForThread(_h).unwrap();
+        _h.wait().unwrap();
     }
-    ///
-    ///
-    fn waitForThread(thd: JoinHandle<()>) -> Result<(), Box<dyn Any + Send>>{
-        let thdId = format!("{:?}-{:?}", thd.thread().id(), thd.thread().name());
-        info!("Waiting for thread: {:?}...", thdId);
-        let r = thd.join();
-        match &r {
-            Ok(_) => {
-                info!("Waiting for thread: '{}' - finished", thdId);
-            }
-            Err(err) => {
-                error!("Waiting for thread '{}' error: {:?}", thdId, err);
-            }
-        }
-        r
-    }
+
 }

@@ -28,8 +28,8 @@ pub struct EmulatedTcpClientSend {
     wait_on_finish: bool,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl EmulatedTcpClientSend {
     pub fn new(parent: impl Into<String>, point_path: impl Into<String>, addr: &str, test_data: Vec<Value>, disconnect: Vec<i8>, wait_on_finish: bool) -> Self {
         let name = Name::new(parent, format!("EmulatedTcpClientSend{}", COUNT.fetch_add(1, Ordering::Relaxed)));
@@ -46,7 +46,7 @@ impl EmulatedTcpClientSend {
         }
     }
     ///
-    /// 
+    /// Returns self id
     pub fn id(&self) -> String {
         self.id.clone()
     }
@@ -103,8 +103,8 @@ impl EmulatedTcpClientSend {
         switch_state
     }
 }
-///
-/// 
+//
+// 
 impl Object for EmulatedTcpClientSend {
     fn id(&self) -> &str {
         &self.id
@@ -113,8 +113,8 @@ impl Object for EmulatedTcpClientSend {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Debug for EmulatedTcpClientSend {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -123,8 +123,8 @@ impl Debug for EmulatedTcpClientSend {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for EmulatedTcpClientSend {
     //
     //
@@ -163,7 +163,7 @@ impl Service for EmulatedTcpClientSend {
                             // ));
                             // send.send(request).unwrap();
                             // thread::sleep(Duration::from_millis(100));
-                            let tx_id = PointTxId::fromStr(&self_id);
+                            let tx_id = PointTxId::from_str(&self_id);
                             let mut sent_count = 0;
                             let mut progress_percent = 0.0;
                             while test_data.len() > 0 {
@@ -210,7 +210,7 @@ impl Service for EmulatedTcpClientSend {
                                 }
                             }
                         }
-                        if switch_state.isMax() {
+                        if switch_state.is_max() {
                             info!("{}.run | switchState.isMax, exiting", self_id);
                             break 'connect;
                         }
@@ -226,7 +226,7 @@ impl Service for EmulatedTcpClientSend {
                         thread::sleep(Duration::from_millis(1000))
                     }
                 }
-                if switch_state.isMax() {
+                if switch_state.is_max() {
                     info!("{}.run | switchState.isMax, exiting", self_id);
                     break 'connect;
                 }

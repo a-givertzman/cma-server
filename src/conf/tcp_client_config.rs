@@ -1,6 +1,6 @@
-use log::{trace, debug};
+use log::{debug, error, trace};
 use std::{fs, time::Duration, net::SocketAddr};
-use crate::conf::{conf_tree::ConfTree, service_config::ServiceConfig};
+use crate::{conf::{conf_keywd::ConfKind, conf_tree::ConfTree, service_config::ServiceConfig}, services::queue_name::QueueName};
 
 use super::point_config::name::Name;
 ///
@@ -12,7 +12,7 @@ use super::point_config::name::Name;
 ///     address: 127.0.0.1:8080
 ///     in queue link:
 ///         max-length: 10000
-///     out queue: MultiQueue.queue
+///     send-to: MultiQueue.queue
 ///                         ...
 #[derive(Debug, PartialEq, Clone)]
 pub struct TcpClientConfig {
@@ -23,10 +23,10 @@ pub struct TcpClientConfig {
     pub(crate) rx: String,
     pub(crate) rx_buffered: bool,
     pub(crate) rx_max_len: i64,
-    pub(crate) tx: String,
+    pub(crate) send_to: QueueName,
 }
-///
-/// 
+//
+// 
 impl TcpClientConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
@@ -38,7 +38,7 @@ impl TcpClientConfig {
     ///     in queue link:
     ///         buffered: true
     ///         max-length: 10000
-    ///     out queue: MultiQueue.queue
+    ///     send-to: MultiQueue.queue
     ///                     ...
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> TcpClientConfig {
         println!();
@@ -57,8 +57,11 @@ impl TcpClientConfig {
         let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
         let rx_buffered = rx_max_len > 0;
         debug!("{}.new | RX: {},\tmax-length: {}", self_id, rx, rx_max_len);
-        let tx = self_conf.get_out_queue().unwrap();
-        debug!("{}.new | TX: {}", self_id, tx);
+        let send_to = QueueName::new(self_conf.get_send_to().unwrap()).validate();
+        debug!("{}.new | send-to: {}", self_id, send_to);
+        if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
+            error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)
+        }
         TcpClientConfig {
             name: self_name,
             address: self_address,
@@ -67,7 +70,7 @@ impl TcpClientConfig {
             rx,
             rx_buffered,
             rx_max_len,
-            tx,
+            send_to,
         }
     }
     ///

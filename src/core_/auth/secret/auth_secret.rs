@@ -4,8 +4,8 @@
 pub struct AuthSecret {
     token: String,
 }
-///
-/// 
+//
+// 
 impl AuthSecret {
     ///
     /// Creates new instance of AuthSecret

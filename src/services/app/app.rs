@@ -9,11 +9,10 @@ use signal_hook::iterator::Signals;
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
-        api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig, conf_tree::ConfTree, multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig, task_config::TaskConfig, tcp_client_config::TcpClientConfig, tcp_server_config::TcpServerConfig
-    }, 
-    services::{
-        api_cient::api_client::ApiClient, cache::cache_service::CacheService, history::{producer_service::ProducerService, producer_service_config::ProducerServiceConfig}, multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, server::tcp_server::TcpServer, service::{service::Service, service_handles::ServiceHandles}, services::Services, task::task::Task, tcp_client::tcp_client::TcpClient
-    },
+        api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig, conf_tree::ConfTree, multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig, slmp_client_config::slmp_client_config::SlmpClientConfig, task_config::TaskConfig, tcp_client_config::TcpClientConfig, tcp_server_config::TcpServerConfig
+    }, core_::object::object::Object, services::{
+        api_cient::api_client::ApiClient, cache::cache_service::CacheService, history::{producer_service::ProducerService, producer_service_config::ProducerServiceConfig}, multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, server::tcp_server::TcpServer, service::{service::Service, service_handles::ServiceHandles}, services::Services, slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient
+    }
 };
 
 pub struct App {
@@ -21,18 +20,18 @@ pub struct App {
     handles: LinkedHashMap<String, ServiceHandles>,
     conf: AppConfig,
 }
-///
-/// 
+//
+// 
 impl App {
     ///
     /// Creates new instance of the ReatinBuffer
     ///     - path - path to the application configuration
-    pub fn new(path: impl AsRef<Path>) -> Self {
+    pub fn new(path: Vec<impl AsRef<Path>>) -> Self {
         let self_id = "App".to_owned();
-        info!("{}.run | Configuration path: '{}'", self_id, path.as_ref().display());
-        info!("{}.run | Reading configuration...", self_id);
+        path.iter().for_each(|p| {
+            info!("{}.run | Configuration path: '{}'", self_id, p.as_ref().display());
+        });
         let conf: AppConfig = AppConfig::read(path);
-        info!("{}.run | Reading configuration - ok", self_id);
         Self {
             id: self_id,
             handles: LinkedHashMap::new(),
@@ -47,25 +46,29 @@ impl App {
         let conf = self.conf.clone();
         let self_name = Name::new("", conf.name);
         let app = Arc::new(RwLock::new(self));
-        let services = Arc::new(Mutex::new(Services::new(&self_id)));
+        let services = Arc::new(RwLock::new(Services::new(&self_id)));
         info!("{}.run |     Configuring services...", self_id);
         for (node_keywd, mut node_conf) in conf.nodes {
             let node_name = node_keywd.name();
             let node_sufix = node_keywd.sufix();
             info!("{}.run |         Configuring service: {}({})...", self_id, node_name, node_sufix);
             trace!("{}.run |         Config: {:#?}", self_id, node_conf);
-            services.slock().insert(
-                Self::match_service(&self_id, &self_name, &node_name, &node_sufix, &mut node_conf, services.clone()),
+            services.wlock(&self_id).insert(
+                Self::build_service(&self_id, &self_name, &node_name, &node_sufix, &mut node_conf, services.clone()),
             );
             info!("{}.run |         Configuring service: {}({}) - ok\n", self_id, node_name, node_sufix);
         }
         info!("{}.run |     All services configured\n", self_id);
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(Duration::from_millis(100));
+        let handles = services.wlock(&self_id).run().unwrap();
+        let name = services.rlock(&self_id).id().to_owned();
+        app.write().unwrap().insert_handles(&name, handles);
+        thread::sleep(Duration::from_millis(100));
         info!("{}.run |     Starting services...", self_id);
-        let services_iter = services.slock().all();
+        let services_iter = services.rlock(&self_id).all();
         for (name, service) in services_iter {
             info!("{}.run |         Starting service: {}...", self_id, name);
-            let handles = service.slock().run();
+            let handles = service.slock(&self_id).run();
             match handles {
                 Ok(handles) => {
                     app.write().unwrap().insert_handles(&name, handles);
@@ -98,8 +101,8 @@ impl App {
         Ok(())
     }    
     ///
-    /// 
-    fn match_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: &mut ConfTree, services: Arc<Mutex<Services>>) -> Arc<Mutex<dyn Service + Send>> {
+    /// Returns service by it's name
+    fn build_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: &mut ConfTree, services: Arc<RwLock<Services>>) -> Arc<Mutex<dyn Service + Send>> {
         match node_name {
             Services::API_CLIENT => Arc::new(Mutex::new(
                 ApiClient::new(ApiClientConfig::new(parent, node_conf))
@@ -125,6 +128,9 @@ impl App {
             Services::CACHE_SERVICE => Arc::new(Mutex::new(
                 CacheService::new(CacheServiceConfig::new(parent, node_conf), services.clone())
             )),
+            Services::SLMP_CLIENT => Arc::new(Mutex::new(
+                SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services)
+            )),
             _ => {
                 panic!("{}.run | Unknown service: {}({})", self_id, node_name, node_sufix);
             }
@@ -140,7 +146,7 @@ impl App {
     }
     ///
     /// Listening for signals from the operating system
-    fn listen_sys_signals(self_id: String, services: Arc<Mutex<Services>>) {
+    fn listen_sys_signals(self_id: String, services: Arc<RwLock<Services>>) {
         let signals = Signals::new([
             SIGHUP,     // code: 1	This signal is sent to a process when its controlling terminal is closed or disconnected
             SIGINT,     // code: 2	This signal is sent to a process when the user presses Control+C to interrupt its execution
@@ -165,12 +171,13 @@ impl App {
                                 SIGINT | SIGQUIT | SIGTERM => {
                                     println!("{}.run Received signal {:?}", self_id, signal);
                                     println!("{}.run Application exit...", self_id);
-                                    let services_iter = services.slock().all();
+                                    let services_iter = services.rlock(&self_id).all();
                                     for (_id, service) in services_iter {
                                         println!("{}.run Stopping service '{}'...", self_id, _id);
-                                        service.slock().exit();
+                                        service.slock(&self_id).exit();
                                         println!("{}.run Stopping service '{}' - Ok", self_id, _id);
                                     }
+                                    services.rlock(&self_id).exit();
                                     break;
                                 }
                                 SIGKILL => {

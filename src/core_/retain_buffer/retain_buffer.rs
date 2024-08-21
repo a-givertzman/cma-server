@@ -12,8 +12,8 @@ pub struct RetainBuffer<T> {
     vec: VecDeque<T>,
     capacity: Option<usize>,
 }
-///
-/// 
+//
+// 
 impl<T> RetainBuffer<T> {
     ///
     /// Creates new instance of the ReatinBuffer

@@ -18,15 +18,15 @@ service Task Task1:
     let var0: 
         input: const real 2.224
     # let Var1:
-    #     input fn add:
+    #     input fn Add:
     #         input1: point real '/path/Point.Name1'
-    #         input2 fn add: 
+    #         input2 fn Add: 
     #             input1: point real '/path/Point.Name1'
     #             input2: const real 0.04
     # let Var2:
-    #     input fn add:
+    #     input fn Add:
     #         input1: point real '/path/Point.Name2'
-    #         input2 fn add: 
+    #         input2 fn Add: 
     #             input1: point real '/path/Point.Name2'
     #             input2: const real 0.07
 
@@ -38,13 +38,13 @@ service Task Task1:
             # sql: "UPDATE {table} SET kind = '{input1.value}' WHERE id = '{input2.value}';"
             sql: "insert into {table} (id, value, timestamp) values ({id}, {input.value}, {input3.value});"
             input let Var3:
-                    input fn add:
-                        input1 fn add:
+                    input fn Add:
+                        input1 fn Add:
                             input1: const real 0.2
                             input2: point real '/path/Point.Name'
                         input2:
                             const real 0.05
-            input3 fn add:
+            input3 fn Add:
                 input1:
                     var0
                 input2: point real '/path/Point.Name'

@@ -39,7 +39,7 @@ fn main1() {
             input1: const 177.3
             input2: point '/Path/Point.Name/'
             input3:
-                fn count:
+                fn Count:
                     inputConst1: const '13.5'
                     inputConst2: newVar1
         "#,

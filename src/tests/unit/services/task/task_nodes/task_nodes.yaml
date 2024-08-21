@@ -12,22 +12,22 @@ service Task Task1:
     let Var3:
         input: point int '/path/Point.Name3'
 
-    fn debug:
+    fn Debug:
         input fn SqlMetric:
             initial: 0.123      # начальное значение
             table: table_name
             sql: "{input.value}, {input1.value}, {input2.value}, {input3.value}"
             input let Var1:
                 input: point int '/path/Point.Name1'
-            input1 fn add:
+            input1 fn Add:
                     input1: Var1
                     input2: const int 1001
             input2: Var2
             input3: Var3
 
-    fn ge:
+    fn Ge:
         input1: point int '/path/Point.Name2'
         input2: point int '/path/Point.Name3'
 
-    fn count:
+    fn Count:
         input: point int  '/path/Point.Name1'

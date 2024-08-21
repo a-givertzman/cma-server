@@ -1,9 +1,8 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
 mod tcp_client {
     use log::{info, debug, warn};
-    use std::{sync::{Once, Arc, Mutex}, thread::{self, JoinHandle}, time::{Duration, Instant}, net::TcpListener, io::BufReader};
-    use testing::{session::test_session::TestSession, entities::test_value::Value, stuff::{random_test_values::RandomTestValues, max_test_duration::TestDuration}};
+    use std::{io::BufReader, net::TcpListener, sync::{Arc, Mutex, Once, RwLock}, thread::{self, JoinHandle}, time::{Duration, Instant}};
+    use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::tcp_client_config::TcpClientConfig, core_::{
@@ -36,18 +35,19 @@ mod tcp_client {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
+        let port = TestSession::free_tcp_port_str();
         let conf = serde_yaml::from_str(&format!(r#"
             service TcpClient:
                 cycle: 1 ms
                 reconnect: 1 s  # default 3 s
-                address: 127.0.0.1:8080
+                address: 127.0.0.1:{}
                 in queue link:
                     max-length: 10000
-                out queue: /{}/MockMultiQueue.queue
-        "#, self_id)).unwrap();
-        let mut conf = TcpClientConfig::from_yaml(self_id, &conf);
-        let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
-        conf.address = addr.parse().unwrap();
+                send-to: /{}/MockMultiQueue.queue
+        "#, port, self_id)).unwrap();
+        let conf = TcpClientConfig::from_yaml(self_id, &conf);
+        let addr = format!("127.0.0.1:{}", port);
+        // conf.address = addr.parse().unwrap();
         let iterations = 100;
         let test_data = RandomTestValues::new(
             self_id,
@@ -82,26 +82,23 @@ mod tcp_client {
         );
         let test_data: Vec<Value> = test_data.collect();
 
-        let services = Arc::new(Mutex::new(Services::new(self_id)));
-        let multiQueue = Arc::new(Mutex::new(MockMultiQueue::new(self_id, "", None)));
-        let tcpClient = Arc::new(Mutex::new(TcpClient::new(conf, services.clone())));
-        let tcpClientServiceId = tcpClient.lock().unwrap().id().to_owned();
-        services.lock().unwrap().insert(tcpClient.clone());     // tcpClientServiceId,
-        services.lock().unwrap().insert(multiQueue.clone());            // multiQueueServiceId,
+        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let multi_queue = Arc::new(Mutex::new(MockMultiQueue::new(self_id, "", None)));
+        let tcp_client = Arc::new(Mutex::new(TcpClient::new(conf, services.clone())));
+        let tcp_client_service_id = tcp_client.lock().unwrap().id().to_owned();
+        services.wlock(self_id).insert(tcp_client.clone());     // tcpClientServiceId,
+        services.wlock(self_id).insert(multi_queue.clone());            // multiQueueServiceId,
+        let services_handle = services.wlock(self_id).run().unwrap();
         let mut sent = vec![];
         let received = Arc::new(Mutex::new(vec![]));
-        let handle = mockTcpServer(addr.to_string(), iterations, received.clone());
+        let handle = mock_tcp_server(addr.to_string(), iterations, received.clone());
         thread::sleep(Duration::from_micros(100));
-        let tcpClient = {
-            let services = services.slock();
-            services.get(&tcpClientServiceId)
-            // drop(services);
-        };
-        debug!("Running service {}...", tcpClientServiceId);
-        tcpClient.lock().unwrap().run().unwrap();
-        debug!("Running service {} - ok", tcpClientServiceId);
+        let tcp_client = services.rlock(self_id).get(&tcp_client_service_id).unwrap();
+        debug!("Running service {}...", tcp_client_service_id);
+        tcp_client.slock(self_id).run().unwrap();
+        debug!("Running service {} - ok", tcp_client_service_id);
         let timer = Instant::now();
-        let send = tcpClient.lock().unwrap().get_link("link");
+        let send = tcp_client.slock(self_id).get_link("link");
         debug!("Test - setup - ok");
         debug!("Sending points...");
         for value in test_data {
@@ -109,7 +106,9 @@ mod tcp_client {
             send.send(point.clone()).unwrap();
             sent.push(point);
         }
-        handle.join().unwrap();
+        services.rlock(self_id).exit();
+        handle.wait().unwrap();
+        services_handle.wait().unwrap();
         // let waitDuration = Duration::from_millis(10);
         // let mut waitAttempts = test_duration.as_micros() / waitDuration.as_micros();
         // while received.lock().unwrap().len() < count {
@@ -129,34 +128,34 @@ mod tcp_client {
     }
     ///
     /// TcpServer setup
-    fn mockTcpServer(addr: String, count: usize, received: Arc<Mutex<Vec<PointType>>>) -> JoinHandle<()> {
+    fn mock_tcp_server(addr: String, count: usize, received: Arc<Mutex<Vec<PointType>>>) -> JoinHandle<()> {
         let sent = 0;
         thread::spawn(move || {
             info!("TCP server | Preparing test server...");
             match TcpListener::bind(addr) {
                 Ok(listener) => {
                     info!("TCP server | Preparing test server - ok");
-                    let mut acceptCount = 2;
-                    while acceptCount > 0 {
-                        acceptCount -= 1;
+                    let mut accept_count = 2;
+                    while accept_count > 0 {
+                        accept_count -= 1;
                         match listener.accept() {
                             Ok((mut _socket, addr)) => {
-                                let mut tcpStream = BufReader::new(_socket);
+                                let mut tcp_stream = BufReader::new(_socket);
                                 info!("TCP server | accept connection - ok\n\t{:?}", addr);
                                 let mut jds = JdsDeserialize::new(
                                     "test",
                                     JdsDecodeMessage::new("test"),
                                 );
-                                let mut receivedCount = 0;
+                                let mut received_count = 0;
                                 loop {
-                                    match jds.read(&mut tcpStream) {
+                                    match jds.read(&mut tcp_stream) {
                                         ConnectionStatus::Active(point) => {
                                             match point {
                                                 OpResult::Ok(point) => {
                                                     received.lock().unwrap().push(point);
-                                                    receivedCount += 1;
-                                                    if receivedCount >= count {
-                                                        acceptCount = -1;
+                                                    received_count += 1;
+                                                    if received_count >= count {
+                                                        accept_count = -1;
                                                         break;
                                                     }
                                                 }

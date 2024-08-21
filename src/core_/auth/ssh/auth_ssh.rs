@@ -4,8 +4,8 @@
 pub struct AuthSsh {
     path: String,
 }
-///
-/// 
+//
+// 
 impl AuthSsh {
     ///
     /// Creates new instance of AuthSsh
@@ -15,7 +15,7 @@ impl AuthSsh {
         }
     }
     ///
-    /// 
+    /// Returns Ok if SSH auth success
     #[allow(unused)]
     pub fn validate(&self, secret: &str) -> Result<(), String> {
         Err("AuthSsh.validate | Not implemented yet".to_owned())

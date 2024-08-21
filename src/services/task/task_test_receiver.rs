@@ -12,8 +12,8 @@ pub struct TaskTestReceiver {
     received: Arc<Mutex<Vec<PointType>>>,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl TaskTestReceiver {
     ///
     /// 
@@ -36,8 +36,8 @@ impl TaskTestReceiver {
         self.received.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Object for TaskTestReceiver {
     fn id(&self) -> &str {
         &self.id
@@ -46,8 +46,8 @@ impl Object for TaskTestReceiver {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Debug for TaskTestReceiver {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -56,8 +56,8 @@ impl Debug for TaskTestReceiver {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for TaskTestReceiver {
     //
     //
@@ -87,12 +87,23 @@ impl Service for TaskTestReceiver {
                 match in_recv.recv() {
                     Ok(point) => {
                         debug!("{}.run | received: {}/{}, (value: {:?})", self_id, count, iterations, point.value());
-                        trace!("{}.run | received SQL: {:?}", self_id, point.as_string().value);
+                        trace!("{}.run | received Point: {:#?}", self_id, point);
                         // debug!("{}.run | value: {}\treceived SQL: {:?}", value, sql);
                         count += 1;
                         received.lock().unwrap().push(point.clone());
                         if count >= iterations {
                             break 'main;
+                        }
+                        match point {
+                            PointType::Bool(_) => {},
+                            PointType::Int(_) => {},
+                            PointType::Real(_) => {},
+                            PointType::Double(_) => {},
+                            PointType::String(p) => {
+                                if p.name.to_lowercase().ends_with("exit") || p.value == "exit" {
+                                    break 'main;
+                                }
+                            },
                         }
                     }
                     Err(err) => {
@@ -108,7 +119,7 @@ impl Service for TaskTestReceiver {
                     break 'main;
                 }
             };
-            info!("{}.run | received {} SQL's", self_id, count);
+            info!("{}.run | received {} Point's", self_id, count);
             info!("{}.run | exit", self_id);
             // thread::sleep(Duration::from_secs_f32(2.1));
         });

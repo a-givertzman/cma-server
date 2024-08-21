@@ -1,12 +1,11 @@
 #[cfg(test)]
 
 mod multi_queue {
-    use std::{sync::{Once, Arc, Mutex}, time::{Duration, Instant}, collections::HashMap};
+    use std::{collections::HashMap, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        tests::unit::services::multi_queue::{mock_send_service::MockSendService, mock_multi_queue::MockMultiQueue, mock_recv_service::MockRecvService, mock_multi_queue_match::MockMultiQueueMatch},
-        services::{services::Services, service::service::Service},
+        conf::point_config::name::Name, services::{safe_lock::SafeLock, service::service::Service, services::Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
     };
     ///
     ///
@@ -44,7 +43,7 @@ mod multi_queue {
         let total_count = iterations * producer_count;
         let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
-        let services = Arc::new(Mutex::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id)));
         for i in 0..receiver_count {
             let receiver = Arc::new(Mutex::new(MockRecvService::new(
                 self_id,
@@ -52,7 +51,7 @@ mod multi_queue {
                 Some(total_count)
             )));
             let receiver_id = format!("Receiver{}", i + 1);
-            services.lock().unwrap().insert(receiver.clone());
+            services.wlock(self_id).insert(receiver.clone());
             receivers.insert(receiver_id.clone(), receiver);
             println!(" Receiver {} created", receiver_id);
         }
@@ -68,7 +67,7 @@ mod multi_queue {
         )));
         println!(" Creating Mock Multiqueue - ok");
         println!(" Inserting Mock Multiqueue into Services...");
-        services.lock().unwrap().insert(mq_service.clone());
+        services.wlock(self_id).insert(mq_service.clone());
         println!(" Inserting Mock Multiqueue into Services - ok");
         let test_data = RandomTestValues::new(
             self_id,
@@ -102,6 +101,7 @@ mod multi_queue {
             iterations,
         );
         let test_data: Vec<Value> = test_data.collect();
+        let services_handle = services.wlock(self_id).run().unwrap();
         println!(" Trying to start Multiqueue...:");
         mq_service.lock().unwrap().run().unwrap();
         let mut recv_handles  = vec![];
@@ -119,6 +119,7 @@ mod multi_queue {
         for h in recv_handles {
             h.wait().unwrap();
         }
+        services_handle.wait().unwrap();
         println!("\n Elapsed: {:?}", timer.elapsed());
         println!(" Total test events: {:?}", total_count);
         let (total_sent, all_sent) = get_sent(&producers);
@@ -142,6 +143,7 @@ mod multi_queue {
         println!();
         let self_id = "test MultiQueue Performance with matching by producer ID";
         println!("\n{}", self_id);
+        let self_id = "MultiQueuePerformance";
         let iterations = ITERATIONS;
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
@@ -150,15 +152,15 @@ mod multi_queue {
         let total_count = iterations * producer_count;
         let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
-        let services = Arc::new(Mutex::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id)));
         for i in 0..receiver_count {
             let receiver = Arc::new(Mutex::new(MockRecvService::new(
                 self_id,
                 "rx-queue",
                 Some(total_count)
             )));
-            let receiver_id = format!("Receiver{}", i + 1);
-            services.lock().unwrap().insert(receiver.clone());
+            let receiver_id = format!("/{}/MockRecvService{}", self_id, i);
+            services.wlock(self_id).insert(receiver.clone());
             receivers.insert(receiver_id.clone(), receiver);
             println!(" Receiver {} created", receiver_id);
         }
@@ -174,7 +176,7 @@ mod multi_queue {
         )));
         println!(" Creating Mock Multiqueue - ok");
         println!(" Inserting Mock Multiqueue into Services...");
-        services.lock().unwrap().insert(mq_service.clone());
+        services.wlock(self_id).insert(mq_service.clone());
         println!(" Inserting Mock Multiqueue into Services - ok");
         let test_data = RandomTestValues::new(
             self_id,
@@ -190,6 +192,8 @@ mod multi_queue {
             iterations,
         );
         let test_data: Vec<Value> = test_data.collect();
+        let services_handle = services.wlock(self_id).run().unwrap();
+        thread::sleep(Duration::from_millis(50));
         println!(" Trying to start Multiqueue...:");
         mq_service.lock().unwrap().run().unwrap();
         let mut recv_handles  = vec![];
@@ -198,7 +202,13 @@ mod multi_queue {
             recv_handles.push(h)
         }
         for i in 0..producer_count {
-            let mut prod = MockSendService::new(self_id, "MultiQueue.rx-queue", services.clone(), test_data.clone(), None);
+            let mut prod = MockSendService::new(
+                self_id,
+                &Name::new(self_id, "MockMultiQueueMatch0.rx-queue").join(),
+                services.clone(),
+                test_data.clone(),
+                None,
+            );
             prod.run().unwrap();
             producers.insert(format!("MockSendService{}", i), prod);
         }
@@ -206,6 +216,7 @@ mod multi_queue {
         for h in recv_handles {
             h.wait().unwrap();
         }
+        services_handle.wait().unwrap();
         println!("\n Elapsed: {:?}", timer.elapsed());
         println!(" Total test events: {:?}", total_count);
         let (total_sent, all_sent) = get_sent(&producers);

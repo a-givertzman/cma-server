@@ -3,8 +3,7 @@ service ProfinetClient Ied01:
     # in queue in-queue:
         # max-length: 10000
     subscribe: MultiQueue
-    out queue: MultiQueue.in-queue
-    # name Ied01:                       # device will be executed in the independent thread, must have unique name
+    send-to: MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01'
     ip: '192.168.130.243'
@@ -15,7 +14,6 @@ service ProfinetClient Ied01:
         number: 899
         offset: 0
         size: 34
-        cycle: 10 ms
         point Drive.Speed: 
             type: 'Real'
             address:
@@ -42,7 +40,6 @@ service ProfinetClient Ied01:
         number: 899
         offset: 0
         size: 34
-        cycle: 10 ms
         point Drive.positionFromMru: 
             type: 'Real'
             address:
@@ -70,8 +67,7 @@ service ProfinetClient Ied02:
     cycle: 1 ms                         # operating cycle time of the module
     in queue in-queue:
         max-length: 10000
-    out queue: MultiQueue.in-queue
-    name Ied02:                       # device will be executed in the independent thread, must have unique name
+    send-to: MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-02'
     ip: '192.168.100.243'
@@ -82,7 +78,6 @@ service ProfinetClient Ied02:
         number: 899
         offset: 0
         size: 34
-        delay: 10
         point Drive.Speed: 
             type: 'Real'
             address:

@@ -39,8 +39,8 @@ pub struct TaskConfig {
     pub(crate) nodes: IndexMap<String, FnConfKind>,
     pub(crate) vars: Vec<String>,
 }
-///
-/// 
+//
+// 
 impl TaskConfig {
     ///
     /// creates config from serde_yaml::Value of following format:

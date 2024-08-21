@@ -13,7 +13,7 @@
 //! ```
 use std::{
     env, fmt::Debug, fs, hash::{BuildHasher, BuildHasherDefault}, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering},
-    mpsc::{self, Receiver, RecvTimeoutError}, Arc, Mutex, RwLock},
+    mpsc::{self, Receiver, RecvTimeoutError}, Arc, RwLock},
     thread,
 };
 use chrono::Utc;
@@ -46,16 +46,16 @@ pub struct CacheService {
     id: String,
     name: Name,
     conf: CacheServiceConfig,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     cache: Arc<RwLock<IndexMap<String, PointType, BuildHasherDefault<FxHasher>>>>,
     exit: Arc<AtomicBool>,
 }
-///
-///
+//
+//
 impl CacheService {
     ///
-    ///
-    pub fn new(conf: CacheServiceConfig, services: Arc<Mutex<Services>>) -> Self {
+    /// Creates new instance of the CacheService
+    pub fn new(conf: CacheServiceConfig, services: Arc<RwLock<Services>>) -> Self {
         Self {
             id: conf.name.join(),
             name: conf.name.clone(),
@@ -66,7 +66,7 @@ impl CacheService {
         }
     }
     ///
-    ///
+    /// Returns vector of the SubscriptionCriteria by config and list of configured Point's
     fn subscriptions(&mut self, conf: &CacheServiceConfig, points: &[PointConfig]) -> (String, Vec<SubscriptionCriteria>) {
         if conf.subscribe.is_empty() {
             panic!("{}.subscribe | Error. Subscription can`t be empty: {:#?}", self.id, conf.subscribe);
@@ -228,7 +228,7 @@ impl CacheService {
             Ok(mut cache) => {
                 let timestamp = Utc::now();
                 for point_config in points {
-                    let point = match point_config._type {
+                    let point = match point_config.type_ {
                         PointConfigType::Bool => PointType::Bool(Point::new(
                             tx_id,
                             &point_config.name,
@@ -287,8 +287,8 @@ impl CacheService {
         }
     }
 }
-///
-///
+//
+//
 impl Object for CacheService {
     fn id(&self) -> &str {
         &self.id
@@ -297,8 +297,8 @@ impl Object for CacheService {
         self.name.clone()
     }
 }
-///
-///
+//
+//
 impl Debug for CacheService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -308,8 +308,8 @@ impl Debug for CacheService {
             .finish()
     }
 }
-///
-///
+//
+//
 impl Service for CacheService {
     //
     //
@@ -317,16 +317,23 @@ impl Service for CacheService {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
-        let tx_id = PointTxId::fromStr(&self_name.join());
+        let tx_id = PointTxId::from_str(&self_name.join());
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let services = self.services.clone();
         let cache = self.cache.clone();
-        let point_configs = services.slock().points(&self_name.join());
+        let point_configs = services.rlock(&self_id).points(&self_name.join())
+            .then(
+                |points| points,
+            |err| {
+                error!("{}.run | Requesting Points error: {:?}", self_id, err);
+                vec![]
+            }
+        );
         let (service_name, points) = self.subscriptions(&conf, &point_configs);
         debug!("{}.run | points: {:#?}", self_id, points.len());
         trace!("{}.run | points: {:#?}", self_id, points);
-        let (_, rx_recv) = services.slock().subscribe(
+        let (_, rx_recv) = services.wlock(&self_id).subscribe(
             &service_name,
             &self.name.join(),
             &points,
@@ -372,7 +379,7 @@ impl Service for CacheService {
                     break;
                 }
             }
-            if let Err(err) = services.slock().unsubscribe(&service_name, &self_name.join(), &points) {
+            if let Err(err) = services.wlock(&self_id).unsubscribe(&service_name, &self_name.join(), &points) {
                 error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
             }
             info!("{}.run | Exit", self_id);
@@ -442,8 +449,8 @@ impl Service for CacheService {
         });
         recv
     }
-    ///
-    ///
+    //
+    //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
     }

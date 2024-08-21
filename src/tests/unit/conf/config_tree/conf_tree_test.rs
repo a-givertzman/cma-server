@@ -54,7 +54,7 @@ mod config_tree {
             // ),
             // (
             //     r#"let newVar:
-            //         input fn count:
+            //         input fn Count:
             //             inputConst1 const '13.3'
             //             inputConst2 const '13.7'
             //     "#,
@@ -62,10 +62,10 @@ mod config_tree {
             // ),
             // (
             //     r#"let newVar:
-            //         input1 fn count:
+            //         input1 fn Count:
             //             inputConst1 const '11.3'
             //             inputConst2 const '12.7'"
-            //         input2 fn count:
+            //         input2 fn Count:
             //             inputConst1 const '13.3'
             //             inputConst2 const '14.7'
             //     "#,
@@ -98,7 +98,7 @@ mod config_tree {
                         input1: const 177.3
                         input2: point '/Path/Point.Name/'
                         input3:
-                            fn count:
+                            fn Count:
                                 inputConst1: const '13.5'
                                 inputConst2: newVar1
                 "#,
@@ -106,7 +106,7 @@ mod config_tree {
                     (format!("let newVar1"), Node::Map(IndexMap::from([
                         (format!("input2"), Node::End(ConfTree { key: format!("input2"), conf: serde_yaml::from_str("point '/Path/Point.Name/'").unwrap() })),
                         (format!("input3"), Node::Map(IndexMap::from([
-                            (format!("fn count"), Node::Map(IndexMap::from([
+                            (format!("fn Count"), Node::Map(IndexMap::from([
                                 (format!("inputConst1"), Node::End(ConfTree { key: format!("inputConst1"), conf: serde_yaml::from_str("const '13.5'").unwrap() })),
                                 (format!("inputConst2"), Node::End(ConfTree { key: format!("inputConst2"), conf: serde_yaml::from_str("newVar1").unwrap() }))
                             ])))

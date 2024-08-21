@@ -2,12 +2,12 @@
 
 mod task {
     use log::{trace, info};
-    use std::{sync::{Arc, Mutex, Once}, thread, time::{Duration, Instant}};
+    use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{point_config::name::Name, task_config::TaskConfig},
-        services::{service::service::Service, services::Services, task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver}},
+        services::{safe_lock::SafeLock, service::service::Service, services::Services, task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver}},
     };
     ///
     ///
@@ -54,14 +54,14 @@ mod task {
         "#, self_name)).unwrap();
         let config = TaskConfig::from_yaml(&self_name, &conf);
         trace!("config: {:?}", &config);
-        let services = Arc::new(Mutex::new(Services::new(&self_name)));
+        let services = Arc::new(RwLock::new(Services::new(&self_name)));
         let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
             &self_name.join(),
             "",
             "in-queue",
             iterations,
         )));
-        services.lock().unwrap().insert(receiver.clone());
+        services.wlock(self_id).insert(receiver.clone());
         let test_data = RandomTestValues::new(
             self_id,
             vec![
@@ -91,7 +91,8 @@ mod task {
             test_data,
         )));
         let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
-        services.lock().unwrap().insert(task.clone());      // "Task",
+        services.wlock(self_id).insert(task.clone());
+        let services_handle = services.wlock(self_id).run().unwrap();
         let receiver_handle = receiver.lock().unwrap().run().unwrap();
         info!("receiver runing - ok");
         let task_handle = task.lock().unwrap().run().unwrap();
@@ -103,8 +104,10 @@ mod task {
         receiver_handle.wait().unwrap();
         producer.lock().unwrap().exit();
         task.lock().unwrap().exit();
+        services.rlock(self_id).exit();
         task_handle.wait().unwrap();
         producer_handle.wait().unwrap();
+        services_handle.wait().unwrap();
         let sent = producer.lock().unwrap().sent().lock().unwrap().len();
         let result = receiver.lock().unwrap().received().lock().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());

@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, 
-    mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::{Duration, Instant} 
+    mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::Instant, 
 };
 use hashers::fx_hash::FxHasher;
 use log::{debug, error, info, trace, warn};
@@ -17,7 +17,6 @@ use crate::{
     }, 
     services::{
         multi_queue::subscription_criteria::SubscriptionCriteria, 
-        queue_name::QueueName, 
         safe_lock::SafeLock, 
         server::{
             connections::Action, 
@@ -38,8 +37,8 @@ pub enum JdsState {
     Unknown,
     Authenticated,
 }
-///
-/// 
+//
+// 
 impl From<usize> for JdsState {
     fn from(value: usize) -> Self {
         match value {
@@ -77,18 +76,18 @@ pub struct JdsConnection {
     name: Name,
     connection_id: String,
     action_recv: Vec<Receiver<Action>>, 
-    services: Arc<Mutex<Services>>, 
+    services: Arc<RwLock<Services>>, 
     conf: TcpServerConfig, 
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl JdsConnection {
     ///
     /// Creates new instance of the [JdsConnection]
     /// - parent - id of the parent
     /// - path - path of the parent
-    pub fn new(parent_id: &str, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Mutex<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
+    pub fn new(parent_id: &str, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
         let id = format!("{}/JdsConnection/{}", parent_id, connection_id);
         let name = Name::new(parent, "Jds");
         debug!("{}.new | name: {:#?}",id, name);
@@ -109,9 +108,9 @@ impl JdsConnection {
         let self_id = self.id.clone();
         let self_name = self.name.clone();
         let conf = self.conf.clone();
-        let self_conf_send_to = conf.tx.clone();
+        let self_conf_send_to = conf.send_to.clone();
         let receiver_name = Name::new(&self_name, &self.connection_id).join();
-        let subscribe = QueueName::new(&self_conf_send_to).service().to_owned();
+        let subscribe = self_conf_send_to.service().unwrap();
         let shared_options: Arc<RwLock<Shared>> = Arc::new(RwLock::new(Shared {
                 subscribe: subscribe.clone(), 
                 subscribe_receiver: receiver_name.clone(), 
@@ -130,26 +129,33 @@ impl JdsConnection {
         let action_recv = self.action_recv.pop().unwrap();
         let services = self.services.clone();
         info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
+        let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
             let receivers = Arc::new(RwLock::new(
                 HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
             ));
-            receivers.write().unwrap().insert(Cot::Req, services.slock().get_link(&self_conf_send_to));
-            // let recv = services.slock().get_link(&self_conf_tx);
-            let points = services.slock().points(&self_id).iter().fold(vec![], |mut points, point_conf| {
-                // points.push(SubscriptionCriteria::new(&point_conf.name, Cot::Inf));
-                // points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ActCon));
-                // points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ActErr));
-                points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ReqCon));
-                points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ReqErr));
-                points
-            });
-            let send = services.slock().get_link(&self_conf_send_to).unwrap_or_else(|err| {
+            receivers.write().unwrap().insert(Cot::Req, services.rlock(&self_id).get_link(&self_conf_send_to));
+            let points = services.rlock(&self_id).points(&self_id)
+                .then(
+                    |points| points,
+                    |err| {
+                        error!("{}.functions | Functions::PointId | Requesting points error: {:?}", self_id, err);
+                        vec![]
+                    },
+                )            
+                .iter().fold(vec![], |mut points, point_conf| {
+                    // points.push(SubscriptionCriteria::new(&point_conf.name, Cot::Inf));
+                    // points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ActCon));
+                    // points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ActErr));
+                    points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ReqCon));
+                    points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ReqErr));
+                    points
+                });
+            let send = services.rlock(&self_id).get_link(&self_conf_send_to).unwrap_or_else(|err| {
                 panic!("{}.run | services.get_link error: {:#?}", self_id, err);
             });
-            println!("{}.run | subscribe: {:?}", self_id, subscribe);
-            let (req_reply_send, recv) = services.slock().subscribe(&subscribe, &receiver_name, &points);
+            debug!("{}.run | subscribe: {:?}", self_id, subscribe);
+            let (req_reply_send, recv) = services.wlock(&self_id).subscribe(&subscribe, &receiver_name, &points);
             shared_options.write().unwrap().req_reply_send = vec![req_reply_send.clone()];
             let buffered = rx_max_length > 0;
             let mut tcp_read_alive = TcpReadAlive::new(
@@ -212,7 +218,7 @@ impl JdsConnection {
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
             );
-            let keep_timeout = conf.keep_timeout.unwrap_or(Duration::from_secs(3));
+            let keep_timeout = conf.keep_timeout;
             let mut duration = Instant::now();
             loop {
                 exit_pair.store(false, Ordering::SeqCst);
@@ -252,7 +258,7 @@ impl JdsConnection {
                     break;
                 }
             }
-            if let Err(err) = services.slock().unsubscribe(&subscribe, &receiver_name, &[]) {
+            if let Err(err) = services.wlock(&self_id).unsubscribe(&subscribe, &receiver_name, &[]) {
                 error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
             }
             info!("{}.run | Exit", self_id);

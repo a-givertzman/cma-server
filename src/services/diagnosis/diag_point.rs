@@ -8,17 +8,17 @@ use crate::{
     }
 };
 ///
-/// Provides state for diagnosis points
+/// Provides the state for diagnosis Point's
 pub struct DiagPoint {
     tx_id: usize,
     conf: PointConfig,
     value: Status,
 }
-///
-///
+//
+//
 impl DiagPoint {
     ///
-    ///
+    /// Creates new instance of the DiagPoint
     pub fn new(tx_id: usize, conf: PointConfig) -> Self {
         Self {
             tx_id,
@@ -27,7 +27,8 @@ impl DiagPoint {
         }
     }
     ///
-    /// 
+    /// Returns diagnostic Point from value
+    ///  - the value is represents the [Status]
     fn point(&self, value: Status) -> PointType {
         PointType::Int(Point::new(
             self.tx_id,

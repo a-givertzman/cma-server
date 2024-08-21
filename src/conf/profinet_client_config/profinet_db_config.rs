@@ -18,8 +18,8 @@ pub struct ProfinetDbConfig {
     pub(crate) cycle: Option<Duration>,
     pub(crate) points: Vec<PointConfig>,
 }
-///
-/// 
+//
+// 
 impl ProfinetDbConfig {
     ///
     /// Creates new instance of the ProfinetDbConfig

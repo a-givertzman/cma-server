@@ -1,30 +1,30 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, warn, info, trace};
 use testing::entities::test_value::Value;
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::{point_tx_id::PointTxId, point_type::{PointType, ToPoint}}}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
+use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::{point_tx_id::PointTxId, point_type::{PointType, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
 
 ///
 /// 
 pub struct TaskTestProducer {
     id: String,
     name: Name,
-    link: String, 
+    send_to: QueueName, 
     cycle: Duration,
     // rxSend: HashMap<String, Sender<PointType>>,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
     sent: Arc<Mutex<Vec<PointType>>>,
     exit: Arc<AtomicBool>,
 }
-///
-/// 
+//
+// 
 impl TaskTestProducer {
-    pub fn new(parent: &str, link: &str, cycle: Duration, services: Arc<Mutex<Services>>, test_data: Vec<Value>) -> Self {
+    pub fn new(parent: &str, send_to: &str, cycle: Duration, services: Arc<RwLock<Services>>, test_data: Vec<Value>) -> Self {
         let name = Name::new(parent, format!("TaskTestProducer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             id: name.join(),
             name,
-            link: link.to_string(),
+            send_to: QueueName::new(send_to),
             cycle,
             // rxSend: HashMap::new(),
             services,
@@ -39,8 +39,8 @@ impl TaskTestProducer {
         self.sent.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Object for TaskTestProducer {
     fn id(&self) -> &str {
         &self.id
@@ -49,8 +49,8 @@ impl Object for TaskTestProducer {
         self.name.clone()
     }
 }
-///
-/// 
+//
+// 
 impl Debug for TaskTestProducer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -59,17 +59,17 @@ impl Debug for TaskTestProducer {
             .finish()
     }
 }
-///
-/// 
+//
+// 
 impl Service for TaskTestProducer {
     //
     // 
     fn run(&mut self) -> Result<ServiceHandles, String> {
         let self_id = self.id.clone();
-        let tx_id = PointTxId::fromStr(&self_id);
+        let tx_id = PointTxId::from_str(&self_id);
         let cycle = self.cycle;
         let delayed = !cycle.is_zero();
-        let tx_send = self.services.slock().get_link(&self.link).unwrap_or_else(|err| {
+        let tx_send = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
         let sent = self.sent.clone();

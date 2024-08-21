@@ -1,9 +1,9 @@
 use indexmap::IndexMap;
-use log::{debug, trace};
+use log::{debug, error, trace};
 use std::{fs, str::FromStr, time::Duration};
 use crate::{conf::{
-    conf_tree::ConfTree, diag_keywd::DiagKeywd, point_config::{name::Name, point_config::PointConfig}, profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig}, service_config::ServiceConfig
-}, core_::types::map::IndexMapFxHasher};
+    conf_keywd::ConfKind, conf_tree::ConfTree, diag_keywd::DiagKeywd, point_config::{name::Name, point_config::PointConfig}, profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig}, service_config::ServiceConfig
+}, core_::types::map::IndexMapFxHasher, services::queue_name::QueueName};
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -11,8 +11,7 @@ use crate::{conf::{
 ///    subscribe: Multiqueue
 ///    in queue in-queue:
 ///        max-length: 10000
-///    out queue: MultiQueue.in-queue
-///    name Ied01:                       
+///    send-to: MultiQueue.in-queue
 ///    cycle: 1 ms                     # operating cycle time of the device
 ///    protocol: 'profinet'
 ///    description: 'S7-IED-01.01'
@@ -32,7 +31,6 @@ use crate::{conf::{
 ///        number: 899
 ///        offset: 0
 ///        size: 34
-///        delay: 10
 ///        point Drive.Speed: 
 ///            type: 'Real'
 ///            offset: 0
@@ -44,7 +42,7 @@ pub struct ProfinetClientConfig {
     pub(crate) cycle: Option<Duration>,
     pub(crate) reconnect_cycle: Duration,
     pub(crate) subscribe: String,
-    pub(crate) tx: String,
+    pub(crate) send_to: QueueName,
     pub(crate) protocol: String,
     pub(crate) description: String,
     pub(crate) ip: String,
@@ -53,8 +51,8 @@ pub struct ProfinetClientConfig {
     pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
     pub(crate) dbs: IndexMap<String, ProfinetDbConfig>,
 }
-///
-/// 
+//
+// 
 impl ProfinetClientConfig {
     ///
     /// Creates new instance of the [ProfinetClientConfig]:
@@ -72,8 +70,11 @@ impl ProfinetClientConfig {
         debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let tx = self_conf.get_out_queue().unwrap();
-        debug!("{}.new | TX: {}", self_id, tx);
+        let send_to = QueueName::new(self_conf.get_send_to().unwrap()).validate();
+        debug!("{}.new | send-to: {}", self_id, send_to);
+        if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
+            error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)
+        }
         let protocol = self_conf.get_param_value("protocol").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | protocol: {:?}", self_id, protocol);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
@@ -110,7 +111,7 @@ impl ProfinetClientConfig {
             // rx,
             // rx_max_len,
             subscribe,
-            tx,
+            send_to,
             protocol,
             description,
             ip,

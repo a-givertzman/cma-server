@@ -6,10 +6,7 @@ mod task_config_read {
     use std::{sync::Once, env, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::{
-        conf_subscribe::ConfSubscribe,
-        fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_config::FnConfig},
-        point_config::name::Name,
-        task_config::TaskConfig,
+        conf_subscribe::ConfSubscribe, conf_tree::ConfTree, fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig}, point_config::name::Name, task_config::TaskConfig
     };
     ///
     ///
@@ -51,47 +48,55 @@ mod task_config_read {
                         // initial: 0.123,
                         // vars: vec![format!("VarName2")],
                         inputs: IndexMap::from([
-                            (format!("initial"), FnConfKind::Param( format!("0.123") )),
-                            (format!("table"), FnConfKind::Param( format!("table_name") )),
-                            (format!("sql"), FnConfKind::Param( String::from("UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';") )),
+                            (format!("initial"), FnConfKind::Param( ConfTree::new("initial", serde_yaml::from_str("0.123").unwrap()) )),
+                            (format!("table"), FnConfKind::Param( ConfTree::new("table", serde_yaml::from_str("table_name").unwrap()) )),
+                            (format!("sql"), FnConfKind::Param( ConfTree::new("sql", serde_yaml::from_str("UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';").unwrap()) )),
                             (format!("input1"), FnConfKind::Var( FnConfig {
                                 name: format!("VarName2"), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
                                     (format!("input"), FnConfKind::Fn( FnConfig {
                                         name: format!("functionName"), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                            (format!("initial"), FnConfKind::Var( FnConfig { name: format!("VarName2"), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
+                                            (format!("initial"), FnConfKind::Var( FnConfig { name: format!("VarName2"), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
                                             (format!("input"), FnConfKind::Fn( FnConfig {
                                                 name: format!("functionName"), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                                    (format!("input1"), FnConfKind::Const( FnConfig { name: format!("someValue"), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                                                    (format!("input2"), FnConfKind::Point( FnConfig { name: format!("/path/Point.Name"), type_: FnConfPointType::Real, inputs: IndexMap::new() } )),
+                                                    (format!("input1"), FnConfKind::Const( FnConfig { name: format!("someValue"), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
+                                                    (format!("input2"), FnConfKind::Point( FnConfig { name: format!("/path/Point.Name"), type_: FnConfPointType::Real, inputs: IndexMap::new(), options: FnConfOptions::default(), } )),
                                                     (format!("input"), FnConfKind::Fn( FnConfig {
                                                         name: format!("functionName"), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                                            (format!("input"), FnConfKind::Point( FnConfig { name: format!("/path/Point.Name"), type_: FnConfPointType::Bool, inputs: IndexMap::new() } )),
-                                                        ])
+                                                            (format!("input"), FnConfKind::Point( FnConfig { name: format!("/path/Point.Name"), type_: FnConfPointType::Bool, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
+                                                        ]),
+                                                        options: FnConfOptions::default(),
                                                     } )),
-                                                ])
+                                                ]),
+                                                options: FnConfOptions::default(),
                                             } )),
-                                        ])
+                                        ]),
+                                        options: FnConfOptions::default(),
                                     } ))
-                                ])
+                                ]),
+                                options: FnConfOptions::default(),
                             } )),
-                            (format!("input2"), FnConfKind::Const( FnConfig { name: format!("1"), type_: FnConfPointType::Unknown, inputs: IndexMap::new() } )),
-                            (format!("input3"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Any, inputs: IndexMap::new() } )),
+                            (format!("input2"), FnConfKind::Const( FnConfig { name: format!("1"), type_: FnConfPointType::Unknown, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
+                            (format!("input3"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Any, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
                             (format!("input4"), FnConfKind::Fn( FnConfig {
                                 name: format!("PointId"), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                    (format!("input"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Any, inputs: IndexMap::new() } )),
+                                    (format!("input"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Any, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
                                 ]),
+                                options: FnConfOptions::default(),
                             } )),
                             (format!("input5"), FnConfKind::Fn( FnConfig {
                                 name: format!("PointId"), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                    (format!("input"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Int, inputs: IndexMap::new() } )),
+                                    (format!("input"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Int, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
                                 ]),
+                                options: FnConfOptions::default(),
                             } )),
                             (format!("input6"), FnConfKind::Fn( FnConfig {
                                 name: format!("PointId"), type_: FnConfPointType::Unknown, inputs: IndexMap::from([
-                                    (format!("input"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Real, inputs: IndexMap::new() } )),
+                                    (format!("input"), FnConfKind::Point( FnConfig { name: format!("every"), type_: FnConfPointType::Real, inputs: IndexMap::new(), options: FnConfOptions::default() } )),
                                 ]),
+                                options: FnConfOptions::default(),
                             } )),
                         ]),
+                        options: FnConfOptions::default(),
                     } )
                 ),
             ])

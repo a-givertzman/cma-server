@@ -1,6 +1,6 @@
 use log::{debug, info, warn};
 use std::{
-    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex}, thread, time::Duration
+    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex, RwLock}, thread, time::Duration
 };
 use crate::{
     conf::{point_config::name::Name, tcp_server_config::TcpServerConfig},
@@ -12,6 +12,24 @@ use crate::{
     },
 };
 ///
+/// 
+struct ConnectionInfo<'a> {
+    self_id: &'a str,
+    self_name: &'a Name,
+    connection_id: &'a str,
+}
+//
+// 
+impl<'a> ConnectionInfo<'a> {
+    pub fn new(self_id: &'a str, self_name: &'a Name, connection_id: &'a str) -> Self {
+        Self {
+            self_id,
+            self_name,
+            connection_id,
+        }
+    }
+}
+///
 /// Bounds TCP socket server
 /// Listening socket for incoming connections
 /// Verified incoming connections handles in the separate thread
@@ -20,11 +38,11 @@ pub struct TcpServer {
     name: Name,
     conf: TcpServerConfig,
     connections: Arc<Mutex<TcpServerConnections>>,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     exit: Arc<AtomicBool>,
 }
-///
-///
+//
+//
 impl TcpServer {
     ///
     /// Creates new instance of the TcpServer:
@@ -32,7 +50,7 @@ impl TcpServer {
     /// - filter - all trafic from server to client will be filtered by some criterias, until Subscribe request confirmed:
     ///    - cot - [Cot] - bit mask wich will be passed
     ///    - name - exact name wich passed
-    pub fn new(conf: TcpServerConfig, services: Arc<Mutex<Services>>, ) -> Self {
+    pub fn new(conf: TcpServerConfig, services: Arc<RwLock<Services>>, ) -> Self {
         Self {
             id: conf.name.join(),
             name: conf.name.clone(),
@@ -43,22 +61,22 @@ impl TcpServer {
         }
     }
     ///
-    ///
-    fn setup_connection(self_id: &str, self_name: &Name, connection_id: &str, stream: TcpStream, services: Arc<Mutex<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<Mutex<TcpServerConnections>>) {
-        info!("{}.setup_connection | Trying to repair Connection '{}'...", self_id, connection_id);
-        let repair_result = connections.slock().repair(connection_id, stream.try_clone().unwrap());
+    ///                 self_id: &str, self_name: &Name, connection_id: &str
+    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<Mutex<TcpServerConnections>>) {
+        info!("{}.setup_connection | Trying to repair Connection '{}'...", con_info.self_id, con_info.connection_id);
+        let repair_result = connections.slock(con_info.self_id).repair(con_info.connection_id, stream.try_clone().unwrap());
         match repair_result {
             Ok(_) => {
-                info!("{}.setup_connection | Connection '{}' - reparied", self_id, connection_id);
+                info!("{}.setup_connection | Connection '{}' - reparied", con_info.self_id, con_info.connection_id);
             }
             Err(err) => {
-                info!("{}.setup_connection | {}", self_id, err);
-                info!("{}.setup_connection | New connection: '{}'", self_id, connection_id);
+                info!("{}.setup_connection | {}", con_info.self_id, err);
+                info!("{}.setup_connection | New connection: '{}'", con_info.self_id, con_info.connection_id);
                 let (send, recv) = mpsc::channel();
                 let mut connection = JdsConnection::new(
-                    self_id,
-                    &Name::from(self_name.parent()),
-                    connection_id,
+                    con_info.self_id,
+                    &Name::from(con_info.self_name.parent()),
+                    con_info.connection_id,
                     recv, services.clone(),
                     conf.clone(),
                     exit.clone()
@@ -66,28 +84,28 @@ impl TcpServer {
                 match connection.run() {
                     Ok(handles) => {
                         if handles.len() != 1 {
-                            panic!("{}.setup_connection | TcpServerConnection.run must return single handle, but returns {}", self_id, handles.len())
+                            panic!("{}.setup_connection | TcpServerConnection.run must return single handle, but returns {}", con_info.self_id, handles.len())
                         }
                         let (_, handle) = handles.into_iter().next().unwrap();
                         match send.send(Action::Continue(stream)) {
                             Ok(_) => {}
                             Err(err) => {
-                                warn!("{}.setup_connection | Send tcpStream error {:?}", self_id, err);
+                                warn!("{}.setup_connection | Send tcpStream error {:?}", con_info.self_id, err);
                             }
                         }
-                        info!("{}.setup_connection | connections.lock...", self_id);
-                        connections.slock().insert(
-                            connection_id,
+                        info!("{}.setup_connection | connections.lock...", con_info.self_id);
+                        connections.slock(con_info.self_id).insert(
+                            con_info.connection_id,
                             handle,
                             send,
                         );
-                        info!("{}.setup_connection | connections.lock - ok", self_id);
+                        info!("{}.setup_connection | connections.lock - ok", con_info.self_id);
                     }
                     Err(err) => {
-                        warn!("{}.setup_connection | error: {:?}", self_id, err);
+                        warn!("{}.setup_connection | error: {:?}", con_info.self_id, err);
                     }
                 };
-                info!("{}.setup_connection | Connection '{}' - created new", self_id, connection_id);
+                info!("{}.setup_connection | Connection '{}' - created new", con_info.self_id, con_info.connection_id);
             }
         }
     }
@@ -128,8 +146,8 @@ impl TcpServer {
     }
     
 }
-///
-///
+//
+//
 impl Object for TcpServer {
     fn id(&self) -> &str {
         &self.id
@@ -138,8 +156,8 @@ impl Object for TcpServer {
         self.name.clone()
     }
 }
-///
-///
+//
+//
 impl Debug for TcpServer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -148,8 +166,8 @@ impl Debug for TcpServer {
             .finish()
     }
 }
-///
-///
+//
+//
 impl Service for TcpServer {
     //
     //
@@ -183,7 +201,14 @@ impl Service for TcpServer {
                                     let connection_id = stream.peer_addr().map_or("Unknown remote IP".to_string(), |a| {a.ip().to_string()});
                                     Self::set_stream_timout(&self_id, &stream, RECV_TIMEOUT, None);
                                     info!("{}.run | Setting up Connection '{}'...", self_id, connection_id);
-                                    Self::setup_connection(&self_id, &self_name, &connection_id, stream, services.clone(), conf.clone(), exit.clone(), connections.clone());
+                                    Self::setup_connection(
+                                        ConnectionInfo::new(&self_id, &self_name, &connection_id),
+                                        stream,
+                                        services.clone(),
+                                        conf.clone(),
+                                        exit.clone(),
+                                        connections.clone(),
+                                    );
                                 }
                                 Err(err) => {
                                     warn!("{}.run | error: {:?}", self_id, err);
@@ -205,7 +230,7 @@ impl Service for TcpServer {
             }
             info!("{}.run | Exit...", self_id);
             // Self::waitConnections(&self_id, connections);
-            connections.slock().wait();
+            connections.slock(&self_id).wait();
             info!("{}.run | Exit", self_id);
         });
         match handle {
