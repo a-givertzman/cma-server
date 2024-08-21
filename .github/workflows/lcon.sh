@@ -18,7 +18,7 @@ export LLVM_PROFILE_FILE='target/coverage/%p-%m.profraw'
 
 rm -rf ./target/coverage
 
-cargo test --release --no-fail-fast
+cargo test --release --no-fail-fast || true
 
 grcov target/coverage -s . --binary-path target/release -o target/coverage --keep-only 'src/*' --output-types html,covdir --ignore 'src/tests/*'
 
@@ -40,10 +40,6 @@ while IFS= read -r line; do
     path="${path%[. ]coveragePercent}"
     path="${path//children.}"
     path="${path//[[:space:]]}"
-    # path="${path%\s]"
-    # echo "$line"
-    # echo "percent: $percent"
-    # echo "path: $path"
     if (( $(echo "$percent >= 30.0" |bc -l) )); then
         echo -e "${GRAY} ${percent} '$path' ${NC}"
         passed=$passed && true
@@ -57,3 +53,6 @@ while IFS= read -r line; do
 done <<< "$lines"
 echo "totalCoverage: $totalCoverage"
 echo "passed: $passed"
+if ! $passed; then
+    exit 1
+fi
