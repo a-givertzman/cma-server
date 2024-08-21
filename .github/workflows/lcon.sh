@@ -27,10 +27,11 @@ grcov target/coverage -s . --binary-path target/release -o target/coverage --kee
 lines=$(jq -r --stream 'select(.[0]|contains(["coveragePercent"])) | "\(.[1]) \t \(.[0]|join("."))"' ./target/coverage/covdir)
 regex='([0-9]+(\.[0-9]+)*)[ \t]+([^ \t].+)'
 
-while IFS= read -r line; do
-    echo "$line"
-done <<< "$lines"
-echo 
+# FOR DEBUG
+# while IFS= read -r line; do
+#     echo "$line"
+# done <<< "$lines"
+# echo 
 
 while IFS= read -r line; do
     [[ $line =~ $regex ]]
