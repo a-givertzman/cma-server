@@ -39,7 +39,7 @@ mod cma_recorder {
         let self_id = "AppTest";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
         test_duration.run().unwrap();
         //
         // can be changed

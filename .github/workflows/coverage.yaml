@@ -7,6 +7,8 @@ on:
 env: 
   TERM: dumb
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: '-Cinstrument-coverage'
+  LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
 
 jobs:
   build_and_test:
@@ -22,8 +24,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
         # uses: actions/checkout@v3
-
-
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -31,13 +31,10 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Static analisis
+      - name: Test-Coverage analisis
         run: |
-          # cargo install cargo-tarpaulin
-          cargo +stable install cargo-llvm-cov --locked
-          cargo update
-          cargo check
-          clear && cargo llvm-cov --fail-under-functions 30 --release -- --nocapture
-      # - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      # - run: cargo build --release
+          cargo install grcov
+          rustup component add llvm-tools-preview
+          # cargo test --release --no-fail-fast
+          ./.github/workflows/coverage.sh 
   
