@@ -20,7 +20,7 @@ rm -rf ./target/coverage
 
 cargo test --release --no-fail-fast
 
-grcov target/coverage -s . --binary-path target/release -o target/coverage --keep-only 'src/*' --output-types html,cobertura,covdir,'coveralls+' --ignore 'src/tests/*'
+grcov target/coverage -s . --binary-path target/release -o target/coverage --keep-only 'src/*' --output-types html,covdir --ignore 'src/tests/*'
 
 ############ REPORT ############
 
