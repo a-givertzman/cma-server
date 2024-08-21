@@ -5,24 +5,11 @@ passCondition=30    # min percent to be passed
 passed=false        # true if all passed
 totalCoverage='not initialized'     # all project percentage
 
-############ COVERAGE ############
-
+############ TEST ACTIONS ############
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 GRAY='\033[1;30m'
 NC='\033[0m' # No Color
-
-# export CARGO_INCREMENTAL=0
-export RUSTFLAGS='-Cinstrument-coverage'
-export LLVM_PROFILE_FILE='target/coverage/%p-%m.profraw'
-
-rm -rf ./target/coverage
-
-cargo test --release --no-fail-fast
-
-grcov target/coverage -s . --binary-path target/release -o target/coverage --keep-only 'src/*' --output-types html,cobertura,covdir,'coveralls+' --ignore 'src/tests/*'
-
-############ REPORT ############
 
 lines=$(jq -r --stream 'select(.[0]|contains(["coveragePercent"])) | "\(.[1]) \t \(.[0]|join("."))"' ./target/coverage/covdir)
 regex='([0-9]+(\.[0-9]+)*)[ \t]+([^ \t].+)'
