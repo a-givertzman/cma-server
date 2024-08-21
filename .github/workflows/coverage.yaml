@@ -34,6 +34,7 @@ jobs:
       - name: Test-Coverage analisis
         run: |
           cargo install grcov
+          cargo add llvm-tools-preview
           # cargo test --release --no-fail-fast
           ./.github/workflows/lcon.sh 
   
