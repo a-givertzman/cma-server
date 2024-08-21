@@ -36,5 +36,5 @@ jobs:
           cargo install grcov
           rustup component add llvm-tools-preview
           # cargo test --release --no-fail-fast
-          ./.github/workflows/lcon.sh 
+          ./.github/workflows/coverage.sh 
   
