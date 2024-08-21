@@ -100,4 +100,4 @@ impl FnOut for FnToBool {
 impl FnInOut for FnToBool {}
 ///
 /// Global static counter of FnToBool instances
-static COUNT: AtomicUsize = AtomicUsize::new(1);
+pub static COUNT: AtomicUsize = AtomicUsize::new(1);

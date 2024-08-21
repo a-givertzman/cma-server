@@ -19,7 +19,7 @@ export LLVM_PROFILE_FILE='target/coverage/%p-%m.profraw'
 
 rm -rf ./target/coverage
 
-cargo test --release --no-fail-fast || true
+cargo test --release --no-fail-fast 2>/dev/null
 
 grcov target/coverage -s . --binary-path target/release -o target/coverage --keep-only 'src/*' --output-types html,covdir --ignore 'src/tests/*'
 
