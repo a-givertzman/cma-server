@@ -55,7 +55,7 @@ impl FnConfig {
         // if confTree.count() > 1 {
         //     error!("FnConfig.new | FnConf must have single item, additional items was ignored: {:?}", confTree)
         // };
-        let cfg = if conf_tree.isMapping() {
+        let cfg = if conf_tree.is_mapping() {
             trace!("FnConfig.new | MAPPING VALUE: \t{:#?}", conf_tree);
             match FnConfKeywd::from_str(conf_tree.key.as_str()) {
                 Ok(self_keyword) => {
@@ -132,7 +132,7 @@ impl FnConfig {
                             FnConfKind::PointConf(
                                 FnPointConfig {
                                     conf: PointConfig::new(parent_name, conf_tree),
-                                    send_to: conf_tree.asStr("send-to").map_or(None, |v| Some(v.to_owned())),
+                                    send_to: conf_tree.as_str("send-to").map_or(None, |v| Some(v.to_owned())),
                                     enable,
                                     input,
                                     changes_only,
@@ -225,7 +225,7 @@ impl FnConfig {
     /// Returns input ronfigurations in IndexMap
     fn build_inputs(parent_id: &str, parent_name: &Name, conf_tree: &ConfTree, vars: &mut Vec<String>) -> IndexMap<String, FnConfKind> {
         let mut inputs = IndexMap::new();
-        match conf_tree.subNodes() {
+        match conf_tree.sub_nodes() {
             // has inputs in mapping
             Some(sub_nodes) => {
                 trace!("FnConfig.buildInputs | sub nodes - found");
@@ -264,7 +264,7 @@ impl FnConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
     pub fn from_yaml(parent_id: &str, parent_name: &Name, value: &serde_yaml::Value, vars: &mut Vec<String>) -> FnConfKind {
-        Self::new(parent_id, parent_name, &ConfTree::newRoot(value.clone()).next().unwrap(), vars)
+        Self::new(parent_id, parent_name, &ConfTree::new_root(value.clone()).next().unwrap(), vars)
     }
     ///
     /// reads yaml config from path
@@ -316,7 +316,7 @@ impl FnConfig {
     /// Returns ConfTree by keyword or Err
     fn get_param_by_keyword(conf: &ConfTree, input: &str, kind: u8) -> Result<ConfTree, String> {
         trace!("FnConfig.getParamByKeyword | conf: {:?}", conf);
-        for node in conf.subNodes().unwrap() {
+        for node in conf.sub_nodes().unwrap() {
             trace!("FnConfig.getParamByKeyword | node: {:?}", node);
             match FnConfKeywd::from_str(&node.key) {
                 Ok(keyword) => {

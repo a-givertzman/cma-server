@@ -105,7 +105,7 @@ impl AppConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
     pub(crate) fn from_yaml_value(value: &serde_yaml::Value) -> AppConfig {
-        Self::new(&mut ConfTree::newRoot(value.clone()))
+        Self::new(&mut ConfTree::new_root(value.clone()))
     }
     ///
     /// reads config from path

@@ -24,14 +24,14 @@ impl TcpServerAuth {
                 }
             }
             "auth-secret" => {
-                let token = match value.asStr("pass") {
+                let token = match value.as_str("pass") {
                     Ok(token) => token,
                     Err(_) => panic!("TcpServerAuth.new | 'pass' - not found in 'auth-secret'"),
                 };
                 TcpServerAuth::Secret(AuthSecret::new(token))
             }
             "auth-ssh" => {
-                let path = match value.asStr("path") {
+                let path = match value.as_str("path") {
                     Ok(path) => path,
                     Err(_) => panic!("TcpServerAuth.new | 'path' - not found in 'auth-ssh'"),
                 };
