@@ -1,5 +1,5 @@
 //!
-//! # Implements communication with Vibro-analitics microcontroller (Sub MC) over udp simple protocol.
+//! # Implements communication with Vibro-analytics microcontroller (Sub MC) over udp simple protocol.
 //! 
 //! - Cyclically reads data from the device 
 //! and yields changed to the specified destination service.

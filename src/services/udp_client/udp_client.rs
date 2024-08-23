@@ -1,5 +1,5 @@
 //!
-//! communication with Vibro-analitics microcontroller (Sub MC) over udp simple protocol
+//! Communication with Vibro-analytics microcontroller (Sub MC) over udp simple protocol
 //! 
 //! Basic configuration parameters:
 //! ```yaml
