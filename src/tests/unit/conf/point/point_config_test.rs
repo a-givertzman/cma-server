@@ -156,7 +156,7 @@ mod point_config {
         test_duration.exit();
     }
     ///
-    ///
+    /// Testing PointConfig::from_yaml
     #[test]
     fn deserialize_yaml() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -249,7 +249,7 @@ mod point_config {
         test_duration.exit();
     }
     ///
-    ///
+    /// Testing PointConfig::from_json
     #[test]
     fn deserialize_json() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
