@@ -92,7 +92,7 @@ impl PointConfig {
     /// Creates config from serde_yaml::Value of following format:
     pub(crate) fn from_yaml(parent_name: &Name, value: &serde_yaml::Value) -> Self {
         trace!("PointConfig.from_yaml | value: {:?}", value);
-        Self::new(parent_name, &ConfTree::newRoot(value.clone()).next().unwrap())
+        Self::new(parent_name, &ConfTree::new_root(value.clone()).next().unwrap())
     }
     ///
     /// Returns yaml representation

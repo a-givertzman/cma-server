@@ -64,7 +64,7 @@ impl JdsServiceConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
     pub(crate) fn from_yaml(value: &serde_yaml::Value) -> JdsServiceConfig {
-        Self::new(&mut ConfTree::newRoot(value.clone()))
+        Self::new(&mut ConfTree::new_root(value.clone()))
     }
     ///
     /// reads config from path

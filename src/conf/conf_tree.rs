@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 ///
 /// ConfTree holds sede_yaml::Value and it key
 /// for root key = ""
@@ -13,7 +12,7 @@ pub struct ConfTree {
 impl ConfTree {
     ///
     /// creates iterotor on the serde_yaml::Value mapping
-    pub fn newRoot(conf: serde_yaml::Value) -> Self {
+    pub fn new_root(conf: serde_yaml::Value) -> Self {
         Self {
             key: String::new(),
             conf,
@@ -26,28 +25,28 @@ impl ConfTree {
     }
     ///
     /// returns true if holding mapping 
-    pub fn isMapping(&self) -> bool {
+    pub fn is_mapping(&self) -> bool {
         self.conf.is_mapping()
     }
     ///
     /// iterates across all sub nodes 
     pub fn next(&self) -> Option<ConfTree> {
-        match self.subNodes() {
-            Some(mut subNodes) => subNodes.next(),
+        match self.sub_nodes() {
+            Some(mut sub_nodes) => sub_nodes.next(),
             None => None,
         }
     }
     ///
     /// returns count of sub nodes
     pub fn count(&self) -> usize {
-        match self.subNodes() {
-            Some(subNodes) => subNodes.count(),
+        match self.sub_nodes() {
+            Some(sub_nodes) => sub_nodes.count(),
             None => 0,
         }
     }
     ///
     /// iterate across all sub nodes
-    pub fn subNodes(&self) -> Option<impl Iterator<Item = ConfTree> + '_> {
+    pub fn sub_nodes(&self) -> Option<impl Iterator<Item = ConfTree> + '_> {
         if self.conf.is_mapping() {
             let iter = self.conf.as_mapping().unwrap().into_iter().map( |(key, value)| {
                 ConfTree::new(
@@ -76,7 +75,7 @@ impl ConfTree {
     }
     ///
     /// returns tree node value as bool by it's key if exists
-    pub fn asBool(&self, key: &str) -> Result<bool, String> {
+    pub fn as_bool(&self, key: &str) -> Result<bool, String> {
         if self.conf.is_mapping() {
             match self.conf.as_mapping().unwrap().get(key) {
                 Some(value) => {
@@ -93,7 +92,7 @@ impl ConfTree {
     }
     ///
     /// returns tree node value as bool by it's key if exists
-    pub fn asI64(&self, key: &str) -> Result<i64, String> {
+    pub fn as_i64(&self, key: &str) -> Result<i64, String> {
         if self.conf.is_mapping() {
             match self.conf.as_mapping().unwrap().get(key) {
                 Some(value) => {
@@ -110,7 +109,7 @@ impl ConfTree {
     }
     ///
     /// returns tree node value as f32 by it's key if exists
-    pub fn asF32(&self, key: &str) -> Result<f32, String> {
+    pub fn as_f32(&self, key: &str) -> Result<f32, String> {
         if self.conf.is_mapping() {
             match self.conf.as_mapping().unwrap().get(key) {
                 Some(value) => {
@@ -127,7 +126,7 @@ impl ConfTree {
     }
     ///
     /// returns tree node value as f64 by it's key if exists
-    pub fn asF64(&self, key: &str) -> Result<f64, String> {
+    pub fn as_f64(&self, key: &str) -> Result<f64, String> {
         if self.conf.is_mapping() {
             match self.conf.as_mapping().unwrap().get(key) {
                 Some(value) => {
@@ -144,7 +143,7 @@ impl ConfTree {
     }
     ///
     /// returns tree node value as str by it's key if exists
-    pub fn asStr(&self, key: &str) -> Result<&str, String> {
+    pub fn as_str(&self, key: &str) -> Result<&str, String> {
         if self.conf.is_mapping() {
             match self.conf.as_mapping().unwrap().get(key) {
                 Some(value) => {

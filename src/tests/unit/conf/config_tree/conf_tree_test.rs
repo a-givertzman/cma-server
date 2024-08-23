@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
 mod config_tree {
     use log::{debug, info};
@@ -29,15 +28,15 @@ mod config_tree {
         End(ConfTree),
     }
     impl Node {
-        fn asMap(&self) ->&IndexMap<String, Node> {
+        fn as_map(&self) ->&IndexMap<String, Node> {
             match self {
                 Node::Map(map) => map,
                 Node::End(_) => panic!("is not a map"),
             }
         }
     }
-
-
+    ///
+    ///
     #[test]
     fn valid() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -171,39 +170,38 @@ mod config_tree {
             let conf: serde_yaml::Value = serde_yaml::from_str(value).unwrap();
             debug!("test conf: {:?}", conf);
             // let conf = test_data.get("/").unwrap();
-            let confTree = ConfTree::newRoot(conf);
-            debug!("confTree: {:?}", confTree);
-            let res = inputs(&confTree);
+            let conf_tree = ConfTree::new_root(conf);
+            debug!("confTree: {:?}", conf_tree);
+            let res = inputs(&conf_tree);
             debug!("result: {:?}", res);
             println!();
             assert_eq!(res, target);
-            let mut target = target.asMap().iter();
-            for (_name, node) in res.asMap() {
-                let (_, targetNode) = target.next().unwrap();
-                assert_eq!(node, targetNode);
+            let mut target = target.as_map().iter();
+            for (_name, node) in res.as_map() {
+                let (_, target_node) = target.next().unwrap();
+                assert_eq!(node, target_node);
             }
         }
     }
 
-    fn inputs(confTree: &ConfTree) -> Node {
-        match confTree.subNodes() {
+    fn inputs(conf_tree: &ConfTree) -> Node {
+        match conf_tree.sub_nodes() {
             Some(nodes) => {
                 let mut res: IndexMap<String, Node> = IndexMap::new();
                 for node in nodes {
                     debug!("key: {:?}\t|\tnode: {:?}", &node.key, &node.conf);
-                    let subRes = inputs(&node);
-                    res.insert(node.key.clone(), subRes);
+                    let sub_res = inputs(&node);
+                    res.insert(node.key.clone(), sub_res);
                 }
                 return Node::Map(res)
             }
             None => {
-                return Node::End(confTree.clone());
+                return Node::End(conf_tree.clone());
             }
         };
     }
-
-
-
+    ///
+    /// 
     #[test]
     fn as_type() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -246,14 +244,14 @@ mod config_tree {
             // debug!("test value: {:?}", value);
             let conf: serde_yaml::Value = serde_yaml::from_str(value).unwrap();
             debug!("test conf: {:?}", conf);
-            let confTree = ConfTree::newRoot(conf);
+            let conf_tree = ConfTree::new_root(conf);
             for (key, target) in targets {
                 match target {
-                    Value::Bool(targetValue) => assert_eq!(confTree.asBool(key).unwrap(), targetValue),
-                    Value::Int(targetValue) => assert_eq!(confTree.asI64(key).unwrap(), targetValue),
-                    Value::Real(targetValue) => assert_eq!(confTree.asF32(key).unwrap(), targetValue),
-                    Value::Double(targetValue) => assert_eq!(confTree.asF64(key).unwrap(), targetValue),
-                    Value::String(targetValue) => assert_eq!(confTree.asStr(key).unwrap(), targetValue),
+                    Value::Bool(target_value) => assert_eq!(conf_tree.as_bool(key).unwrap(), target_value),
+                    Value::Int(target_value) => assert_eq!(conf_tree.as_i64(key).unwrap(), target_value),
+                    Value::Real(target_value) => assert_eq!(conf_tree.as_f32(key).unwrap(), target_value),
+                    Value::Double(target_value) => assert_eq!(conf_tree.as_f64(key).unwrap(), target_value),
+                    Value::String(target_value) => assert_eq!(conf_tree.as_str(key).unwrap(), target_value),
                 }
             }
         }

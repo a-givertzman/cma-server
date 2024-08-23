@@ -48,7 +48,7 @@ impl MetricConfig {
         trace!("MetricConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item
-        if conf_tree.isMapping() {
+        if conf_tree.is_mapping() {
                 debug!("MetricConfig.new | MAPPING VALUE");
                 trace!("MetricConfig.new | confTree: {:?}", conf_tree);
                 let self_name = match FnConfKeywd::from_str(&conf_tree.key) {
@@ -62,9 +62,9 @@ impl MetricConfig {
                 let mut inputs = IndexMap::new();
                 match conf_tree.get("inputs") {
                     Some(inputs_node) => {
-                        for input_conf in inputs_node.subNodes().unwrap() {
+                        for input_conf in inputs_node.sub_nodes().unwrap() {
                             trace!("MetricConfig.new | input conf: {:?}\t|\t{:?}", input_conf.key, input_conf.conf);
-                            if input_conf.isMapping() {
+                            if input_conf.is_mapping() {
                                 inputs.insert(
                                     (input_conf).key.to_string(), 
                                     FnConfig::new(parent_id, parent_name, &input_conf.next().unwrap(), vars),
@@ -83,9 +83,9 @@ impl MetricConfig {
                 }
                 MetricConfig {
                     name: self_name,
-                    table: (conf_tree).asStr("table").unwrap().to_string(),
-                    sql: (conf_tree).asStr("sql").unwrap().to_string(),
-                    initial: (conf_tree).asF64("initial").unwrap(),
+                    table: (conf_tree).as_str("table").unwrap().to_string(),
+                    sql: (conf_tree).as_str("sql").unwrap().to_string(),
+                    initial: (conf_tree).as_f64("initial").unwrap(),
                     inputs,
                     vars: vars.clone(),
                 }
@@ -96,7 +96,7 @@ impl MetricConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
     pub(crate) fn from_yaml(parent_id: &str, parent_name: &Name, value: &serde_yaml::Value, vars: &mut Vec<String>) -> MetricConfig {
-        Self::new(parent_id, parent_name, &ConfTree::newRoot(value.clone()).next().unwrap(), vars)
+        Self::new(parent_id, parent_name, &ConfTree::new_root(value.clone()).next().unwrap(), vars)
     }
     ///
     /// reads config from path
