@@ -42,20 +42,21 @@ while IFS= read -r line; do
     path="${path//children.}"
     path="${path//[[:space:]]}"
     if (( $(echo "$percent >= 30.0" |bc -l) )); then
-        echo -e " ${percent} '$path'"
-        passed=$passed && true
+        echo -e "${GREEN}$(printf %3.2f $percent)${NC} '$path'"
+        passed=$($passed && echo true)
     else
-        echo -e "${RED} $(printf %3.2f $percent)${NC} '$path'"
+        echo -e "${RED}$(printf %3.2f $percent)${NC} '$path'"
         passed=false
     fi
     if [[ $path == 'src' ]]; then
         totalCoverage=$percent
     fi
 done <<< "$lines"
-echo "TotalCoverage: $totalCoverage"
 if ! $passed; then
+    echo -e "TotalCoverage: ${RED}$totalCoverage${NC}"
     echo -e "Coverage passed: ${RED}$passed${NC}"
     exit 1
 else
+    echo -e "TotalCoverage: ${GREEN}$totalCoverage${NC}"
     echo -e "Coverage passed: ${GREEN}$passed${NC}"
 fi
