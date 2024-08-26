@@ -75,6 +75,6 @@
 //! </details>
 pub mod point_hlr;
 
-pub mod point_type;
+pub mod point;
 
 pub mod point_tx_id;

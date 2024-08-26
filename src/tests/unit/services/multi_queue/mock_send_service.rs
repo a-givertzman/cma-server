@@ -2,7 +2,7 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{info, warn, trace};
 use testing::entities::test_value::Value;
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point_type::{PointType, ToPoint}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
+use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point::{Point, ToPoint}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
 ///
 ///
 pub struct MockSendService {
@@ -11,7 +11,7 @@ pub struct MockSendService {
     send_to: QueueName,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<PointType>>>,
+    sent: Arc<Mutex<Vec<Point>>>,
     delay: Option<Duration>,
     exit: Arc<AtomicBool>,
 }
@@ -38,7 +38,7 @@ impl MockSendService {
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn sent(&self) -> Arc<Mutex<Vec<Point>>> {
         self.sent.clone()
     }
 }
@@ -67,7 +67,7 @@ impl Debug for MockSendService {
 impl Service for MockSendService {
     //
     //
-    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point_type::PointType> {
+    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point::Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),

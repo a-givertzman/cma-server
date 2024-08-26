@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
     conf::point_config::point_config_type::PointConfigType,
-    core_::{point::{point_hlr::PointHlr, point_type::PointType},
+    core_::{point::{point_hlr::PointHlr, point::Point},
     types::{fn_in_out_ref::FnInOutRef, type_of::TypeOf}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
@@ -43,9 +43,9 @@ impl FnPiecewiseLineApprox {
     }
     ///
     /// Build an out Point deppending on the input type
-    fn build_point(&self, input: &PointType, value: f64) -> PointType {
+    fn build_point(&self, input: &Point, value: f64) -> Point {
         match input.type_() {
-            PointConfigType::Int => PointType::Int(
+            PointConfigType::Int => Point::Int(
                 PointHlr::new(
                     input.tx_id(),
                     &concat_string!(self.id, ".out"),
@@ -55,7 +55,7 @@ impl FnPiecewiseLineApprox {
                     input.timestamp(),
                 )
             ),
-            PointConfigType::Real => PointType::Real(
+            PointConfigType::Real => Point::Real(
                 PointHlr::new(
                     input.tx_id(),
                     &concat_string!(self.id, ".out"),
@@ -65,7 +65,7 @@ impl FnPiecewiseLineApprox {
                     input.timestamp(),
                 )
             ),
-            PointConfigType::Double => PointType::Double(
+            PointConfigType::Double => Point::Double(
                 PointHlr::new(
                     input.tx_id(),
                     &concat_string!(self.id, ".out"),
@@ -99,7 +99,7 @@ impl FnOut for FnPiecewiseLineApprox {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:?}", self.id, input);
         match input {

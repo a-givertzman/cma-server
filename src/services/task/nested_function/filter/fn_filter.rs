@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::{
-    core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef},
+    core_::{point::point::Point, types::fn_in_out_ref::FnInOutRef},
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///
@@ -16,7 +16,7 @@ pub struct FnFilter {
     default: Option<FnInOutRef>,
     input: FnInOutRef,
     pass: FnInOutRef,
-    state: Option<PointType>,
+    state: Option<Point>,
 }
 //
 //
@@ -63,7 +63,7 @@ impl FnOut for FnFilter {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let pass_point = self.pass.borrow_mut().out();
         trace!("{}.out | pass: {:?}", self.id, pass_point);
         let pass = match pass_point {

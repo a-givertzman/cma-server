@@ -13,7 +13,7 @@ use crate::{
             jds_deserialize::JdsDeserialize, 
             jds_encode_message::JdsEncodeMessage, 
             jds_serialize::JdsSerialize,
-        }, point::point_type::PointType 
+        }, point::point::Point 
     }, 
     services::{
         multi_queue::subscription_criteria::SubscriptionCriteria, 
@@ -66,7 +66,7 @@ pub struct Shared {
     pub auth: TcpServerAuth,
     pub connection_id: String,
     pub cache: Option<String>,
-    pub req_reply_send: Vec<Sender<PointType>>,
+    pub req_reply_send: Vec<Sender<Point>>,
 }
 
 ///
@@ -174,7 +174,7 @@ impl JdsConnection {
                     |parent_id, parent_name, point, services, shared| {
                         let parent_id: String = parent_id;
                         let parent: Name = parent_name;
-                        let point: PointType = point;
+                        let point: Point = point;
                         debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
                         trace!("{}.run | point from socket: \n\t{:?}", parent, point);
                         match point.cot() {

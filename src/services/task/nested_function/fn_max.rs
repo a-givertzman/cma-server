@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use concat_string::concat_string;
 use crate::core_::{
-    point::point_type::PointType,
+    point::point::Point,
     types::fn_in_out_ref::FnInOutRef,
 };
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
@@ -14,7 +14,7 @@ pub struct FnMax {
     kind: FnKind,
     enable: Option<FnInOutRef>,
     input: FnInOutRef,
-    max: Option<PointType>,
+    max: Option<Point>,
 }
 //
 // 
@@ -56,7 +56,7 @@ impl FnOut for FnMax {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let enable = match &self.enable {
             Some(enable) => match enable.borrow_mut().out() {
                 FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
@@ -74,31 +74,31 @@ impl FnOut for FnMax {
                     trace!("{}.out | max: {:?}", self.id, self.max);
                     let max = self.max.get_or_insert(input.clone());
                     match &input {
-                        PointType::Bool(input_val) => {
+                        Point::Bool(input_val) => {
                             let max_val = max.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
                             if input_val.value.0 > max_val.value.0 {
                                 *max = input;
                             }
                         }
-                        PointType::Int(input_val) => {
+                        Point::Int(input_val) => {
                             let max_val = max.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
                             if input_val.value > max_val.value {
                                 *max = input;
                             }
                         }
-                        PointType::Real(input_val) => {
+                        Point::Real(input_val) => {
                             let max_val = max.try_as_real().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
                             if input_val.value > max_val.value {
                                 *max = input;
                             }
                         }
-                        PointType::Double(input_val) => {
+                        Point::Double(input_val) => {
                             let max_val = max.try_as_double().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
                             if input_val.value > max_val.value {
                                 *max = input;
                             }
                         }
-                        PointType::String(_) => return FnResult::Err(concat_string!(self.id, ".out | Input of type 'String' is not suppoted in: '", input.name(), "'")),
+                        Point::String(_) => return FnResult::Err(concat_string!(self.id, ".out | Input of type 'String' is not suppoted in: '", input.name(), "'")),
                     }
                 }
                 FnResult::None => {}

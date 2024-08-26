@@ -3,7 +3,7 @@ use log::{info, warn, debug, trace};
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread};
 use testing::entities::test_value::Value;
 use crate::{
-    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point_type::{PointType, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}
+    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point::{Point, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}
 };
 ///
 ///
@@ -13,8 +13,8 @@ pub struct MockTcpServer {
     multiQueue: QueueName,
     services: Arc<Mutex<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<PointType>>>,
-    received: Arc<Mutex<Vec<PointType>>>,
+    sent: Arc<Mutex<Vec<Point>>>,
+    received: Arc<Mutex<Vec<Point>>>,
     recvLimit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -47,7 +47,7 @@ impl MockTcpServer {
     // }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
         self.received.clone()
     }
 }

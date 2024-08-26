@@ -4,7 +4,7 @@ use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{diag_keywd::DiagKeywd, point_config::{name::Name, point_config::PointConfig}, slmp_client_config::slmp_client_config::SlmpClientConfig},
     core_::{
-        constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point_type::PointType}, state::exit_notify::ExitNotify, status::status::Status, types::map::IndexMapFxHasher
+        constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point::Point}, state::exit_notify::ExitNotify, status::status::Status, types::map::IndexMapFxHasher
     },
     services::{
         diagnosis::diag_point::DiagPoint, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles},
@@ -54,7 +54,7 @@ impl SlmpClient {
         diagnosis: &Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
         kewd: &DiagKeywd,
         value: Status,
-        dest: &Sender<PointType>,
+        dest: &Sender<Point>,
     ) {
         match diagnosis.lock() {
             Ok(mut diagnosis) => {

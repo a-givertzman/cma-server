@@ -6,7 +6,7 @@ mod task_nodes {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{point_config::name::Name, task_config::TaskConfig},
-        core_::{object::object::Object, point::point_type::{PointType, ToPoint}},
+        core_::{object::object::Object, point::point::{Point, ToPoint}},
         services::{
             safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services,
             task::{nested_function::{comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric}, task_nodes::TaskNodes}
@@ -148,8 +148,8 @@ mod task_nodes {
     struct MockService {
         id: String,
         name: Name,
-        links: HashMap<String, Sender<PointType>>,
-        rx_recv: Vec<Receiver<PointType>>,
+        links: HashMap<String, Sender<Point>>,
+        rx_recv: Vec<Receiver<Point>>,
         exit: Arc<AtomicBool>,
     }
     //
@@ -194,7 +194,7 @@ mod task_nodes {
     impl Service for MockService {
         //
         //
-        fn get_link(&mut self, name: &str) -> Sender<PointType> {
+        fn get_link(&mut self, name: &str) -> Sender<Point> {
             match self.links.get(name) {
                 Some(send) => send.clone(),
                 None => panic!("{}.run | link '{:?}' - not found", self.id, name),

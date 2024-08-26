@@ -6,7 +6,7 @@ use crate::{
     core_::{
         net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, 
         object::object::Object, 
-        point::{point_tx_id::PointTxId, point_type::{PointType, ToPoint}}, 
+        point::{point_tx_id::PointTxId, point::{Point, ToPoint}}, 
         state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged},
     }, 
     services::service::{service::Service, service_handles::ServiceHandles}, tcp::steam_read::StreamRead,
@@ -23,7 +23,7 @@ pub struct EmulatedTcpClientSend {
     addr: SocketAddr,
     point_path: String,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<PointType>>>,
+    sent: Arc<Mutex<Vec<Point>>>,
     disconnect: Vec<i8>,
     wait_on_finish: bool,
     exit: Arc<AtomicBool>,
@@ -53,7 +53,7 @@ impl EmulatedTcpClientSend {
     ///
     /// 
     #[allow(dead_code)]
-    pub fn sent(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn sent(&self) -> Arc<Mutex<Vec<Point>>> {
         self.sent.clone()
     }
     ///

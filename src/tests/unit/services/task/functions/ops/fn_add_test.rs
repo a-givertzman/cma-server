@@ -5,7 +5,7 @@ mod fn_add {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
+        core_::{point::point::{Point, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, ops::fn_add::{self, FnAdd}, reset_counter::AtomicReset}
     };
     ///
@@ -37,7 +37,7 @@ mod fn_add {
         info!("test_bool");
         let mut value1_stored;
         let mut value2_stored = false.to_point(0, "bool");
-        let mut target: PointType;
+        let mut target: Point;
         let input1 = init_each("false", FnConfPointType::Bool);
         let input2 = init_each("false", FnConfPointType::Bool);
         let mut fn_add = FnAdd::new(
@@ -63,13 +63,13 @@ mod fn_add {
             let state = fn_add.out().unwrap();
             debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
-            target = PointType::Bool(value1_stored.as_bool() + value2_stored.as_bool());
+            target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state.as_bool().value, target.as_bool().value);
             input2.borrow_mut().add(&point2);
             let state = fn_add.out().unwrap();
             debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
-            target = PointType::Bool(value1_stored.as_bool() + value2_stored.as_bool());
+            target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state.as_bool().value, target.as_bool().value);
         }
     }

@@ -3,20 +3,20 @@ use log::{info, warn, trace};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use testing::entities::test_value::Value;
 use crate::{
-    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point_type::{PointType, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}
+    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point::{Point, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}
 };
 ///
 /// 
 pub struct MockRecvSendService {
     id: String,
     name: Name,
-    rxSend: HashMap<String, Sender<PointType>>,
-    rxRecv: Vec<Receiver<PointType>>,
+    rxSend: HashMap<String, Sender<Point>>,
+    rxRecv: Vec<Receiver<Point>>,
     send_to: QueueName,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<PointType>>>,
-    received: Arc<Mutex<Vec<PointType>>>,
+    sent: Arc<Mutex<Vec<Point>>>,
+    received: Arc<Mutex<Vec<Point>>>,
     recvLimit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -25,7 +25,7 @@ pub struct MockRecvSendService {
 impl MockRecvSendService {
     pub fn new(parent: impl Into<String>, rxQueue: &str, send_to: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, recvLimit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
-        let (send, recv) = mpsc::channel::<PointType>();
+        let (send, recv) = mpsc::channel::<Point>();
         Self {
             id: name.join(),
             name,
@@ -47,12 +47,12 @@ impl MockRecvSendService {
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn sent(&self) -> Arc<Mutex<Vec<Point>>> {
         self.sent.clone()
     }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -81,7 +81,7 @@ impl Debug for MockRecvSendService {
 impl Service for MockRecvSendService {
     //
     //
-    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point_type::PointType> {
+    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point::Point> {
         match self.rxSend.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),

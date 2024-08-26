@@ -1,15 +1,15 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
 use log::{info, warn, trace, debug};
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point_type::PointType}, services::service::{service::Service, service_handles::ServiceHandles}};
+use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point::Point}, services::service::{service::Service, service_handles::ServiceHandles}};
 ///
 /// 
 pub struct TaskTestReceiver {
     id: String,
     name: Name,
     iterations: usize, 
-    in_send: HashMap<String, Sender<PointType>>,
-    in_recv: Vec<Receiver<PointType>>,
-    received: Arc<Mutex<Vec<PointType>>>,
+    in_send: HashMap<String, Sender<Point>>,
+    in_recv: Vec<Receiver<Point>>,
+    received: Arc<Mutex<Vec<Point>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -18,7 +18,7 @@ impl TaskTestReceiver {
     ///
     /// 
     pub fn new(parent: &str, index: impl Into<String>, recv_queue: &str, iterations: usize) -> Self {
-        let (send, recv): (Sender<PointType>, Receiver<PointType>) = mpsc::channel();
+        let (send, recv): (Sender<Point>, Receiver<Point>) = mpsc::channel();
         let name = Name::new(parent, format!("TaskTestReceiver{}", index.into()));
         Self {
             id: name.join(),
@@ -32,7 +32,7 @@ impl TaskTestReceiver {
     }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -61,7 +61,7 @@ impl Debug for TaskTestReceiver {
 impl Service for TaskTestReceiver {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -95,11 +95,11 @@ impl Service for TaskTestReceiver {
                             break 'main;
                         }
                         match point {
-                            PointType::Bool(_) => {},
-                            PointType::Int(_) => {},
-                            PointType::Real(_) => {},
-                            PointType::Double(_) => {},
-                            PointType::String(p) => {
+                            Point::Bool(_) => {},
+                            Point::Int(_) => {},
+                            Point::Real(_) => {},
+                            Point::Double(_) => {},
+                            Point::String(p) => {
                                 if p.name.to_lowercase().ends_with("exit") || p.value == "exit" {
                                     break 'main;
                                 }

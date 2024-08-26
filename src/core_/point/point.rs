@@ -11,37 +11,37 @@ use super::point_hlr::PointHlr;
 ///
 ///
 pub trait ToPoint {
-    fn to_point(&self, tx_id: usize, name: &str) -> PointType;
+    fn to_point(&self, tx_id: usize, name: &str) -> Point;
 }
 
 impl ToPoint for bool {
-    fn to_point(&self, tx_id: usize, name: &str) -> PointType {
-        PointType::Bool(PointHlr::new_bool(tx_id, name, *self))
+    fn to_point(&self, tx_id: usize, name: &str) -> Point {
+        Point::Bool(PointHlr::new_bool(tx_id, name, *self))
     }
 }
 impl ToPoint for i64 {
-    fn to_point(&self, tx_id: usize, name: &str) -> PointType {
-        PointType::Int(PointHlr::new_int(tx_id, name, *self))
+    fn to_point(&self, tx_id: usize, name: &str) -> Point {
+        Point::Int(PointHlr::new_int(tx_id, name, *self))
     }
 }
 impl ToPoint for f32 {
-    fn to_point(&self, tx_id: usize, name: &str) -> PointType {
-        PointType::Real(PointHlr::new_real(tx_id, name, *self))
+    fn to_point(&self, tx_id: usize, name: &str) -> Point {
+        Point::Real(PointHlr::new_real(tx_id, name, *self))
     }
 }
 impl ToPoint for f64 {
-    fn to_point(&self, tx_id: usize, name: &str) -> PointType {
-        PointType::Double(PointHlr::new_double(tx_id, name, *self))
+    fn to_point(&self, tx_id: usize, name: &str) -> Point {
+        Point::Double(PointHlr::new_double(tx_id, name, *self))
     }
 }
 impl ToPoint for &str {
-    fn to_point(&self, tx_id: usize, name: &str) -> PointType {
-        PointType::String(PointHlr::new_string(tx_id, name, *self))
+    fn to_point(&self, tx_id: usize, name: &str) -> Point {
+        Point::String(PointHlr::new_string(tx_id, name, *self))
     }
 }
 impl ToPoint for String {
-    fn to_point(&self, tx_id: usize, name: &str) -> PointType {
-        PointType::String(PointHlr::new_string(tx_id, name, self))
+    fn to_point(&self, tx_id: usize, name: &str) -> Point {
+        Point::String(PointHlr::new_string(tx_id, name, self))
     }
 }
 
@@ -49,7 +49,7 @@ impl ToPoint for String {
 /// enum container for Point<T>
 /// - supported types: Bool, Int, Real, Double, String
 #[derive(Debug, Clone, PartialEq)]
-pub enum PointType {
+pub enum Point {
     Bool(PointHlr<Bool>),
     Int(PointHlr<i64>),
     Real(PointHlr<f32>),
@@ -58,7 +58,7 @@ pub enum PointType {
 }
 //
 //
-impl PointType {
+impl Point {
     ///
     /// Creates instance of PointType
     ///  - tx_id - identifier of the producer - service
@@ -71,62 +71,62 @@ impl PointType {
     /// Returns transmitter ID of the containing Point
     pub fn tx_id(&self) -> usize {
         match self {
-            PointType::Bool(point) => point.tx_id,
-            PointType::Int(point) => point.tx_id,
-            PointType::Real(point) => point.tx_id,
-            PointType::Double(point) => point.tx_id,
-            PointType::String(point) => point.tx_id,
+            Point::Bool(point) => point.tx_id,
+            Point::Int(point) => point.tx_id,
+            Point::Real(point) => point.tx_id,
+            Point::Double(point) => point.tx_id,
+            Point::String(point) => point.tx_id,
         }
     }
     ///
     /// Returns type of the containing Point
     pub fn type_(&self) -> PointConfigType {
         match self {
-            PointType::Bool(_) => PointConfigType::Bool,
-            PointType::Int(_) => PointConfigType::Int,
-            PointType::Real(_) => PointConfigType::Real,
-            PointType::Double(_) => PointConfigType::Double,
-            PointType::String(_) => PointConfigType::String,
+            Point::Bool(_) => PointConfigType::Bool,
+            Point::Int(_) => PointConfigType::Int,
+            Point::Real(_) => PointConfigType::Real,
+            Point::Double(_) => PointConfigType::Double,
+            Point::String(_) => PointConfigType::String,
         }
     }
     ///
     /// Returns name of the containing Point
     pub fn name(&self) -> String {
         match self {
-            PointType::Bool(point) => point.name.clone(),
-            PointType::Int(point) => point.name.clone(),
-            PointType::Real(point) => point.name.clone(),
-            PointType::Double(point) => point.name.clone(),
-            PointType::String(point) => point.name.clone(),
+            Point::Bool(point) => point.name.clone(),
+            Point::Int(point) => point.name.clone(),
+            Point::Real(point) => point.name.clone(),
+            Point::Double(point) => point.name.clone(),
+            Point::String(point) => point.name.clone(),
         }
     }
     ///
     /// Returns destination of the containing Point
     pub fn dest(&self) -> String {
         match self {
-            PointType::Bool(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
-            PointType::Int(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
-            PointType::Real(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
-            PointType::Double(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
-            PointType::String(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
+            Point::Bool(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
+            Point::Int(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
+            Point::Real(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
+            Point::Double(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
+            Point::String(point) => SubscriptionCriteria::dest(&point.cot, &point.name),    //concat_string!(point.cot, point.name),
         }
     }
     ///
     /// Returns point.value wraped into the enum Value
     pub fn value(&self) -> Value {
         match self {
-            PointType::Bool(point) => Value::Bool(point.value.0),
-            PointType::Int(point) => Value::Int(point.value),
-            PointType::Real(point) => Value::Real(point.value),
-            PointType::Double(point) => Value::Double(point.value),
-            PointType::String(point) => Value::String(point.value.clone()),
+            Point::Bool(point) => Value::Bool(point.value.0),
+            Point::Int(point) => Value::Int(point.value),
+            Point::Real(point) => Value::Real(point.value),
+            Point::Double(point) => Value::Double(point.value),
+            Point::String(point) => Value::String(point.value.clone()),
         }
     }
     ///
     /// Returns containing Point<bool>
     pub fn as_bool(&self) -> PointHlr<Bool> {
         match self {
-            PointType::Bool(point) => point.clone(),
+            Point::Bool(point) => point.clone(),
             _ => panic!("PointType.as_bool | Expected type 'Bool', but found '{:?}' point: '{}'", self.type_(), self.name()),
         }
     }
@@ -134,7 +134,7 @@ impl PointType {
     /// Returns containing Point<bool>
     pub fn try_as_bool(&self) -> Result<PointHlr<Bool>, String> {
         match self {
-            PointType::Bool(point) => Ok(point.clone()),
+            Point::Bool(point) => Ok(point.clone()),
             _ => Err(format!("PointType.try_as_bool | Expected type 'Bool', but found '{:?}' point: '{}'", self.type_(), self.name())),
         }
     }
@@ -142,7 +142,7 @@ impl PointType {
     /// Returns containing Point<i64>
     pub fn as_int(&self) -> PointHlr<i64> {
         match self {
-            PointType::Int(point) => point.clone(),
+            Point::Int(point) => point.clone(),
             _ => panic!("PointType.as_int | Expected type 'Int', but found '{:?}' point: '{}'", self.type_(), self.name()),
         }
     }
@@ -150,7 +150,7 @@ impl PointType {
     /// Returns containing Point<i64>
     pub fn try_as_int(&self) -> Result<PointHlr<i64>, String> {
         match self {
-            PointType::Int(point) => Ok(point.clone()),
+            Point::Int(point) => Ok(point.clone()),
             _ => Err(format!("PointType.try_as_int | Expected type 'Int', but found '{}' point: {}", self.type_of(), self.name())),
         }
     }
@@ -158,7 +158,7 @@ impl PointType {
     /// Returns containing Point<f32>
     pub fn as_real(&self) -> PointHlr<f32> {
         match self {
-            PointType::Real(point) => point.clone(),
+            Point::Real(point) => point.clone(),
             _ => panic!("PointType.as_real | Expected type 'Real', but found '{:?}' point: '{}'", self.type_(), self.name()),
         }
     }
@@ -166,7 +166,7 @@ impl PointType {
     /// Returns containing Point<f32>
     pub fn try_as_real(&self) -> Result<PointHlr<f32>, String> {
         match self {
-            PointType::Real(point) => Ok(point.clone()),
+            Point::Real(point) => Ok(point.clone()),
             _ => Err(format!("PointType.try_as_real | Expected type 'Real', but found '{:?}' point: '{}'", self.type_(), self.name())),
         }
     }
@@ -174,7 +174,7 @@ impl PointType {
     /// Returns containing Point<f64>
     pub fn as_double(&self) -> PointHlr<f64> {
         match self {
-            PointType::Double(point) => point.clone(),
+            Point::Double(point) => point.clone(),
             _ => panic!("PointType.as_double | Expected type 'Double', but found '{:?}' point: '{}'", self.type_(), self.name()),
         }
     }
@@ -182,7 +182,7 @@ impl PointType {
     /// Returns containing Point<f64>
     pub fn try_as_double(&self) -> Result<PointHlr<f64>, String> {
         match self {
-            PointType::Double(point) => Ok(point.clone()),
+            Point::Double(point) => Ok(point.clone()),
             _ => Err(format!("PointType.try_as_double | Expected type 'Double', but found '{:?}' point: '{}'", self.type_(), self.name())),
         }
     }
@@ -190,7 +190,7 @@ impl PointType {
     /// Returns containing Point<String>
     pub fn as_string(&self) -> PointHlr<String> {
         match self {
-            PointType::String(point) => point.clone(),
+            Point::String(point) => point.clone(),
             _ => panic!("PointType.as_string | Expected type 'String', but found '{:?}' point: '{}'", self.type_(), self.name()),
         }
     }
@@ -198,7 +198,7 @@ impl PointType {
     /// Returns containing Point<String>
     pub fn try_as_string(&self) -> Result<PointHlr<String>, String> {
         match self {
-            PointType::String(point) => Ok(point.clone()),
+            Point::String(point) => Ok(point.clone()),
             _ => Err(format!("PointType.try_as_string | Expected type 'String', but found '{:?}' point: '{}'", self.type_(), self.name())),
         }
     }
@@ -206,56 +206,56 @@ impl PointType {
     /// Returns status of the containing Point
     pub fn status(&self) -> Status {
         match self {
-            PointType::Bool(point) => point.status,
-            PointType::Int(point) => point.status,
-            PointType::Real(point) => point.status,
-            PointType::Double(point) => point.status,
-            PointType::String(point) => point.status,
+            Point::Bool(point) => point.status,
+            Point::Int(point) => point.status,
+            Point::Real(point) => point.status,
+            Point::Double(point) => point.status,
+            Point::String(point) => point.status,
         }
     }
     ///
     /// Returns the cause & direction of the containing Point
     pub fn cot(&self) -> Cot {
         match self {
-            PointType::Bool(point) => point.cot,
-            PointType::Int(point) => point.cot,
-            PointType::Real(point) => point.cot,
-            PointType::Double(point) => point.cot,
-            PointType::String(point) => point.cot,
+            Point::Bool(point) => point.cot,
+            Point::Int(point) => point.cot,
+            Point::Real(point) => point.cot,
+            Point::Double(point) => point.cot,
+            Point::String(point) => point.cot,
         }
     }
     ///
     /// Returns timestamp of the containing Point
     pub fn timestamp(&self) -> DateTime<chrono::Utc> {
         match self {
-            PointType::Bool(point) => point.timestamp,
-            PointType::Int(point) => point.timestamp,
-            PointType::Real(point) => point.timestamp,
-            PointType::Double(point) => point.timestamp,
-            PointType::String(point) => point.timestamp,
+            Point::Bool(point) => point.timestamp,
+            Point::Int(point) => point.timestamp,
+            Point::Real(point) => point.timestamp,
+            Point::Double(point) => point.timestamp,
+            Point::String(point) => point.timestamp,
         }
     }
     ///
     /// Returns true if other.value == self.value
-    pub fn cmp_value(&self, other: &PointType) -> bool {
+    pub fn cmp_value(&self, other: &Point) -> bool {
         match self {
-            PointType::Bool(point) => point.value == other.as_bool().value,
-            PointType::Int(point) => point.value == other.as_int().value,
-            PointType::Real(point) => point.value == other.as_real().value,
-            PointType::Double(point) => point.value == other.as_double().value,
-            PointType::String(point) => point.value == other.as_string().value,
+            Point::Bool(point) => point.value == other.as_bool().value,
+            Point::Int(point) => point.value == other.as_int().value,
+            Point::Real(point) => point.value == other.as_real().value,
+            Point::Double(point) => point.value == other.as_double().value,
+            Point::String(point) => point.value == other.as_string().value,
         }
     }
     ///
     /// Returns Point converted to the Bool
     pub fn to_bool(&self) -> Self {
         let value = match self {
-            PointType::Bool(p) => p.value.0,
-            PointType::Int(p) => p.value > 0,
-            PointType::Real(p) => p.value > 0.0,
-            PointType::Double(p) => p.value > 0.0,
+            Point::Bool(p) => p.value.0,
+            Point::Int(p) => p.value > 0,
+            Point::Real(p) => p.value > 0.0,
+            Point::Double(p) => p.value > 0.0,
             // PointType::String(point) => panic!("{}.to_bool | Conversion to Bool for 'String' - is not supported", point.name),
-            PointType::String(p) => {
+            Point::String(p) => {
                 match p.value.parse() {
                     Ok(value) => value,
                     Err(err) => {
@@ -265,7 +265,7 @@ impl PointType {
             }
             // _ => panic!("{}.to_bool | Conversion to Bool for '{}' - is not supported", self.name(),  self.type_of()),
         };
-        PointType::Bool(PointHlr::new(
+        Point::Bool(PointHlr::new(
             self.tx_id(),
             &self.name(),
             Bool(value),
@@ -278,12 +278,12 @@ impl PointType {
     /// Returns Point converted to the Int
     pub fn to_int(&self) -> Self {
         let value = match self {
-            PointType::Bool(p) => if p.value.0 {1} else {0},
-            PointType::Int(p) => p.value,
-            PointType::Real(p) => p.value.round() as i64 ,
-            PointType::Double(p) => p.value.round() as i64,
+            Point::Bool(p) => if p.value.0 {1} else {0},
+            Point::Int(p) => p.value,
+            Point::Real(p) => p.value.round() as i64 ,
+            Point::Double(p) => p.value.round() as i64,
             // PointType::String(p) => panic!("{}.to_int | Conversion to Int for 'String' - is not supported", p.name),
-            PointType::String(p) => match p.value.parse() {
+            Point::String(p) => match p.value.parse() {
                 Ok(value) => value,
                 Err(err) => {
                     panic!("PointType({}).to_int | Error conversion into<i64> value: {:?}\n\terror: {:#?}", self.name(), self.value(), err);
@@ -291,7 +291,7 @@ impl PointType {
             }
             // _ => panic!("{}.to_int | Conversion to Int for '{}' - is not supported", self.name(),  self.type_of()),
         };
-        PointType::Int(PointHlr::new(
+        Point::Int(PointHlr::new(
             self.tx_id(),
             &self.name(),
             value,
@@ -304,12 +304,12 @@ impl PointType {
     /// Returns Point converted to the Real
     pub fn to_real(&self) -> Self {
         let value = match self {
-            PointType::Bool(p) => if p.value.0 {1.0} else {0.0},
-            PointType::Int(p) => p.value as f32,
-            PointType::Real(p) => p.value,
-            PointType::Double(p) => p.value as f32,
+            Point::Bool(p) => if p.value.0 {1.0} else {0.0},
+            Point::Int(p) => p.value as f32,
+            Point::Real(p) => p.value,
+            Point::Double(p) => p.value as f32,
             // PointType::String(p) => panic!("{}.to_real | Conversion to Real for 'String' - is not supported", p.name),
-            PointType::String(p) => match p.value.parse() {
+            Point::String(p) => match p.value.parse() {
                 Ok(value) => value,
                 Err(err) => {
                     panic!("PointType({}).to_real | Error conversion into<f32> value: {:?}\n\terror: {:#?}", self.name(), self.value(), err);
@@ -317,7 +317,7 @@ impl PointType {
             }
             // _ => panic!("{}.to_real | Conversion to Real for '{}' - is not supported", self.name(),  self.type_of()),
         };
-        PointType::Real(PointHlr::new(
+        Point::Real(PointHlr::new(
             self.tx_id(),
             &self.name(),
             value,
@@ -330,12 +330,12 @@ impl PointType {
     /// Returns Point converted to the Double
     pub fn to_double(&self) -> Self {
         let value = match self {
-            PointType::Bool(p) => if p.value.0 {1.0} else {0.0},
-            PointType::Int(p) => p.value as f64,
-            PointType::Real(p) => p.value as f64,
-            PointType::Double(p) => p.value,
+            Point::Bool(p) => if p.value.0 {1.0} else {0.0},
+            Point::Int(p) => p.value as f64,
+            Point::Real(p) => p.value as f64,
+            Point::Double(p) => p.value,
             // PointType::String(p) => panic!("{}.to_double | Conversion to Double for 'String' - is not supported", p.name),
-            PointType::String(p) => match p.value.parse() {
+            Point::String(p) => match p.value.parse() {
                 Ok(value) => value,
                 Err(err) => {
                     panic!("PointType({}).to_double | Error conversion into<f64> value: {:?}\n\terror: {:#?}", self.name(), self.value(), err);
@@ -343,7 +343,7 @@ impl PointType {
             }
             // _ => panic!("{}.to_double | Conversion to Double for '{}' - is not supported", self.name(),  self.type_of()),
         };
-        PointType::Double(PointHlr::new(
+        Point::Double(PointHlr::new(
             self.tx_id(),
             &self.name(),
             value,
@@ -356,14 +356,14 @@ impl PointType {
     /// Returns Point converted to the String
     pub fn to_string(&self) -> Self {
         let value = match self {
-            PointType::Bool(p) => p.value.0.to_string(),
-            PointType::Int(p) => p.value.to_string(),
-            PointType::Real(p) => p.value.to_string(),
-            PointType::Double(p) => p.value.to_string(),
-            PointType::String(p) => p.value.to_owned(),
+            Point::Bool(p) => p.value.0.to_string(),
+            Point::Int(p) => p.value.to_string(),
+            Point::Real(p) => p.value.to_string(),
+            Point::Double(p) => p.value.to_string(),
+            Point::String(p) => p.value.to_owned(),
             // _ => panic!("{}.to_double | Conversion to Double for '{}' - is not supported", self.name(),  self.type_of()),
         };
-        PointType::String(PointHlr::new(
+        Point::String(PointHlr::new(
             self.tx_id(),
             &self.name(),
             value,
@@ -376,27 +376,27 @@ impl PointType {
     /// Raises self to a [factor] power.
     pub fn pow(&self, exp: Self) -> Self {
         match &self {
-            PointType::Int(self_point) => {
+            Point::Int(self_point) => {
                 match exp {
-                    PointType::Int(exp) => PointType::Int(self_point.pow(exp)),
-                    PointType::Real(exp) => PointType::Int(self_point.to_real().pow(exp).to_int()),
-                    PointType::Double(exp) => PointType::Int(self_point.to_double().pow(exp).to_int()),
+                    Point::Int(exp) => Point::Int(self_point.pow(exp)),
+                    Point::Real(exp) => Point::Int(self_point.to_real().pow(exp).to_int()),
+                    Point::Double(exp) => Point::Int(self_point.to_double().pow(exp).to_int()),
                     _ => panic!("PointType.pow | Pow is not supported for 'exp' of type '{:?}'", self.type_()),
                 }
             }
-            PointType::Real(self_point) => {
+            Point::Real(self_point) => {
                 match exp {
-                    PointType::Int(exp) => PointType::Real(self_point.pow(exp.to_real())),
-                    PointType::Real(exp) => PointType::Real(self_point.pow(exp)),
-                    PointType::Double(exp) => PointType::Real(self_point.pow(exp.to_real())),
+                    Point::Int(exp) => Point::Real(self_point.pow(exp.to_real())),
+                    Point::Real(exp) => Point::Real(self_point.pow(exp)),
+                    Point::Double(exp) => Point::Real(self_point.pow(exp.to_real())),
                     _ => panic!("PointType.pow | Pow is not supported for 'exp' of type '{:?}'", self.type_()),
                 }
             }
-            PointType::Double(self_point) => {
+            Point::Double(self_point) => {
                 match exp {
-                    PointType::Int(exp) => PointType::Double(self_point.pow(exp.to_double())),
-                    PointType::Real(exp) => PointType::Double(self_point.pow(exp.to_double())),
-                    PointType::Double(exp) => PointType::Double(self_point.pow(exp)),
+                    Point::Int(exp) => Point::Double(self_point.pow(exp.to_double())),
+                    Point::Real(exp) => Point::Double(self_point.pow(exp.to_double())),
+                    Point::Double(exp) => Point::Double(self_point.pow(exp)),
                     _ => panic!("PointType.pow | Pow is not supported for 'exp' of type '{:?}'", self.type_()),
                 }
             }
@@ -406,7 +406,7 @@ impl PointType {
 }
 //
 //
-impl Serialize for PointType {
+impl Serialize for Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer {
@@ -421,7 +421,7 @@ impl Serialize for PointType {
             timestamp: String,
         }
         match self {
-            PointType::Bool(point) => {
+            Point::Bool(point) => {
                 PointSerialize {
                     type_: "Bool",
                     value: if point.value.0 {1} else {0},
@@ -431,7 +431,7 @@ impl Serialize for PointType {
                     timestamp: point.timestamp.to_rfc3339(),
                 }.serialize(serializer)
             }
-            PointType::Int(point) => {
+            Point::Int(point) => {
                 PointSerialize {
                     type_: "Int",
                     value: &point.value,
@@ -441,7 +441,7 @@ impl Serialize for PointType {
                     timestamp: point.timestamp.to_rfc3339(),
                 }.serialize(serializer)
             }
-            PointType::Real(point) => {
+            Point::Real(point) => {
                 PointSerialize {
                     type_: "Real",
                     value: point.value,
@@ -451,7 +451,7 @@ impl Serialize for PointType {
                     timestamp: point.timestamp.to_rfc3339(),
                 }.serialize(serializer)
             }
-            PointType::Double(point) => {
+            Point::Double(point) => {
                 PointSerialize {
                     type_: "Double",
                     value: &point.value,
@@ -461,7 +461,7 @@ impl Serialize for PointType {
                     timestamp: point.timestamp.to_rfc3339(),
                 }.serialize(serializer)
             }
-            PointType::String(point) => {
+            Point::String(point) => {
                 PointSerialize {
                     type_: "String",
                     value: &point.value,
@@ -476,7 +476,7 @@ impl Serialize for PointType {
 }
 //
 //
-impl<'de> Deserialize<'de> for PointType {
+impl<'de> Deserialize<'de> for Point {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de> {
@@ -501,7 +501,7 @@ impl<'de> Deserialize<'de> for PointType {
         match visitor.type_ {
             PointConfigType::Bool => {
                 let value = visitor.value.as_i64().ok_or_else(|| value_parsing_error::<D>("Point<Bool>", &visitor, "err"))?;
-                Ok(PointType::Bool(PointHlr::new(
+                Ok(Point::Bool(PointHlr::new(
                     tx_id,
                     &visitor.name,
                     Bool(value > 0),
@@ -512,7 +512,7 @@ impl<'de> Deserialize<'de> for PointType {
             }
             PointConfigType::Int => {
                 let value = visitor.value.as_i64().ok_or_else(|| value_parsing_error::<D>("Point<Int>", &visitor, "err"))?;
-                Ok(PointType::Int(PointHlr::new(
+                Ok(Point::Int(PointHlr::new(
                     tx_id,
                     &visitor.name,
                     value,
@@ -523,7 +523,7 @@ impl<'de> Deserialize<'de> for PointType {
             }
             PointConfigType::Real => {
                 let value = visitor.value.as_f64().ok_or_else(|| value_parsing_error::<D>("Point<Real>", &visitor, "err"))?;
-                Ok(PointType::Real(PointHlr::new(
+                Ok(Point::Real(PointHlr::new(
                     tx_id,
                     &visitor.name,
                     value as f32,
@@ -534,7 +534,7 @@ impl<'de> Deserialize<'de> for PointType {
             }
             PointConfigType::Double => {
                 let value = visitor.value.as_f64().ok_or_else(|| value_parsing_error::<D>("Point<Double>", &visitor, "err"))?;
-                Ok(PointType::Double(PointHlr::new(
+                Ok(Point::Double(PointHlr::new(
                     tx_id,
                     &visitor.name,
                     value,
@@ -544,7 +544,7 @@ impl<'de> Deserialize<'de> for PointType {
                 )))
             }
             PointConfigType::String => {
-                Ok(PointType::String(PointHlr::new(
+                Ok(Point::String(PointHlr::new(
                     tx_id,
                     &visitor.name,
                     visitor.value.as_str().unwrap().to_owned(),
@@ -569,22 +569,22 @@ impl<'de> Deserialize<'de> for PointType {
 }
 //
 //
-impl std::ops::Add for PointType {
-    type Output = PointType;
+impl std::ops::Add for Point {
+    type Output = Point;
     fn add(self, rhs: Self) -> Self::Output {
         assert_eq!(self.type_(), rhs.type_(), "PointType.add | Incopitable types self: '{:?}' and other: '{:?}'\tin '{}'", self.type_(), rhs.type_(), self.name());
         match self {
-            PointType::Bool(self_point) => {
-                PointType::Bool(self_point + rhs.as_bool())
+            Point::Bool(self_point) => {
+                Point::Bool(self_point + rhs.as_bool())
             }
-            PointType::Int(self_point) => {
-                PointType::Int(self_point + rhs.as_int())
+            Point::Int(self_point) => {
+                Point::Int(self_point + rhs.as_int())
             }
-            PointType::Real(self_point) => {
-                PointType::Real(self_point + rhs.as_real())
+            Point::Real(self_point) => {
+                Point::Real(self_point + rhs.as_real())
             }
-            PointType::Double(self_point) => {
-                PointType::Double(self_point + rhs.as_double())
+            Point::Double(self_point) => {
+                Point::Double(self_point + rhs.as_double())
             }
             _ => panic!("PointType.add | Add is not supported for type '{:?}'", self.type_()),
         }
@@ -592,19 +592,19 @@ impl std::ops::Add for PointType {
 }
 //
 //
-impl std::ops::Sub for PointType {
-    type Output = PointType;
+impl std::ops::Sub for Point {
+    type Output = Point;
     fn sub(self, rhs: Self) -> Self::Output {
         assert_eq!(self.type_(), rhs.type_(), "PointType.sub | Incopitable types self: '{:?}' and other: '{:?}'\tin '{}'", self.type_(), rhs.type_(), self.name());
         match self {
-            PointType::Int(self_point) => {
-                PointType::Int(self_point - rhs.as_int())
+            Point::Int(self_point) => {
+                Point::Int(self_point - rhs.as_int())
             }
-            PointType::Real(self_point) => {
-                PointType::Real(self_point - rhs.as_real())
+            Point::Real(self_point) => {
+                Point::Real(self_point - rhs.as_real())
             }
-            PointType::Double(self_point) => {
-                PointType::Double(self_point - rhs.as_double())
+            Point::Double(self_point) => {
+                Point::Double(self_point - rhs.as_double())
             }
             _ => panic!("PointType.sub | Sub is not supported for type '{:?}'", self.type_()),
         }
@@ -612,22 +612,22 @@ impl std::ops::Sub for PointType {
 }
 //
 //
-impl std::ops::Mul for PointType {
-    type Output = PointType;
+impl std::ops::Mul for Point {
+    type Output = Point;
     fn mul(self, rhs: Self) -> Self::Output {
         assert_eq!(self.type_(), rhs.type_(), "PointType.mul | Incopitable types self: '{:?}' and other: '{:?}'\tin '{}'", self.type_(), rhs.type_(), self.name());
         match self {
-            PointType::Bool(self_point) => {
-                PointType::Bool(self_point * rhs.as_bool())
+            Point::Bool(self_point) => {
+                Point::Bool(self_point * rhs.as_bool())
             }
-            PointType::Int(self_point) => {
-                PointType::Int(self_point * rhs.as_int())
+            Point::Int(self_point) => {
+                Point::Int(self_point * rhs.as_int())
             }
-            PointType::Real(self_point) => {
-                PointType::Real(self_point * rhs.as_real())
+            Point::Real(self_point) => {
+                Point::Real(self_point * rhs.as_real())
             }
-            PointType::Double(self_point) => {
-                PointType::Double(self_point * rhs.as_double())
+            Point::Double(self_point) => {
+                Point::Double(self_point * rhs.as_double())
             }
             _ => panic!("PointType.mul | Mul is not supported for type '{:?}'", self.type_()),
         }
@@ -635,19 +635,19 @@ impl std::ops::Mul for PointType {
 }
 //
 //
-impl std::ops::Div for PointType {
-    type Output = PointType;
+impl std::ops::Div for Point {
+    type Output = Point;
     fn div(self, rhs: Self) -> Self::Output {
         assert_eq!(self.type_(), rhs.type_(), "PointType.div | Incopitable types self: '{:?}' and other: '{:?}'\tin '{}'", self.type_(), rhs.type_(), self.name());
         match self {
-            PointType::Int(self_point) => {
-                PointType::Int(self_point / rhs.as_int())
+            Point::Int(self_point) => {
+                Point::Int(self_point / rhs.as_int())
             }
-            PointType::Real(self_point) => {
-                PointType::Real(self_point / rhs.as_real())
+            Point::Real(self_point) => {
+                Point::Real(self_point / rhs.as_real())
             }
-            PointType::Double(self_point) => {
-                PointType::Double(self_point / rhs.as_double())
+            Point::Double(self_point) => {
+                Point::Double(self_point / rhs.as_double())
             }
             _ => panic!("PointType.div | Div is not supported for type '{:?}'", self.type_()),
         }
@@ -655,23 +655,23 @@ impl std::ops::Div for PointType {
 }
 //
 //
-impl std::cmp::PartialOrd for PointType {
+impl std::cmp::PartialOrd for Point {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         assert_eq!(self.type_(), other.type_(), "PointType.partial_cmp | Incopitable types self: '{:?}' and other: '{:?}'\tin '{}'", self.type_(), other.type_(), self.name());
         match self {
-            PointType::Bool(self_point) => {
+            Point::Bool(self_point) => {
                 self_point.partial_cmp(&other.as_bool())
             }
-            PointType::Int(self_point) => {
+            Point::Int(self_point) => {
                 self_point.partial_cmp(&other.as_int())
             }
-            PointType::Real(self_point) => {
+            Point::Real(self_point) => {
                 self_point.partial_cmp(&other.as_real())
             }
-            PointType::Double(self_point) => {
+            Point::Double(self_point) => {
                 self_point.partial_cmp(&other.as_double())
             }
-            PointType::String(self_point) => {
+            Point::String(self_point) => {
                 self_point.partial_cmp(&other.as_string())
             }
             // _ => panic!("PointType.partial_cmp | Not supported for type '{:?}'", self.type_of()),

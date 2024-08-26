@@ -8,7 +8,7 @@ mod jds_deserialize {
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::{
-        cot::cot::Cot, net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, point::{point_hlr::PointHlr, point_type::PointType}, status::status::Status, types::bool::Bool
+        cot::cot::Cot, net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool
     }, tcp::tcp_stream_write::OpResult};
     ///
     ///
@@ -49,72 +49,72 @@ mod jds_deserialize {
         let test_data = [
             (
                 format!(r#"{{"id": "1", "type": "Bool",  "name": "{}", "value": 0,   "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Bool(PointHlr::new(tx_id, name, Bool(false), Status::Ok, Cot::default(), ts))
+                Point::Bool(PointHlr::new(tx_id, name, Bool(false), Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Bool",  "name": "{}", "value": 1,    "status": 0, "cot": "Inf", "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Bool(PointHlr::new(tx_id, name, Bool(true), Status::Ok, Cot::default(), ts))
+                Point::Bool(PointHlr::new(tx_id, name, Bool(true), Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Int",   "name": "{}", "value": 1,   "status": 0, "cot": "Inf", "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Int(PointHlr::new(tx_id, name, 1, Status::Ok, Cot::Inf, ts))
+                Point::Int(PointHlr::new(tx_id, name, 1, Status::Ok, Cot::Inf, ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Int",   "name": "{}", "value": -9223372036854775808,   "status": 0, "cot": "Act", "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Int(PointHlr::new(tx_id, name, -9223372036854775808, Status::Ok, Cot::Act, ts))
+                Point::Int(PointHlr::new(tx_id, name, -9223372036854775808, Status::Ok, Cot::Act, ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Int",   "name": "{}", "value":  9223372036854775807,   "status": 0, "cot": "act", "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Int(PointHlr::new(tx_id, name,  9223372036854775807, Status::Ok, Cot::Act, ts))
+                Point::Int(PointHlr::new(tx_id, name,  9223372036854775807, Status::Ok, Cot::Act, ts))
             ),
 
 
             (
                 format!(r#"{{"id": "1", "type": "Real", "name": "{}", "value":  0.0, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Real(PointHlr::new(tx_id, name,  0.0, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(tx_id, name,  0.0, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Real", "name": "{}", "value": -1.1, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Real(PointHlr::new(tx_id, name, -1.1, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(tx_id, name, -1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Real", "name": "{}", "value":  1.1, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Real(PointHlr::new(tx_id, name,  1.1, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(tx_id, name,  1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Real", "name": "{}", "value": -3.4028235e38, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Real(PointHlr::new(tx_id, name, -f32::MAX, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(tx_id, name, -f32::MAX, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Real", "name": "{}", "value":  3.4028235e38, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Real(PointHlr::new(tx_id, name,  f32::MAX, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(tx_id, name,  f32::MAX, Status::Ok, Cot::default(), ts))
             ),
 
 
 
             (
                 format!(r#"{{"id": "1", "type": "Double", "name": "{}", "value":  0.0, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Double(PointHlr::new(tx_id, name,  0.0, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(tx_id, name,  0.0, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Double", "name": "{}", "value": -1.1, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Double(PointHlr::new(tx_id, name, -1.1, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(tx_id, name, -1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Double", "name": "{}", "value":  1.1, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Double(PointHlr::new(tx_id, name,  1.1, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(tx_id, name,  1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Double", "name": "{}", "value": -1.7976931348623157e308, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Double(PointHlr::new(tx_id, name, -1.7976931348623157e308, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(tx_id, name, -1.7976931348623157e308, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "Double", "name": "{}", "value":  1.7976931348623157e308, "status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::Double(PointHlr::new(tx_id, name,  1.7976931348623157e308, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(tx_id, name,  1.7976931348623157e308, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"id": "1", "type": "String","name": "{}", "value": "~!@#$%^&*()_+`1234567890-=","status": 0, "timestamp":"{}"}}"#, name, ts_str(ts)),
-                PointType::String(PointHlr::new(tx_id, name, "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::default(), ts))
+                Point::String(PointHlr::new(tx_id, name, "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::default(), ts))
             ),
         ];
         //
@@ -150,11 +150,11 @@ mod jds_deserialize {
                                             assert!(point.cot() == test_data[recv_index].1.cot(), "\nreceived: {:?}\nexpected: {:?}", point.cot(), test_data[recv_index].1.cot());
                                             assert!(point.timestamp() == test_data[recv_index].1.timestamp(), "\nreceived: {:?}\nexpected: {:?}", point.timestamp(), test_data[recv_index].1.timestamp());
                                             match point {
-                                                PointType::Bool(point) => assert!(point.value == test_data[recv_index].1.as_bool().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_bool().value),
-                                                PointType::Int(point) => assert!(point.value == test_data[recv_index].1.as_int().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_int().value),
-                                                PointType::Real(point) => assert!(point.value == test_data[recv_index].1.as_real().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_real().value),
-                                                PointType::Double(point) => assert!(point.value == test_data[recv_index].1.as_double().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_double().value),
-                                                PointType::String(point) => assert!(point.value == test_data[recv_index].1.as_string().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_string().value),
+                                                Point::Bool(point) => assert!(point.value == test_data[recv_index].1.as_bool().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_bool().value),
+                                                Point::Int(point) => assert!(point.value == test_data[recv_index].1.as_int().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_int().value),
+                                                Point::Real(point) => assert!(point.value == test_data[recv_index].1.as_real().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_real().value),
+                                                Point::Double(point) => assert!(point.value == test_data[recv_index].1.as_double().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_double().value),
+                                                Point::String(point) => assert!(point.value == test_data[recv_index].1.as_string().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_string().value),
                                             }
                                             // debug!("socket read - received: {:?}", received.load(Ordering::SeqCst));
                                             if received.load(Ordering::SeqCst) >= total {
@@ -184,7 +184,7 @@ mod jds_deserialize {
     }
     ///
     /// TcpServer setup
-    fn mock_tcp_server(addr: String, count: usize, test_data: &[(String, PointType)], received: Arc<AtomicUsize>) {
+    fn mock_tcp_server(addr: String, count: usize, test_data: &[(String, Point)], received: Arc<AtomicUsize>) {
         let mut sent = 0;
         let test_data = test_data.to_owned().clone();
         thread::spawn(move || {

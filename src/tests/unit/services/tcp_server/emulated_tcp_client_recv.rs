@@ -6,7 +6,7 @@ use crate::{
         net::{
             connection_status::ConnectionStatus,
             protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize},
-        }, object::object::Object, point::point_type::PointType, state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged}
+        }, object::object::Object, point::point::Point, state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged}
     }, services::service::{service::Service, service_handles::ServiceHandles}, tcp::tcp_stream_write::OpResult
 };
 
@@ -21,7 +21,7 @@ pub struct EmulatedTcpClientRecv {
     id: String,
     name: Name,
     addr: SocketAddr,
-    received: Arc<Mutex<Vec<PointType>>>,
+    received: Arc<Mutex<Vec<Point>>>,
     recv_limit: Option<usize>,
     must_received: Option<Value>,
     disconnect: Vec<i8>,
@@ -52,7 +52,7 @@ impl EmulatedTcpClientRecv {
     }
     ///
     ///
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
         self.received.clone()
     }
     ///
@@ -157,7 +157,7 @@ impl Debug for EmulatedTcpClientRecv {
 impl Service for EmulatedTcpClientRecv {
     //
     //
-    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point_type::PointType> {
+    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point::Point> {
         panic!("{}.get_link | Does not support static producer", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),

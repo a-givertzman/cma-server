@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use crate::{
     conf::point_config::{point_config_address::PointConfigAddress, point_config_type::PointConfigType},
-    core_::{point::point_type::PointType, status::status::Status},
+    core_::{point::point::Point, status::status::Status},
 };
 ///
 /// Returns updated points parsed from the data slice from the S7 device,
@@ -11,13 +11,13 @@ pub trait ParsePoint: Send + Sync {
     fn type_(&self) -> PointConfigType;
     ///
     /// Returns new point parsed from the data slice [bytes] with current timestamp and Status::Ok
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<PointType>;
+    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point>;
     ///
     /// Returns new point parsed from the data slice [bytes] with the given [timestamp] and Status::Ok
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<PointType>;
+    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point>;
     ///
     /// Returns new point (prevously parsed) with the given [status]
-    fn next_status(&mut self, status: Status) -> Option<PointType>;
+    fn next_status(&mut self, status: Status) -> Option<Point>;
     ///
     /// Returns true if value or status was updated since last call [addRaw()]
     fn is_changed(&self) -> bool;
@@ -29,5 +29,5 @@ pub trait ParsePoint: Send + Sync {
     fn size(&self) -> usize;
     ///
     /// Returns protocol specific bytes ready to write represents [value]
-    fn to_bytes(&self, point: &PointType) -> Result<Vec<u8>, String>;
+    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String>;
 }

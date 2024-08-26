@@ -4,7 +4,7 @@ use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::{api_client_config::ApiClientConfig, point_config::name::Name}, 
-    core_::{object::object::Object, point::point_type::PointType, retain_buffer::retain_buffer::RetainBuffer}, 
+    core_::{object::object::Object, point::point::Point, retain_buffer::retain_buffer::RetainBuffer}, 
     services::{service::{service::Service, service_handles::ServiceHandles}, task::service_cycle::ServiceCycle},
 };
 
@@ -16,8 +16,8 @@ use crate::{
 pub struct ApiClient {
     id: String,
     name: Name,
-    recv: Vec<Receiver<PointType>>,
-    send: HashMap<String, Sender<PointType>>,
+    recv: Vec<Receiver<Point>>,
+    send: HashMap<String, Sender<Point>>,
     conf: ApiClientConfig,
     exit: Arc<AtomicBool>,
 }
@@ -40,7 +40,7 @@ impl ApiClient {
     }
     ///
     /// Reads all avalible at the moment items from the in-queue
-    fn read_queue(self_id: &str, recv: &Receiver<PointType>, buffer: &mut RetainBuffer<PointType>) {
+    fn read_queue(self_id: &str, recv: &Receiver<Point>, buffer: &mut RetainBuffer<Point>) {
         let max_read_at_once = 1000;
         for (index, point) in recv.try_iter().enumerate() {   
             debug!("{}.read_queue | point: {:?}", self_id, &point);
@@ -109,7 +109,7 @@ impl Debug for ApiClient {
 impl Service for ApiClient {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -156,11 +156,11 @@ impl Service for ApiClient {
                     match buffer.first() {
                         Some(point) => {
                             match point {
-                                PointType::Bool(_) => warn!("{}.run | Invalid point type 'Bool' in: {:?}", self_id, point),
-                                PointType::Int(_) => warn!("{}.run | Invalid point type 'Int' in: {:?}", self_id, point),
-                                PointType::Real(_) => warn!("{}.run | Invalid point type 'Real' in: {:?}", self_id, point),
-                                PointType::Double(_) => warn!("{}.run | Invalid point type 'Double' in: {:?}", self_id, point),
-                                PointType::String(point) => {
+                                Point::Bool(_) => warn!("{}.run | Invalid point type 'Bool' in: {:?}", self_id, point),
+                                Point::Int(_) => warn!("{}.run | Invalid point type 'Int' in: {:?}", self_id, point),
+                                Point::Real(_) => warn!("{}.run | Invalid point type 'Real' in: {:?}", self_id, point),
+                                Point::Double(_) => warn!("{}.run | Invalid point type 'Double' in: {:?}", self_id, point),
+                                Point::String(point) => {
                                     let sql = point.value.clone();
                                     match Self::send(&self_id, &mut request, &conf.database, sql, api_keep_alive) {
                                         Ok(reply) => {

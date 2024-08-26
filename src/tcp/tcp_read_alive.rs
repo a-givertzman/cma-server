@@ -5,7 +5,7 @@ use std::{
     thread::{self, JoinHandle}, time::Duration,
 };
 use crate::{core_::{
-    net::connection_status::ConnectionStatus, point::point_type::PointType
+    net::connection_status::ConnectionStatus, point::point::Point
 }, services::{safe_lock::SafeLock, task::service_cycle::ServiceCycle}, tcp::tcp_stream_write::OpResult};
 use super::steam_read::TcpStreamRead;
 
@@ -15,7 +15,7 @@ use super::steam_read::TcpStreamRead;
 pub struct TcpReadAlive {
     id: String,
     stream_read: Arc<Mutex<dyn TcpStreamRead>>,
-    send: Sender<PointType>,
+    send: Sender<Point>,
     cycle: Option<Duration>,
     exit: Arc<AtomicBool>,
     exit_pair: Arc<AtomicBool>,
@@ -29,7 +29,7 @@ impl TcpReadAlive {
     pub fn new(
         parent: impl Into<String>, 
         stream_read: Arc<Mutex<dyn TcpStreamRead>>,
-        dest: Sender<PointType>, 
+        dest: Sender<Point>, 
         cycle: Option<Duration>, 
         exit: Option<Arc<AtomicBool>>, 
         exit_pair: Option<Arc<AtomicBool>>

@@ -3,7 +3,7 @@ use log::{error, trace};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType},
     core_::{
-        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, 
+        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, 
         types::{bool::Bool, fn_in_out_ref::FnInOutRef}
     }, 
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
@@ -36,7 +36,7 @@ pub struct FnExport {
     enable: Option<FnInOutRef>,
     conf: Option<PointConfig>,
     input: FnInOutRef,
-    tx_send: Option<Sender<PointType>>,
+    tx_send: Option<Sender<Point>>,
 }
 //
 //
@@ -48,7 +48,7 @@ impl FnExport {
     /// - conf - the configuration of the Point to be prodused, if None - input Point will be sent
     /// - input - incoming points
     /// - send-to - destination queue
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, conf: Option<PointConfig>, input: FnInOutRef, send: Option<Sender<PointType>>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, conf: Option<PointConfig>, input: FnInOutRef, send: Option<Sender<Point>>) -> Self {
         let self_id = format!("{}/FnExport{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
@@ -62,7 +62,7 @@ impl FnExport {
     }
     ///
     /// Sending Point to the external service if 'send-to' specified
-    fn send(&self, point: PointType) {
+    fn send(&self, point: Point) {
         if let Some(tx_send) = &self.tx_send {
             let (type_, name) = match &self.conf {
                 Some(conf) => (conf.type_.clone(), conf.name.clone()),
@@ -70,7 +70,7 @@ impl FnExport {
             };
             let point = match type_ {
                 PointConfigType::Bool => {
-                    PointType::Bool(PointHlr::new(
+                    Point::Bool(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         Bool(point.as_bool().value.0), 
@@ -80,7 +80,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Int => {
-                    PointType::Int(PointHlr::new(
+                    Point::Int(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_int().value, 
@@ -90,7 +90,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Real => {
-                    PointType::Real(PointHlr::new(
+                    Point::Real(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_real().value, 
@@ -100,7 +100,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Double => {
-                    PointType::Double(PointHlr::new(
+                    Point::Double(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_double().value, 
@@ -110,7 +110,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::String => {
-                    PointType::String(PointHlr::new(
+                    Point::String(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_string().value, 
@@ -120,7 +120,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Json => {
-                    PointType::String(PointHlr::new(
+                    Point::String(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_string().value, 
@@ -165,7 +165,7 @@ impl FnOut for FnExport {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let enable = match &self.enable {
             Some(enable) => match enable.borrow_mut().out() {
                 FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,

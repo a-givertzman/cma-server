@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::{
     conf::point_config::point_config_type::PointConfigType, core_::{
-        point::point_type::PointType, 
+        point::point::Point, 
         types::fn_in_out_ref::FnInOutRef,
     }, services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
@@ -18,7 +18,7 @@ pub struct FnSmooth {
     kind: FnKind,
     factor: FnInOutRef,
     input: FnInOutRef,
-    value: PointType,
+    value: Point,
 }
 //
 // 
@@ -32,7 +32,7 @@ impl FnSmooth {
             kind: FnKind::Fn,
             factor,
             input,
-            value: PointType::new(0, "", 0.0),
+            value: Point::new(0, "", 0.0),
         }
     }    
 }
@@ -59,7 +59,7 @@ impl FnOut for FnSmooth {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let factor = self.factor.borrow_mut().out();
         trace!("{}.out | factor: {:?}", self.id, factor);
         let factor = match factor {
@@ -77,7 +77,7 @@ impl FnOut for FnSmooth {
                 trace!("{}.out | delta: {:?}", self.id, delta);
                 let value = self.value.to_double().as_double() + delta * factor;
                 trace!("{}.out | value: {:?}", self.id, value);
-                let value = PointType::Double(value);
+                let value = Point::Double(value);
                 self.value = match input_type {
                     PointConfigType::Int => value.to_int(),
                     PointConfigType::Real => value.to_real(),
@@ -97,7 +97,7 @@ impl FnOut for FnSmooth {
     fn reset(&mut self) {
         self.factor.borrow_mut().reset();
         self.input.borrow_mut().reset();
-        self.value = PointType::new(0, "", 0.0);
+        self.value = Point::new(0, "", 0.0);
     }
 }
 //

@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
-    point::{point_hlr::PointHlr, point_type::PointType},
+    point::{point_hlr::PointHlr, point::Point},
     types::fn_in_out_ref::FnInOutRef,
 }};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
@@ -14,7 +14,7 @@ pub struct FnAcc {
     id: String,
     kind: FnKind,
     input: FnInOutRef,
-    acc: Option<PointType>,
+    acc: Option<Point>,
     initial: Option<FnInOutRef>,
 }
 //
@@ -57,7 +57,7 @@ impl FnOut for FnAcc {
         inputs
     }
     ///
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         // trace!("{}.out | input: {:?}", self.id, input);
         match input {
@@ -74,13 +74,13 @@ impl FnOut for FnAcc {
                                 }
                             }
                             None => match input.type_() {
-                                PointConfigType::Bool | PointConfigType::Int  => PointType::Int(PointHlr::new(
+                                PointConfigType::Bool | PointConfigType::Int  => Point::Int(PointHlr::new(
                                     input.tx_id(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
                                 )),
-                                PointConfigType::Real => PointType::Real(PointHlr::new(
+                                PointConfigType::Real => Point::Real(PointHlr::new(
                                     input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
-                                PointConfigType::Double => PointType::Double(PointHlr::new(
+                                PointConfigType::Double => Point::Double(PointHlr::new(
                                     input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
                                 _ => panic!("{}.out | Invalit input type '{:?}'", self.id, input.type_()),
@@ -89,7 +89,7 @@ impl FnOut for FnAcc {
                     }
                 };
                 let acc = match &input {
-                    PointType::Bool(_) => acc + input.to_int(),
+                    Point::Bool(_) => acc + input.to_int(),
                     _ => acc + input,
                 };
                 trace!("{}.out | out: {:?}", self.id, acc);

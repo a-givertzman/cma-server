@@ -2,7 +2,7 @@ use log::{debug, warn};
 use chrono::{DateTime, Utc};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_config_type::PointConfigType},
-    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point_type::PointType}, status::status::Status, types::bool::Bool},
+    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool},
     services::slmp_client::parse_point::ParsePoint,
 };
 ///
@@ -76,9 +76,9 @@ impl SlmpParseBool {
     }
     ///
     ///
-    fn to_point(&self) -> Option<PointType> {
+    fn to_point(&self) -> Option<Point> {
         if self.is_changed {
-            Some(PointType::Bool(PointHlr::new(
+            Some(Point::Bool(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 Bool(self.get_bit(self.value, self.bit.unwrap() as usize)),
@@ -159,13 +159,13 @@ impl ParsePoint for SlmpParseBool {
     }
     //
     //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<PointType> {
+    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
         self.add_raw_simple(bytes);
         self.to_point()
     }
     //
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<PointType> {
+    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_raw(bytes, timestamp);
         self.to_point().map(|point| {
             self.is_changed = false;
@@ -174,7 +174,7 @@ impl ParsePoint for SlmpParseBool {
     }
     //
     //
-    fn next_status(&mut self, status: Status) -> Option<PointType> {
+    fn next_status(&mut self, status: Status) -> Option<Point> {
         if self.status != status {
             self.status = status;
             self.timestamp = Utc::now();
@@ -202,7 +202,7 @@ impl ParsePoint for SlmpParseBool {
     }
     //
     //
-    fn to_bytes(&self, point: &PointType) -> Result<Vec<u8>, String> {
+    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
         match point.try_as_bool() {
             Ok(point) => {
                 let value = self.change_bit(self.value, point.value.0, self.bit.unwrap() as usize);

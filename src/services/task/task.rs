@@ -4,7 +4,7 @@ use std::{
 use log::{debug, error, info, trace, warn};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::point_type::PointType, constants::constants::RECV_TIMEOUT, object::object::Object, point::point_tx_id::PointTxId},
+    core_::{point::point::Point, constants::constants::RECV_TIMEOUT, object::object::Object, point::point_tx_id::PointTxId},
     conf::{point_config::{name::Name, point_config::PointConfig}, task_config::TaskConfig}, 
     services::{
         multi_queue::subscription_criteria::SubscriptionCriteria, safe_lock::SafeLock,
@@ -21,8 +21,8 @@ use crate::{
 pub struct Task {
     id: String,
     name: Name,
-    in_send: HashMap<String, Sender<PointType>>,
-    rx_recv: Vec<Receiver<PointType>>,
+    in_send: HashMap<String, Sender<Point>>,
+    rx_recv: Vec<Receiver<Point>>,
     services: Arc<RwLock<Services>>,
     conf: TaskConfig,
     exit: Arc<AtomicBool>,
@@ -89,7 +89,7 @@ impl Task {
     }
     ///
     ///
-    fn subscribe(&mut self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<RwLock<Services>>) -> Receiver<PointType> {
+    fn subscribe(&mut self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<RwLock<Services>>) -> Receiver<Point> {
         match subscriptions {
             Some((service_name, points)) => {
                 let (_, rx_recv) = services.wlock(&self.id).subscribe(
@@ -130,7 +130,7 @@ impl Debug for Task {
 impl Service for Task {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),

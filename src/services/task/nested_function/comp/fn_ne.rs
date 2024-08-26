@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     core_::{
         cot::cot::Cot,
-        point::{point_hlr::PointHlr, point_type::PointType},
+        point::{point_hlr::PointHlr, point::Point},
         types::{bool::Bool, fn_in_out_ref::FnInOutRef},
     },
     services::task::nested_function::{
@@ -56,7 +56,7 @@ impl FnOut for FnNe {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input1 = self.input1.borrow_mut().out();     
         let input2 = self.input2.borrow_mut().out();    
         trace!("{}.out | input1: {:?}", self.id, &input1);
@@ -75,7 +75,7 @@ impl FnOut for FnNe {
                     std::cmp::Ordering::Equal => (input1.tx_id(), input1.timestamp()),
                     std::cmp::Ordering::Greater => (input1.tx_id(), input1.timestamp()),
                 };
-                FnResult::Ok(PointType::Bool(
+                FnResult::Ok(Point::Bool(
                     PointHlr::new(
                         tx_id,
                         &format!("{}.out", self.id),

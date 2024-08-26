@@ -7,7 +7,7 @@ mod fn_average {
     use crate::{
         conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
         core_::{
-            aprox_eq::aprox_eq::AproxEq, point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef
+            aprox_eq::aprox_eq::AproxEq, point::point::{Point, ToPoint}, types::fn_in_out_ref::FnInOutRef
         },
         services::task::nested_function::{
             fn_::FnOut, fn_average::FnAverage, fn_input::FnInput, fn_result::FnResult
@@ -65,7 +65,7 @@ mod fn_average {
             input.clone(),
         );
         let test_data = vec![
-            (00,    true,  false,     FnResult::<PointType, _>::Err("")),
+            (00,    true,  false,     FnResult::<Point, _>::Err("")),
             (01,    true,  false,     FnResult::Err("")),
             (02,    true,   true,      FnResult::Err("")),
             (03,    true,  false,     FnResult::Err("")),

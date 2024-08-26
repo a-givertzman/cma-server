@@ -6,7 +6,7 @@ use log::{error, trace};
 use winit::platform::x11::EventLoopBuilderExtX11;
 use std::{mem::MaybeUninit, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Once}, thread};
 use crate::{
-    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}},
+    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -81,7 +81,7 @@ impl FnOut for FnPlot {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let mut inputs = self.inputs.iter();
         let enable = match &self.enable {
             Some(enable) => {
@@ -94,7 +94,7 @@ impl FnOut for FnPlot {
             }
             None => true,
         };
-        let mut value: PointType;
+        let mut value: Point;
         while let Some((name, input)) = inputs.next() {
             let input = input.borrow_mut().out();
             match input {
@@ -116,7 +116,7 @@ impl FnOut for FnPlot {
                 }
             }
         }        
-        FnResult::Ok(PointType::Bool(
+        FnResult::Ok(Point::Bool(
             PointHlr::new(
                 self.tx_id,
                 &self.id,

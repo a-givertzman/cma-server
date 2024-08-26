@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUs
 use log::{debug, error, info, warn};
 use concat_string::concat_string;
 use crate::{
-    conf::point_config::{name::Name, point_config::PointConfig}, core_::{future::{Future, Sink}, object::object::Object, point::point_type::PointType},
+    conf::point_config::{name::Name, point_config::PointConfig}, core_::{future::{Future, Sink}, object::object::Object, point::point::Point},
     services::{
         multi_queue::subscription_criteria::SubscriptionCriteria, queue_name::QueueName,
         retain_point_id::RetainPointId, safe_lock::SafeLock, service::service::Service, task::service_cycle::ServiceCycle
@@ -205,7 +205,7 @@ impl Services {
     }
     ///
     /// Returns copy of the Sender - service's incoming queue
-    pub fn get_link(&self, name: &QueueName) -> Result<Sender<PointType>, String> {
+    pub fn get_link(&self, name: &QueueName) -> Result<Sender<Point>, String> {
         match name.split() {
             Ok((service, queue)) => {
                 match self.get(&service) {
@@ -219,7 +219,7 @@ impl Services {
     ///
     /// Returns Receiver
     /// - service - the name of the service to subscribe on
-    pub fn subscribe(&mut self, service: &str, receiver_name: &str, points: &[SubscriptionCriteria]) -> (Sender<PointType>, Receiver<PointType>) {
+    pub fn subscribe(&mut self, service: &str, receiver_name: &str, points: &[SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         match self.get(service) {
             Some(srvc) => {
                 let r = srvc.slock(&self.id).subscribe(receiver_name, points);
@@ -285,7 +285,7 @@ impl Services {
     }
     ///
     /// Sends the General Interogation request to all services
-    pub fn gi(&self, _service: &str, _points: &[SubscriptionCriteria]) -> Receiver<PointType> {
+    pub fn gi(&self, _service: &str, _points: &[SubscriptionCriteria]) -> Receiver<Point> {
         panic!("{}.gi | Not implemented yet", self.id);
     }
     ///

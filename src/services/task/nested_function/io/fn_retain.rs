@@ -6,7 +6,7 @@ use crate::{
     conf::point_config::{name::Name, point_config_type::PointConfigType},
     core_::{
         cot::cot::Cot,
-        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType},
+        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point},
         status::status::Status,
         types::{bool::Bool, fn_in_out_ref::FnInOutRef},
     }, 
@@ -39,7 +39,7 @@ pub struct FnRetain {
     default: Option<FnInOutRef>,
     input: Option<FnInOutRef>,
     path: Option<PathBuf>,
-    cache: Option<PointType>,
+    cache: Option<Point>,
 }
 //
 //
@@ -89,15 +89,15 @@ impl FnRetain {
     }
     ///
     /// Writes Point value to the file
-    fn store(&mut self, point: &PointType) -> Result<(), String> {
+    fn store(&mut self, point: &Point) -> Result<(), String> {
         match self.path() {
             Ok(path) => {
                 let value = match point {
-                    PointType::Bool(point) => point.value.0.to_string(),
-                    PointType::Int(point) => point.value.to_string(),
-                    PointType::Real(point) => point.value.to_string(),
-                    PointType::Double(point) => point.value.to_string(),
-                    PointType::String(point) => point.value.clone(),
+                    Point::Bool(point) => point.value.0.to_string(),
+                    Point::Int(point) => point.value.to_string(),
+                    Point::Real(point) => point.value.to_string(),
+                    Point::Double(point) => point.value.to_string(),
+                    Point::String(point) => point.value.clone(),
                 };
                 match fs::OpenOptions::new().truncate(true).create(true).write(true).open(&path) {
                     Ok(mut f) => {
@@ -145,7 +145,7 @@ impl FnRetain {
     }
     ///
     /// Loads retained Point value from the disk
-    fn load(&mut self, type_: PointConfigType) -> Option<PointType> {
+    fn load(&mut self, type_: PointConfigType) -> Option<Point> {
         match self.path() {
             Ok(path) => {
                 match fs::OpenOptions::new().read(true).open(&path) {
@@ -155,8 +155,8 @@ impl FnRetain {
                             Ok(_) => {
                                 match type_ {
                                     PointConfigType::Bool => match input.as_str() {
-                                        "true" => Some(PointType::Bool(PointHlr::new(self.tx_id, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
-                                        "false" => Some(PointType::Bool(PointHlr::new(self.tx_id, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
+                                        "true" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
+                                        "false" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                         _ => {
                                             error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self.id, input, path);
                                             None
@@ -164,7 +164,7 @@ impl FnRetain {
                                     }
                                     PointConfigType::Int => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(PointType::Int(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(Point::Int(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -173,7 +173,7 @@ impl FnRetain {
                                     }
                                     PointConfigType::Real => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(PointType::Real(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(Point::Real(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -182,7 +182,7 @@ impl FnRetain {
                                     }
                                     PointConfigType::Double => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(PointType::Double(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(Point::Double(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -190,10 +190,10 @@ impl FnRetain {
                                         }
                                     }
                                     PointConfigType::String => {
-                                        Some(PointType::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                        Some(Point::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
                                     }
                                     PointConfigType::Json => {
-                                        Some(PointType::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                        Some(Point::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
                                     }
                                 }
 
@@ -246,7 +246,7 @@ impl FnOut for FnRetain {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let enable = match &self.enable {
             Some(enable) => {
                 let enable = enable.borrow_mut().out();

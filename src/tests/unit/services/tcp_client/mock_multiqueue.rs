@@ -1,15 +1,15 @@
 #![allow(non_snake_case)]
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex}, thread};
 use log::{warn, info};
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point_type::PointType}, services::service::{service::Service, service_handles::ServiceHandles}};
+use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point::Point}, services::service::{service::Service, service_handles::ServiceHandles}};
 ///
 /// 
 pub struct MockMultiQueue {
     id: String,
     name: Name,
-    send: Sender<PointType>,
-    recv: Vec<Receiver<PointType>>,
-    received: Arc<Mutex<Vec<PointType>>>,
+    send: Sender<Point>,
+    recv: Vec<Receiver<Point>>,
+    received: Arc<Mutex<Vec<Point>>>,
     recvLimit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -27,7 +27,7 @@ impl MockMultiQueue {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -56,7 +56,7 @@ impl Debug for MockMultiQueue {
 impl Service for MockMultiQueue {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         assert!(name == "queue", "{}.run | link '{:?}' - not found", self.id, name);
         self.send.clone()
     }

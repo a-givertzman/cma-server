@@ -8,7 +8,7 @@ mod fn_retain {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, point_config::{name::Name, point_config_type::PointConfigType}, task_config::TaskConfig},
-        core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point_hlr::PointHlr, point_type::PointType}, status::status::Status, types::bool::Bool},
+        core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool},
         services::{
             multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, service::service::Service, services::Services,
             task::{task::Task, task_test_receiver::TaskTestReceiver}
@@ -27,7 +27,7 @@ mod fn_retain {
     }
     ///
     /// Loads retained Point value from the disk
-    fn load(self_id: &str, path: &str, type_: PointConfigType) -> Option<PointType> {
+    fn load(self_id: &str, path: &str, type_: PointConfigType) -> Option<Point> {
         let tx_id = 10001;
         match fs::OpenOptions::new().read(true).open(&path) {
             Ok(mut f) => {
@@ -36,8 +36,8 @@ mod fn_retain {
                     Ok(_) => {
                         match type_ {
                             PointConfigType::Bool => match input.as_str() {
-                                "true" => Some(PointType::Bool(PointHlr::new(tx_id, &self_id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
-                                "false" => Some(PointType::Bool(PointHlr::new(tx_id, &self_id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
+                                "true" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
+                                "false" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                 _ => {
                                     error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self_id, input, path);
                                     None
@@ -45,7 +45,7 @@ mod fn_retain {
                             }
                             PointConfigType::Int => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(PointType::Int(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Int(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
                                     error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
@@ -54,7 +54,7 @@ mod fn_retain {
                             }
                             PointConfigType::Real => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(PointType::Real(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Real(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
                                     error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
@@ -63,7 +63,7 @@ mod fn_retain {
                             }
                             PointConfigType::Double => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(PointType::Double(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Double(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
                                     error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
@@ -71,10 +71,10 @@ mod fn_retain {
                                 }
                             }
                             PointConfigType::String => {
-                                Some(PointType::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
                             }
                             PointConfigType::Json => {
-                                Some(PointType::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
                             }
                         }
 

@@ -1,6 +1,6 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
 use log::trace;
-use crate::core_::point::point_type::PointType;
+use crate::core_::point::point::Point;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Constant value
@@ -8,7 +8,7 @@ use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 pub struct FnConst {
     id: String,
     kind: FnKind,
-    point: PointType,
+    point: Point,
 }
 //
 // 
@@ -17,7 +17,7 @@ impl FnConst {
     /// Creates new instance of function [Const] value
     ///     - [parent] - name of the parent object
     ///     - [value] - PointType, contains point with constant value
-    pub fn new(parent: &str, value: PointType) -> Self {
+    pub fn new(parent: &str, value: Point) -> Self {
         Self {
             id: format!("{}/FnConst{}", parent, COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Input,
@@ -44,7 +44,7 @@ impl FnOut for FnConst {
         vec![]
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         trace!("{}.out | value: {:?}", self.id, &self.point);
         FnResult::Ok(self.point.clone())
     }

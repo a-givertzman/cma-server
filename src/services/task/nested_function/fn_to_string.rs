@@ -2,7 +2,7 @@ use log::trace;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::{point_hlr::PointHlr, point_type::PointType}, types::fn_in_out_ref::FnInOutRef},
+    core_::{point::{point_hlr::PointHlr, point::Point}, types::fn_in_out_ref::FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -50,20 +50,20 @@ impl FnOut for FnToString {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let out = match &input {
-                    PointType::Bool(value) => &value.value.0.to_string(),
-                    PointType::Int(value) => &value.value.to_string(),
-                    PointType::Real(value) => &value.value.to_string(),
-                    PointType::Double(value) => &value.value.to_string(),
-                    PointType::String(value) => &value.value,
+                    Point::Bool(value) => &value.value.0.to_string(),
+                    Point::Int(value) => &value.value.to_string(),
+                    Point::Real(value) => &value.value.to_string(),
+                    Point::Double(value) => &value.value.to_string(),
+                    Point::String(value) => &value.value,
                 };
                 trace!("{}.out | out: {:?}", self.id, &out);
-                FnResult::Ok(PointType::String(
+                FnResult::Ok(Point::String(
                     PointHlr::new(
                         input.tx_id(),
                         &concat_string!(self.id, ".out"),

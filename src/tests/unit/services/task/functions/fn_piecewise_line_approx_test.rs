@@ -5,7 +5,7 @@ mod fn_piecewise_line_approx {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
-        core_::{aprox_eq::aprox_eq::AproxEq, point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
+        core_::{aprox_eq::aprox_eq::AproxEq, point::point::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_piecewise_line_approx::FnPiecewiseLineApprox},
     };
     ///

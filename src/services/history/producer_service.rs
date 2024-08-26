@@ -8,7 +8,7 @@ use serde_json::json;
 use testing::entities::test_value::Value;
 use crate::{
     conf::point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}, 
-    core_::{cot::cot::Cot, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::bool::Bool}, 
+    core_::{cot::cot::Cot, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status, types::bool::Bool}, 
     services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services, task::service_cycle::ServiceCycle},
 };
 use super::producer_service_config::ProducerServiceConfig;
@@ -64,7 +64,7 @@ impl ProducerService {
     }
     ///
     /// Writes Point into the log file ./logs/parent/points.log
-    fn log(self_id: &str, parent: &Name, point: &PointType) {
+    fn log(self_id: &str, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -208,12 +208,12 @@ impl PointGen {
     }
     ///
     /// Returns Point
-    fn to_point(&self) -> Option<PointType> {
+    fn to_point(&self) -> Option<Point> {
         if self.is_changed {
             trace!("{}.to_point | generating point type '{:?}'...", self.id, self._type);
             match &self._type {
                 PointConfigType::Bool => {
-                    Some(PointType::Bool(PointHlr::new(
+                    Some(Point::Bool(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         Bool(test_data_bool().as_bool()), 
@@ -223,7 +223,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Int => {
-                    Some(PointType::Int(PointHlr::new(
+                    Some(Point::Int(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_int().as_int(), 
@@ -233,7 +233,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Real => {
-                    Some(PointType::Real(PointHlr::new(
+                    Some(Point::Real(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_real().as_real(), 
@@ -243,7 +243,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Double => {
-                    Some(PointType::Double(PointHlr::new(
+                    Some(Point::Double(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_double().as_double(), 
@@ -253,7 +253,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::String => {
-                    Some(PointType::String(PointHlr::new(
+                    Some(Point::String(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_double().as_double().to_string(), 
@@ -263,7 +263,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Json => {
-                    Some(PointType::String(PointHlr::new(
+                    Some(Point::String(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         json!(test_data_double().as_double()).to_string(), 
@@ -293,7 +293,7 @@ impl PointGen {
 impl ParsePoint<Value> for PointGen {
     //
     //
-    fn next(&mut self, value: &Value, timestamp: DateTime<Utc>) -> Option<PointType> {
+    fn next(&mut self, value: &Value, timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_value(value, timestamp);
         match self.to_point() {
             Some(point) => {
@@ -305,7 +305,7 @@ impl ParsePoint<Value> for PointGen {
     }
     //
     //
-    fn next_status(&mut self, status: Status) -> Option<PointType> {
+    fn next_status(&mut self, status: Status) -> Option<Point> {
         self.status = status;
         self.timestamp = Utc::now();
         self.to_point()
@@ -322,10 +322,10 @@ impl ParsePoint<Value> for PointGen {
 pub trait ParsePoint<T> {
     ///
     /// Returns new point parsed from the data slice [bytes] with the given [timestamp] and Status::Ok
-    fn next(&mut self, input: &T, timestamp: DateTime<Utc>) -> Option<PointType>;
+    fn next(&mut self, input: &T, timestamp: DateTime<Utc>) -> Option<Point>;
     ///
     /// Returns new point (prevously parsed) with the given [status]
-    fn next_status(&mut self, status: Status) -> Option<PointType>;
+    fn next_status(&mut self, status: Status) -> Option<Point>;
     ///
     /// Returns true if value or status was updated since last call [addRaw()]
     fn is_changed(&self) -> bool;

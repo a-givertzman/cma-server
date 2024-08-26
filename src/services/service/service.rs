@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Sender, Receiver};
 use crate::{
     conf::point_config::point_config::PointConfig, 
-    core_::{object::object::Object, point::point_type::PointType}, 
+    core_::{object::object::Object, point::point::Point}, 
     services::multi_queue::subscription_criteria::SubscriptionCriteria,
 };
 use super::service_handles::ServiceHandles;
@@ -16,13 +16,13 @@ pub trait Service: Object + std::fmt::Debug {
     ///
     /// Returns copy of the Sender - service's incoming queue
     #[allow(unused_variables)]
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not supported", self.id())
     }
     ///
     /// Returns Receiver
     #[allow(unused_variables)]
-    fn subscribe(&mut self, receiver_id: &str, points: &[SubscriptionCriteria]) -> (Sender<PointType>, Receiver<PointType>) {
+    fn subscribe(&mut self, receiver_id: &str, points: &[SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         panic!("{}.subscribe | Does not supported", self.id())
     }
     ///
@@ -47,7 +47,7 @@ pub trait Service: Object + std::fmt::Debug {
     }
     ///
     /// Returns Receiver<PointType>, where will be pushed all points by subscription
-    fn gi(&self, _receiver_name: &str, _points: &[SubscriptionCriteria]) -> Receiver<PointType> {
+    fn gi(&self, _receiver_name: &str, _points: &[SubscriptionCriteria]) -> Receiver<Point> {
         panic!("{}.gi | Does not supported", self.id())
     }    
     ///

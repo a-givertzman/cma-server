@@ -15,7 +15,7 @@ use crate::{
         profinet_client_config::profinet_client_config::ProfinetClientConfig,
     },
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, failure::errors_limit::ErrorLimit, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, state::change_notify::ChangeNotify, status::status::Status, types::map::IndexMapFxHasher
+        constants::constants::RECV_TIMEOUT, cot::cot::Cot, failure::errors_limit::ErrorLimit, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, state::change_notify::ChangeNotify, status::status::Status, types::map::IndexMapFxHasher
     },
     services::{
         diagnosis::diag_point::DiagPoint,
@@ -66,7 +66,7 @@ impl ProfinetClient {
         diagnosis: &Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
         kewd: &DiagKeywd,
         value: Status,
-        tx_send: &Sender<PointType>,
+        tx_send: &Sender<Point>,
     ) {
         match diagnosis.lock() {
             Ok(mut diagnosis) => {
@@ -87,7 +87,7 @@ impl ProfinetClient {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    fn yield_status(self_id: &str, dbs: &mut IndexMapFxHasher<String, ProfinetDb>, tx_send: &Sender<PointType>) {
+    fn yield_status(self_id: &str, dbs: &mut IndexMapFxHasher<String, ProfinetDb>, tx_send: &Sender<Point>) {
         for (db_name, db) in dbs {
             debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(Status::Invalid, tx_send) {
@@ -100,7 +100,7 @@ impl ProfinetClient {
     }
     ///
     /// Reads data slice from the S7 device,
-    fn read(&mut self, tx_send: Sender<PointType>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn read(&mut self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
         info!("{}.read | starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
@@ -193,7 +193,7 @@ impl ProfinetClient {
     }
     ///
     /// Writes Point to the protocol (PROFINET device) specific address
-    fn write(&mut self, tx_send: Sender<PointType>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn write(&mut self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
         let exit = self.exit.clone();
@@ -261,7 +261,7 @@ impl ProfinetClient {
                                                     if errors_limit.add().is_err() {
                                                         error!("{}.write | ProfinetDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
-                                                        if let Err(err) = tx_send.send(PointType::String(PointHlr::new(
+                                                        if let Err(err) = tx_send.send(Point::String(PointHlr::new(
                                                             tx_id,
                                                             &point_name,
                                                             format!("Write error: {}", err),
@@ -314,10 +314,10 @@ impl ProfinetClient {
     }
     ///
     /// Creates confirmation reply point with the same value & Cot::ActCon
-    fn reply_point(tx_id: usize, point: PointType) -> PointType {
+    fn reply_point(tx_id: usize, point: Point) -> Point {
         match point {
-            PointType::Bool(point) => {
-                PointType::Bool(PointHlr::new(
+            Point::Bool(point) => {
+                Point::Bool(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -326,8 +326,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Int(point) => {
-                PointType::Int(PointHlr::new(
+            Point::Int(point) => {
+                Point::Int(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -336,8 +336,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Real(point) => {
-                PointType::Real(PointHlr::new(
+            Point::Real(point) => {
+                Point::Real(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -346,8 +346,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Double(point) => {
-                PointType::Double(PointHlr::new(
+            Point::Double(point) => {
+                Point::Double(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -356,8 +356,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::String(point) => {
-                PointType::String(PointHlr::new(
+            Point::String(point) => {
+                Point::String(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,

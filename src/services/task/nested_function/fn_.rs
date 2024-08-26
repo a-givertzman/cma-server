@@ -1,4 +1,4 @@
-use crate::core_::point::point_type::PointType;
+use crate::core_::point::point::Point;
 use super::{fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Input side interface for nested function
@@ -7,7 +7,7 @@ use super::{fn_kind::FnKind, fn_result::FnResult};
 pub trait FnIn: std::fmt::Debug {
     ///
     /// Adds new value into Input
-    fn add(&mut self, _point: &PointType) {
+    fn add(&mut self, _point: &Point) {
         panic!("FnIn.add | don't use this method, used only for FnInput")
     }
     ///
@@ -45,7 +45,7 @@ pub trait FnOut: std::fmt::Debug {
     ///   - Input not initialized
     /// - Returns None if:
     ///   - Point filtered by any kind of filtering function
-    fn out(&mut self) -> FnResult<PointType, String>;
+    fn out(&mut self) -> FnResult<Point, String>;
     ///
     /// resets self state to the initial, calls reset method of all inputs 
     fn reset(&mut self);
