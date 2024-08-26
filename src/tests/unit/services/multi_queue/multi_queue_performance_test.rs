@@ -2,7 +2,7 @@
 
 mod multi_queue {
     use std::{collections::HashMap, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
-    use sal_sync::services::entity::name::Name;
+    use sal_sync::services::{entity::name::Name, service::service::Service};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{

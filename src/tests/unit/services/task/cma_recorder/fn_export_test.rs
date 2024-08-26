@@ -2,7 +2,7 @@
 
 mod fn_export {
     use log::{debug, info, trace};
-    use sal_sync::services::entity::name::Name;
+    use sal_sync::services::{entity::name::Name, service::service::Service};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

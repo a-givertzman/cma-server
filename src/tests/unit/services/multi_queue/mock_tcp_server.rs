@@ -1,7 +1,7 @@
 use log::{info, warn, debug, trace};
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread};
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}},
+    entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},
     service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
 };
 use testing::entities::test_value::Value;

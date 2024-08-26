@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod jds_routes {
-    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::link_name::LinkName};
+    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::{link_name::LinkName, service::Service}};
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};

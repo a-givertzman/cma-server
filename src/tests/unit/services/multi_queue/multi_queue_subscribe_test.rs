@@ -6,6 +6,7 @@ use crate::services::{safe_lock::SafeLock, services::Services};
 
 mod multi_queue {
     use log::debug;
+    use sal_sync::services::service::service::Service;
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::{

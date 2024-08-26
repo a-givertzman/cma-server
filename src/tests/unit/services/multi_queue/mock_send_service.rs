@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{info, warn, trace};
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use testing::entities::test_value::Value;
 use crate::services::{safe_lock::SafeLock, services::Services};
 ///

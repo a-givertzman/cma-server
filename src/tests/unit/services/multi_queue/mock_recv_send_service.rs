@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use log::{info, warn, trace};
-use sal_sync::services::{entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use testing::entities::test_value::Value;
 use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::SafeLock, services::Services}};
