@@ -912,6 +912,7 @@ dependencies = [
  "once_cell",
  "rand",
  "regex",
+ "sal-sync",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -980,6 +981,12 @@ dependencies = [
  "bytes",
  "memchr",
 ]
+
+[[package]]
+name = "concat-in-place"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5b80dba65d26e0c4b692ad0312b837f1177e8175031af57fd1de4f3bc36b430"
 
 [[package]]
 name = "concat-string"
@@ -3083,6 +3090,27 @@ name = "ryu"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
+
+[[package]]
+name = "sal-sync"
+version = "0.0.1"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git#17c172f57de2e8ad2e10667597ebe1fbb092cb1a"
+dependencies = [
+ "chrono",
+ "concat-in-place",
+ "concat-string",
+ "debugging",
+ "env_logger",
+ "indexmap",
+ "lexical",
+ "log",
+ "rand",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "testing 0.1.1",
+]
 
 [[package]]
 name = "same-file"
