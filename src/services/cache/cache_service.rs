@@ -26,7 +26,7 @@ use serde_json::json;
 use crate::{
     conf::{cache_service_config::CacheServiceConfig, point_config::{name::Name, point_config::PointConfig, point_config_type::PointConfigType}},
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, object::object::Object, point::{point::Point, point_tx_id::PointTxId, point_type::PointType},
+        constants::constants::RECV_TIMEOUT, cot::cot::Cot, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point},
         status::status::Status,
         types::{bool::Bool, map::IndexMapFxHasher},
     },
@@ -47,7 +47,7 @@ pub struct CacheService {
     name: Name,
     conf: CacheServiceConfig,
     services: Arc<RwLock<Services>>,
-    cache: Arc<RwLock<IndexMap<String, PointType, BuildHasherDefault<FxHasher>>>>,
+    cache: Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -109,14 +109,14 @@ impl CacheService {
     }
     ///
     /// Loads retained on the disk points to the self cache
-    fn load(self_id: &str, name: &Name, cache: &Arc<RwLock<IndexMap<String, PointType, BuildHasherDefault<FxHasher>>>>) {
+    fn load(self_id: &str, name: &Name, cache: &Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>) {
         match cache.write() {
             Ok(mut cache) => {
                 let path = Name::new("assets/cache/", name.join()).join().trim_start_matches('/').to_owned();
                 let path = Path::new(&path).join("cache.json");
                 match fs::OpenOptions::new().read(true).open(&path) {
                     Ok(f) => {
-                        match serde_json::from_reader::<_, Vec<PointType>>(f) {
+                        match serde_json::from_reader::<_, Vec<Point>>(f) {
                             Ok(v) => {
                                 for point in v {
                                     cache.insert(point.dest(), point);
@@ -188,28 +188,28 @@ impl CacheService {
     }
     ///
     /// Stores self.cache on the disk
-    fn store<T: BuildHasher>(self_id: &str, name: &Name, points: &IndexMap<String, PointType, T>, status: Status) -> Result<(), String> {
-        let points: Vec<PointType> = points.into_iter().map(|(_dest, point)| {
+    fn store<T: BuildHasher>(self_id: &str, name: &Name, points: &IndexMap<String, Point, T>, status: Status) -> Result<(), String> {
+        let points: Vec<Point> = points.into_iter().map(|(_dest, point)| {
             match point.clone() {
-                PointType::Bool(mut point) => {
+                Point::Bool(mut point) => {
                     point.status = status;
-                    PointType::Bool(point)
+                    Point::Bool(point)
                 }
-                PointType::Int(mut point) => {
+                Point::Int(mut point) => {
                     point.status = status;
-                    PointType::Int(point)
+                    Point::Int(point)
                 }
-                PointType::Real(mut point) => {
+                Point::Real(mut point) => {
                     point.status = status;
-                    PointType::Real(point)
+                    Point::Real(point)
                 }
-                PointType::Double(mut point) => {
+                Point::Double(mut point) => {
                     point.status = status;
-                    PointType::Double(point)
+                    Point::Double(point)
                 }
-                PointType::String(mut point) => {
+                Point::String(mut point) => {
                     point.status = status;
-                    PointType::String(point)
+                    Point::String(point)
                 }
             }
         }).collect();
@@ -220,7 +220,7 @@ impl CacheService {
     pub fn initial(
         self_id: &str, 
         tx_id: usize, 
-        cache: &Arc<RwLock<IndexMapFxHasher<String, PointType>>>, 
+        cache: &Arc<RwLock<IndexMapFxHasher<String, Point>>>, 
         points: &[PointConfig],
         initial_status: Status,
     ) {
@@ -229,7 +229,7 @@ impl CacheService {
                 let timestamp = Utc::now();
                 for point_config in points {
                     let point = match point_config.type_ {
-                        PointConfigType::Bool => PointType::Bool(Point::new(
+                        PointConfigType::Bool => Point::Bool(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             Bool(false),
@@ -237,7 +237,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Int => PointType::Int(Point::new(
+                        PointConfigType::Int => Point::Int(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             0,
@@ -245,7 +245,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Real => PointType::Real(Point::new(
+                        PointConfigType::Real => Point::Real(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             0.0,
@@ -253,7 +253,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Double => PointType::Double(Point::new(
+                        PointConfigType::Double => Point::Double(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             0.0,
@@ -261,7 +261,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::String => PointType::String(Point::new(
+                        PointConfigType::String => Point::String(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             String::new(),
@@ -269,7 +269,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Json => PointType::String(Point::new(
+                        PointConfigType::Json => Point::String(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             String::new(),
@@ -398,7 +398,7 @@ impl Service for CacheService {
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Receiver<PointType> {
+    fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Receiver<Point> {
         let self_id = self.id.clone();
         info!("{}.gi | Gi requested from: {}", self_id, receiver_name);
         let (send, recv) = mpsc::channel();

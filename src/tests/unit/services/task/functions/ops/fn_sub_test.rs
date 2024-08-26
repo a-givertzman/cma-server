@@ -5,7 +5,7 @@ mod fn_sub {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
-        core_::{point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
+        core_::{point::point::{Point, ToPoint}, types::fn_in_out_ref::FnInOutRef}, 
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, ops::fn_sub::FnSub}
     };
     ///
@@ -37,7 +37,7 @@ mod fn_sub {
         info!("test_bool");
         let mut value1_stored;
         let mut value2_stored = false.to_point(0, "bool");
-        let mut target: PointType;
+        let mut target: Point;
         let input1 = init_each("false", FnConfPointType::Bool);
         let input2 = init_each("false", FnConfPointType::Bool);
         let mut fn_sub = FnSub::new(
@@ -61,13 +61,13 @@ mod fn_sub {
             let state = fn_sub.out().unwrap();
             debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
-            target = PointType::Bool(value1_stored.as_bool() + value2_stored.as_bool());
+            target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state, target);
             input2.borrow_mut().add(&point2);
             let state = fn_sub.out().unwrap();
             debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
-            target = PointType::Bool(value1_stored.as_bool() + value2_stored.as_bool());
+            target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state, target);
             println!();
         }
@@ -81,7 +81,7 @@ mod fn_sub {
         info!("test_int");
         let mut value1_stored;
         let mut value2_stored = 0.to_point(0, "int");
-        let mut target: PointType;
+        let mut target: Point;
         let input1 = init_each("0", FnConfPointType::Int);
         let input2 = init_each("0", FnConfPointType::Int);
         let mut fn_sub = FnSub::new(
@@ -110,13 +110,13 @@ mod fn_sub {
             let state = fn_sub.out().unwrap();
             debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
-            target = PointType::Int(value1_stored.as_int() - value2_stored.as_int());
+            target = Point::Int(value1_stored.as_int() - value2_stored.as_int());
             assert_eq!(state, target);
             input2.borrow_mut().add(&point2);
             let state = fn_sub.out().unwrap();
             debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
-            target = PointType::Int(value1_stored.as_int() - value2_stored.as_int());
+            target = Point::Int(value1_stored.as_int() - value2_stored.as_int());
             assert_eq!(state, target);
             println!();
         }

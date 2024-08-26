@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
 use log::{error, trace};
 use crate::{
-    conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType}, core_::{point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}
+    conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType}, core_::{point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}
 };
 ///
 /// Function | Used for export Point from Task service to another service
@@ -35,8 +35,8 @@ pub struct FnPoint {
     enable: Option<FnInOutRef>,
     changes_only: Option<FnInOutRef>,
     input: Option<FnInOutRef>,
-    send_to: Option<Sender<PointType>>,
-    state: Option<PointType>,
+    send_to: Option<Sender<Point>>,
+    state: Option<Point>,
 }
 //
 //
@@ -46,7 +46,7 @@ impl FnPoint {
     /// - id - just for proper debugging
     /// - input - incoming points
     /// - if [changes-only] is specified and true - changes only will be sent, default false (sending all points)
-    pub fn new(parent: impl Into<String>, conf: PointConfig, enable: Option<FnInOutRef>, changes_only: Option<FnInOutRef>, input: Option<FnInOutRef>, send_to: Option<Sender<PointType>>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: PointConfig, enable: Option<FnInOutRef>, changes_only: Option<FnInOutRef>, input: Option<FnInOutRef>, send_to: Option<Sender<Point>>) -> Self {
         let self_id = format!("{}/FnPoint{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
@@ -62,11 +62,11 @@ impl FnPoint {
     }
     ///
     /// 
-    fn send(&self, point: &PointType) {
+    fn send(&self, point: &Point) {
         if let Some(tx_send) = &self.send_to {
             let point = match self.conf.type_ {
                 PointConfigType::Bool => {
-                    PointType::Bool(Point::new(
+                    Point::Bool(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         Bool(point.as_bool().value.0), 
@@ -76,7 +76,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Int => {
-                    PointType::Int(Point::new(
+                    Point::Int(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_int().value, 
@@ -86,7 +86,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Real => {
-                    PointType::Real(Point::new(
+                    Point::Real(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_real().value, 
@@ -96,7 +96,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Double => {
-                    PointType::Double(Point::new(
+                    Point::Double(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_double().value, 
@@ -106,7 +106,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::String => {
-                    PointType::String(Point::new(
+                    Point::String(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_string().value, 
@@ -116,7 +116,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Json => {
-                    PointType::String(Point::new(
+                    Point::String(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_string().value, 
@@ -163,7 +163,7 @@ impl FnOut for FnPoint {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         match &self.input {
             Some(input) => {
                 let enable = match &self.enable {

@@ -73,8 +73,8 @@
 //! `2024-02-19T12:16:57.648504907Z`
 //! 
 //! </details>
-pub mod point;
+pub mod point_hlr;
 
-pub mod point_type;
+pub mod point;
 
 pub mod point_tx_id;

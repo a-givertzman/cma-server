@@ -1,16 +1,16 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
 use log::{info, trace, warn};
 use crate::{
-    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::point_type::PointType}, services::service::{service::Service, service_handles::ServiceHandles}
+    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::point::Point}, services::service::{service::Service, service_handles::ServiceHandles}
 };
 ///
 /// 
 pub struct MockRecvService {
     id: String,
     name: Name,
-    rx_send: HashMap<String, Sender<PointType>>,
-    rx_recv: Vec<Receiver<PointType>>,
-    received: Arc<Mutex<Vec<PointType>>>,
+    rx_send: HashMap<String, Sender<Point>>,
+    rx_recv: Vec<Receiver<Point>>,
+    received: Arc<Mutex<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -19,7 +19,7 @@ pub struct MockRecvService {
 impl MockRecvService {
     pub fn new(parent: impl Into<String>, rx_queue: &str, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
-        let (send, recv) = mpsc::channel::<PointType>();
+        let (send, recv) = mpsc::channel::<Point>();
         Self {
             id: name.join(),
             name,
@@ -37,7 +37,7 @@ impl MockRecvService {
     // }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -66,7 +66,7 @@ impl Debug for MockRecvService {
 impl Service for MockRecvService {
     //
     //
-    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point_type::PointType> {
+    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point::Point> {
         match self.rx_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),

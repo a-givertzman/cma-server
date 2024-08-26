@@ -7,7 +7,7 @@ mod fn_smooth {
     use crate::{
         conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
         core_::{
-            aprox_eq::aprox_eq::AproxEq, point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef
+            aprox_eq::aprox_eq::AproxEq, point::point::ToPoint, types::fn_in_out_ref::FnInOutRef
         },
         services::task::nested_function::{
             filter::fn_smooth::FnSmooth, fn_::FnOut, fn_input::FnInput

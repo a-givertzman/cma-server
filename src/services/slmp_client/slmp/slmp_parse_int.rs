@@ -2,7 +2,7 @@ use log::{debug, trace, warn};
 use chrono::{DateTime, Utc};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_config_type::PointConfigType},
-    core_::{cot::cot::Cot, filter::filter::Filter, point::{point::Point, point_type::PointType}, status::status::Status},
+    core_::{cot::cot::Cot, filter::filter::Filter, point::{point_hlr::PointHlr, point::Point}, status::status::Status},
     services::slmp_client::parse_point::ParsePoint,
 };
 ///
@@ -76,9 +76,9 @@ impl SlmpParseInt {
     }
     ///
     ///
-    fn to_point(&self) -> Option<PointType> {
+    fn to_point(&self) -> Option<Point> {
         if self.is_changed {
-            Some(PointType::Int(Point::new(
+            Some(Point::Int(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 self.value.value(),
@@ -128,13 +128,13 @@ impl ParsePoint for SlmpParseInt {
     }
     //
     //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<PointType> {
+    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
         self.add_raw_simple(bytes);
         self.to_point()
     }
     //
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<PointType> {
+    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_raw(bytes, timestamp);
         self.to_point().map(|point| {
             self.is_changed = false;
@@ -143,7 +143,7 @@ impl ParsePoint for SlmpParseInt {
     }
     //
     //
-    fn next_status(&mut self, status: Status) -> Option<PointType> {
+    fn next_status(&mut self, status: Status) -> Option<Point> {
         if self.status != status {
             self.status = status;
             self.timestamp = Utc::now();
@@ -171,7 +171,7 @@ impl ParsePoint for SlmpParseInt {
     }
     //
     //
-    fn to_bytes(&self, point: &PointType) -> Result<Vec<u8>, String> {
+    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
         match point.try_as_int() {
             Ok(point) => {
                 debug!("{}.write | converting '{}' into i16...", self.id, point.value);

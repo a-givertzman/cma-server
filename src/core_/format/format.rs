@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use log::trace;
 use regex::RegexBuilder;
-use crate::core_::point::point_type::PointType;
+use crate::core_::point::point::Point;
 ///
 /// Replaces input markers {marker name} with the concrete values
 ///
@@ -22,7 +22,7 @@ use crate::core_::point::point_type::PointType;
 pub struct Format {
     input: String,
     names: HashMap<String, (String, Option<String>)>,
-    values: HashMap<String, PointType>,
+    values: HashMap<String, Point>,
 }
 //
 // 
@@ -48,7 +48,7 @@ impl Format {
     }
     ///
     /// Inserts a Point by key to the configured format
-    pub fn insert(&mut self, key: &str, value: PointType) {
+    pub fn insert(&mut self, key: &str, value: Point) {
         self.values.insert(key.into(), value);
     }
     ///

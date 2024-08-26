@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Debug, fs, io::Write, sync::{atomic::{Atomi
 use log::{debug, error, info, trace, warn};
 use crate::{
     conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name}, 
-    core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point_type::PointType}}, 
+    core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point::Point}}, 
     services::{
         multi_queue::subscription_criteria::SubscriptionCriteria, queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
     },
@@ -18,8 +18,8 @@ pub struct MultiQueue {
     name: Name,
     subscriptions: Arc<Mutex<Subscriptions>>,
     subscriptions_changed: Arc<AtomicBool>,
-    rx_send: HashMap<String, Sender<PointType>>,
-    rx_recv: Vec<Receiver<PointType>>,
+    rx_send: HashMap<String, Sender<Point>>,
+    rx_recv: Vec<Receiver<Point>>,
     send_queues: Vec<QueueName>,
     services: Arc<RwLock<Services>>,
     receiver_dictionary: HashMap<usize, String>,
@@ -74,7 +74,7 @@ impl MultiQueue {
     }
     ///
     /// Writes Point's to the log file 
-    fn log_point(self_id: &str, parent: &Name, point_id: &str, point: &PointType) {
+    fn log_point(self_id: &str, parent: &Name, point_id: &str, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -113,7 +113,7 @@ impl Debug for MultiQueue {
 impl Service for MultiQueue {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.rx_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -121,7 +121,7 @@ impl Service for MultiQueue {
     }
     //
     //
-    fn subscribe(&mut self, receiver_name: &str, points: &[SubscriptionCriteria]) -> (Sender<PointType>, Receiver<PointType>) {
+    fn subscribe(&mut self, receiver_name: &str, points: &[SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         let (send, recv) = mpsc::channel();
         let receiver_hash = PointTxId::from_str(receiver_name);
         self.receiver_dictionary.insert(receiver_hash, receiver_name.to_string());

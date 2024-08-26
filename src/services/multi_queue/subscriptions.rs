@@ -1,7 +1,7 @@
 use log::{warn, trace};
 use std::{collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::mpsc::Sender};
 use hashers::fx_hash::FxHasher;
-use crate::core_::{point::point_type::PointType, types::map::HashMapFxHasher};
+use crate::core_::{point::point::Point, types::map::HashMapFxHasher};
 ///
 /// Unique id of the service receiving the Point's by the subscription
 /// This id used to identify the service produced the Points. 
@@ -17,9 +17,9 @@ type PointDest = String;
 #[derive(Clone)]
 pub struct Subscriptions {
     id: String,
-    multicast: HashMapFxHasher<PointDest, HashMapFxHasher<ReceiverId, Sender<PointType>>>,
-    broadcast: HashMapFxHasher<ReceiverId, Sender<PointType>>,
-    empty: HashMapFxHasher<ReceiverId, Sender<PointType>>,
+    multicast: HashMapFxHasher<PointDest, HashMapFxHasher<ReceiverId, Sender<Point>>>,
+    broadcast: HashMapFxHasher<ReceiverId, Sender<Point>>,
+    empty: HashMapFxHasher<ReceiverId, Sender<Point>>,
 }
 //
 // 
@@ -36,7 +36,7 @@ impl Subscriptions {
     }
     ///
     /// Adds subscription for receiver_id with destination 
-    pub fn add_multicast(&mut self, receiver_id: usize, destination: &str, sender: Sender<PointType>) {
+    pub fn add_multicast(&mut self, receiver_id: usize, destination: &str, sender: Sender<Point>) {
         self.multicast
             .entry(destination.to_owned())
             .or_insert(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
@@ -59,7 +59,7 @@ impl Subscriptions {
     }
     ///
     /// Adds subscription for receiver_id without destination, all destinations will be received
-    pub fn add_broadcast(&mut self, receiver_id: usize, sender: Sender<PointType>) {
+    pub fn add_broadcast(&mut self, receiver_id: usize, sender: Sender<Point>) {
         self.broadcast.insert(
             receiver_id,
             sender,
@@ -67,7 +67,7 @@ impl Subscriptions {
     }
     ///
     /// Returns map of Senders
-    pub fn iter(&self, point_id: &str) -> impl Iterator<Item = (&usize, &Sender<PointType>)> {
+    pub fn iter(&self, point_id: &str) -> impl Iterator<Item = (&usize, &Sender<Point>)> {
         match self.multicast.get(point_id) {
             Some(multicast) => {
                 trace!("{}.iter | \n\t Multicast: {:?} \n\t Broadcast: {:?}", self.id, multicast, self.broadcast);

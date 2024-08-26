@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use concat_string::concat_string;
 use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
-    point::{point::Point, point_type::PointType},
+    point::{point_hlr::PointHlr, point::Point},
     types::fn_in_out_ref::FnInOutRef,
 }};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
@@ -58,7 +58,7 @@ impl FnOut for FnAverage {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let enable = match &self.enable {
             Some(enable) => {
                 let enable = enable.borrow_mut().out();
@@ -89,8 +89,8 @@ impl FnOut for FnAverage {
                     trace!("{}.out | average: {:?}", self.id, average);
                     match input.type_() {
                         PointConfigType::Int => {
-                            FnResult::Ok(PointType::Int(
-                                Point::new(
+                            FnResult::Ok(Point::Int(
+                                PointHlr::new(
                                     input.tx_id(),
                                     &self.id,
                                     average.round() as i64,
@@ -101,8 +101,8 @@ impl FnOut for FnAverage {
                             ))
                         }
                         PointConfigType::Real => {
-                            FnResult::Ok(PointType::Real(
-                                Point::new(
+                            FnResult::Ok(Point::Real(
+                                PointHlr::new(
                                     input.tx_id(),
                                     &self.id,
                                     average as f32,
@@ -113,8 +113,8 @@ impl FnOut for FnAverage {
                             ))
                         }
                         PointConfigType::Double => {
-                            FnResult::Ok(PointType::Double(
-                                Point::new(
+                            FnResult::Ok(Point::Double(
+                                PointHlr::new(
                                     input.tx_id(),
                                     &self.id,
                                     average,

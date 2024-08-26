@@ -5,7 +5,7 @@ mod fn_count {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig},
-        core_::{point::point_type::ToPoint,
+        core_::{point::point::ToPoint,
         types::fn_in_out_ref::FnInOutRef},
         services::task::nested_function::{
             fn_::FnOut, fn_count::{self, FnCount}, fn_input::FnInput, reset_counter::AtomicReset,

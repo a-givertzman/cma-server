@@ -6,7 +6,7 @@ mod tcp_client {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::tcp_client_config::TcpClientConfig, core_::{
-            net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, object::object::Object, point::point_type::{PointType, ToPoint}
+            net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, object::object::Object, point::point::{Point, ToPoint}
         }, services::{safe_lock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient}, tcp::tcp_stream_write::OpResult, tests::unit::services::tcp_client::mock_multiqueue::MockMultiQueue
     };
     ///
@@ -128,7 +128,7 @@ mod tcp_client {
     }
     ///
     /// TcpServer setup
-    fn mock_tcp_server(addr: String, count: usize, received: Arc<Mutex<Vec<PointType>>>) -> JoinHandle<()> {
+    fn mock_tcp_server(addr: String, count: usize, received: Arc<Mutex<Vec<Point>>>) -> JoinHandle<()> {
         let sent = 0;
         thread::spawn(move || {
             info!("TCP server | Preparing test server...");

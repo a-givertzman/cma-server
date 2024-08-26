@@ -3,7 +3,7 @@ use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory},
-    core_::{cot::cot::Cot, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool},
+    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool},
     services::profinet_client::parse_point::ParsePoint,
 };
 
@@ -68,9 +68,9 @@ impl S7ParseBool {
     }
     ///
     ///
-    fn to_point(&self) -> Option<PointType> {
+    fn to_point(&self) -> Option<Point> {
         if self.is_changed {
-            Some(PointType::Bool(Point::new(
+            Some(Point::Bool(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 Bool(self.value),
@@ -117,13 +117,13 @@ impl S7ParseBool {
 impl ParsePoint for S7ParseBool {
     //
     //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<PointType> {
+    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
         self.add_raw_simple(bytes);
         self.to_point()
     }
     //
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<PointType> {
+    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_raw(bytes, timestamp);
         self.to_point().map(|point| {
             self.is_changed = false;
@@ -132,7 +132,7 @@ impl ParsePoint for S7ParseBool {
     }
     //
     //
-    fn next_status(&mut self, status: Status) -> Option<PointType> {
+    fn next_status(&mut self, status: Status) -> Option<Point> {
         if self.status != status {
             self.status = status;
             self.timestamp = Utc::now();

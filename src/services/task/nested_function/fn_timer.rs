@@ -1,7 +1,7 @@
 use log::trace;
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
 use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
-    cot::cot::Cot, point::{point::Point, point_type::PointType},
+    cot::cot::Cot, point::{point_hlr::PointHlr, point::Point},
     state::switch_state::{Switch, SwitchCondition, SwitchState},
     types::fn_in_out_ref::FnInOutRef,
 }};
@@ -145,7 +145,7 @@ impl FnOut for FnTimer {
         inputs
     }
     ///
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let enable = match &mut self.enable {
             Some(en) => match en.borrow_mut().out() {
                 FnResult::Ok(en) => en.to_bool().as_bool().value.0,
@@ -203,8 +203,8 @@ impl FnOut for FnTimer {
                     }                    
                 };
                 trace!("{}.out | out: {:?}", self.id, out);
-                let value = PointType::Double(
-                    Point::new(
+                let value = Point::Double(
+                    PointHlr::new(
                         input.tx_id(),
                         &format!("{}.out", self.id),
                         out,

@@ -8,7 +8,7 @@ use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
     core_::{
         cot::cot::Cot, failure::errors_limit::ErrorLimit,
-        point::{point::Point, point_type::PointType},
+        point::{point_hlr::PointHlr, point::Point},
         state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
         status::status::Status, types::map::IndexMapFxHasher,
     },
@@ -28,7 +28,7 @@ pub struct SlmpWrite {
     id: String,
     // name: Name,
     conf: SlmpClientConfig,
-    dest: Sender<PointType>,
+    dest: Sender<Point>,
     dbs: Arc<RwLock<IndexMapFxHasher<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
     services: Arc<RwLock<Services>>,
@@ -43,7 +43,7 @@ impl SlmpWrite {
         tx_id: usize,
         // name: Name,
         conf: SlmpClientConfig,
-        dest: Sender<PointType>,
+        dest: Sender<Point>,
         // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
         services: Arc<RwLock<Services>>,
         status: Arc<AtomicU32>,
@@ -125,7 +125,7 @@ impl SlmpWrite {
                                                     error!("{}.run | SlmpDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                     exit.exit_pair();
                                                     status.store(Status::Invalid.into(), Ordering::SeqCst);
-                                                    if let Err(err) = dest.send(PointType::String(Point::new(
+                                                    if let Err(err) = dest.send(Point::String(PointHlr::new(
                                                         tx_id,
                                                         &point_name,
                                                         format!("Write error: {}", err),
@@ -170,10 +170,10 @@ impl SlmpWrite {
     }
     ///
     /// Creates confirmation reply point with the same value & Cot::ActCon
-    fn reply_point(tx_id: usize, point: PointType) -> PointType {
+    fn reply_point(tx_id: usize, point: Point) -> Point {
         match point {
-            PointType::Bool(point) => {
-                PointType::Bool(Point::new(
+            Point::Bool(point) => {
+                Point::Bool(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -182,8 +182,8 @@ impl SlmpWrite {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Int(point) => {
-                PointType::Int(Point::new(
+            Point::Int(point) => {
+                Point::Int(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -192,8 +192,8 @@ impl SlmpWrite {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Real(point) => {
-                PointType::Real(Point::new(
+            Point::Real(point) => {
+                Point::Real(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -202,8 +202,8 @@ impl SlmpWrite {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Double(point) => {
-                PointType::Double(Point::new(
+            Point::Double(point) => {
+                Point::Double(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -212,8 +212,8 @@ impl SlmpWrite {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::String(point) => {
-                PointType::String(Point::new(
+            Point::String(point) => {
+                Point::String(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,

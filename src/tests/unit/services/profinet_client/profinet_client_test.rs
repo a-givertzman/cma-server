@@ -6,7 +6,7 @@ mod profinet_client {
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig}, core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status}, services::{multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, service::service::Service, services::Services}};
+    use crate::{conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig}, core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status}, services::{multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, service::service::Service, services::Services}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -76,13 +76,13 @@ mod profinet_client {
             let point = match value {
                 Value::Bool(value) => panic!("{} | Bool does not supported: {:?}", self_id, value),
                 Value::Int(value) => {
-                    PointType::Int(Point::new(tx_id, &Name::new("/Ied01/db999/", "Capacitor.Capacity").join(), value, Status::Ok, Cot::Act, Utc::now()))
+                    Point::Int(PointHlr::new(tx_id, &Name::new("/Ied01/db999/", "Capacitor.Capacity").join(), value, Status::Ok, Cot::Act, Utc::now()))
                 }
                 Value::Real(value) => {
-                    PointType::Real(Point::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
+                    Point::Real(PointHlr::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
                 }
                 Value::Double(value) => {
-                    PointType::Double(Point::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
+                    Point::Double(PointHlr::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
                 }
                 Value::String(value) => panic!("{} | String does not supported: {:?}", self_id, value),
             };
@@ -93,25 +93,25 @@ mod profinet_client {
                 Ok(received_point) => {
                     if received_point.cot() == Cot::Inf {
                         match received_point {
-                            PointType::Bool(value) => {
+                            Point::Bool(value) => {
                                 panic!("{} | Bool does not supported: {:?}", self_id, value)
                             }
-                            PointType::Int(received_point) => {
+                            Point::Int(received_point) => {
                                 let result = received_point.value;
                                 let target = point.as_int().value;
                                 assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
                             }
-                            PointType::Real(received_point) => {
+                            Point::Real(received_point) => {
                                 let result = received_point.value;
                                 let target = point.as_real().value;
                                 assert!(result.aprox_eq(target, 3), "\nresult: {:?}\ntarget: {:?}", result, target);
                             }
-                            PointType::Double(received_point) => {
+                            Point::Double(received_point) => {
                                 let result = received_point.value;
                                 let target = point.as_double().value;
                                 assert!(result.aprox_eq(target, 3), "\nresult: {:?}\ntarget: {:?}", result, target);
                             }
-                            PointType::String(value) => {
+                            Point::String(value) => {
                                 panic!("{} | Bool does not supported: {:?}", self_id, value)
                             }
                         }

@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::{
     core_::{
-        point::point_type::PointType, types::fn_in_out_ref::FnInOutRef,
+        point::point::Point, types::fn_in_out_ref::FnInOutRef,
     },
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
@@ -59,27 +59,27 @@ impl FnOut for FnBitNot {
         self.input.borrow().inputs()
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:#?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let value = match input {
-                    PointType::Bool(mut val) => {
+                    Point::Bool(mut val) => {
                         val.value = ! val.value;
-                        PointType::Bool(val)
+                        Point::Bool(val)
                     }
-                    PointType::Int(mut val) => {
+                    Point::Int(mut val) => {
                         val.value = ! val.value;
-                        PointType::Int(val)
+                        Point::Int(val)
                     }
-                    PointType::Real(_) => {
+                    Point::Real(_) => {
                         panic!("{}.out | Not implemented for Real", self.id);
                     }
-                    PointType::Double(_) => {
+                    Point::Double(_) => {
                         panic!("{}.out | Not implemented for Double", self.id);
                     }
-                    PointType::String(_) => {
+                    Point::String(_) => {
                         panic!("{}.out | Not implemented for String", self.id);
                     }
                 };

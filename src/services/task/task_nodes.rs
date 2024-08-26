@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 use log::{trace, warn};
 use crate::{
     conf::{fn_::fn_conf_kind::FnConfKind, point_config::name::Name, task_config::TaskConfig}, 
-    core_::{point::{point_tx_id::PointTxId, point_type::PointType}, types::fn_in_out_ref::FnInOutRef}, 
+    core_::{point::{point_tx_id::PointTxId, point::Point}, types::fn_in_out_ref::FnInOutRef}, 
     services::{services::Services, task::nested_function::{fn_kind::FnKind, nested_fn::NestedFn}},
 };
 use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
@@ -208,7 +208,7 @@ impl TaskNodes {
     /// Evaluates all containing node:
     ///  - adding new point
     ///  - evaluating each node
-    pub fn eval(&mut self, point: PointType) {
+    pub fn eval(&mut self, point: Point) {
         let self_id = self.id.clone();
         let point_name = point.name();
         if let Some(eval_node) = self.get_eval_node("every") {

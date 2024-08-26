@@ -7,7 +7,7 @@ mod cma_recorder {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, task_config::TaskConfig},
-        core_::point::point_type::PointType,
+        core_::point::point::Point,
         services::{
             multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, service::service::Service, services::Services,
             task::{task::Task, task_test_receiver::TaskTestReceiver},
@@ -295,25 +295,25 @@ mod cma_recorder {
         };
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count_load);
         assert!(result >= total_count_load, "\nresult: {:?}\ntarget: {:?}", result, total_count_load);
-        let smooth: Vec<PointType> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let smooth: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Smooth", self_id)
         }).collect();
         for (i, result) in smooth.iter().enumerate() {
             println!("smooth: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let thrd: Vec<PointType> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let thrd: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Threshold", self_id)
         }).collect();
         for (i, result) in thrd.iter().enumerate() {
             println!("threshold: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle: Vec<PointType> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let op_cycle: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/OpCycle", self_id)
         }).collect();
         for (i, result) in op_cycle.iter().enumerate() {
             println!("op cycle: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle_sql: Vec<PointType> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let op_cycle_sql: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/OpCycleSql", self_id)
         }).collect();
         for (i, result) in op_cycle_sql.iter().enumerate() {

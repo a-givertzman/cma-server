@@ -1,6 +1,6 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{info, trace, warn};
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point_type::PointType}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
+use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point::Point}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
 #[cfg(test)]
 
 mod multi_queue {
@@ -154,7 +154,7 @@ struct MockReceiver {
     name: Name,
     subscribe: String,
     services: Arc<RwLock<Services>>,
-    received: Arc<RwLock<Vec<PointType>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
 }

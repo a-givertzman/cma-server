@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use log::{debug, trace};
 use crate::{
     conf::point_config::point_config_type::PointConfigType, core_::{
-        point::{point::Point, point_type::PointType}, 
+        point::{point_hlr::PointHlr, point::Point}, 
         types::fn_in_out_ref::FnInOutRef,
     }, services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
@@ -35,8 +35,8 @@ pub struct FnThreshold {
     threshold: FnInOutRef,
     factor: Option<FnInOutRef>,
     input: FnInOutRef,
-    value: Option<PointType>,
-    delta: Point<f64>,
+    value: Option<Point>,
+    delta: PointHlr<f64>,
 }
 //
 // 
@@ -53,7 +53,7 @@ impl FnThreshold {
             factor,
             input,
             value: None,
-            delta: Point::new_double(0, "", 0.0),
+            delta: PointHlr::new_double(0, "", 0.0),
         }
     }    
 }
@@ -86,7 +86,7 @@ impl FnOut for FnThreshold {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let enable = match &self.enable {
             Some(enable) => match enable.borrow_mut().out() {
                 FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
@@ -126,21 +126,21 @@ impl FnOut for FnThreshold {
                             let delta = (input.clone() - value.to_double().as_double()).abs();
                             trace!("{}.out | Absolute delta: {}", self.id, delta.value);
                             if delta >= threshold {
-                                *value = PointType::Double(input);
-                                self.delta = Point::new_double(0, "", 0.0);
+                                *value = Point::Double(input);
+                                self.delta = PointHlr::new_double(0, "", 0.0);
                             } else {
                                 if let Some(factor) = factor {
                                     self.delta = self.delta.clone() + (delta * factor);
                                     debug!("{}.out | Integral delta: {}", self.id, self.delta.value);
                                     if self.delta >= threshold {
-                                        self.value = Some(PointType::Double(input));
-                                        self.delta = Point::new_double(0, "", 0.0);
+                                        self.value = Some(Point::Double(input));
+                                        self.delta = PointHlr::new_double(0, "", 0.0);
                                     }
                                 }
                             }
                         }
                         None => {
-                            self.value = Some(PointType::Double(input));
+                            self.value = Some(Point::Double(input));
                         }
                     }
                     let value = match &self.value {
@@ -160,7 +160,7 @@ impl FnOut for FnThreshold {
             }
         } else {
             self.value = None;
-            self.delta = Point::new_double(0, "", 0.0);
+            self.delta = PointHlr::new_double(0, "", 0.0);
             FnResult::None
         }
     }
@@ -176,7 +176,7 @@ impl FnOut for FnThreshold {
         }
         self.input.borrow_mut().reset();
         self.value = None;
-        self.delta = Point::new_double(0, "", 0.0);
+        self.delta = PointHlr::new_double(0, "", 0.0);
     }
 }
 //

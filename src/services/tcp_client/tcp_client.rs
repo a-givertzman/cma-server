@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering
 use log::{info, warn};
 use testing::stuff::wait::WaitTread;
 use crate::{
-    conf::{point_config::name::Name, tcp_client_config::TcpClientConfig}, core_::{net::protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize, jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, object::object::Object, point::point_type::PointType}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}, tcp::{
+    conf::{point_config::name::Name, tcp_client_config::TcpClientConfig}, core_::{net::protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize, jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, object::object::Object, point::point::Point}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}, tcp::{
         tcp_client_connect::TcpClientConnect, tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive
     } 
 };
@@ -14,8 +14,8 @@ use crate::{
 pub struct TcpClient {
     id: String,
     name: Name,
-    in_send: HashMap<String, Sender<PointType>>,
-    in_recv: Vec<Receiver<PointType>>,
+    in_send: HashMap<String, Sender<Point>>,
+    in_recv: Vec<Receiver<Point>>,
     conf: TcpClientConfig,
     services: Arc<RwLock<Services>>,
     tcp_recv_alive: Option<Arc<Mutex<TcpReadAlive>>>,
@@ -66,7 +66,7 @@ impl Debug for TcpClient {
 impl Service for TcpClient {
     //
     // 
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),

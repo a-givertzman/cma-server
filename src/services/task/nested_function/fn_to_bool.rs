@@ -2,7 +2,7 @@ use log::trace;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::{point::Point, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef, type_of::DebugTypeOf}},
+    core_::{point::{point_hlr::PointHlr, point::Point}, types::{bool::Bool, fn_in_out_ref::FnInOutRef, type_of::DebugTypeOf}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -53,29 +53,29 @@ impl FnOut for FnToBool {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         match input {
             FnResult::Ok(input) => {
                 trace!("{}.out | input: {:?}", self.id, input);
                 let out = match &input {
-                    PointType::Bool(value) => {
+                    Point::Bool(value) => {
                         value.value.0
                     }
-                    PointType::Int(value) => {
+                    Point::Int(value) => {
                         value.value > 0
                     }
-                    PointType::Real(value) => {
+                    Point::Real(value) => {
                         value.value > 0.0
                     }
-                    PointType::Double(value) => {
+                    Point::Double(value) => {
                         value.value > 0.0
                     }
                     _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
                 };
                 trace!("{}.out | out: {:?}", self.id, &out);
-                FnResult::Ok(PointType::Bool(
-                    Point::new(
+                FnResult::Ok(Point::Bool(
+                    PointHlr::new(
                         input.tx_id(),
                         &concat_string!(self.id, ".out"),
                         Bool(out),

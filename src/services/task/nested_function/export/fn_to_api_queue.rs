@@ -1,6 +1,6 @@
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
 use log::{debug, error, trace};
-use crate::{core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}};
+use crate::{core_::{point::point::Point, types::fn_in_out_ref::FnInOutRef}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}};
 ///
 /// Exports data from the input into the associated queue
 #[derive(Debug)]
@@ -8,7 +8,7 @@ pub struct FnToApiQueue {
     id: String,
     kind: FnKind,
     input: FnInOutRef,
-    tx_send: Sender<PointType>,
+    tx_send: Sender<Point>,
     state: String,
 }
 ///
@@ -21,7 +21,7 @@ impl FnToApiQueue {
     /// creates new instance of the FnToApiQueue
     /// - id - just for proper debugging
     /// - input - incoming points
-    pub fn new(parent: impl Into<String>, input: FnInOutRef, send: Sender<PointType>) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnInOutRef, send: Sender<Point>) -> Self {
         Self {  
             id: format!("{}/FnToApiQueue{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
@@ -50,7 +50,7 @@ impl FnOut for FnToApiQueue {
         self.input.borrow().inputs()
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:?}", self.id, input);
         match input {

@@ -1,6 +1,6 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
 use log::trace;
-use crate::core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef};
+use crate::core_::{point::point::Point, types::fn_in_out_ref::FnInOutRef};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Specific kinde of function
@@ -15,7 +15,7 @@ pub struct FnVar {
     id: String,
     kind: FnKind,
     input: FnInOutRef,
-    value: Option<FnResult<PointType, String>>,
+    value: Option<FnResult<Point, String>>,
 }
 //
 // 
@@ -59,7 +59,7 @@ impl FnOut for FnVar {
     ///
     /// Do not evaluete calculations, 
     /// just returns the result if evalueted, evaluate
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let value = match &self.value {
             Some(value) => {
                 trace!("{}.out | value: {:?}", self.id, &self.value);

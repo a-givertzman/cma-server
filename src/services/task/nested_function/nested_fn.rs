@@ -4,7 +4,7 @@ use log::{debug, error, trace, warn};
 use crate::{
     conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind}, point_config::name::Name},
     core_::{
-        point::point_type::{PointType, ToPoint},
+        point::point::{Point, ToPoint},
         types::fn_in_out_ref::FnInOutRef,
     },
     services::{
@@ -758,7 +758,7 @@ impl NestedFn {
     }
     ///
     ///
-    fn fn_const(parent: &str, value: PointType) -> FnInOutRef {
+    fn fn_const(parent: &str, value: Point) -> FnInOutRef {
         Rc::new(RefCell::new(Box::new(
             FnConst::new(parent, value)
         )))

@@ -7,7 +7,7 @@ mod fn_point_id {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, point_config::{name::Name, point_config::PointConfig}},
-        core_::{point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef},
+        core_::{point::point::ToPoint, types::fn_in_out_ref::FnInOutRef},
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_point_id::FnPointId},
     };
     ///

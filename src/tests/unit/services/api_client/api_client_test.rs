@@ -6,7 +6,7 @@ mod api_client {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use api_tools::api::reply::api_reply::ApiReply;
     use crate::{
-        core_::point::point_type::ToPoint,
+        core_::point::point::ToPoint,
         conf::api_client_config::ApiClientConfig,
         services::{api_cient::api_client::ApiClient, service::service::Service},
     };

@@ -15,7 +15,7 @@ use crate::{
     core_::{
         filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
         net::connection_status::{ConnectionStatus, SocketState},
-        point::point_type::PointType, status::status::Status,
+        point::point::Point, status::status::Status,
     },
     services::slmp_client::{
         parse_point::ParsePoint,
@@ -64,7 +64,7 @@ impl SlmpDb {
     }
     ///
     /// Writes Point's to the log file
-    fn log(self_id: &str, parent: &Name, point: &PointType) {
+    fn log(self_id: &str, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -79,7 +79,7 @@ impl SlmpDb {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    pub fn yield_status(&mut self, status: Status, tx_send: &Sender<PointType>) -> Result<(), String> {
+    pub fn yield_status(&mut self, status: Status, tx_send: &Sender<Point>) -> Result<(), String> {
         let mut message = String::new();
         for (_key, parse_point) in &mut self.points {
             if let Some(point) = parse_point.next_status(status) {
@@ -165,7 +165,7 @@ impl SlmpDb {
     ///     - reads data slice from the device (TcpStream),
     ///     - parses raw data into the configured points
     ///     - sends to the [dest] only points with updated value or status
-    pub fn read(&mut self, tcp_stream: &mut TcpStream, dest: &Sender<PointType>) -> Result<(), String> {
+    pub fn read(&mut self, tcp_stream: &mut TcpStream, dest: &Sender<Point>) -> Result<(), String> {
         trace!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset, self.size);
         let read_tcp_stream = BufReader::new(tcp_stream.try_clone().unwrap());
         match self.slmp_packet.read_packet(FrameType::BinReqSt) {
@@ -231,7 +231,7 @@ impl SlmpDb {
     ///
     /// Writes point to the current DB
     /// - Returns Ok() if succeed, Err(message) on fail
-    pub fn write(&mut self, tcp_stream: &mut TcpStream, point: PointType) -> Result<(), String> {
+    pub fn write(&mut self, tcp_stream: &mut TcpStream, point: Point) -> Result<(), String> {
         debug!("{}.write | Writing point: {:?}", self.id, point);
         match self.points.get(&point.name()) {
             Some(parse_point) => {

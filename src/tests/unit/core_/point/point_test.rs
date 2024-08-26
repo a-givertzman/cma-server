@@ -5,7 +5,7 @@ mod point {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use log::debug;
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::core_::{cot::cot::Cot, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool};
+    use crate::core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool};
     ///
     ///
     static INIT: Once = Once::new();
@@ -34,7 +34,7 @@ mod point {
         test_duration.run().unwrap();
         let test_data = [
             (r#"{"cot":"Inf","name":"/App/path/Point.Name.0","status":0,"timestamp":"2024-04-08T09:44:43.950510784+00:00","type":"Bool","value":1}"#,
-                PointType::Bool(Point::new(
+                Point::Bool(PointHlr::new(
                     0,
                     &format!("/App/path/Point.Name.0"),
                     Bool(true),
@@ -44,7 +44,7 @@ mod point {
                 ))
             ),
             (r#"{"cot":"Inf","name":"/App/path/Point.Name.1","status":0,"timestamp":"2024-04-08T09:44:44.450961534+00:00","type":"Int","value":1234567}"#,
-                PointType::Int(Point::new(
+                Point::Int(PointHlr::new(
                     0,
                     &format!("/App/path/Point.Name.1"),
                     1234567,
@@ -64,7 +64,7 @@ mod point {
             //     ))
             // ),
             (r#"{"cot":"Inf","name":"/App/path/Point.Name.3","status":0,"timestamp":"2024-04-08T09:44:43.550386216+00:00","type":"Double","value":123.12345}"#,
-                PointType::Double(Point::new(
+                Point::Double(PointHlr::new(
                     0,
                     &format!("/App/path/Point.Name.3"),
                     123.12345,
@@ -98,7 +98,7 @@ mod point {
         test_duration.run().unwrap();
         let test_data = [
             (r#"{"cot":"Inf","name":"/App/path/Point.Name.0","status":0,"timestamp":"2024-04-08T09:44:43.950510784+00:00","type":"Bool","value":1}"#,
-                PointType::Bool(Point::new(
+                Point::Bool(PointHlr::new(
                     0,
                     &format!("/App/path/Point.Name.0"),
                     Bool(true),
@@ -108,7 +108,7 @@ mod point {
                 ))
             ),
             (r#"{"cot":"Inf","name":"/App/path/Point.Name.1","status":0,"timestamp":"2024-04-08T09:44:44.450961534+00:00","type":"Int","value":1234567}"#,
-                PointType::Int(Point::new(
+                Point::Int(PointHlr::new(
                     0,
                     &format!("/App/path/Point.Name.1"),
                     1234567,
@@ -118,7 +118,7 @@ mod point {
                 ))
             ),
             (r#"{"cot":"Inf","name":"/App/path/Point.Name.2","status":0,"timestamp":"2024-04-08T09:44:43.550386216+00:00","type":"Real","value":123.12345}"#,
-                PointType::Real(Point::new(
+                Point::Real(PointHlr::new(
                     0,
                     &format!("/App/path/Point.Name.2"),
                     123.12345,
@@ -130,7 +130,7 @@ mod point {
         ];
         for (point_json, target) in test_data {
             debug!("{} | input: {:#?}", self_id, point_json);
-            let result: PointType = serde_json::from_str(point_json).unwrap();
+            let result: Point = serde_json::from_str(point_json).unwrap();
             // let target: serde_json::Value = json!(target)&target.name, &conf).unwrap();
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }

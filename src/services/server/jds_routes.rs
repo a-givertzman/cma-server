@@ -4,7 +4,7 @@ use crate::{
     conf::point_config::name::Name, core_::{
         net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
         object::object::Object, 
-        point::point_type::PointType,
+        point::point::Point,
     }, 
     services::{server::jds_cnnection::Shared, services::Services},
     tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult},
@@ -16,11 +16,11 @@ use concat_string::concat_string;
 ///     - reply - Point to be sent back to the Client, contains reply in the value
 #[derive(Debug)]
 pub struct RouterReply {
-    pass: Option<PointType>,
-    retply: Option<PointType>,
+    pass: Option<Point>,
+    retply: Option<Point>,
 }
 impl RouterReply {
-    pub fn new(pass: Option<PointType>, retply: Option<PointType>) -> Self {
+    pub fn new(pass: Option<Point>, retply: Option<Point>) -> Self {
         Self { pass, retply }
     }
 }
@@ -38,7 +38,7 @@ pub struct JdsRoutes<F> {
     name: Name,
     services: Arc<RwLock<Services>>,
     jds_deserialize: JdsDeserialize,
-    req_reply_send: Sender<PointType>,
+    req_reply_send: Sender<Point>,
     rautes: F,
     shared: Arc<RwLock<Shared>>,
 }
@@ -52,7 +52,7 @@ impl<F> JdsRoutes<F> {
         parent: &Name, 
         services: Arc<RwLock<Services>>, 
         jds_deserialize: JdsDeserialize, 
-        req_reply_send: Sender<PointType>, 
+        req_reply_send: Sender<Point>, 
         rautes: F, 
         shared: Arc<RwLock<Shared>>,
     ) -> Self {
@@ -89,11 +89,11 @@ impl<F> Object for JdsRoutes<F> {
 // 
 impl<F> TcpStreamRead for JdsRoutes<F> where
     //    parent_id, name
-    F: Fn(String, Name, PointType, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
+    F: Fn(String, Name, Point, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
     F: Send + Sync {
     ///
     /// Reads single point from source
-    fn read(&mut self, tcp_stream: &mut BufReader<TcpStream>) -> ConnectionStatus<OpResult<PointType, String>, String> {
+    fn read(&mut self, tcp_stream: &mut BufReader<TcpStream>) -> ConnectionStatus<OpResult<Point, String>, String> {
         match self.jds_deserialize.read(tcp_stream) {
             ConnectionStatus::Active(point) => {
                 match point {

@@ -9,7 +9,7 @@ use log::{debug, error, info, trace, warn};
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
     core_::{
-        failure::errors_limit::ErrorLimit, point::point_type::PointType, state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
+        failure::errors_limit::ErrorLimit, point::point::Point, state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
         status::status::Status, types::map::IndexMapFxHasher
     },
     services::{
@@ -26,7 +26,7 @@ pub struct SlmpRead {
     id: String,
     // name: Name,
     conf: SlmpClientConfig,
-    dest: Sender<PointType>,
+    dest: Sender<Point>,
     dbs: Arc<RwLock<IndexMapFxHasher<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
     status: Arc<AtomicU32>,
@@ -40,7 +40,7 @@ impl SlmpRead {
         tx_id: usize,
         // name: Name,
         conf: SlmpClientConfig,
-        dest: Sender<PointType>,
+        dest: Sender<Point>,
         // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
         status: Arc<AtomicU32>,
         exit: Arc<ExitNotify>,
@@ -61,7 +61,7 @@ impl SlmpRead {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    fn yield_status(self_id: &str, status: Status, dbs: &mut IndexMapFxHasher<String, SlmpDb>, dest: &Sender<PointType>) {
+    fn yield_status(self_id: &str, status: Status, dbs: &mut IndexMapFxHasher<String, SlmpDb>, dest: &Sender<Point>) {
         for (db_name, db) in dbs {
             debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(status, dest) {
