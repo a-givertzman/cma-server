@@ -1,14 +1,12 @@
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig}},
+    future::future::{Future, Sink}, service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
+    subscription::subscription_criteria::SubscriptionCriteria,
+};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
 use concat_string::concat_string;
-use crate::{
-    conf::point_config::{name::Name, point_config::PointConfig}, core_::{future::{Future, Sink}, object::object::Object, point::point::Point},
-    services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria, queue_name::QueueName,
-        retain_point_id::RetainPointId, safe_lock::SafeLock, service::service::Service, task::service_cycle::ServiceCycle
-    }
-};
-use super::service::service_handles::ServiceHandles;
+use crate::services::{retain_point_id::RetainPointId, safe_lock::SafeLock};
 ///
 /// Holds a map of the all services in app by there names
 pub struct Services {
@@ -26,7 +24,7 @@ impl Object for Services {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -90,7 +88,7 @@ impl Services {
     }
     ///
     /// Main loop of the Services
-    pub fn run(&mut self) -> Result<ServiceHandles, String> {
+    pub fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let points_requested = self.points_requested.clone();
@@ -205,7 +203,7 @@ impl Services {
     }
     ///
     /// Returns copy of the Sender - service's incoming queue
-    pub fn get_link(&self, name: &QueueName) -> Result<Sender<Point>, String> {
+    pub fn get_link(&self, name: &LinkName) -> Result<Sender<Point>, String> {
         match name.split() {
             Ok((service, queue)) => {
                 match self.get(&service) {

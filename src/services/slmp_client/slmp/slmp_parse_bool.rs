@@ -1,10 +1,17 @@
 use log::{debug, warn};
 use chrono::{DateTime, Utc};
-use crate::{
-    conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_config_type::PointConfigType},
-    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool},
-    services::slmp_client::parse_point::ParsePoint,
+use sal_sync::services::{
+    entity::{
+        cot::Cot,
+        point::{
+            point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, 
+            point_config_history::PointConfigHistory, point_config_type::PointConfigType, point_hlr::PointHlr,
+        },
+        status::status::Status,
+    },
+    types::bool::Bool,
 };
+use crate::services::slmp_client::parse_point::ParsePoint;
 ///
 /// Used for parsing configured point from slice of bytes read from device
 #[derive(Debug, Clone)]

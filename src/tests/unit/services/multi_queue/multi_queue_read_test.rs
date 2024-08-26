@@ -6,7 +6,7 @@ mod multi_queue {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::multi_queue_config::MultiQueueConfig, services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, service::service::Service, services::Services, task::nested_function::reset_counter::AtomicReset},
+        conf::multi_queue_config::MultiQueueConfig, services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services, task::nested_function::reset_counter::AtomicReset},
         tests::unit::services::multi_queue::{mock_recv_service::{self, MockRecvService}, mock_send_service::{self, MockSendService}},
     };
     ///

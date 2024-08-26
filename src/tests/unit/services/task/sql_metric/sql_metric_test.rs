@@ -5,14 +5,13 @@ mod sql_metric {
     use log::debug;
     use log::warn;
     use regex::RegexBuilder;
+    use sal_sync::services::entity::{name::Name, point::point::{Point, ToPoint}};
     use std::sync::RwLock;
     use std::sync::{Once, Arc};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::point_config::name::Name;
     use crate::services::task::nested_function::fn_result::FnResult;
     use crate::{
         conf::task_config::TaskConfig,
-        core_::point::point::{ToPoint, Point},
         services::{
             task::task_nodes::TaskNodes, services::Services,
             // queues::queues::Queues,

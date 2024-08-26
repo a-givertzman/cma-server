@@ -1,11 +1,8 @@
+use sal_sync::services::{entity::point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId}, types::bool::Bool};
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
 use log::{error, trace};
 use crate::{
-    conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType},
-    core_::{
-        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, 
-        types::{bool::Bool, fn_in_out_ref::FnInOutRef}
-    }, 
+    core_::types::fn_in_out_ref::FnInOutRef, 
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///

@@ -1,7 +1,8 @@
 use log::{debug, error, trace, warn};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, service::link_name::LinkName};
 use std::fs;
-use crate::{conf::{conf_tree::ConfTree, service_config::ServiceConfig}, services::queue_name::QueueName};
-use super::{conf_keywd::ConfKind, point_config::name::Name};
+use crate::conf::service_config::ServiceConfig;
+use super::conf_keywd::ConfKind;
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -19,7 +20,7 @@ pub struct MultiQueueConfig {
     pub(crate) name: Name,
     pub(crate) rx: String,
     pub(crate) rx_max_length: i64,
-    pub(crate) send_to: Vec<QueueName>,
+    pub(crate) send_to: Vec<LinkName>,
 }
 //
 // 
@@ -48,7 +49,7 @@ impl MultiQueueConfig {
         let (rx, rx_max_length) = self_conf.get_in_queue().unwrap();
         debug!("{}.new | 'in queue': {},\tmax-length: {}", self_id, rx, rx_max_length);
         let send_to = match self_conf.get_send_to_many() {
-            crate::conf::service_config::ConfParam::Ok(send_to) => send_to.into_iter().map(QueueName::new).collect(),
+            crate::conf::service_config::ConfParam::Ok(send_to) => send_to.into_iter().map(LinkName::new).collect(),
             crate::conf::service_config::ConfParam::None => vec![],
             crate::conf::service_config::ConfParam::Err(err) => {
                 warn!("{}.new | Get 'send-to' many error: {:?} in config: {:#?}", self_id, err, self_conf);

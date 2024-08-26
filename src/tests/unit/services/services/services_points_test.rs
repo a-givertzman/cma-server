@@ -2,11 +2,12 @@
 
 mod services_points {
     use log::{error, trace};
+    use sal_sync::services::entity::name::Name;
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, time::Duration};
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{point_config::name::Name, task_config::TaskConfig},
+        conf::task_config::TaskConfig,
         services::{safe_lock::SafeLock, services::Services, task::task::Task},
     };
     ///

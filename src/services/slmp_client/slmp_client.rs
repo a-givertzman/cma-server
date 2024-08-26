@@ -1,13 +1,14 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status}, service::{service::Service, service_handles::ServiceHandles}}};
 use testing::stuff::wait::WaitTread;
 use crate::{
-    conf::{diag_keywd::DiagKeywd, point_config::{name::Name, point_config::PointConfig}, slmp_client_config::slmp_client_config::SlmpClientConfig},
+    conf::{diag_keywd::DiagKeywd, slmp_client_config::slmp_client_config::SlmpClientConfig},
     core_::{
-        constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point::Point}, state::exit_notify::ExitNotify, status::status::Status, types::map::IndexMapFxHasher
+        constants::constants::RECV_TIMEOUT, state::exit_notify::ExitNotify,
     },
     services::{
-        diagnosis::diag_point::DiagPoint, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles},
+        diagnosis::diag_point::DiagPoint, safe_lock::SafeLock,
         services::Services, slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
     },
     tcp::tcp_client_connect::TcpClientConnect,
@@ -121,7 +122,7 @@ impl Debug for SlmpClient {
 impl Service for SlmpClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();

@@ -1,15 +1,14 @@
 #[cfg(test)]
 
 mod jds_routes {
+    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::link_name::LinkName};
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, point_config::{name::Name, point_config::PointConfig}, tcp_server_config::TcpServerConfig},
-        core_::{
-            cot::cot::Cot, net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status
-        },
-        services::{multi_queue::multi_queue::MultiQueue, queue_name::QueueName, safe_lock::SafeLock, server::tcp_server::TcpServer, service::service::Service, services::Services, task::nested_function::reset_counter::AtomicReset},
+        conf::{multi_queue_config::MultiQueueConfig, tcp_server_config::TcpServerConfig},
+        core_::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, server::tcp_server::TcpServer, services::Services, task::nested_function::reset_counter::AtomicReset},
         tests::unit::services::{multi_queue::mock_recv_service::{self, MockRecvService}, service::moc_service_points::MockServicePoints},
     };
     ///
@@ -611,7 +610,7 @@ mod jds_routes {
         //
         // Sending test events
         println!("{} | Try to get send from MultiQueue...", self_id);
-        let send = services.wlock(self_id).get_link(&QueueName::new("MultiQueue.in-queue")).unwrap();
+        let send = services.wlock(self_id).get_link(&LinkName::new("MultiQueue.in-queue")).unwrap();
         println!("{} | Try to get send from MultiQueue - ok", self_id);
         let mut sent = 0;
         for point in test_data {

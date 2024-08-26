@@ -3,10 +3,11 @@ use eframe::EventLoopBuilderHook;
 use egui::ViewportBuilder;
 use indexmap::IndexMap;
 use log::{error, trace};
+use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
 use winit::platform::x11::EventLoopBuilderExtX11;
 use std::{mem::MaybeUninit, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Once}, thread};
 use crate::{
-    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}},
+    core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,

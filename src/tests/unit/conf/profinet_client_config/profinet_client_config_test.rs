@@ -2,10 +2,11 @@
 
 mod profinet_client_config {
     use log::debug;
+    use sal_sync::services::entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}};
     use std::{sync::Once, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::conf::{point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}, profinet_client_config::profinet_client_config::ProfinetClientConfig};
+    use crate::conf::profinet_client_config::profinet_client_config::ProfinetClientConfig;
     ///
     ///
     static INIT: Once = Once::new();

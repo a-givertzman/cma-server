@@ -1,3 +1,4 @@
+use sal_sync::{collections::map::HashMapFxHasher, services::entity::point::{point_config::PointConfig, point_config_type::PointConfigType}};
 use std::{collections::HashMap, env, ffi::OsStr, fs, hash::BuildHasherDefault, path::{Path, PathBuf}};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use hashers::fx_hash::FxHasher;
@@ -5,7 +6,6 @@ use concat_string::concat_string;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
 use serde::{Deserialize, Serialize};
-use crate::{conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType}, core_::types::map::HashMapFxHasher};
 type RetainedCahe = HashMapFxHasher<String, HashMapFxHasher<String, RetainedPointConfig>>;
 ///
 /// Stores unique Point ID in the json file

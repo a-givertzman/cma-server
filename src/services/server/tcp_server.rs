@@ -1,14 +1,15 @@
 use log::{debug, info, warn};
+use sal_sync::services::{entity::{name::Name, object::Object}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
 use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex, RwLock}, thread, time::Duration
 };
 use crate::{
-    conf::{point_config::name::Name, tcp_server_config::TcpServerConfig},
-    core_::{constants::constants::RECV_TIMEOUT, object::object::Object},
+    conf::tcp_server_config::TcpServerConfig,
+    core_::constants::constants::RECV_TIMEOUT,
     services::{
         safe_lock::SafeLock, server::{
             connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection
-        }, service::{service::Service, service_handles::ServiceHandles}, services::Services, task::service_cycle::ServiceCycle
+        }, services::Services, 
     },
 };
 ///
@@ -171,7 +172,7 @@ impl Debug for TcpServer {
 impl Service for TcpServer {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();

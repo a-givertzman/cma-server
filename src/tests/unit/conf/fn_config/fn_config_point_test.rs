@@ -2,12 +2,11 @@
 
 mod tests {
     use log::debug;
+    use sal_sync::services::entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}};
     use std::sync::Once;
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::{
-        fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig, fn_point_config::FnPointConfig}, point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}
-    };
+    use crate::conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig, fn_point_config::FnPointConfig};
     ///
     ///
     static INIT: Once = Once::new();

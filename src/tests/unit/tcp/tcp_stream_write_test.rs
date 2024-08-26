@@ -1,6 +1,6 @@
+use sal_sync::services::entity::{name::Name, object::Object};
 use crate::{
-    conf::point_config::name::Name,
-    core_::{failure::recv_error::RecvError, object::object::Object},
+    core_::failure::recv_error::RecvError,
     tcp::steam_read::StreamRead,
 };
 #[cfg(test)]

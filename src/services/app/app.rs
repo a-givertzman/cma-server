@@ -1,5 +1,6 @@
 use linked_hash_map::LinkedHashMap;
 use log::{error, info, trace};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, object::Object}, service::{service::Service, service_handles::ServiceHandles}};
 use std::{path::Path, process::exit, sync::{Arc, Mutex, RwLock}, thread, time::Duration};
 use libc::{
     SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
@@ -9,15 +10,22 @@ use signal_hook::iterator::Signals;
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
-        api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig, conf_tree::ConfTree, multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig, slmp_client_config::slmp_client_config::SlmpClientConfig, task_config::TaskConfig, tcp_client_config::TcpClientConfig, tcp_server_config::TcpServerConfig
-    }, core_::object::object::Object, services::{
-        api_cient::api_client::ApiClient, cache::cache_service::CacheService, history::{producer_service::ProducerService, producer_service_config::ProducerServiceConfig}, multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, server::tcp_server::TcpServer, service::{service::Service, service_handles::ServiceHandles}, services::Services, slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient
+        api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig,
+        multi_queue_config::MultiQueueConfig, profinet_client_config::profinet_client_config::ProfinetClientConfig,
+        slmp_client_config::slmp_client_config::SlmpClientConfig, task_config::TaskConfig,
+        tcp_client_config::TcpClientConfig, tcp_server_config::TcpServerConfig
+    }, services::{
+        api_cient::api_client::ApiClient, cache::cache_service::CacheService,
+        history::{producer_service::ProducerService, producer_service_config::ProducerServiceConfig},
+        multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient,
+        safe_lock::SafeLock, server::tcp_server::TcpServer,
+        services::Services, slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient,
     }
 };
 
 pub struct App {
     id: String,
-    handles: LinkedHashMap<String, ServiceHandles>,
+    handles: LinkedHashMap<String, ServiceHandles<()>>,
     conf: AppConfig,
 }
 //
@@ -138,7 +146,7 @@ impl App {
     }
     ///
     /// Inserts new pair service_id & service_join_handle
-    fn insert_handles(&mut self, id:&str, handles: ServiceHandles) {
+    fn insert_handles(&mut self, id:&str, handles: ServiceHandles<()>) {
         if self.handles.contains_key(id) {
             panic!("{}.insert | Duplicated service name '{:?}'", self.id, id);
         }

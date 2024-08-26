@@ -7,24 +7,21 @@ use std::{
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, subscription::subscription_criteria::SubscriptionCriteria}};
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
         diag_keywd::DiagKeywd,
-        point_config::{name::Name, point_config::PointConfig},
         profinet_client_config::profinet_client_config::ProfinetClientConfig,
     },
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, failure::errors_limit::ErrorLimit, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, state::change_notify::ChangeNotify, status::status::Status, types::map::IndexMapFxHasher
+        constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit, state::change_notify::ChangeNotify,
     },
     services::{
         diagnosis::diag_point::DiagPoint,
-        multi_queue::subscription_criteria::SubscriptionCriteria,
         profinet_client::{profinet_db::ProfinetDb, s7::s7_client::S7Client},
         safe_lock::SafeLock,
-        service::{service::Service, service_handles::ServiceHandles},
         services::Services,
-        task::service_cycle::ServiceCycle,
     },
 };
 ///
@@ -394,7 +391,7 @@ impl Debug for ProfinetClient {
 impl Service for ProfinetClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let tx_send = self.services.rlock(&self.id).get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });

@@ -1,6 +1,7 @@
+use sal_sync::services::service::service_cycle::ServiceCycle;
 use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread, time::Duration};
 use log::{warn, LevelFilter, debug, info};
-use crate::services::{safe_lock::SafeLock, task::service_cycle::ServiceCycle};
+use crate::services::safe_lock::SafeLock;
 ///
 /// Opens a TCP connection to a remote host
 /// - returns connected Result<TcpStream, Err>

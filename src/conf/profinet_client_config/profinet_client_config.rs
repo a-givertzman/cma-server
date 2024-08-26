@@ -1,9 +1,12 @@
 use indexmap::IndexMap;
 use log::{debug, error, trace};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
-use crate::{conf::{
-    conf_keywd::ConfKind, conf_tree::ConfTree, diag_keywd::DiagKeywd, point_config::{name::Name, point_config::PointConfig}, profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig}, service_config::ServiceConfig
-}, core_::types::map::IndexMapFxHasher, services::queue_name::QueueName};
+use crate::conf::{
+    conf_keywd::ConfKind, diag_keywd::DiagKeywd,
+    profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig},
+    service_config::ServiceConfig
+};
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -42,7 +45,7 @@ pub struct ProfinetClientConfig {
     pub(crate) cycle: Option<Duration>,
     pub(crate) reconnect_cycle: Duration,
     pub(crate) subscribe: String,
-    pub(crate) send_to: QueueName,
+    pub(crate) send_to: LinkName,
     pub(crate) protocol: String,
     pub(crate) description: String,
     pub(crate) ip: String,
@@ -70,7 +73,7 @@ impl ProfinetClientConfig {
         debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = QueueName::new(self_conf.get_send_to().unwrap()).validate();
+        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
         debug!("{}.new | send-to: {}", self_id, send_to);
         if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
             error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)

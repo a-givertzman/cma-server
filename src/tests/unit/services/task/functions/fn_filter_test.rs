@@ -2,13 +2,14 @@
 
 mod cma_recorder {
     use log::{debug, info, trace};
+    use sal_sync::services::{entity::name::Name, service::service::Service};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, task_config::TaskConfig},
+        conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
         services::{
-            multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, service::service::Service, services::Services,
+            multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services,
             task::{task::Task, task_test_receiver::TaskTestReceiver},
         },
         tests::unit::services::task::task_test_producer::TaskTestProducer,

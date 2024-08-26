@@ -1,8 +1,9 @@
 use indexmap::IndexMap;
 use log::{debug, info, trace};
+use sal_sync::services::conf::conf_tree::ConfTree;
 use std::{fs, path::Path, str::FromStr};
 use crate::conf::{
-    conf_keywd::{ConfKeywd, ConfKind}, conf_tree::ConfTree, service_config::ServiceConfig
+    conf_keywd::{ConfKeywd, ConfKind}, service_config::ServiceConfig
 };
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -105,7 +106,7 @@ impl AppConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
     pub(crate) fn from_yaml_value(value: &serde_yaml::Value) -> AppConfig {
-        Self::new(&mut ConfTree::newRoot(value.clone()))
+        Self::new(&mut ConfTree::new_root(value.clone()))
     }
     ///
     /// reads config from path

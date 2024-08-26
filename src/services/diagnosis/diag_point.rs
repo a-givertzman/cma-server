@@ -1,11 +1,8 @@
 use chrono::Utc;
-use crate::{
-    conf::point_config::point_config::PointConfig,
-    core_::{
-        cot::cot::Cot,
-        point::{point_hlr::PointHlr, point::Point},
-        status::status::Status,
-    }
+use sal_sync::services::entity::{
+    cot::Cot,
+    point::{point_hlr::PointHlr, point::Point, point_config::PointConfig,},
+    status::status::Status,
 };
 ///
 /// Provides the state for diagnosis Point's

@@ -1,14 +1,15 @@
+use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, warn, info, trace};
 use testing::entities::test_value::Value;
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::{point_tx_id::PointTxId, point::{Point, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
+use crate::services::{safe_lock::SafeLock, services::Services};
 
 ///
 /// 
 pub struct TaskTestProducer {
     id: String,
     name: Name,
-    send_to: QueueName, 
+    send_to: LinkName, 
     cycle: Duration,
     // rxSend: HashMap<String, Sender<PointType>>,
     services: Arc<RwLock<Services>>,
@@ -24,7 +25,7 @@ impl TaskTestProducer {
         Self {
             id: name.join(),
             name,
-            send_to: QueueName::new(send_to),
+            send_to: LinkName::new(send_to),
             cycle,
             // rxSend: HashMap::new(),
             services,
@@ -45,7 +46,7 @@ impl Object for TaskTestProducer {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -64,7 +65,7 @@ impl Debug for TaskTestProducer {
 impl Service for TaskTestProducer {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
         let tx_id = PointTxId::from_str(&self_id);
         let cycle = self.cycle;

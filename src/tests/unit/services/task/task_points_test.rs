@@ -2,12 +2,13 @@
 
 mod task {
     use log::trace;
+    use sal_sync::services::{entity::name::Name, service::service::Service};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{point_config::name::Name, task_config::TaskConfig},
-        services::{safe_lock::SafeLock, service::service::Service, services::Services, task::task::Task},
+        conf::task_config::TaskConfig,
+        services::{safe_lock::SafeLock, services::Services, task::task::Task},
     };
     ///
     ///

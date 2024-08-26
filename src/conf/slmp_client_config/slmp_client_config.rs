@@ -1,11 +1,9 @@
 use indexmap::IndexMap;
 use log::{debug, trace};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
-use crate::{
-    conf::{
-        conf_tree::ConfTree, diag_keywd::DiagKeywd, point_config::{name::Name, point_config::PointConfig}, service_config::ServiceConfig, slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig}
-    }, 
-    core_::types::map::IndexMapFxHasher, services::queue_name::QueueName,
+use crate::conf::{
+    diag_keywd::DiagKeywd, service_config::ServiceConfig, slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig}
 };
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -40,7 +38,7 @@ pub struct SlmpClientConfig {
     pub(crate) cycle: Option<Duration>,
     pub(crate) reconnect_cycle: Duration,
     pub(crate) subscribe: String,
-    pub(crate) send_to: QueueName,
+    pub(crate) send_to: LinkName,
     pub(crate) description: String,
     pub(crate) ip: String,
     pub(crate) port: u64,
@@ -66,7 +64,7 @@ impl SlmpClientConfig {
         debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = QueueName::new(self_conf.get_send_to().unwrap());
+        let send_to = LinkName::new(self_conf.get_send_to().unwrap());
         debug!("{}.new | send-to: '{}'", self_id, send_to);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | description: {:?}", self_id, description);

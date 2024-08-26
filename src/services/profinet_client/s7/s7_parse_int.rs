@@ -1,11 +1,11 @@
 use log::{debug, warn};
+use sal_sync::services::entity::{
+    cot::Cot, point::{point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_hlr::PointHlr},
+    status::status::Status
+};
 use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
-use crate::{
-    conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory},
-    core_::{cot::cot::Cot, filter::filter::Filter, point::{point_hlr::PointHlr, point::Point}, status::status::Status},
-    services::profinet_client::parse_point::ParsePoint,
-};
+use crate::{core_::filter::filter::Filter, services::profinet_client::parse_point::ParsePoint};
 ///
 ///
 #[derive(Debug)]
