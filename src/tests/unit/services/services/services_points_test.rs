@@ -42,7 +42,7 @@ mod services_points {
         let config = TaskConfig::read(&self_name, path);
         trace!("config: {:?}", &config);
         println!(" points: {:?}", config.points());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
         services.wlock(self_id).insert(task.clone());
         let services_handle = services.wlock(self_id).run().unwrap();

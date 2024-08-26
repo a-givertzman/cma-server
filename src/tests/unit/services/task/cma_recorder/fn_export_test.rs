@@ -41,7 +41,7 @@ mod fn_export {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -185,7 +185,7 @@ mod fn_export {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -315,7 +315,7 @@ mod fn_export {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"

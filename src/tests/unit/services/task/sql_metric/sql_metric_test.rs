@@ -45,7 +45,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -118,7 +118,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -201,7 +201,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![

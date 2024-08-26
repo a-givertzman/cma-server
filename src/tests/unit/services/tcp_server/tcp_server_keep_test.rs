@@ -57,7 +57,7 @@ mod tcp_server {
         let total_count = test_data.len();
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let conf = format!(r#"
             service TcpServer:
                 cycle: 10 ms
@@ -147,7 +147,7 @@ mod tcp_server {
         );
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
         let conf = format!(r#"

@@ -45,7 +45,7 @@ mod task_nodes {
         let mut task_nodes = TaskNodes::new(self_id);
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let mock_service = Arc::new(Mutex::new(MockService::new(self_id, "queue")));
         services.wlock(self_id).insert(mock_service.clone());
         let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);

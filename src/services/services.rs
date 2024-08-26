@@ -1,12 +1,13 @@
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig}},
-    future::future::{Future, Sink}, service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
-    subscription::subscription_criteria::SubscriptionCriteria,
+    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig}}, 
+    future::future::{Future, Sink}, retain_point_id::{RetainPointApi, RetainPointId}, 
+    service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
+    subscription::subscription_criteria::SubscriptionCriteria
 };
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
 use concat_string::concat_string;
-use crate::services::{retain_point_id::RetainPointId, safe_lock::SafeLock};
+use crate::services::safe_lock::SafeLock;
 ///
 /// Holds a map of the all services in app by there names
 pub struct Services {
@@ -42,7 +43,7 @@ impl Services {
     pub const SLMP_CLIENT: &'static str = "SlmpClient";
     ///
     /// Creates new instance of the Services
-    pub fn new(parent: impl Into<String>) -> Self {
+    pub fn new(parent: impl Into<String>, api: Option<RetainPointApi>) -> Self {
         let name = Name::new(parent, "Services");
         // let self_id = format!("{}/Services", parent.into());
         let self_id = name.join();
@@ -50,7 +51,7 @@ impl Services {
             id: self_id.clone(),
             name,
             map: Arc::new(RwLock::new(HashMap::new())),
-            retain_point_id: Arc::new(RwLock::new(RetainPointId::new(&self_id, "assets/retain_points.json"))),
+            retain_point_id: Arc::new(RwLock::new(RetainPointId::new(&self_id, "assets/retain_points.json", api))),
             points_requested: Arc::new(AtomicUsize::new(0)),
             points_request: Arc::new(RwLock::new(vec![])),
             exit: Arc::new(AtomicBool::new(false)),

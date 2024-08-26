@@ -87,7 +87,7 @@ mod tcp_client {
         );
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let multi_queue = Arc::new(Mutex::new(MockMultiQueue::new(self_id, "", Some(total_count))));
         let tcp_client = Arc::new(Mutex::new(TcpClient::new(conf, services.clone())));
         let multi_queue_service_id = multi_queue.lock().unwrap().id().to_owned();

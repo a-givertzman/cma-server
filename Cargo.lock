@@ -3109,8 +3109,9 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 [[package]]
 name = "sal-sync"
 version = "0.0.1"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git#25e715aa9816865d8b0f345046635364e120cdcb"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git#076e350798faecf54d4185d3c954a28341ec6129"
 dependencies = [
+ "api-tools",
  "chrono",
  "concat-in-place",
  "concat-string",

@@ -44,7 +44,7 @@ mod cma_recorder {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/fn_rec_op_cycle_metric.yaml");
         trace!("config: {:?}", config);
         debug!("Task config points: {:#?}", config.points());

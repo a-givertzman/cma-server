@@ -50,7 +50,7 @@ mod cma_recorder {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let mut tasks = vec![];
         let mut task_handles = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/operating-event.yaml";

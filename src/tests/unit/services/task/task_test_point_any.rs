@@ -55,7 +55,7 @@ mod task {
         "#, self_name)).unwrap();
         let config = TaskConfig::from_yaml(&self_name, &conf);
         trace!("config: {:?}", &config);
-        let services = Arc::new(RwLock::new(Services::new(&self_name)));
+        let services = Arc::new(RwLock::new(Services::new(&self_name, None)));
         let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
             &self_name.join(),
             "",

@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use log::{debug, info, trace};
-use sal_sync::services::conf::conf_tree::ConfTree;
+use sal_sync::services::{conf::conf_tree::ConfTree, retain_point_id::RetainPointApi};
 use std::{fs, path::Path, str::FromStr};
 use crate::conf::{
     conf_keywd::{ConfKeywd, ConfKind}, service_config::ServiceConfig
@@ -53,6 +53,7 @@ pub struct AppConfig {
     pub(crate) description: String,
     // pub(crate) cycle: Option<Duration>,
     pub(crate) nodes: IndexMap<ConfKeywd, ConfTree>,
+    pub(crate) retain_api: RetainPointApi
 }
 //
 // 

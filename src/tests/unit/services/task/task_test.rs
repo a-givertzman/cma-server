@@ -47,7 +47,7 @@ mod task {
         let path = "./src/tests/unit/services/task/task_test_struct.yaml";
         let config = TaskConfig::read(&self_name, path);
         trace!("config: {:?}", &config);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
             self_id,
             "",
@@ -129,7 +129,7 @@ mod task {
         // let path = "./src/tests/unit/task/task_test.yaml";
         let config = TaskConfig::read(&self_name, path);
         trace!("config: {:?}", &config);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
             self_id,
             "",

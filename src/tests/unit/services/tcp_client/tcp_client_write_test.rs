@@ -1,10 +1,7 @@
 #[cfg(test)]
 mod tcp_client {
     use log::{info, debug, warn};
-    use sal_sync::services::{
-        entity::{object::Object, point::point::{Point, ToPoint}},
-        service::service::Service,
-    };
+    use sal_sync::services::entity::{object::Object, point::point::{Point, ToPoint}};
     use std::{io::BufReader, net::TcpListener, sync::{Arc, Mutex, Once, RwLock}, thread::{self, JoinHandle}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -87,7 +84,7 @@ mod tcp_client {
         );
         let test_data: Vec<Value> = test_data.collect();
 
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         let multi_queue = Arc::new(Mutex::new(MockMultiQueue::new(self_id, "", None)));
         let tcp_client = Arc::new(Mutex::new(TcpClient::new(conf, services.clone())));
         let tcp_client_service_id = tcp_client.lock().unwrap().id().to_owned();

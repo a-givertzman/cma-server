@@ -29,8 +29,6 @@ pub mod safe_lock;
 
 pub mod history;
 
-pub mod retain_point_id;
-
 pub mod cache;
 
 pub mod diagnosis;

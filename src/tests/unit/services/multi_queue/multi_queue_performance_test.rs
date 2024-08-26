@@ -44,7 +44,7 @@ mod multi_queue {
         let total_count = iterations * producer_count;
         let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         for i in 0..receiver_count {
             let receiver = Arc::new(Mutex::new(MockRecvService::new(
                 self_id,
@@ -153,7 +153,7 @@ mod multi_queue {
         let total_count = iterations * producer_count;
         let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
         for i in 0..receiver_count {
             let receiver = Arc::new(Mutex::new(MockRecvService::new(
                 self_id,
