@@ -11,7 +11,7 @@ use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thre
 use log::{info, warn};
 use crate::{
     conf::{point_config::name::Name, udp_client_config::udp_client_config::UdpClientConfig}, 
-    core_::{object::object::Object, point::point_type::PointType},
+    core_::{object::object::Object, point::point::Point},
     services::{
         service::{service::Service, service_handles::ServiceHandles},
         services::Services,
@@ -66,7 +66,7 @@ impl std::fmt::Debug for UdpClient {
 impl Service for UdpClient {
     //
     // 
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
