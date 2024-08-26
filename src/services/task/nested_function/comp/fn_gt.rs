@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     core_::{
         cot::cot::Cot,
-        point::{point::Point, point_type::PointType},
+        point::{point_hlr::PointHlr, point_type::PointType},
         types::{bool::Bool, fn_in_out_ref::FnInOutRef},
     },
     services::task::nested_function::{
@@ -76,7 +76,7 @@ impl FnOut for FnGt {
                     std::cmp::Ordering::Greater => (input1.tx_id(), input1.timestamp()),
                 };
                 FnResult::Ok(PointType::Bool(
-                    Point::new(
+                    PointHlr::new(
                         tx_id,
                         &format!("{}.out", self.id),
                         Bool(value),

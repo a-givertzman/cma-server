@@ -6,7 +6,7 @@ mod profinet_client {
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig}, core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status}, services::{multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, service::service::Service, services::Services}};
+    use crate::{conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig}, core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, status::status::Status}, services::{multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, service::service::Service, services::Services}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -76,13 +76,13 @@ mod profinet_client {
             let point = match value {
                 Value::Bool(value) => panic!("{} | Bool does not supported: {:?}", self_id, value),
                 Value::Int(value) => {
-                    PointType::Int(Point::new(tx_id, &Name::new("/Ied01/db999/", "Capacitor.Capacity").join(), value, Status::Ok, Cot::Act, Utc::now()))
+                    PointType::Int(PointHlr::new(tx_id, &Name::new("/Ied01/db999/", "Capacitor.Capacity").join(), value, Status::Ok, Cot::Act, Utc::now()))
                 }
                 Value::Real(value) => {
-                    PointType::Real(Point::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
+                    PointType::Real(PointHlr::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
                 }
                 Value::Double(value) => {
-                    PointType::Double(Point::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
+                    PointType::Double(PointHlr::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
                 }
                 Value::String(value) => panic!("{} | String does not supported: {:?}", self_id, value),
             };

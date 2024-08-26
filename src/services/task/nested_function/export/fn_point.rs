@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
 use log::{error, trace};
 use crate::{
-    conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType}, core_::{point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}
+    conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType}, core_::{point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}}, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}
 };
 ///
 /// Function | Used for export Point from Task service to another service
@@ -66,7 +66,7 @@ impl FnPoint {
         if let Some(tx_send) = &self.send_to {
             let point = match self.conf.type_ {
                 PointConfigType::Bool => {
-                    PointType::Bool(Point::new(
+                    PointType::Bool(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         Bool(point.as_bool().value.0), 
@@ -76,7 +76,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Int => {
-                    PointType::Int(Point::new(
+                    PointType::Int(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_int().value, 
@@ -86,7 +86,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Real => {
-                    PointType::Real(Point::new(
+                    PointType::Real(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_real().value, 
@@ -96,7 +96,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Double => {
-                    PointType::Double(Point::new(
+                    PointType::Double(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_double().value, 
@@ -106,7 +106,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::String => {
-                    PointType::String(Point::new(
+                    PointType::String(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_string().value, 
@@ -116,7 +116,7 @@ impl FnPoint {
                     ))
                 }
                 PointConfigType::Json => {
-                    PointType::String(Point::new(
+                    PointType::String(PointHlr::new(
                         self.tx_id, 
                         &self.conf.name, 
                         point.as_string().value, 

@@ -3,7 +3,7 @@ use chrono::Utc;
 use log::trace;
 use crate::{
     core_::{
-        cot::cot::Cot, point::{point::Point, point_tx_id::PointTxId, point_type::PointType},
+        cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType},
         status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef},
     },
     services::task::nested_function::{
@@ -86,7 +86,7 @@ impl FnOut for FnBitAnd {
                                 PointType::Bool(val) => {
                                     let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
                                     PointType::Bool(
-                                        Point::new(
+                                        PointHlr::new(
                                             tx_id,
                                             &format!("{}.out", self.id),
                                             Bool(val.value.0 & input_val.value.0),
@@ -99,7 +99,7 @@ impl FnOut for FnBitAnd {
                                 PointType::Int(val) => {
                                     let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
                                     PointType::Int(
-                                        Point::new(
+                                        PointHlr::new(
                                             tx_id,
                                             &format!("{}.out", self.id),
                                             val.value & input_val.value,

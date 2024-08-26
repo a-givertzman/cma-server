@@ -3,7 +3,7 @@ use chrono::Utc;
 use indexmap::IndexMap;
 use log::{debug, error, trace, warn};
 use crate::core_::{
-    cot::cot::Cot, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}
+    cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}
 };
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
@@ -170,7 +170,7 @@ impl FnOut for FnRecOpCycleMetric {
             }
         }
         FnResult::Ok(PointType::Bool(
-            Point::new(
+            PointHlr::new(
                 tx_id,
                 &self.id,
                 Bool(enable),

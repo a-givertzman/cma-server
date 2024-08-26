@@ -5,7 +5,7 @@ use std::{hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use concat_string::concat_string;
 use crate::{
     conf::point_config::point_config::PointConfig, 
-    core_::{point::{point::Point, point_type::PointType}, types::fn_in_out_ref::FnInOutRef}, 
+    core_::{point::{point_hlr::PointHlr, point_type::PointType}, types::fn_in_out_ref::FnInOutRef}, 
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,
@@ -73,7 +73,7 @@ impl FnOut for FnPointId {
                     Some(id) => {
                         debug!("{}.out | ID: {:?}", self.id, id);
                         FnResult::Ok(PointType::Int(
-                            Point::new(
+                            PointHlr::new(
                                 input.tx_id(),
                                 &concat_string!(self.id, ".out"),
                                 *id as i64,

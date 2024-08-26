@@ -2,7 +2,7 @@ use log::{trace, warn};
 use chrono::{DateTime, Utc};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_config_type::PointConfigType},
-    core_::{cot::cot::Cot, filter::filter::Filter, point::{point::Point, point_type::PointType}, status::status::Status},
+    core_::{cot::cot::Cot, filter::filter::Filter, point::{point_hlr::PointHlr, point_type::PointType}, status::status::Status},
     services::slmp_client::parse_point::ParsePoint,
 };
 ///
@@ -78,7 +78,7 @@ impl SlmpParseReal {
     ///
     fn to_point(&self) -> Option<PointType> {
         if self.is_changed {
-            Some(PointType::Real(Point::new(
+            Some(PointType::Real(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 self.value.value(),

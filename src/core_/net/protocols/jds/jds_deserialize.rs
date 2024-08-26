@@ -7,7 +7,7 @@ use crate::{
         cot::cot::Cot, 
         net::connection_status::ConnectionStatus, 
         object::object::Object, 
-        point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, 
+        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, 
         status::status::Status,
         types::bool::Bool,
     }, tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult}
@@ -101,7 +101,7 @@ impl JdsDeserialize {
                                         let direction = Self::parse_cot(self_id, name, obj);
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
-                                        Ok(PointType::Bool(Point::new(
+                                        Ok(PointType::Bool(PointHlr::new(
                                             tx_id,
                                             name,
                                             Bool(value > 0),
@@ -117,7 +117,7 @@ impl JdsDeserialize {
                                         let direction = Self::parse_cot(self_id, name, obj);
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
-                                        Ok(PointType::Int(Point::new(
+                                        Ok(PointType::Int(PointHlr::new(
                                             tx_id,
                                             name,
                                             value,
@@ -133,7 +133,7 @@ impl JdsDeserialize {
                                         let direction = Self::parse_cot(self_id, name, obj);
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
-                                        Ok(PointType::Real(Point::new(
+                                        Ok(PointType::Real(PointHlr::new(
                                             tx_id,
                                             name,
                                             value as f32,
@@ -149,7 +149,7 @@ impl JdsDeserialize {
                                         let direction = Self::parse_cot(self_id, name, obj);
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
-                                        Ok(PointType::Double(Point::new(
+                                        Ok(PointType::Double(PointHlr::new(
                                             tx_id,
                                             name,
                                             value,
@@ -165,7 +165,7 @@ impl JdsDeserialize {
                                         let direction = Self::parse_cot(self_id, name, obj);
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
-                                        Ok(PointType::String(Point::new(
+                                        Ok(PointType::String(PointHlr::new(
                                             tx_id,
                                             name,
                                             value.to_owned(),

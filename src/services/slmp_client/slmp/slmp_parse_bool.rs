@@ -2,7 +2,7 @@ use log::{debug, warn};
 use chrono::{DateTime, Utc};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_config_type::PointConfigType},
-    core_::{cot::cot::Cot, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool},
+    core_::{cot::cot::Cot, point::{point_hlr::PointHlr, point_type::PointType}, status::status::Status, types::bool::Bool},
     services::slmp_client::parse_point::ParsePoint,
 };
 ///
@@ -78,7 +78,7 @@ impl SlmpParseBool {
     ///
     fn to_point(&self) -> Option<PointType> {
         if self.is_changed {
-            Some(PointType::Bool(Point::new(
+            Some(PointType::Bool(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 Bool(self.get_bit(self.value, self.bit.unwrap() as usize)),

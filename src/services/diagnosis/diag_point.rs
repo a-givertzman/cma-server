@@ -3,7 +3,7 @@ use crate::{
     conf::point_config::point_config::PointConfig,
     core_::{
         cot::cot::Cot,
-        point::{point::Point, point_type::PointType},
+        point::{point_hlr::PointHlr, point_type::PointType},
         status::status::Status,
     }
 };
@@ -30,7 +30,7 @@ impl DiagPoint {
     /// Returns diagnostic Point from value
     ///  - the value is represents the [Status]
     fn point(&self, value: Status) -> PointType {
-        PointType::Int(Point::new(
+        PointType::Int(PointHlr::new(
             self.tx_id,
             &self.conf.name,
             i64::from(value),

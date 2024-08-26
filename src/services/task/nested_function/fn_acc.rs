@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
-    point::{point::Point, point_type::PointType},
+    point::{point_hlr::PointHlr, point_type::PointType},
     types::fn_in_out_ref::FnInOutRef,
 }};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
@@ -74,13 +74,13 @@ impl FnOut for FnAcc {
                                 }
                             }
                             None => match input.type_() {
-                                PointConfigType::Bool | PointConfigType::Int  => PointType::Int(Point::new(
+                                PointConfigType::Bool | PointConfigType::Int  => PointType::Int(PointHlr::new(
                                     input.tx_id(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
                                 )),
-                                PointConfigType::Real => PointType::Real(Point::new(
+                                PointConfigType::Real => PointType::Real(PointHlr::new(
                                     input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
-                                PointConfigType::Double => PointType::Double(Point::new(
+                                PointConfigType::Double => PointType::Double(PointHlr::new(
                                     input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
                                 _ => panic!("{}.out | Invalit input type '{:?}'", self.id, input.type_()),

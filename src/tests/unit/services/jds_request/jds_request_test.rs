@@ -7,7 +7,7 @@ mod jds_routes {
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, point_config::{name::Name, point_config::PointConfig}, tcp_server_config::TcpServerConfig},
         core_::{
-            cot::cot::Cot, net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status
+            cot::cot::Cot, net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, status::status::Status
         },
         services::{multi_queue::multi_queue::MultiQueue, queue_name::QueueName, safe_lock::SafeLock, server::tcp_server::TcpServer, service::service::Service, services::Services, task::nested_function::reset_counter::AtomicReset},
         tests::unit::services::{multi_queue::mock_recv_service::{self, MockRecvService}, service::moc_service_points::MockServicePoints},
@@ -122,7 +122,7 @@ mod jds_routes {
         // Preparing test data
         let self_name = Name::new(self_id, "Jds");
         let test_data = [
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 0,
                 &Name::new(&self_name, "Auth.Secret").join(),
                 r#"{\"reply\": \"Auth.Ssh Reply\"}"#.to_string(),
@@ -130,7 +130,7 @@ mod jds_routes {
                 Cot::Inf,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 0,
                 &Name::new(&self_name, "Auth.Secret").join(),
                 r#"{\"reply\": \"Auth.Ssh Reply\"}"#.to_string(),
@@ -138,7 +138,7 @@ mod jds_routes {
                 Cot::Act,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 0,
                 &Name::new(&self_name, "Auth.Secret").join(),
                 r#"{\"reply\": \"Auth.Ssh Reply\"}"#.to_string(),
@@ -146,7 +146,7 @@ mod jds_routes {
                 Cot::ActCon,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 0,
                 &Name::new(&self_name, "Auth.Secret").join(),
                 r#"{\"reply\": \"Auth.Ssh Reply\"}"#.to_string(),
@@ -154,7 +154,7 @@ mod jds_routes {
                 Cot::ActErr,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 0,
                 &Name::new(&self_name, "Auth.Secret").join(),
                 r#"{\"reply\": \"Auth.Ssh Reply\"}"#.to_string(),
@@ -162,7 +162,7 @@ mod jds_routes {
                 Cot::ReqCon,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 0,
                 &Name::new(&self_name, "Auth.Secret").join(),
                 r#"{\"reply\": \"Auth.Ssh Reply\"}"#.to_string(),
@@ -292,7 +292,7 @@ mod jds_routes {
         // Sending tcp test events / receiver must not receive anything before subscription activated
         println!("{} | Sending tcp test events - to be rejected (not authenticated)", self_id);
         let mut tcp_stream = TcpStream::connect(tcp_server_addr).unwrap();
-        let auth_req = PointType::String(Point::new(
+        let auth_req = PointType::String(PointHlr::new(
             0,
             &Name::new(&self_name, "Auth.Secret").join(),
             secret.into(),
@@ -301,7 +301,7 @@ mod jds_routes {
             chrono::offset::Utc::now(),
         ));
         let result = request(self_id, &mut tcp_stream, auth_req);
-        let target = PointType::String(Point::new(0, &Name::new(&self_name, "Auth.Secret").join(), "Authentication successful".to_owned(), Status::Ok, Cot::ReqCon, chrono::offset::Utc::now()));
+        let target = PointType::String(PointHlr::new(0, &Name::new(&self_name, "Auth.Secret").join(), "Authentication successful".to_owned(), Status::Ok, Cot::ReqCon, chrono::offset::Utc::now()));
         assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result.name(), target.name());
         assert!(result.value() == target.value(), "\nresult: {:?}\ntarget: {:?}", result.value(), target.value());
         assert!(result.status() == target.status(), "\nresult: {:?}\ntarget: {:?}", result.status(), target.status());
@@ -375,7 +375,7 @@ mod jds_routes {
         let tx_id = PointTxId::from_str(self_id);
         let self_name = Name::new(self_id, "Jds");
         let test_data = [
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(&self_name, "Auth.Secret").join(),
                 r#"{
@@ -385,7 +385,7 @@ mod jds_routes {
                 Cot::Req,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(&self_name, "Auth.Ssh").join(),
                 r#"{
@@ -395,7 +395,7 @@ mod jds_routes {
                 Cot::Req,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(&self_name, "Points").join(),
                 r#"{
@@ -405,7 +405,7 @@ mod jds_routes {
                 Cot::Req,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(&self_name, "Subscribe").join(),
                 r#"{
@@ -440,7 +440,7 @@ mod jds_routes {
         // Authenticating
         println!("{} | Sending tcp test events - to be rejected (not authenticated)", self_id);
         let mut tcp_stream = TcpStream::connect(tcp_server_addr).unwrap();
-        let auth_req = PointType::String(Point::new(
+        let auth_req = PointType::String(PointHlr::new(
             0,
             &Name::new(&self_name, "Auth.Secret").join(),
             secret.into(),
@@ -452,7 +452,7 @@ mod jds_routes {
         assert!(result.cot() == Cot::ReqCon, "\nresult: {:?}\ntarget: {:?}", result.cot(), Cot::ReqCon);
         //
         // Sending Points request
-        let subscribe_req = PointType::String(Point::new(
+        let subscribe_req = PointType::String(PointHlr::new(
             0,
             &Name::new(&self_name, "Points").join(),
             "".to_string(),
@@ -461,7 +461,7 @@ mod jds_routes {
             chrono::offset::Utc::now(),
         ));
         let result = request(self_id, &mut tcp_stream, subscribe_req);
-        let target = PointType::String(Point::new(0, &Name::new(&self_name, "Points").join(), "".to_owned(), Status::Ok, Cot::ReqCon, chrono::offset::Utc::now()));
+        let target = PointType::String(PointHlr::new(0, &Name::new(&self_name, "Points").join(), "".to_owned(), Status::Ok, Cot::ReqCon, chrono::offset::Utc::now()));
         // assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result.name(), target.name());
         // assert!(result.value() == target.value(), "\nresult: {:?}\ntarget: {:?}", result.value(), target.value());
         let points: HashMap<String, serde_json::Value> = serde_json::from_str(&result.value().as_string()).unwrap();
@@ -553,7 +553,7 @@ mod jds_routes {
         let tx_id = PointTxId::from_str(self_id);
         let parent = self_id;
         let test_data = [
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(parent, "JdsService/Auth.Secret").join(),
                 r#"{
@@ -563,7 +563,7 @@ mod jds_routes {
                 Cot::Req,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(parent, "JdsService/Auth.Ssh").join(),
                 r#"{
@@ -573,7 +573,7 @@ mod jds_routes {
                 Cot::Req,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(parent, "JdsService/Points").join(),
                 r#"{
@@ -583,7 +583,7 @@ mod jds_routes {
                 Cot::Req,
                 chrono::offset::Utc::now(),
             )),
-            PointType::String(Point::new(
+            PointType::String(PointHlr::new(
                 tx_id,
                 &Name::new(parent, "JdsService/Subcribe").join(),
                 r#"{

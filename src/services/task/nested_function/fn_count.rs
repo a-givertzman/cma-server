@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use crate::core_::{
-    point::{point::Point, point_type::PointType},
+    point::{point_hlr::PointHlr, point_type::PointType},
     types::fn_in_out_ref::FnInOutRef,
 };
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
@@ -91,7 +91,7 @@ impl FnOut for FnCount {
                 self.prev = input_val;
                 trace!("{}.out | value: {:?}", self.id, count);
                 FnResult::Ok(PointType::Int(
-                    Point::new(
+                    PointHlr::new(
                         input.tx_id(),
                         &format!("{}.out", self.id),
                         count,

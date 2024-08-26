@@ -3,7 +3,7 @@ use log::{error, trace};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_type::PointConfigType},
     core_::{
-        point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, 
+        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, 
         types::{bool::Bool, fn_in_out_ref::FnInOutRef}
     }, 
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
@@ -70,7 +70,7 @@ impl FnExport {
             };
             let point = match type_ {
                 PointConfigType::Bool => {
-                    PointType::Bool(Point::new(
+                    PointType::Bool(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         Bool(point.as_bool().value.0), 
@@ -80,7 +80,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Int => {
-                    PointType::Int(Point::new(
+                    PointType::Int(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_int().value, 
@@ -90,7 +90,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Real => {
-                    PointType::Real(Point::new(
+                    PointType::Real(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_real().value, 
@@ -100,7 +100,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Double => {
-                    PointType::Double(Point::new(
+                    PointType::Double(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_double().value, 
@@ -110,7 +110,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::String => {
-                    PointType::String(Point::new(
+                    PointType::String(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_string().value, 
@@ -120,7 +120,7 @@ impl FnExport {
                     ))
                 }
                 PointConfigType::Json => {
-                    PointType::String(Point::new(
+                    PointType::String(PointHlr::new(
                         self.tx_id, 
                         &name, 
                         point.as_string().value, 

@@ -15,7 +15,7 @@ use crate::{
         profinet_client_config::profinet_client_config::ProfinetClientConfig,
     },
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, failure::errors_limit::ErrorLimit, object::object::Object, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, state::change_notify::ChangeNotify, status::status::Status, types::map::IndexMapFxHasher
+        constants::constants::RECV_TIMEOUT, cot::cot::Cot, failure::errors_limit::ErrorLimit, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, state::change_notify::ChangeNotify, status::status::Status, types::map::IndexMapFxHasher
     },
     services::{
         diagnosis::diag_point::DiagPoint,
@@ -261,7 +261,7 @@ impl ProfinetClient {
                                                     if errors_limit.add().is_err() {
                                                         error!("{}.write | ProfinetDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
-                                                        if let Err(err) = tx_send.send(PointType::String(Point::new(
+                                                        if let Err(err) = tx_send.send(PointType::String(PointHlr::new(
                                                             tx_id,
                                                             &point_name,
                                                             format!("Write error: {}", err),
@@ -317,7 +317,7 @@ impl ProfinetClient {
     fn reply_point(tx_id: usize, point: PointType) -> PointType {
         match point {
             PointType::Bool(point) => {
-                PointType::Bool(Point::new(
+                PointType::Bool(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -327,7 +327,7 @@ impl ProfinetClient {
                 ))
             },
             PointType::Int(point) => {
-                PointType::Int(Point::new(
+                PointType::Int(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -337,7 +337,7 @@ impl ProfinetClient {
                 ))
             },
             PointType::Real(point) => {
-                PointType::Real(Point::new(
+                PointType::Real(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -347,7 +347,7 @@ impl ProfinetClient {
                 ))
             },
             PointType::Double(point) => {
-                PointType::Double(Point::new(
+                PointType::Double(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -357,7 +357,7 @@ impl ProfinetClient {
                 ))
             },
             PointType::String(point) => {
-                PointType::String(Point::new(
+                PointType::String(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,

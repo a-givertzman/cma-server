@@ -6,7 +6,7 @@ use crate::{
     conf::point_config::{name::Name, point_config_type::PointConfigType},
     core_::{
         cot::cot::Cot,
-        point::{point::Point, point_tx_id::PointTxId, point_type::PointType},
+        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType},
         status::status::Status,
         types::{bool::Bool, fn_in_out_ref::FnInOutRef},
     }, 
@@ -155,8 +155,8 @@ impl FnRetain {
                             Ok(_) => {
                                 match type_ {
                                     PointConfigType::Bool => match input.as_str() {
-                                        "true" => Some(PointType::Bool(Point::new(self.tx_id, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
-                                        "false" => Some(PointType::Bool(Point::new(self.tx_id, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
+                                        "true" => Some(PointType::Bool(PointHlr::new(self.tx_id, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
+                                        "false" => Some(PointType::Bool(PointHlr::new(self.tx_id, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                         _ => {
                                             error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self.id, input, path);
                                             None
@@ -164,7 +164,7 @@ impl FnRetain {
                                     }
                                     PointConfigType::Int => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(PointType::Int(Point::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(PointType::Int(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -173,7 +173,7 @@ impl FnRetain {
                                     }
                                     PointConfigType::Real => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(PointType::Real(Point::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(PointType::Real(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -182,7 +182,7 @@ impl FnRetain {
                                     }
                                     PointConfigType::Double => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(PointType::Double(Point::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(PointType::Double(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -190,10 +190,10 @@ impl FnRetain {
                                         }
                                     }
                                     PointConfigType::String => {
-                                        Some(PointType::String(Point::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                        Some(PointType::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
                                     }
                                     PointConfigType::Json => {
-                                        Some(PointType::String(Point::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                        Some(PointType::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
                                     }
                                 }
 

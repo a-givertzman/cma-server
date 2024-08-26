@@ -26,7 +26,7 @@ use serde_json::json;
 use crate::{
     conf::{cache_service_config::CacheServiceConfig, point_config::{name::Name, point_config::PointConfig, point_config_type::PointConfigType}},
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, object::object::Object, point::{point::Point, point_tx_id::PointTxId, point_type::PointType},
+        constants::constants::RECV_TIMEOUT, cot::cot::Cot, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType},
         status::status::Status,
         types::{bool::Bool, map::IndexMapFxHasher},
     },
@@ -229,7 +229,7 @@ impl CacheService {
                 let timestamp = Utc::now();
                 for point_config in points {
                     let point = match point_config.type_ {
-                        PointConfigType::Bool => PointType::Bool(Point::new(
+                        PointConfigType::Bool => PointType::Bool(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             Bool(false),
@@ -237,7 +237,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Int => PointType::Int(Point::new(
+                        PointConfigType::Int => PointType::Int(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             0,
@@ -245,7 +245,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Real => PointType::Real(Point::new(
+                        PointConfigType::Real => PointType::Real(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             0.0,
@@ -253,7 +253,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Double => PointType::Double(Point::new(
+                        PointConfigType::Double => PointType::Double(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             0.0,
@@ -261,7 +261,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::String => PointType::String(Point::new(
+                        PointConfigType::String => PointType::String(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             String::new(),
@@ -269,7 +269,7 @@ impl CacheService {
                             Cot::Inf,
                             timestamp,
                         )),
-                        PointConfigType::Json => PointType::String(Point::new(
+                        PointConfigType::Json => PointType::String(PointHlr::new(
                             tx_id,
                             &point_config.name,
                             String::new(),

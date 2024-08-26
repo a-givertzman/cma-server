@@ -8,7 +8,7 @@ use serde_json::json;
 use testing::entities::test_value::Value;
 use crate::{
     conf::point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}, 
-    core_::{cot::cot::Cot, object::object::Object, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::bool::Bool}, 
+    core_::{cot::cot::Cot, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::bool::Bool}, 
     services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services, task::service_cycle::ServiceCycle},
 };
 use super::producer_service_config::ProducerServiceConfig;
@@ -213,7 +213,7 @@ impl PointGen {
             trace!("{}.to_point | generating point type '{:?}'...", self.id, self._type);
             match &self._type {
                 PointConfigType::Bool => {
-                    Some(PointType::Bool(Point::new(
+                    Some(PointType::Bool(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         Bool(test_data_bool().as_bool()), 
@@ -223,7 +223,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Int => {
-                    Some(PointType::Int(Point::new(
+                    Some(PointType::Int(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_int().as_int(), 
@@ -233,7 +233,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Real => {
-                    Some(PointType::Real(Point::new(
+                    Some(PointType::Real(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_real().as_real(), 
@@ -243,7 +243,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Double => {
-                    Some(PointType::Double(Point::new(
+                    Some(PointType::Double(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_double().as_double(), 
@@ -253,7 +253,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::String => {
-                    Some(PointType::String(Point::new(
+                    Some(PointType::String(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_double().as_double().to_string(), 
@@ -263,7 +263,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Json => {
-                    Some(PointType::String(Point::new(
+                    Some(PointType::String(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         json!(test_data_double().as_double()).to_string(), 

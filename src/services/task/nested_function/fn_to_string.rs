@@ -2,7 +2,7 @@ use log::trace;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::{point::Point, point_type::PointType}, types::fn_in_out_ref::FnInOutRef},
+    core_::{point::{point_hlr::PointHlr, point_type::PointType}, types::fn_in_out_ref::FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -64,7 +64,7 @@ impl FnOut for FnToString {
                 };
                 trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(PointType::String(
-                    Point::new(
+                    PointHlr::new(
                         input.tx_id(),
                         &concat_string!(self.id, ".out"),
                         out.to_owned(),

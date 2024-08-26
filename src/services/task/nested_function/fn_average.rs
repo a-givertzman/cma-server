@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use log::trace;
 use concat_string::concat_string;
 use crate::{conf::point_config::point_config_type::PointConfigType, core_::{
-    point::{point::Point, point_type::PointType},
+    point::{point_hlr::PointHlr, point_type::PointType},
     types::fn_in_out_ref::FnInOutRef,
 }};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
@@ -90,7 +90,7 @@ impl FnOut for FnAverage {
                     match input.type_() {
                         PointConfigType::Int => {
                             FnResult::Ok(PointType::Int(
-                                Point::new(
+                                PointHlr::new(
                                     input.tx_id(),
                                     &self.id,
                                     average.round() as i64,
@@ -102,7 +102,7 @@ impl FnOut for FnAverage {
                         }
                         PointConfigType::Real => {
                             FnResult::Ok(PointType::Real(
-                                Point::new(
+                                PointHlr::new(
                                     input.tx_id(),
                                     &self.id,
                                     average as f32,
@@ -114,7 +114,7 @@ impl FnOut for FnAverage {
                         }
                         PointConfigType::Double => {
                             FnResult::Ok(PointType::Double(
-                                Point::new(
+                                PointHlr::new(
                                     input.tx_id(),
                                     &self.id,
                                     average,

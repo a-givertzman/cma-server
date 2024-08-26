@@ -8,7 +8,7 @@ use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
     core_::{
         cot::cot::Cot, failure::errors_limit::ErrorLimit,
-        point::{point::Point, point_type::PointType},
+        point::{point_hlr::PointHlr, point_type::PointType},
         state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
         status::status::Status, types::map::IndexMapFxHasher,
     },
@@ -125,7 +125,7 @@ impl SlmpWrite {
                                                     error!("{}.run | SlmpDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                     exit.exit_pair();
                                                     status.store(Status::Invalid.into(), Ordering::SeqCst);
-                                                    if let Err(err) = dest.send(PointType::String(Point::new(
+                                                    if let Err(err) = dest.send(PointType::String(PointHlr::new(
                                                         tx_id,
                                                         &point_name,
                                                         format!("Write error: {}", err),
@@ -173,7 +173,7 @@ impl SlmpWrite {
     fn reply_point(tx_id: usize, point: PointType) -> PointType {
         match point {
             PointType::Bool(point) => {
-                PointType::Bool(Point::new(
+                PointType::Bool(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -183,7 +183,7 @@ impl SlmpWrite {
                 ))
             },
             PointType::Int(point) => {
-                PointType::Int(Point::new(
+                PointType::Int(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -193,7 +193,7 @@ impl SlmpWrite {
                 ))
             },
             PointType::Real(point) => {
-                PointType::Real(Point::new(
+                PointType::Real(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -203,7 +203,7 @@ impl SlmpWrite {
                 ))
             },
             PointType::Double(point) => {
-                PointType::Double(Point::new(
+                PointType::Double(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -213,7 +213,7 @@ impl SlmpWrite {
                 ))
             },
             PointType::String(point) => {
-                PointType::String(Point::new(
+                PointType::String(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,

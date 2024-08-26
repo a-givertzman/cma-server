@@ -3,7 +3,7 @@ use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
 use crate::{
     conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory},
-    core_::{cot::cot::Cot, filter::filter::Filter, point::{point::Point, point_type::PointType}, status::status::Status},
+    core_::{cot::cot::Cot, filter::filter::Filter, point::{point_hlr::PointHlr, point_type::PointType}, status::status::Status},
     services::profinet_client::parse_point::ParsePoint,
 };
 ///
@@ -68,7 +68,7 @@ impl S7ParseInt {
     ///
     fn to_point(&self) -> Option<PointType> {
         if self.is_changed {
-            Some(PointType::Int(Point::new(
+            Some(PointType::Int(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 self.value.value(),

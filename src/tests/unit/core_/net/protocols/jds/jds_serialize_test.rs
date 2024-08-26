@@ -4,7 +4,7 @@ mod tests {
     use chrono::{DateTime, Utc};
     use std::sync::{Once, mpsc};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::{core_::{cot::cot::Cot, net::protocols::jds::jds_serialize::JdsSerialize, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool}, tcp::steam_read::StreamRead};
+    use crate::{core_::{cot::cot::Cot, net::protocols::jds::jds_serialize::JdsSerialize, point::{point_hlr::PointHlr, point_type::PointType}, status::status::Status, types::bool::Bool}, tcp::steam_read::StreamRead};
     ///
     ///
     static INIT: Once = Once::new();
@@ -45,51 +45,51 @@ mod tests {
         let test_data = [
             (
                 format!(r#"{{"type": "Bool",  "name": "{}", "value": 0,   "status": 0, "cot": "Inf", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Bool(Point::new(txId, name, Bool(false), Status::Ok, Cot::default(), ts))
+                name, tsStr(ts)), PointType::Bool(PointHlr::new(txId, name, Bool(false), Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"type": "Bool",  "name": "{}", "value": 1,    "status": 0, "cot": "Act", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Bool(Point::new(txId, name, Bool(true), Status::Ok, Cot::Act, ts))
+                name, tsStr(ts)), PointType::Bool(PointHlr::new(txId, name, Bool(true), Status::Ok, Cot::Act, ts))
             ),
             (
                 format!(r#"{{"type": "Int",   "name": "{}", "value": 1,   "status": 0, "cot": "ActCon", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Int(Point::new(txId, name, 1, Status::Ok, Cot::ActCon, ts))
+                name, tsStr(ts)), PointType::Int(PointHlr::new(txId, name, 1, Status::Ok, Cot::ActCon, ts))
             ),
             (
                 format!(r#"{{"type": "Int",   "name": "{}", "value": -9223372036854775808,   "status": 0, "cot": "ActErr", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Int(Point::new(txId, name, -9223372036854775808, Status::Ok, Cot::ActErr, ts))
+                name, tsStr(ts)), PointType::Int(PointHlr::new(txId, name, -9223372036854775808, Status::Ok, Cot::ActErr, ts))
             ),
             (
                 format!(r#"{{"type": "Int",   "name": "{}", "value":  9223372036854775807,   "status": 0, "cot": "Req", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Int(Point::new(txId, name,  9223372036854775807, Status::Ok, Cot::Req, ts))
+                name, tsStr(ts)), PointType::Int(PointHlr::new(txId, name,  9223372036854775807, Status::Ok, Cot::Req, ts))
             ),
             (
                 format!(r#"{{"type": "Real", "name": "{}", "value":  0.0, "status": 0, "cot": "ReqCon", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Real(Point::new(txId, name,  0.0, Status::Ok, Cot::ReqCon, ts))
+                name, tsStr(ts)), PointType::Real(PointHlr::new(txId, name,  0.0, Status::Ok, Cot::ReqCon, ts))
             ),
             (
                 format!(r#"{{"type": "Double", "name": "{}", "value":  0.0, "status": 0, "cot": "ReqCon", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Double(Point::new(txId, name,  0.0, Status::Ok, Cot::ReqCon, ts))
+                name, tsStr(ts)), PointType::Double(PointHlr::new(txId, name,  0.0, Status::Ok, Cot::ReqCon, ts))
             ),
             (
                 format!(r#"{{"type": "Double", "name": "{}", "value": -1.1, "status": 0, "cot": "ReqErr", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Double(Point::new(txId, name, -1.1, Status::Ok, Cot::ReqErr, ts))
+                name, tsStr(ts)), PointType::Double(PointHlr::new(txId, name, -1.1, Status::Ok, Cot::ReqErr, ts))
             ),
             (
                 format!(r#"{{"type": "Double", "name": "{}", "value":  1.1, "status": 0, "cot": "Inf", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Double(Point::new(txId, name,  1.1, Status::Ok, Cot::default(), ts))
+                name, tsStr(ts)), PointType::Double(PointHlr::new(txId, name,  1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"type": "Double", "name": "{}", "value": -1.7976931348623157e308, "status": 0, "cot": "Inf", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Double(Point::new(txId, name, -1.7976931348623157e308, Status::Ok, Cot::default(), ts))
+                name, tsStr(ts)), PointType::Double(PointHlr::new(txId, name, -1.7976931348623157e308, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"type": "Double", "name": "{}", "value":  1.7976931348623157e308, "status": 0, "cot": "Inf", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::Double(Point::new(txId, name,  1.7976931348623157e308, Status::Ok, Cot::default(), ts))
+                name, tsStr(ts)), PointType::Double(PointHlr::new(txId, name,  1.7976931348623157e308, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(r#"{{"type": "String","name": "{}", "value": "~!@#$%^&*()_+`1234567890-=","status": 0, "cot": "Inf", "timestamp":"{}"}}"#,
-                name, tsStr(ts)), PointType::String(Point::new(txId, name, "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::default(), ts))
+                name, tsStr(ts)), PointType::String(PointHlr::new(txId, name, "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::default(), ts))
             ),
         ];
         let (send, recv) = mpsc::channel();

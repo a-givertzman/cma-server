@@ -8,7 +8,7 @@ use crate::{
         auth::ssh::auth_ssh::AuthSsh,
         cot::cot::Cot,
         net::protocols::jds::request_kind::RequestKind,
-        point::{point::Point, point_type::PointType},
+        point::{point_hlr::PointHlr, point_type::PointType},
         status::status::Status,
     }, services::{
         multi_queue::subscription_criteria::SubscriptionCriteria,
@@ -50,7 +50,7 @@ impl JdsRequest {
                 };
                 RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(PointType::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Auth.Secret").join(),
                         message.to_owned(),
@@ -84,7 +84,7 @@ impl JdsRequest {
                 };
                 RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(PointType::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Auth.Ssh").join(),
                         message.to_owned(),
@@ -110,7 +110,7 @@ impl JdsRequest {
                 let points = json!(points).to_string();
                 let reply = RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(PointType::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Points").join(),
                         points,
@@ -197,7 +197,7 @@ impl JdsRequest {
                 }
                 let reply = RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(PointType::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Subscribe").join(),
                         message,

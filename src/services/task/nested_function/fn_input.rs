@@ -1,7 +1,7 @@
 use log::{error, trace};
 use concat_string::concat_string;
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-use crate::{conf::fn_::{fn_conf_keywd::FnConfPointType, fn_config::FnConfig}, core_::{point::{point::Point, point_type::{PointType, ToPoint}}, status::status::Status, types::bool::Bool}};
+use crate::{conf::fn_::{fn_conf_keywd::FnConfPointType, fn_config::FnConfig}, core_::{point::{point_hlr::PointHlr, point_type::{PointType, ToPoint}}, status::status::Status, types::bool::Bool}};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// 
@@ -72,12 +72,12 @@ impl FnIn for FnInput {
             FnConfPointType::Bool => {
                 match point {
                     PointType::Bool(_) => point.clone(),
-                    PointType::Int(p) => PointType::Bool(Point::new(p.tx_id, &p.name, Bool(p.value > 0), p.status, p.cot, p.timestamp)),
-                    PointType::Real(p) => PointType::Bool(Point::new(p.tx_id, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
-                    PointType::Double(p) => PointType::Bool(Point::new(p.tx_id, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
+                    PointType::Int(p) => PointType::Bool(PointHlr::new(p.tx_id, &p.name, Bool(p.value > 0), p.status, p.cot, p.timestamp)),
+                    PointType::Real(p) => PointType::Bool(PointHlr::new(p.tx_id, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
+                    PointType::Double(p) => PointType::Bool(PointHlr::new(p.tx_id, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
                     PointType::String(p) => {
                         match p.value.parse() {
-                            Ok(value) => PointType::Bool(Point::new(p.tx_id, &p.name, Bool(value), p.status, p.cot, p.timestamp)),
+                            Ok(value) => PointType::Bool(PointHlr::new(p.tx_id, &p.name, Bool(value), p.status, p.cot, p.timestamp)),
                             Err(err) => {
                                 error!("{}.add | Error conversion into<bool> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
@@ -88,13 +88,13 @@ impl FnIn for FnInput {
             }
             FnConfPointType::Int => {
                 match point {
-                    PointType::Bool(p) => PointType::Int(Point::new(p.tx_id, &p.name, if p.value.0 {1} else {0}, p.status, p.cot, p.timestamp)),
-                    PointType::Int(p) => PointType::Int(Point::new(p.tx_id, &p.name, p.value, p.status, p.cot, p.timestamp)),
-                    PointType::Real(p) => PointType::Int(Point::new(p.tx_id, &p.name, p.value.round() as i64, p.status, p.cot, p.timestamp)),
-                    PointType::Double(p) => PointType::Int(Point::new(p.tx_id, &p.name, p.value.round() as i64, p.status, p.cot, p.timestamp)),
+                    PointType::Bool(p) => PointType::Int(PointHlr::new(p.tx_id, &p.name, if p.value.0 {1} else {0}, p.status, p.cot, p.timestamp)),
+                    PointType::Int(p) => PointType::Int(PointHlr::new(p.tx_id, &p.name, p.value, p.status, p.cot, p.timestamp)),
+                    PointType::Real(p) => PointType::Int(PointHlr::new(p.tx_id, &p.name, p.value.round() as i64, p.status, p.cot, p.timestamp)),
+                    PointType::Double(p) => PointType::Int(PointHlr::new(p.tx_id, &p.name, p.value.round() as i64, p.status, p.cot, p.timestamp)),
                     PointType::String(p) => {
                         match p.value.parse() {
-                            Ok(value) => PointType::Int(Point::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
+                            Ok(value) => PointType::Int(PointHlr::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
                             Err(err) => {
                                 error!("{}.add | Error conversion into<i64> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
@@ -106,20 +106,20 @@ impl FnIn for FnInput {
             FnConfPointType::Real => {
                 match point {
                     PointType::Bool(p) => {
-                        PointType::Real(Point::new(p.tx_id, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp))
+                        PointType::Real(PointHlr::new(p.tx_id, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp))
                     }
                     PointType::Int(p) => {
-                        PointType::Real(Point::new(p.tx_id, &p.name, p.value as f32, p.status, p.cot, p.timestamp))
+                        PointType::Real(PointHlr::new(p.tx_id, &p.name, p.value as f32, p.status, p.cot, p.timestamp))
                     }
                     PointType::Real(p) => {
-                        PointType::Real(Point::new(p.tx_id, &p.name, p.value, p.status, p.cot, p.timestamp))
+                        PointType::Real(PointHlr::new(p.tx_id, &p.name, p.value, p.status, p.cot, p.timestamp))
                     }
                     PointType::Double(p) => {
-                        PointType::Real(Point::new(p.tx_id, &p.name, p.value as f32, p.status, p.cot, p.timestamp))
+                        PointType::Real(PointHlr::new(p.tx_id, &p.name, p.value as f32, p.status, p.cot, p.timestamp))
                     }
                     PointType::String(p) => {
                         match p.value.parse() {
-                            Ok(value) => PointType::Real(Point::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
+                            Ok(value) => PointType::Real(PointHlr::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
                             Err(err) => {
                                 error!("{}.add | Error conversion into<f32> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
@@ -131,20 +131,20 @@ impl FnIn for FnInput {
             FnConfPointType::Double => {
                 match point {
                     PointType::Bool(p) => {
-                        PointType::Double(Point::new(p.tx_id, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp))
+                        PointType::Double(PointHlr::new(p.tx_id, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp))
                     }
                     PointType::Int(p) => {
-                        PointType::Double(Point::new(p.tx_id, &p.name, p.value as f64, p.status, p.cot, p.timestamp))
+                        PointType::Double(PointHlr::new(p.tx_id, &p.name, p.value as f64, p.status, p.cot, p.timestamp))
                     }
                     PointType::Real(p) => {
-                        PointType::Double(Point::new(p.tx_id, &p.name, p.value as f64, p.status, p.cot, p.timestamp))
+                        PointType::Double(PointHlr::new(p.tx_id, &p.name, p.value as f64, p.status, p.cot, p.timestamp))
                     }
                     PointType::Double(p) => {
-                        PointType::Double(Point::new(p.tx_id, &p.name, p.value, p.status, p.cot, p.timestamp))
+                        PointType::Double(PointHlr::new(p.tx_id, &p.name, p.value, p.status, p.cot, p.timestamp))
                     }
                     PointType::String(p) => {
                         match p.value.parse() {
-                            Ok(value) => PointType::Double(Point::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
+                            Ok(value) => PointType::Double(PointHlr::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
                             Err(err) => {
                                 error!("{}.add | Error conversion into<f64> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
@@ -156,19 +156,19 @@ impl FnIn for FnInput {
             FnConfPointType::String => {
                 match point {
                     PointType::Bool(p) => {
-                        PointType::String(Point::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
+                        PointType::String(PointHlr::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
                     }
                     PointType::Int(p) => {
-                        PointType::String(Point::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
+                        PointType::String(PointHlr::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
                     }
                     PointType::Real(p) => {
-                        PointType::String(Point::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
+                        PointType::String(PointHlr::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
                     }
                     PointType::Double(p) => {
-                        PointType::String(Point::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
+                        PointType::String(PointHlr::new(p.tx_id, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))
                     }
                     PointType::String(p) => {
-                        PointType::String(Point::new(p.tx_id, &p.name, p.value.clone(), p.status, p.cot, p.timestamp))
+                        PointType::String(PointHlr::new(p.tx_id, &p.name, p.value.clone(), p.status, p.cot, p.timestamp))
                     }
                 }
             }

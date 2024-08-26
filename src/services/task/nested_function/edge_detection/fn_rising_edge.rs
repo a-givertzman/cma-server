@@ -1,7 +1,7 @@
 use log::trace;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::{point::{point::Point, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}},
+    core_::{point::{point_hlr::PointHlr, point_type::PointType}, types::{bool::Bool, fn_in_out_ref::FnInOutRef}},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -58,7 +58,7 @@ impl FnOut for FnRisingEdge {
         match input {
             FnResult::Ok(input) => {
                 let input_value = input.to_bool().as_bool().value.0;
-                let value = PointType::Bool(Point::new(
+                let value = PointType::Bool(PointHlr::new(
                     input.tx_id(),
                     &input.name(),
                     Bool(input_value && (! self.prev)),
