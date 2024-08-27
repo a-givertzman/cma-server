@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod jds_routes {
-    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, retain::retain_conf::RetainConf, service::{link_name::LinkName, service::Service}};
+    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::{link_name::LinkName, service::Service}};
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
@@ -337,7 +337,10 @@ mod jds_routes {
         test_duration.run().unwrap();
         //
         // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            None::<&str>,
+            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+        ))));
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
                 in queue in-queue:
