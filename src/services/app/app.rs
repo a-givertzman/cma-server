@@ -54,7 +54,7 @@ impl App {
         let conf = self.conf.clone();
         let self_name = Name::new("", conf.name);
         let app = Arc::new(RwLock::new(self));
-        let services = Arc::new(RwLock::new(Services::new(&self_id, self.conf.retain.point.clone())));
+        let services = Arc::new(RwLock::new(Services::new(&self_id, conf.retain.point.clone())));
         info!("{}.run |     Configuring services...", self_id);
         for (node_keywd, mut node_conf) in conf.nodes {
             let node_name = node_keywd.name();
