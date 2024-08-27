@@ -55,6 +55,8 @@ eframe = "^0.28"
 winit = "^0.29"
 hsl = "^0.1"
 
+uid = "^0.1"
+
 # [[bin]]
 # name = "task_test"
 # path = "src/task_test.rs"

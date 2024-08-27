@@ -2,7 +2,7 @@
 
 mod cma_recorder {
     use log::{debug, info, trace};
-    use sal_sync::services::{entity::{name::Name, point::point::Point}, retain::retain_conf::RetainConf, service::service::Service};
+    use sal_sync::services::{entity::{name::Name, point::point::Point}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -44,7 +44,10 @@ mod cma_recorder {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+        ))));
         let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/fn_rec_op_cycle_metric.yaml");
         trace!("config: {:?}", config);
         debug!("Task config points: {:#?}", config.points());

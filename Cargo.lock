@@ -371,7 +371,7 @@ dependencies = [
  "futures-lite 2.3.0",
  "parking",
  "polling 3.7.3",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "slab",
  "tracing",
  "windows-sys 0.59.0",
@@ -416,7 +416,7 @@ dependencies = [
  "cfg-if",
  "event-listener 3.1.0",
  "futures-lite 1.13.0",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "windows-sys 0.48.0",
 ]
 
@@ -443,7 +443,7 @@ dependencies = [
  "cfg-if",
  "futures-core",
  "futures-io",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "signal-hook-registry",
  "slab",
  "windows-sys 0.59.0",
@@ -725,7 +725,7 @@ dependencies = [
  "bitflags 2.6.0",
  "log",
  "polling 3.7.3",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "slab",
  "thiserror",
 ]
@@ -739,7 +739,7 @@ dependencies = [
  "bitflags 2.6.0",
  "log",
  "polling 3.7.3",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "slab",
  "thiserror",
 ]
@@ -751,7 +751,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f0ea9b9476c7fad82841a8dbb380e2eae480c21910feba80725b46931ed8f02"
 dependencies = [
  "calloop 0.12.4",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "wayland-backend",
  "wayland-client",
 ]
@@ -763,7 +763,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95a66a987056935f7efce4ab5668920b5d0dac4a7c99991a67395f13702ddd20"
 dependencies = [
  "calloop 0.13.0",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "wayland-backend",
  "wayland-client",
 ]
@@ -923,6 +923,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "testing 0.1.1",
+ "uid",
  "winit",
 ]
 
@@ -2782,7 +2783,7 @@ dependencies = [
  "concurrent-queue",
  "hermit-abi 0.4.0",
  "pin-project-lite",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "tracing",
  "windows-sys 0.59.0",
 ]
@@ -3042,9 +3043,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.34"
+version = "0.38.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70dc5ec042f7a43c4a73241207cecc9873a06d45debb38b329f8541d85c2730f"
+checksum = "a85d50532239da68e9addb745ba38ff4612a242c1c7ceea689c4bc7c2f43c36f"
 dependencies = [
  "bitflags 2.6.0",
  "errno",
@@ -3068,7 +3069,7 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 [[package]]
 name = "sal-sync"
 version = "0.0.1"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git#e895b3632b0482fbd621ff12da8d051114de8304"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git#37627dd24d13fda2ce3b55a53d69b6d35853cef0"
 dependencies = [
  "api-tools",
  "chrono",
@@ -3274,7 +3275,7 @@ dependencies = [
  "libc",
  "log",
  "memmap2",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "thiserror",
  "wayland-backend",
  "wayland-client",
@@ -3299,7 +3300,7 @@ dependencies = [
  "libc",
  "log",
  "memmap2",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "thiserror",
  "wayland-backend",
  "wayland-client",
@@ -3456,7 +3457,7 @@ dependencies = [
  "cfg-if",
  "fastrand 2.1.1",
  "once_cell",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "windows-sys 0.59.0",
 ]
 
@@ -3695,6 +3696,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "uid"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "281a11e4180ee68f8c06a7bf82d1be3c496e0debcadcc4576cc0b56132201edf"
+
+[[package]]
 name = "unicase"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3880,7 +3887,7 @@ checksum = "f90e11ce2ca99c97b940ee83edbae9da2d56a08f9ea8158550fd77fa31722993"
 dependencies = [
  "cc",
  "downcast-rs",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "scoped-tls",
  "smallvec",
  "wayland-sys",
@@ -3893,7 +3900,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e321577a0a165911bdcfb39cf029302479d7527b517ee58ab0f6ad09edf0943"
 dependencies = [
  "bitflags 2.6.0",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "wayland-backend",
  "wayland-scanner",
 ]
@@ -3915,7 +3922,7 @@ version = "0.31.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ef9489a8df197ebf3a8ce8a7a7f0a2320035c3743f3c1bd0bdbccf07ce64f95"
 dependencies = [
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "wayland-client",
  "xcursor",
 ]
@@ -4157,7 +4164,7 @@ dependencies = [
  "either",
  "home",
  "once_cell",
- "rustix 0.38.34",
+ "rustix 0.38.35",
 ]
 
 [[package]]
@@ -4504,7 +4511,7 @@ dependencies = [
  "raw-window-handle 0.5.2",
  "raw-window-handle 0.6.2",
  "redox_syscall 0.3.5",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "sctk-adwaita",
  "smithay-client-toolkit 0.18.1",
  "smol_str",
@@ -4563,7 +4570,7 @@ dependencies = [
  "libc",
  "libloading 0.8.5",
  "once_cell",
- "rustix 0.38.34",
+ "rustix 0.38.35",
  "x11rb-protocol",
 ]
 

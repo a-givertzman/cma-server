@@ -3,7 +3,7 @@
 mod cma_recorder {
     use log::{info, trace};
     use regex::Regex;
-    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
+    use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
     use std::{env, fs, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -40,12 +40,15 @@ mod cma_recorder {
         let self_id = "AppTest";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
+        let test_duration = TestDuration::new(self_id, Duration::from_secs(60));
         test_duration.run().unwrap();
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+        ))));
         let mut tasks = vec![];
         let mut task_handles = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/basic-metric-cycles-distribution-by-load.yaml";

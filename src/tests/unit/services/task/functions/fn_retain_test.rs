@@ -117,7 +117,7 @@ mod fn_retain {
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
             RetainConf::new(
-                Some("assets/testing/retain/"), 
+                Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
                     "assets/testing/retain/point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
@@ -255,7 +255,7 @@ mod fn_retain {
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
             RetainConf::new(
-                Some("assets/testing/retain/"), 
+                Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
                     "assets/testing/retain/point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
@@ -399,7 +399,10 @@ mod fn_retain {
         init_once();
         init_each();
         println!();
-        let self_id = "AppTest";
+        #[derive(Copy, Clone, Eq, PartialEq)]
+        struct T(());
+        // let uid = uid::Id::<T>::new();
+        let self_id = &format!("AppTest");
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
@@ -410,7 +413,7 @@ mod fn_retain {
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
             RetainConf::new(
-                Some("assets/testing/retain/"), 
+                Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
                     "assets/testing/retain/point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
@@ -419,14 +422,14 @@ mod fn_retain {
         )));
         let config = TaskConfig::from_yaml(
             &self_name,
-            &serde_yaml::from_str(r"
+            &serde_yaml::from_str(&format!(r"
                 service Task RetainTask:
                     cycle: 1 ms
                     in queue in-queue:
                         max-length: 10000
                     subscribe:
-                        /AppTest/MultiQueue:                    # - multicast subscription to the MultiQueue
-                            {cot: Inf}: []                      #   - on all points having Cot::Inf
+                        /{}/MultiQueue:                    # - multicast subscription to the MultiQueue
+                            {{cot: Inf}}: []                      #   - on all points having Cot::Inf
                     
                     let realRetain:
                         input fn Retain:
@@ -437,11 +440,11 @@ mod fn_retain {
                         in2 fn Retain:
                             key: 'RealRetain'
                             input fn Export:
-                                send-to: /AppTest/TaskTestReceiver.in-queue
+                                send-to: '/{}/TaskTestReceiver.in-queue'
                                 input fn Add:
                                     input1: realRetain
-                                    input2: point real '/AppTest/Load'
-            ").unwrap(),
+                                    input2: point real '/{}/Load'
+            ", self_id, self_id, self_id)).unwrap(),
         );
         trace!("config: {:?}", config);
         debug!("Task config points: {:#?}", config.points());
@@ -571,7 +574,7 @@ mod fn_retain {
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
             RetainConf::new(
-                Some("assets/testing/retain/"), 
+                Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
                     "assets/testing/retain/point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))

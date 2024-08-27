@@ -147,7 +147,7 @@ impl FromStr for FnConfKeywd {
     type Err = String;
     fn from_str(input: &str) -> Result<Self, String> {
         trace!("FnConfKeywd.from_str | input: {}", input);
-        let re = r#"[ \t]*(?:(\w+)[ \t]+)*(?:(let|fn|const|point){1}(?:[ \t](bool|int|real|double|string|any))*(?:$|(?:[ \t]+['"]*([\w/.]+)['"]*)))(?:[ \t](.+))?"#;
+        let re = r#"[ \t]*(?:(\w+)[ \t]+)*(?:(let|fn|const|point){1}(?:[ \t](bool|int|real|double|string|any))*(?:$|(?:[ \t]+['"]*([\w/.-]+)['"]*)))(?:[ \t](.+))?"#;
         let re = RegexBuilder::new(re).multi_line(true).build().unwrap();
         let group_input = 1;
         let group_kind = 2;

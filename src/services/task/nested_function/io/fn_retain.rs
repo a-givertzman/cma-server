@@ -53,6 +53,8 @@ impl FnRetain {
     /// - `input` - incoming Point's
     pub fn new(parent: &Name, path: impl AsRef<Path>, enable: Option<FnInOutRef>, every_cycle: bool, key: &str, default: Option<FnInOutRef>, input: Option<FnInOutRef>) -> Self {
         let self_id = format!("{}/FnRetain{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
+        let mut path = PathBuf::from(path.as_ref());
+        path.push(parent.join().trim_start_matches('/'));
         Self {
             id: self_id.clone(),
             name: parent.clone(),
@@ -63,7 +65,7 @@ impl FnRetain {
             key: key.to_owned(),
             default,
             input,
-            path: PathBuf::from(path.as_ref()),
+            path,
             cache: None,
         }
     }

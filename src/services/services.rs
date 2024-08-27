@@ -159,9 +159,15 @@ impl Services {
                                                 sink.add(points);
                                                 debug!("{}.run | Points requested from: '{}' - Ok", self_id, requester_name);
                                             }
-                                            Err(err) => error!("{}.run | Points id's write access error, requester: '{}', error: {:#?}", self_id, requester_name, err),
+                                            Err(err) => {
+                                                error!("{}.run | Points id's write access error, requester: '{}', error: {:#?}", self_id, requester_name, err);
+                                                sink.add(vec![]);
+                                            }
                                         },
-                                        None => notify.add(NotifyState::RetainPointNotConfiguredWarn, &format!("{}.run | Retain->Point - not configured", self_id)),
+                                        None => {
+                                            notify.add(NotifyState::RetainPointNotConfiguredWarn, &format!("{}.run | Retain->Point - not configured", self_id));
+                                            sink.add(vec![]);
+                                        }
                                     }
                                 }
                                 None => notify.add(NotifyState::PointsRequestsIsEmpty, &format!("{}.run | Points requests is empty", self_id)),
