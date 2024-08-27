@@ -112,7 +112,7 @@ mod fn_retain {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/BoolFlag.json", self_id), PointConfigType::Bool)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", self_id), PointConfigType::Bool)
             .map_or(false, |init| init.as_bool().value.0);
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
@@ -311,7 +311,7 @@ mod fn_retain {
             (format!("/{}/Load", self_id), Value::Real(0.0)),
         ];
         let total_count = test_data.len();
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/Count.json", self_id), PointConfigType::Int)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/Count.json", self_id), PointConfigType::Int)
             .map_or(0, |init| init.as_int().value);
         let mut target_data = vec![
             Value::Int(initial + 0),
@@ -465,7 +465,7 @@ mod fn_retain {
             (format!("/{}/Load", self_id), Value::Real(1.1)),
         ];
         let total_count = test_data.len();
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/RealRetain.json", self_id), PointConfigType::Real)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/RealRetain.json", self_id), PointConfigType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let mut target_data = vec![
             Value::Real(initial + 0.1),
@@ -557,7 +557,7 @@ mod fn_retain {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/RealRetainEveryCycle.json", self_id), PointConfigType::Real)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", self_id), PointConfigType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
