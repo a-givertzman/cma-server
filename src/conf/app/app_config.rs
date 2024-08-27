@@ -1,15 +1,24 @@
 use indexmap::IndexMap;
 use log::{debug, info, trace};
-use sal_sync::services::{conf::conf_tree::ConfTree, retain_point_id::RetainPointApi};
+use sal_sync::services::{conf::conf_tree::ConfTree, retain::retain_config::RetainConfig};
 use std::{fs, path::Path, str::FromStr};
 use crate::conf::{
     conf_keywd::{ConfKeywd, ConfKind}, service_config::ServiceConfig
 };
 ///
-/// creates config from serde_yaml::Value of following format:
+/// Creates application config from serde_yaml::Value of following format:
+/// 
+/// Example
+/// 
 /// ```yaml
 /// name: ApplicationName
 /// description: Short explanation / purpose etc.
+/// retain:
+///     api:
+///         table:      public.tags
+///         address:    0.0.0.0:8080
+///         auth_token: 123!@#
+///         database:   cma_data_server
 /// 
 /// service ProfinetClient Ied01:          # device will be executed in the independent thread, must have unique name
 ///    in queue in-queue:
@@ -46,14 +55,14 @@ use crate::conf::{
 ///                     input1: const real 0.2
 ///                     input2: point real '/path/Point.Name'
 ///     ...
-/// 
+/// ```
 #[derive(Debug, PartialEq, Clone)]
 pub struct AppConfig {
     pub(crate) name: String,
     pub(crate) description: String,
     // pub(crate) cycle: Option<Duration>,
     pub(crate) nodes: IndexMap<ConfKeywd, ConfTree>,
-    pub(crate) retain_api: RetainPointApi
+    pub(crate) retain: RetainConfig,
 }
 //
 // 
@@ -97,11 +106,15 @@ impl AppConfig {
                 }
             }
         }
+        let retain = self_conf.get_param_value("retain").unwrap();
+        debug!("{}.new | retain: {:#?}", self_id, retain);
+        let retain = RetainConfig::default();
         Self {
             name: self_name,
             description,
             // cycle,
             nodes,
+            retain,
         }
     }
     ///

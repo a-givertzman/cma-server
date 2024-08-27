@@ -1,5 +1,14 @@
 name: App
 description: Short explanation / purpose etc.
+retain:
+    point:
+        path: assets/retain/point/id.json
+        api:
+            table: public.tags
+            address: 0.0.0.0:8080
+            auth_token: 123!@#
+            database: crane_data_server
+
 
 
 service MultiQueue:
