@@ -2,7 +2,7 @@
 
 mod task_nodes {
     use log::{info, debug, trace, warn};
-    use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, service::{service::Service, service_handles::ServiceHandles}};
+    use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::{service::Service, service_handles::ServiceHandles}};
     use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -45,7 +45,7 @@ mod task_nodes {
         let mut task_nodes = TaskNodes::new(self_id);
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
-        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mock_service = Arc::new(Mutex::new(MockService::new(self_id, "queue")));
         services.wlock(self_id).insert(mock_service.clone());
         let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);

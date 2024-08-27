@@ -1,6 +1,6 @@
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig}}, 
-    future::future::{Future, Sink}, retain::{retain_point_conf::RetainPointConf, retain_point_id::RetainPointId}, 
+    future::future::{Future, Sink}, retain::{retain_conf::RetainConf, retain_point_id::RetainPointId}, 
     service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
     subscription::subscription_criteria::SubscriptionCriteria
 };
@@ -26,6 +26,7 @@ pub struct Services {
     id: String,
     name: Name,
     map: Arc<RwLock<HashMap<String, Arc<Mutex<dyn Service + Send>>>>>,
+    retain_conf: RetainConf,
     retain_point_id: Option<Arc<RwLock<RetainPointId>>>,
     points_requested: Arc<AtomicUsize>,
     points_request: Arc<RwLock<Vec< (String, Sink<Vec<PointConfig>>) >>>,
@@ -55,17 +56,18 @@ impl Services {
     pub const SLMP_CLIENT: &'static str = "SlmpClient";
     ///
     /// Creates new instance of the Services
-    pub fn new(parent: impl Into<String>, conf: Option<RetainPointConf>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: RetainConf) -> Self {
         let name = Name::new(parent, "Services");
         let self_id = name.join();
         Self {
             id: self_id.clone(),
             name,
             map: Arc::new(RwLock::new(HashMap::new())),
-            retain_point_id: match conf {
-                Some(conf) => Some(Arc::new(RwLock::new(RetainPointId::new(&self_id, conf)))),
+            retain_point_id: match &conf.point {
+                Some(conf) => Some(Arc::new(RwLock::new(RetainPointId::new(&self_id, conf.clone())))),
                 None => None,
             },
+            retain_conf: conf,
             points_requested: Arc::new(AtomicUsize::new(0)),
             points_request: Arc::new(RwLock::new(vec![])),
             exit: Arc::new(AtomicBool::new(false)),
@@ -321,6 +323,11 @@ impl Services {
     /// Sends the General Interogation request to all services
     pub fn gi(&self, _service: &str, _points: &[SubscriptionCriteria]) -> Receiver<Point> {
         panic!("{}.gi | Not implemented yet", self.id);
+    }
+    ///
+    /// Returns Retain configuration
+    pub fn retain(&self) -> RetainConf {
+        self.retain_conf.clone()
     }
     ///
     /// 

@@ -2,8 +2,7 @@
 
 mod tcp_server {
     use sal_sync::services::{
-        entity::name::Name,
-        service::service::Service,
+        entity::name::Name, retain::retain_conf::RetainConf, service::service::Service
     };
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues, wait::WaitTread}, session::test_session::TestSession};
@@ -52,7 +51,7 @@ mod tcp_server {
         let total_count = test_data.len();
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
-        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -148,7 +147,7 @@ mod tcp_server {
         let total_count = test_data.len();
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
-        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms

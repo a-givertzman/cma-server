@@ -6,6 +6,7 @@ mod sql_metric {
     use log::warn;
     use regex::RegexBuilder;
     use sal_sync::services::entity::{name::Name, point::point::{Point, ToPoint}};
+    use sal_sync::services::retain::retain_conf::RetainConf;
     use std::sync::RwLock;
     use std::sync::{Once, Arc};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -45,7 +46,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -118,7 +119,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -201,7 +202,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![

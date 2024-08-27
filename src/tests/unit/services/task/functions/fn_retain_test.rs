@@ -3,7 +3,7 @@
 mod fn_retain {
     use chrono::Utc;
     use log::{debug, error, info, trace, warn};
-    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, status::status::Status}, retain::retain_point_conf::{RetainPointConf, RetainPointConfApi}, service::service::Service, types::bool::Bool};
+    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_conf::{RetainPointConf, RetainPointConfApi}}, service::service::Service, types::bool::Bool};
     use std::{env, fs, io::Read, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -116,10 +116,13 @@ mod fn_retain {
             .map_or(false, |init| init.as_bool().value.0);
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
-            Some(RetainPointConf::new(
-                "assets/testing/retain/point/id.json", 
-                Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
-            )),
+            RetainConf::new(
+                Some("assets/testing/retain/"), 
+                Some(RetainPointConf::new(
+                    "assets/testing/retain/point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
         )));
         let config = TaskConfig::from_yaml(
             &self_name,
@@ -153,7 +156,7 @@ mod fn_retain {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -251,10 +254,13 @@ mod fn_retain {
         trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
-            Some(RetainPointConf::new(
-                "assets/testing/retain/point/id.json", 
-                Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
-            )),
+            RetainConf::new(
+                Some("assets/testing/retain/"), 
+                Some(RetainPointConf::new(
+                    "assets/testing/retain/point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
         )));
         let config = TaskConfig::from_yaml(
             &self_name,
@@ -293,7 +299,7 @@ mod fn_retain {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -403,10 +409,13 @@ mod fn_retain {
         trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
-            Some(RetainPointConf::new(
-                "assets/testing/retain/point/id.json", 
-                Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
-            )),
+            RetainConf::new(
+                Some("assets/testing/retain/"), 
+                Some(RetainPointConf::new(
+                    "assets/testing/retain/point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
         )));
         let config = TaskConfig::from_yaml(
             &self_name,
@@ -446,7 +455,7 @@ mod fn_retain {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -561,10 +570,13 @@ mod fn_retain {
             .map_or(0.0, |init| init.as_real().value);
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
-            Some(RetainPointConf::new(
-                "assets/testing/retain/point/id.json", 
-                Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
-            )),
+            RetainConf::new(
+                Some("assets/testing/retain/"), 
+                Some(RetainPointConf::new(
+                    "assets/testing/retain/point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
         )));
         let config = TaskConfig::from_yaml(
             &self_name,

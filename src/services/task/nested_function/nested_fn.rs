@@ -387,8 +387,9 @@ impl NestedFn {
                             panic!("{}.function | Parameter 'key' - missed in '{}'", self_id, conf.name)
                         ).as_param();
                         let key = key.conf.as_str().unwrap();
+                        let retain_path = services.rlock(&self_id).retain().path.unwrap_or_else(|| panic!("{}.function | Retain: path - missed in Application config", self_id));
                         Rc::new(RefCell::new(Box::new(
-                            FnRetain::new(parent, enable, every_cycle, key, default, input)
+                            FnRetain::new(parent, retain_path, enable, every_cycle, key, default, input)
                         )))
                     }
                     //

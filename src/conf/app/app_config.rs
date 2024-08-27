@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use log::{debug, info, trace};
-use sal_sync::services::{conf::conf_tree::ConfTree, retain::retain_config::RetainConfig};
+use sal_sync::services::{conf::conf_tree::ConfTree, retain::retain_conf::RetainConf};
 use std::{fs, path::Path, str::FromStr};
 use crate::conf::{
     conf_keywd::{ConfKeywd, ConfKind}, service_config::ServiceConfig
@@ -62,7 +62,7 @@ pub struct AppConfig {
     pub(crate) description: String,
     // pub(crate) cycle: Option<Duration>,
     pub(crate) nodes: IndexMap<ConfKeywd, ConfTree>,
-    pub(crate) retain: RetainConfig,
+    pub(crate) retain: RetainConf,
 }
 //
 // 
@@ -108,7 +108,7 @@ impl AppConfig {
         }
         let retain = self_conf.get_param_value("retain").unwrap();
         debug!("{}.new | retain: {:#?}", self_id, retain);
-        let retain = RetainConfig::default();
+        let retain = RetainConf::default();
         Self {
             name: self_name,
             description,

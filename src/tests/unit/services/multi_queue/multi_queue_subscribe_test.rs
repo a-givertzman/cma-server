@@ -6,7 +6,7 @@ use crate::services::{safe_lock::SafeLock, services::Services};
 
 mod multi_queue {
     use log::debug;
-    use sal_sync::services::service::service::Service;
+    use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::{
@@ -61,7 +61,7 @@ mod multi_queue {
         let conf = serde_yaml::from_str(&conf).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(self_id, &conf);
         debug!("mqConf: {:?}", mq_conf);
-        let services = Arc::new(RwLock::new(Services::new(self_id, None)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let mut receiver_handles = vec![];

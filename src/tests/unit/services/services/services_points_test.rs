@@ -2,7 +2,7 @@
 
 mod services_points {
     use log::{error, trace};
-    use sal_sync::services::{entity::name::Name, retain::retain_point_conf::RetainPointConf};
+    use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, time::Duration};
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -42,11 +42,13 @@ mod services_points {
         let config = TaskConfig::read(&self_name, path);
         trace!("config: {:?}", &config);
         println!(" points: {:?}", config.points());
-        let services = Arc::new(RwLock::new(Services::new(self_id, Some(RetainPointConf::new(
-            "assets/testing/retain/point/id.json",
-            None,
-            // RetainPointConfApi::new(table, address, auth_token, database)
-        )))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new(
+                "assets/testing/retain/point/id.json",
+                None,
+            ))),
+        )));
         let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
         services.wlock(self_id).insert(task.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
