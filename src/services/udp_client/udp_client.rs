@@ -18,7 +18,7 @@
 //! |Data type:    | u8  | u8   | u8   | u8    | u8[1024]    | 
 //! |Example value:| 22  | 0    | 16   | 1024  | [u16; 1024] |
 //! - `SYN` = 22 - message starts with
-//! - `ADDR` = 0...255 - an address of the signal (0 - first input channel)
+//! - `ADDR` = 0...255 - an address of the input channel (0 - first input channel)
 //! - `TYPE` - type of values in the array in `DATA` field
 //!     - 8 - 1 byte integer value
 //!     - 16 - 2 byte float value

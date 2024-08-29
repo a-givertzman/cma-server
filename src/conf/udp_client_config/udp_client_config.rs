@@ -1,9 +1,8 @@
 use indexmap::IndexMap;
-use log::{debug, error, trace};
 use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::{
-    conf_keywd::ConfKind, diag_keywd::DiagKeywd,
+    diag_keywd::DiagKeywd,
     service_config::ServiceConfig, udp_client_config::keywd::{self, Keywd},
 };
 
@@ -15,14 +14,12 @@ use super::udp_client_db_config::UdpClientDbConfig;
 /// 
 /// ```yaml
 /// service UdpClient UdpIed01:            # device will be executed in the independent thread, must have unique name
+///    description: 'UDP-IED-01.01'
 ///    subscribe: Multiqueue
-///    in queue in-queue:
-///        max-length: 10000
 ///    send-to: MultiQueue.in-queue
 ///    cycle: 1 ms                         # operating cycle time of the device
 ///    reconnect: 1000 ms                  # reconnect timeout when connection is lost
 ///    protocol: 'udp-raw'
-///    description: 'UDP-IED-01.01'
 ///    local-address: 192.168.100.100:15180
 ///    remote-address: 192.168.100.241:15180
 ///    diagnosis:                          # internal diagnosis
@@ -35,24 +32,23 @@ use super::udp_client_db_config::UdpClientDbConfig;
 /// 
 ///    db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
 ///        description: 'Data block of the device'
-///        size: 1024
+///        size: 1024                      # corresponding to the length of the array transmitted in the UDP message
 ///        point Sensor1: 
 ///            type: 'Int'
-///            input: 1                    # the number of input 1...4
+///            input: 0                    # the number of input 0..8 (0 - first input channel)
 ///                 ...
 /// 
 #[derive(Debug, PartialEq, Clone)]
 pub struct UdpClientConfig {
     pub(crate) name: Name,
-    pub(crate) cycle: Option<Duration>,
-    pub(crate) reconnect_cycle: Duration,
+    pub(crate) description: String,
     pub(crate) subscribe: String,
     pub(crate) send_to: LinkName,
+    pub(crate) cycle: Option<Duration>,
+    pub(crate) reconnect: Duration,
     pub(crate) protocol: String,
-    pub(crate) description: String,
-    pub(crate) ip: String,
-    pub(crate) rack: u64,
-    pub(crate) slot: u64,
+    pub(crate) local_address: String,
+    pub(crate) remote_address: String,
     pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
     pub(crate) dbs: IndexMap<String, UdpClientDbConfig>,
 }
@@ -63,67 +59,59 @@ impl UdpClientConfig {
     /// Creates new instance of the [UdpClientConfig]:
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
         println!();
-        trace!("UdpClientConfig.new | conf_tree: {:#?}", conf_tree);
+        log::trace!("UdpClientConfig.new | conf_tree: {:#?}", conf_tree);
         let self_id = format!("UdpClientConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | self_conf: {:?}", self_id, self_conf);
+        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
         let self_name = Name::new(parent, self_conf.sufix());
-        debug!("{}.new | name: {:?}", self_id, self_name);
-        let cycle = self_conf.get_duration("cycle");
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let reconnect_cycle = self_conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
-        debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
-        let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
-        debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
-        debug!("{}.new | send-to: {}", self_id, send_to);
-        if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
-            error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)
-        }
-        let protocol = self_conf.get_param_value("protocol").unwrap().as_str().unwrap().to_string();
-        debug!("{}.new | protocol: {:?}", self_id, protocol);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
-        debug!("{}.new | description: {:?}", self_id, description);
-        let ip = self_conf.get_param_value("ip").unwrap().as_str().unwrap().to_string();
-        debug!("{}.new | ip: {:?}", self_id, ip);
-        let rack = self_conf.get_param_value("rack").unwrap().as_u64().unwrap();
-        debug!("{}.new | rack: {:?}", self_id, rack);
-        let slot = self_conf.get_param_value("slot").unwrap().as_u64().unwrap();
-        debug!("{}.new | slot: {:?}", self_id, slot);
+        log::debug!("{}.new | description: {:?}", self_id, description);
+        let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
+        log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
+        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
+        log::debug!("{}.new | send-to: {}", self_id, send_to);
+        let cycle = self_conf.get_duration("cycle");
+        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
+        let reconnect = self_conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
+        log::debug!("{}.new | reconnect: {:?}", self_id, reconnect);
+        let protocol = self_conf.get_param_value("protocol").unwrap().as_str().unwrap().to_string();
+        log::debug!("{}.new | protocol: {:?}", self_id, protocol);
+        let local_address = self_conf.get_param_value("local-address").unwrap().as_str().unwrap().to_string();
+        log::debug!("{}.new | local-address: {:?}", self_id, local_address);
+        let remote_address = self_conf.get_param_value("remote-address").unwrap().as_str().unwrap().to_string();
+        log::debug!("{}.new | remote-address: {:?}", self_id, remote_address);
         let diagnosis = self_conf.get_diagnosis(&self_name);
-        debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
+        log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::new();
         for key in &self_conf.keys {
             let keyword = Keywd::from_str(key).unwrap();
             if keyword.kind() == keywd::Kind::Db {
                 let db_name = keyword.name();
                 let mut device_conf = self_conf.get(key).unwrap();
-                debug!("{}.new | DB '{}'", self_id, db_name);
-                trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
+                log::debug!("{}.new | DB '{}'", self_id, db_name);
+                log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
                 let node_conf = UdpClientDbConfig::new(&self_name, &db_name, &mut device_conf);
                 dbs.insert(
                     db_name,
                     node_conf,
                 );
             } else {
-                debug!("{}.new | device expected, but found {:?}", self_id, keyword);
+                log::debug!("{}.new | device expected, but found {:?}", self_id, keyword);
             }
         }
         UdpClientConfig {
             name: self_name,
-            cycle,
-            reconnect_cycle,
-            // rx,
-            // rx_max_len,
+            description,
             subscribe,
             send_to,
+            cycle,
+            reconnect,
             protocol,
-            description,
-            ip,
-            rack,
-            slot,
+            local_address,
+            remote_address,
             diagnosis,
-            dbs
+            dbs,
         }
     }
     ///
