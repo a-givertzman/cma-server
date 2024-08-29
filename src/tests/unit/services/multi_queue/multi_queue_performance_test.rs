@@ -2,10 +2,11 @@
 
 mod multi_queue {
     use std::{collections::HashMap, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::point_config::name::Name, services::{safe_lock::SafeLock, service::service::Service, services::Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
+        services::{safe_lock::SafeLock, services::Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
     };
     ///
     ///
@@ -43,7 +44,7 @@ mod multi_queue {
         let total_count = iterations * producer_count;
         let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         for i in 0..receiver_count {
             let receiver = Arc::new(Mutex::new(MockRecvService::new(
                 self_id,
@@ -152,7 +153,7 @@ mod multi_queue {
         let total_count = iterations * producer_count;
         let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         for i in 0..receiver_count {
             let receiver = Arc::new(Mutex::new(MockRecvService::new(
                 self_id,

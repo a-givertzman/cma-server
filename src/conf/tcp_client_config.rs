@@ -1,8 +1,7 @@
 use log::{debug, error, trace};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, service::link_name::LinkName};
 use std::{fs, time::Duration, net::SocketAddr};
-use crate::{conf::{conf_keywd::ConfKind, conf_tree::ConfTree, service_config::ServiceConfig}, services::queue_name::QueueName};
-
-use super::point_config::name::Name;
+use crate::conf::{conf_keywd::ConfKind, service_config::ServiceConfig};
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -23,7 +22,7 @@ pub struct TcpClientConfig {
     pub(crate) rx: String,
     pub(crate) rx_buffered: bool,
     pub(crate) rx_max_len: i64,
-    pub(crate) send_to: QueueName,
+    pub(crate) send_to: LinkName,
 }
 //
 // 
@@ -57,7 +56,7 @@ impl TcpClientConfig {
         let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
         let rx_buffered = rx_max_len > 0;
         debug!("{}.new | RX: {},\tmax-length: {}", self_id, rx, rx_max_len);
-        let send_to = QueueName::new(self_conf.get_send_to().unwrap()).validate();
+        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
         debug!("{}.new | send-to: {}", self_id, send_to);
         if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
             error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)

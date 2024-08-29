@@ -4,12 +4,11 @@ mod jds_deserialize {
     use chrono::{DateTime, Utc};
     use log::{info, debug, trace, error};
     use rand::Rng;
+    use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::{core_::{
-        cot::cot::Cot, net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool
-    }, tcp::tcp_stream_write::OpResult};
+    use crate::{core_::net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, tcp::tcp_stream_write::OpResult};
     ///
     ///
     static INIT: Once = Once::new();

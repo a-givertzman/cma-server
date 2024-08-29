@@ -2,11 +2,12 @@
 
 mod services_points {
     use log::{error, trace};
+    use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, time::Duration};
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{point_config::name::Name, task_config::TaskConfig},
+        conf::task_config::TaskConfig,
         services::{safe_lock::SafeLock, services::Services, task::task::Task},
     };
     ///
@@ -24,7 +25,7 @@ mod services_points {
     ///  - ...
     fn init_each() -> () {}
     ///
-    ///
+    /// Testing Services::points()
     #[test]
     fn services_points() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -41,7 +42,13 @@ mod services_points {
         let config = TaskConfig::read(&self_name, path);
         trace!("config: {:?}", &config);
         println!(" points: {:?}", config.points());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new(
+                "point/id.json",
+                None,
+            ))),
+        )));
         let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
         services.wlock(self_id).insert(task.clone());
         let services_handle = services.wlock(self_id).run().unwrap();

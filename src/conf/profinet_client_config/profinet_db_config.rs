@@ -1,9 +1,8 @@
 use log::{debug, trace};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}};
 use std::{str::FromStr, time::Duration};
 use crate::conf::{
-    conf_tree::ConfTree, 
     fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName}, 
-    point_config::{point_config::PointConfig, name::Name}, 
     service_config::ServiceConfig,
 };
 ///

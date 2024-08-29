@@ -1,10 +1,9 @@
+use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
 use std::sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender};
 use chrono::Utc;
 use indexmap::IndexMap;
 use log::{debug, error, trace, warn};
-use crate::core_::{
-    cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}
-};
+use crate::core_::types::fn_in_out_ref::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Creates SQL requests on [op-cycle] falling edge:

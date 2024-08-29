@@ -1,8 +1,11 @@
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{info, warn};
 use testing::stuff::wait::WaitTread;
 use crate::{
-    conf::{point_config::name::Name, tcp_client_config::TcpClientConfig}, core_::{net::protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize, jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, object::object::Object, point::point::Point}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}, tcp::{
+    conf::tcp_client_config::TcpClientConfig,
+    core_::net::protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize, jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize},
+    services::{safe_lock::SafeLock, services::Services}, tcp::{
         tcp_client_connect::TcpClientConnect, tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive
     } 
 };
@@ -74,7 +77,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();
@@ -174,5 +177,38 @@ impl Service for TcpClient {
             }
             None => {}
         }
+    }
+    //
+    //
+    fn subscribe(&mut self, receiver_id: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
+        let _ = receiver_id;
+        let _ = points;
+        std::panic!("{}.subscribe | Does not supported", self.id())
+    }
+    //
+    //
+    fn extend_subscription(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), String> {
+        let _ = receiver_name;
+        let _ = points;
+        std::panic!("{}.extend_subscription | Does not supported", self.id())
+    }
+    //
+    //
+    fn unsubscribe(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), String> {
+        let _ = receiver_name;
+        let _ = points;
+        std::panic!("{}.unsubscribe | Does not supported", self.id())
+    }
+    //
+    //
+    fn points(&self) -> Vec<sal_sync::services::entity::point::point_config::PointConfig> {
+        std::vec![]
+    }
+    //
+    //
+    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Receiver<Point> {
+        let _ = receiver_name;
+        let _ = points;
+        std::panic!("{}.gi | Does not supported", self.id())
     }
 }

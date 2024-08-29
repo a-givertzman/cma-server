@@ -1,15 +1,13 @@
 use chrono::Utc;
 use concat_string::concat_string;
 use log::{error, trace};
-use std::{env, fs, io::{Read, Write}, path::PathBuf, sync::atomic::{AtomicUsize, Ordering}};
+use sal_sync::services::{
+    entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
+    types::bool::Bool,
+};
+use std::{env, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
 use crate::{
-    conf::point_config::{name::Name, point_config_type::PointConfigType},
-    core_::{
-        cot::cot::Cot,
-        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point},
-        status::status::Status,
-        types::{bool::Bool, fn_in_out_ref::FnInOutRef},
-    }, 
+    core_::types::fn_in_out_ref::FnInOutRef, 
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///
@@ -38,7 +36,7 @@ pub struct FnRetain {
     key: String,
     default: Option<FnInOutRef>,
     input: Option<FnInOutRef>,
-    path: Option<PathBuf>,
+    path: PathBuf,
     cache: Option<Point>,
 }
 //
@@ -46,14 +44,17 @@ pub struct FnRetain {
 impl FnRetain {
     ///
     /// Creates new instance of the FnRetain
-    /// - [parent] - the name of the parent entitie
-    /// - [name] - the name of the parent
-    /// - [enable] - boolean (numeric) input enables the readinf/storing and pass through if true (> 0)
-    /// - [every-cycle] - if true read will done in every computing cycle, else read will done only once
-    /// - [key] - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
-    /// - [input] - incoming Point's
-    pub fn new(parent: &Name, enable: Option<FnInOutRef>, every_cycle: bool, key: &str, default: Option<FnInOutRef>, input: Option<FnInOutRef>) -> Self {
+    /// - `parent` - the name of the parent entitie
+    /// - `path` something like "assets/retain/"
+    /// - `name` - the name of the parent
+    /// - `enable` - boolean (numeric) input enables the readinf/storing and pass through if true (> 0)
+    /// - `every`cycle] - if true read will done in every computing cycle, else read will done only once
+    /// - `key` - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
+    /// - `input` - incoming Point's
+    pub fn new(parent: &Name, path: impl AsRef<Path>, enable: Option<FnInOutRef>, every_cycle: bool, key: &str, default: Option<FnInOutRef>, input: Option<FnInOutRef>) -> Self {
         let self_id = format!("{}/FnRetain{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
+        let mut path = PathBuf::from(path.as_ref());
+        path.push(parent.join().trim_start_matches('/'));
         Self {
             id: self_id.clone(),
             name: parent.clone(),
@@ -64,27 +65,19 @@ impl FnRetain {
             key: key.to_owned(),
             default,
             input,
-            path: None,
+            path,
             cache: None,
         }
     }
     ///
-    /// 
+    /// Creates a directory of the specified `path`
     fn path(&mut self) -> Result<PathBuf, String> {
-        match self.path.clone() {
-            Some(path) => Ok(path),
-            None => {
-                let path = Name::new("assets/retain/", self.name.join()).join();
-                let path = path.trim_start_matches('/');
-                match Self::create_dir(&self.id, path) {
-                    Ok(path) => {
-                        let path = path.join(concat_string!(self.key, ".json"));
-                        self.path = Some(path.clone());
-                        Ok(path)
-                    }
-                    Err(err) => Err(concat_string!(self.id, ".path | Error: {}", err)),
-                }
+        match Self::create_dir(&self.id, &self.path) {
+            Ok(path) => {
+                let path = path.join(concat_string!(self.key, ".json"));
+                Ok(path)
             }
+            Err(err) => Err(concat_string!(self.id, ".path | Error: {}", err)),
         }
     }
     ///
@@ -126,7 +119,7 @@ impl FnRetain {
     ///
     /// Creates directiry (all necessary folders in the 'path' if not exists)
     ///  - path is relative, will be joined with current working dir
-    fn create_dir(self_id: &str, path: &str) -> Result<PathBuf, String> {
+    fn create_dir(self_id: &str, path: impl AsRef<Path>) -> Result<PathBuf, String> {
         let current_dir = env::current_dir().unwrap();
         let path = current_dir.join(path);
         match path.exists() {

@@ -4,19 +4,19 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use log::{debug, error, info, trace, warn};
+use sal_sync::services::{entity::{cot::Cot, name::Name, point::point::Point}, service::service_handles::ServiceHandles, subscription::subscription_criteria::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
-    conf::{point_config::name::Name, tcp_server_config::TcpServerConfig}, 
+    conf::tcp_server_config::TcpServerConfig, 
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, net::protocols::jds::{
+        constants::constants::RECV_TIMEOUT, net::protocols::jds::{
             jds_decode_message::JdsDecodeMessage, 
             jds_deserialize::JdsDeserialize, 
             jds_encode_message::JdsEncodeMessage, 
             jds_serialize::JdsSerialize,
-        }, point::point::Point 
+        },
     }, 
     services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria, 
         safe_lock::SafeLock, 
         server::{
             connections::Action, 
@@ -24,7 +24,6 @@ use crate::{
             jds_routes::{JdsRoutes, RouterReply}, 
             jds_auth::TcpServerAuth,
         }, 
-        service::service_handles::ServiceHandles, 
         services::Services,
     }, 
     tcp::{tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive},
@@ -103,7 +102,7 @@ impl JdsConnection {
     }
     ///
     /// Main loop of the connection 
-    pub fn run(&mut self) -> Result<ServiceHandles, String> {
+    pub fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();

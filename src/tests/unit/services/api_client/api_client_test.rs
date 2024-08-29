@@ -1,14 +1,14 @@
 #[cfg(test)]
 mod api_client {
     use log::{info, debug, error};
+    use sal_sync::services::{entity::point::point::ToPoint, service::service::Service};
     use std::{sync::{Once, Arc, Mutex}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use api_tools::api::reply::api_reply::ApiReply;
     use crate::{
-        core_::point::point::ToPoint,
         conf::api_client_config::ApiClientConfig,
-        services::{api_cient::api_client::ApiClient, service::service::Service},
+        services::api_cient::api_client::ApiClient,
     };
     ///
     static INIT: Once = Once::new();

@@ -1,12 +1,7 @@
 use std::fs;
 use log::{debug, error, trace};
-use crate::conf::{
-    conf_tree::ConfTree, 
-    point_config::point_config::PointConfig, 
-    service_config::ServiceConfig,
-};
-
-
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::point::point_config::PointConfig};
+use crate::conf::service_config::ServiceConfig;
 ///
 /// Creates config from serde_yaml::Value of following format:
 /// ```yaml

@@ -6,16 +6,11 @@ use std::{
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{point::point::Point, status::status::Status}, service::service_cycle::ServiceCycle}};
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::{
-        failure::errors_limit::ErrorLimit, point::point::Point, state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
-        status::status::Status, types::map::IndexMapFxHasher
-    },
-    services::{
-        slmp_client::slmp_db::SlmpDb,
-        task::service_cycle::ServiceCycle,
-    }
+    core_::{failure::errors_limit::ErrorLimit, state::{change_notify::ChangeNotify, exit_notify::ExitNotify}},
+    services::slmp_client::slmp_db::SlmpDb
 };
 ///
 /// Cyclicaly reads SLMP data ranges (DB's) specified in the [conf]

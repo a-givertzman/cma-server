@@ -2,10 +2,11 @@
 
 mod tcp_stream {
     use log::{info, warn, debug};
+    use sal_sync::services::service::service_handles::ServiceHandles;
     use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
     use testing::{session::test_session::TestSession, stuff::{wait::WaitTread, max_test_duration::TestDuration}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{core_::{constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit}, services::service::service_handles::ServiceHandles};
+    use crate::core_::{constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit};
     ///
     ///
     static INIT: Once = Once::new();
@@ -118,7 +119,7 @@ mod tcp_stream {
     }
     ///
     ///
-    fn server(addr: &str, mut send_bytes: Vec<u8>) -> Result<ServiceHandles, String> {
+    fn server(addr: &str, mut send_bytes: Vec<u8>) -> Result<ServiceHandles<()>, String> {
         let self_id = "Emuleted TcpServer";
         let addr = addr.to_string();
         info!("{}.run | Preparing thread...", self_id);

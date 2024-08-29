@@ -1,10 +1,11 @@
+use sal_sync::services::entity::{name::Name, point::{point::{Point, ToPoint}, point_hlr::PointHlr, point_tx_id::PointTxId}};
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc, RwLock}};
 use indexmap::IndexMap;
 use log::trace;
 use crate::{
-    conf::{fn_::fn_config::FnConfig, point_config::name::Name},
+    conf::fn_::fn_config::FnConfig,
     core_::{
-        format::format::Format, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::{Point, ToPoint}},
+        format::format::Format,
         types::fn_in_out_ref::FnInOutRef,
     },
     services::{

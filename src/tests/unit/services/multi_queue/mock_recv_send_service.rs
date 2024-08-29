@@ -1,10 +1,9 @@
 #![allow(non_snake_case)]
 use log::{info, warn, trace};
+use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use testing::entities::test_value::Value;
-use crate::{
-    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point::{Point, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}
-};
+use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::SafeLock, services::Services}};
 ///
 /// 
 pub struct MockRecvSendService {
@@ -12,7 +11,7 @@ pub struct MockRecvSendService {
     name: Name,
     rxSend: HashMap<String, Sender<Point>>,
     rxRecv: Vec<Receiver<Point>>,
-    send_to: QueueName,
+    send_to: LinkName,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
     sent: Arc<Mutex<Vec<Point>>>,
@@ -31,7 +30,7 @@ impl MockRecvSendService {
             name,
             rxSend: HashMap::from([(rxQueue.to_string(), send)]),
             rxRecv: vec![recv],
-            send_to: QueueName::new(send_to),
+            send_to: LinkName::new(send_to),
             services,
             test_data,
             sent: Arc::new(Mutex::new(vec![])),
@@ -81,7 +80,7 @@ impl Debug for MockRecvSendService {
 impl Service for MockRecvSendService {
     //
     //
-    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point::Point> {
+    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<Point> {
         match self.rxSend.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -89,7 +88,7 @@ impl Service for MockRecvSendService {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

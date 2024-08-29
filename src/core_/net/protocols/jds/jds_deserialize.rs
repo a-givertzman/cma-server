@@ -2,15 +2,16 @@ use std::io::{BufReader, Read};
 use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use log::{warn, trace, LevelFilter};
-use crate::{
-    conf::point_config::name::Name, core_::{
-        cot::cot::Cot, 
-        net::connection_status::ConnectionStatus, 
-        object::object::Object, 
-        point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, 
+use sal_sync::services::{
+    entity::{
+        cot::Cot, name::Name, object::Object, 
+        point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId},
         status::status::Status,
-        types::bool::Bool,
-    }, tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult}
+    }, 
+    types::bool::Bool
+};
+use crate::{
+    core_::net::connection_status::ConnectionStatus, tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult}
 };
 use super::jds_decode_message::JdsDecodeMessage;
 ///
@@ -209,7 +210,7 @@ impl Object for JdsDeserialize {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }

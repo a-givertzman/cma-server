@@ -1,5 +1,5 @@
 use log::warn;
-use crate::core_::types::type_of::TypeOf;
+use sal_sync::services::types::type_of::TypeOf;
 ///
 /// Provide approximately equality for f36, f64
 pub trait AproxEq<T> {

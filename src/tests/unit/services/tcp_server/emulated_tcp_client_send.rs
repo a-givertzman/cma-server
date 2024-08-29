@@ -1,15 +1,16 @@
 use log::{info, warn, debug};
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},
+    service::{service::Service, service_handles::ServiceHandles},
+};
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc, Arc, Mutex}, thread, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    conf::point_config::name::Name, 
     core_::{
         net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, 
-        object::object::Object, 
-        point::{point_tx_id::PointTxId, point::{Point, ToPoint}}, 
         state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged},
     }, 
-    services::service::{service::Service, service_handles::ServiceHandles}, tcp::steam_read::StreamRead,
+    tcp::steam_read::StreamRead,
 };
 ///
 /// Jast connects to the tcp socket on [address]
@@ -128,7 +129,7 @@ impl Debug for EmulatedTcpClientSend {
 impl Service for EmulatedTcpClientSend {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let point_path = self.point_path.clone();

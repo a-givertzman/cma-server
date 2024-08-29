@@ -1,13 +1,10 @@
 use indexmap::IndexMap;
 use log::trace;
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}};
 use std::{fs, str::FromStr};
-use crate::conf::{
-    conf_tree::ConfTree,
-    fn_::{
-        fn_conf_keywd::{FnConfKeywd, FnConfKindName, FnConfPointType}, fn_conf_kind::FnConfKind,
-        fn_point_config::FnPointConfig, fn_conf_options::FnConfOptions,
-    },
-    point_config::{name::Name, point_config::PointConfig},
+use crate::conf::fn_::{
+    fn_conf_keywd::{FnConfKeywd, FnConfKindName, FnConfPointType}, fn_conf_kind::FnConfKind,
+    fn_point_config::FnPointConfig, fn_conf_options::FnConfOptions,
 };
 ///
 /// creates config read from yaml file of following format:

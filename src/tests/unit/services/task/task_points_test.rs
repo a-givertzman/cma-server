@@ -2,12 +2,13 @@
 
 mod task {
     use log::trace;
+    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{point_config::name::Name, task_config::TaskConfig},
-        services::{safe_lock::SafeLock, service::service::Service, services::Services, task::task::Task},
+        conf::task_config::TaskConfig,
+        services::{safe_lock::SafeLock, services::Services, task::task::Task},
     };
     ///
     ///
@@ -41,7 +42,7 @@ mod task {
         let config = TaskConfig::read(&self_name, path);
         trace!("config: {:?}", &config);
         println!(" config points: {:?}", config.points());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
         services.wlock(self_id).insert(task.clone());
         let target  = 3;

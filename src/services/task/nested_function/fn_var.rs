@@ -1,6 +1,7 @@
+use sal_sync::services::entity::point::point::Point;
 use std::sync::atomic::{Ordering, AtomicUsize};
 use log::trace;
-use crate::core_::{point::point::Point, types::fn_in_out_ref::FnInOutRef};
+use crate::core_::types::fn_in_out_ref::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Specific kinde of function

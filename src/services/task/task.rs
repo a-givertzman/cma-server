@@ -1,16 +1,19 @@
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}},
+    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
+    subscription::subscription_criteria::SubscriptionCriteria,
+};
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Duration
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, 
+    mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Duration,
 };
 use log::{debug, error, info, trace, warn};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::point::Point, constants::constants::RECV_TIMEOUT, object::object::Object, point::point_tx_id::PointTxId},
-    conf::{point_config::{name::Name, point_config::PointConfig}, task_config::TaskConfig}, 
+    core_::constants::constants::RECV_TIMEOUT,
+    conf::task_config::TaskConfig, 
     services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria, safe_lock::SafeLock,
-        service::{service::Service, service_handles::ServiceHandles},
-        services::Services,
-        task::{service_cycle::ServiceCycle, task_nodes::TaskNodes},
+        safe_lock::SafeLock, services::Services, task::task_nodes::TaskNodes,
     },
 };
 ///
@@ -138,7 +141,7 @@ impl Service for Task {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         trace!("{}.run | Self tx_id: {}", self.id, PointTxId::from_str(&self.id));
         let self_id = self.id.clone();

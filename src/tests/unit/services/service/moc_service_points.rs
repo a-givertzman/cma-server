@@ -2,9 +2,8 @@
 //! MockServicePoints implements points() method only.
 //! Which returns exactly the vector from which it was created
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-
+use sal_sync::services::{entity::{name::Name, object::Object, point::point_config::PointConfig}, service::{service::Service, service_handles::ServiceHandles}};
 use log::debug;
-use crate::{conf::point_config::{name::Name, point_config::PointConfig}, core_::object::object::Object, services::service::{service::Service, service_handles::ServiceHandles}};
 ///
 /// MockServicePoints implements points() method only.
 /// Which returns exactly the vector from which it was created
@@ -52,7 +51,7 @@ impl Debug for MockServicePoints {
 impl Service for MockServicePoints {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let message = format!("{}.run | Not implemented", self.id);
         debug!("{}", message);
         Err(message)

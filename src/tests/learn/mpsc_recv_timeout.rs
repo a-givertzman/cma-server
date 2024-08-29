@@ -1,9 +1,8 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use log::{info, error};
     use testing::stuff::wait::WaitTread;
-    use std::{sync::{Once, mpsc::{self, RecvTimeoutError}}, time::Duration, thread::{self, JoinHandle}, any::Any};
+    use std::{sync::{Once, mpsc::{self, RecvTimeoutError}}, time::Duration, thread::{self}};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::core_::constants::constants::RECV_TIMEOUT;
 

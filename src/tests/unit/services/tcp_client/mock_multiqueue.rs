@@ -1,7 +1,9 @@
-#![allow(non_snake_case)]
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex}, thread};
 use log::{warn, info};
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point::Point}, services::service::{service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::point::Point},
+    service::{service::Service, service_handles::ServiceHandles},
+};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex}, thread};
 ///
 /// 
 pub struct MockMultiQueue {
@@ -10,11 +12,11 @@ pub struct MockMultiQueue {
     send: Sender<Point>,
     recv: Vec<Receiver<Point>>,
     received: Arc<Mutex<Vec<Point>>>,
-    recvLimit: Option<usize>,
+    recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
 impl MockMultiQueue {
-    pub fn new(parent: &str, index: impl Into<String>, recvLimit: Option<usize>) -> Self {
+    pub fn new(parent: &str, index: impl Into<String>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockMultiQueue{}", index.into()));
         let (send, recv) = std::sync::mpsc::channel();
         Self {
@@ -23,7 +25,7 @@ impl MockMultiQueue {
             send,
             recv: vec![recv],
             received: Arc::new(Mutex::new(vec![])),
-            recvLimit,
+            recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -62,22 +64,22 @@ impl Service for MockMultiQueue {
     }
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let recv = self.recv.pop().unwrap();
         let received = self.received.clone();
-        let recvLimit = self.recvLimit.clone();
+        let recv_limit = self.recv_limit.clone();
         let handle = thread::spawn(move || {
-            match recvLimit {
-                Some(recvLimit) => {
-                    let mut receivedCount = 0;
+            match recv_limit {
+                Some(recv_limit) => {
+                    let mut received_count = 0;
                     'main: loop {
                         match recv.recv() {
                             Ok(point) => {
                                 received.lock().unwrap().push(point);
-                                receivedCount += 1;
-                                if receivedCount >= recvLimit {
+                                received_count += 1;
+                                if received_count >= recv_limit {
                                     break;
                                 }
                             }

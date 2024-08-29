@@ -2,12 +2,14 @@ use std::{hash::BuildHasherDefault, str::FromStr, time::Duration};
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, trace, warn};
-use crate::core_::types::map::IndexMapFxHasher;
+use sal_sync::{
+    collections::map::IndexMapFxHasher,
+    services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe},
+};
 use super::{
     conf_duration::ConfDuration,
-    conf_keywd::{ConfKeywd, ConfKind}, conf_subscribe::ConfSubscribe, conf_tree::ConfTree,
+    conf_keywd::{ConfKeywd, ConfKind},
     diag_keywd::DiagKeywd, fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
-    point_config::{name::Name, point_config::PointConfig},
 };
 ///
 /// Result getting parameter
