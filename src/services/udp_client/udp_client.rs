@@ -1,12 +1,31 @@
 //!
-//! Communication with Vibro-analytics microcontroller (Sub MC) over udp simple protocol
+//! # Communication with Vibro-analytics microcontroller (Sub MC) over udp simple protocol
 //! 
-//! Basic configuration parameters:
+//! ## Basic configuration parameters:
+//! 
 //! ```yaml
 //! service UdpClient Id:
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
+//! 
+//! ## UDP protocol description
+//! 
+//! Message in the UDP has fallowing fiels
+//! 
+//! |Field name:   | SYN | ADDR | TYPE | COUNT | DATA        |
+//! |---           | --- | ---- | ---- | ----- | ----        |
+//! |Data type:    | u8  | u8   | u8   | u8    | u8[1024]    | 
+//! |Example value:| 22  | 0    | 16   | 1024  | [u16; 1024] |
+//! - `SYN` = 22 - message starts with
+//! - `ADDR` = 0...255 - an address of the signal (0 - first input channel)
+//! - `TYPE` - type of values in the array in `DATA` field
+//!     - 8 - 1 byte integer value
+//!     - 16 - 2 byte float value
+//!     - 32 - u16[1024] an array of 2 byte values of length 512
+//! - `COUNT` - length of the array in the `DATA` field
+//! - `DATA` - array of values of type specified in the `TYPE` field
+//! 
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
 use log::{info, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};

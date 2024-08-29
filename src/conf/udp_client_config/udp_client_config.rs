@@ -20,11 +20,11 @@ use super::udp_client_db_config::UdpClientDbConfig;
 ///        max-length: 10000
 ///    send-to: MultiQueue.in-queue
 ///    cycle: 1 ms                         # operating cycle time of the device
+///    reconnect: 1000 ms                  # reconnect timeout when connection is lost
 ///    protocol: 'udp-raw'
 ///    description: 'UDP-IED-01.01'
-///    ip: '192.168.100.241'
-///    rack: 0
-///    slot: 1
+///    local-address: 192.168.100.100:15180
+///    remote-address: 192.168.100.241:15180
 ///    diagnosis:                          # internal diagnosis
 ///        point Status:                   # Ok(0) / Invalid(10)
 ///            type: 'Int'
@@ -35,7 +35,7 @@ use super::udp_client_db_config::UdpClientDbConfig;
 /// 
 ///    db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
 ///        description: 'Data block of the device'
-///        size: 34
+///        size: 1024
 ///        point Sensor1: 
 ///            type: 'Int'
 ///            input: 1                    # the number of input 1...4

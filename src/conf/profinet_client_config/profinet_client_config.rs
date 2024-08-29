@@ -15,7 +15,8 @@ use crate::conf::{
 ///    in queue in-queue:
 ///        max-length: 10000
 ///    send-to: MultiQueue.in-queue
-///    cycle: 1 ms                     # operating cycle time of the device
+///    cycle: 1 ms                         # operating cycle time of the device
+///    reconnect: 1000 ms                  # reconnect timeout when connection is lost
 ///    protocol: 'profinet'
 ///    description: 'S7-IED-01.01'
 ///    ip: '192.168.100.243'
