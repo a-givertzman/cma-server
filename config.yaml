@@ -1,8 +1,9 @@
 name: App
 description: Short explanation / purpose etc.
 retain:
+    path: assets/retain/
     point:
-        path: assets/retain/point/id.json
+        path: point/id.json
         api:
             table: public.tags
             address: 0.0.0.0:8080

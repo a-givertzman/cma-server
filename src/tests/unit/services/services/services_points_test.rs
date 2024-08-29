@@ -45,7 +45,7 @@ mod services_points {
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
             Some(RetainPointConf::new(
-                "assets/testing/retain/point/id.json",
+                "point/id.json",
                 None,
             ))),
         )));

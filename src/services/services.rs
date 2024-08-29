@@ -64,7 +64,7 @@ impl Services {
             name,
             map: Arc::new(RwLock::new(HashMap::new())),
             retain_point_id: match &conf.point {
-                Some(conf) => Some(Arc::new(RwLock::new(RetainPointId::new(&self_id, conf.clone())))),
+                Some(_) => Some(Arc::new(RwLock::new(RetainPointId::new(&self_id, conf.clone())))),
                 None => None,
             },
             retain_conf: conf,

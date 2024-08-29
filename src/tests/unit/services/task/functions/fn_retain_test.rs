@@ -3,7 +3,7 @@
 mod fn_retain {
     use chrono::Utc;
     use log::{debug, error, info, trace, warn};
-    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_conf::{RetainPointConf, RetainPointConfApi}}, service::service::Service, types::bool::Bool};
+    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_api::RetainPointConfApi, retain_point_conf::RetainPointConf}, service::service::Service, types::bool::Bool};
     use std::{env, fs, io::Read, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -119,7 +119,7 @@ mod fn_retain {
             RetainConf::new(
                 Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
-                    "assets/testing/retain/point/id.json", 
+                    "point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
                 )),
             ),
@@ -257,7 +257,7 @@ mod fn_retain {
             RetainConf::new(
                 Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
-                    "assets/testing/retain/point/id.json", 
+                    "point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
                 )),
             ),
@@ -415,7 +415,7 @@ mod fn_retain {
             RetainConf::new(
                 Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
-                    "assets/testing/retain/point/id.json", 
+                    "point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
                 )),
             ),
@@ -576,7 +576,7 @@ mod fn_retain {
             RetainConf::new(
                 Some("./assets/testing/retain/"),
                 Some(RetainPointConf::new(
-                    "assets/testing/retain/point/id.json", 
+                    "point/id.json", 
                     Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
                 )),
             ),
