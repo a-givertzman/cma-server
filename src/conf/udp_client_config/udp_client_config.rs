@@ -1,6 +1,7 @@
+use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
-use std::{fs, str::FromStr, time::Duration};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
+use std::{fs, hash::BuildHasherDefault, str::FromStr, time::Duration};
 use crate::conf::{
     diag_keywd::DiagKeywd,
     service_config::ServiceConfig, udp_client_config::keywd::{self, Keywd},
@@ -42,7 +43,7 @@ use super::udp_client_db_config::UdpClientDbConfig;
 pub struct UdpClientConfig {
     pub(crate) name: Name,
     pub(crate) description: String,
-    pub(crate) subscribe: String,
+    pub(crate) subscribe: ConfSubscribe,
     pub(crate) send_to: LinkName,
     pub(crate) cycle: Option<Duration>,
     pub(crate) reconnect: Duration,
@@ -50,7 +51,7 @@ pub struct UdpClientConfig {
     pub(crate) local_address: String,
     pub(crate) remote_address: String,
     pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
-    pub(crate) dbs: IndexMap<String, UdpClientDbConfig>,
+    pub(crate) dbs: IndexMapFxHasher<String, UdpClientDbConfig>,
 }
 //
 // 
@@ -63,11 +64,12 @@ impl UdpClientConfig {
         let self_id = format!("UdpClientConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
         log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
-        let self_name = Name::new(parent, self_conf.sufix());
+        let sufix = self_conf.sufix();
+        let self_name = Name::new(parent, if sufix.is_empty() {self_conf.name()} else {sufix});
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
         log::debug!("{}.new | description: {:?}", self_id, description);
-        let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
+        let subscribe = ConfSubscribe::new(self_conf.get_param_value("subscribe").unwrap_or(serde_yaml::Value::Null));
         log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
         let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
         log::debug!("{}.new | send-to: {}", self_id, send_to);
@@ -83,7 +85,7 @@ impl UdpClientConfig {
         log::debug!("{}.new | remote-address: {:?}", self_id, remote_address);
         let diagnosis = self_conf.get_diagnosis(&self_name);
         log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
-        let mut dbs = IndexMap::new();
+        let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for key in &self_conf.keys {
             let keyword = Keywd::from_str(key).unwrap();
             if keyword.kind() == keywd::Kind::Db {
@@ -115,7 +117,7 @@ impl UdpClientConfig {
         }
     }
     ///
-    /// creates config from serde_yaml::Value of following format:
+    /// Returns config build from serde_yaml::Value
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> UdpClientConfig {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
@@ -127,7 +129,7 @@ impl UdpClientConfig {
         }
     }
     ///
-    /// reads config from path
+    /// Returns config build from path
     #[allow(dead_code)]
     pub fn read(parent: impl Into<String>, path: &str) -> UdpClientConfig {
         match fs::read_to_string(path) {
