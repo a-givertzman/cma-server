@@ -1,6 +1,6 @@
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
 use log::{info, warn, trace, debug};
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point::Point}, services::service::{service::Service, service_handles::ServiceHandles}};
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -42,7 +42,7 @@ impl Object for TaskTestReceiver {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -69,7 +69,7 @@ impl Service for TaskTestReceiver {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
         info!("{}.run | Starting...", self_id);
         let exit = self.exit.clone();

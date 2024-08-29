@@ -1,5 +1,5 @@
 use log::error;
-use crate::core_::types::map::IndexMapFxHasher;
+use sal_sync::collections::map::IndexMapFxHasher;
 ///
 /// Provides callback on connection status changes
 pub struct ChangeNotify<T> {

@@ -3,14 +3,15 @@
 mod fn_retain {
     use chrono::Utc;
     use log::{debug, error, info, trace, warn};
+    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_api::RetainPointConfApi, retain_point_conf::RetainPointConf}, service::service::Service, types::bool::Bool};
     use std::{env, fs, io::Read, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, point_config::{name::Name, point_config_type::PointConfigType}, task_config::TaskConfig},
-        core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool},
+        conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
+        core_::aprox_eq::aprox_eq::AproxEq,
         services::{
-            multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, service::service::Service, services::Services,
+            multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services,
             task::{task::Task, task_test_receiver::TaskTestReceiver}
         },
         tests::unit::services::task::task_test_producer::TaskTestProducer,
@@ -111,9 +112,18 @@ mod fn_retain {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/BoolFlag.json", self_id), PointConfigType::Bool)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", self_id), PointConfigType::Bool)
             .map_or(false, |init| init.as_bool().value.0);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(
+            self_id,
+            RetainConf::new(
+                Some("./assets/testing/retain/"),
+                Some(RetainPointConf::new(
+                    "point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -146,7 +156,7 @@ mod fn_retain {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -242,7 +252,16 @@ mod fn_retain {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(
+            self_id,
+            RetainConf::new(
+                Some("./assets/testing/retain/"),
+                Some(RetainPointConf::new(
+                    "point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -280,7 +299,7 @@ mod fn_retain {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -298,7 +317,7 @@ mod fn_retain {
             (format!("/{}/Load", self_id), Value::Real(0.0)),
         ];
         let total_count = test_data.len();
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/Count.json", self_id), PointConfigType::Int)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/Count.json", self_id), PointConfigType::Int)
             .map_or(0, |init| init.as_int().value);
         let mut target_data = vec![
             Value::Int(initial + 0),
@@ -380,7 +399,10 @@ mod fn_retain {
         init_once();
         init_each();
         println!();
-        let self_id = "AppTest";
+        #[derive(Copy, Clone, Eq, PartialEq)]
+        struct T(());
+        // let uid = uid::Id::<T>::new();
+        let self_id = &format!("AppTest");
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
@@ -388,17 +410,26 @@ mod fn_retain {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(
+            self_id,
+            RetainConf::new(
+                Some("./assets/testing/retain/"),
+                Some(RetainPointConf::new(
+                    "point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
-            &serde_yaml::from_str(r"
+            &serde_yaml::from_str(&format!(r"
                 service Task RetainTask:
                     cycle: 1 ms
                     in queue in-queue:
                         max-length: 10000
                     subscribe:
-                        /AppTest/MultiQueue:                    # - multicast subscription to the MultiQueue
-                            {cot: Inf}: []                      #   - on all points having Cot::Inf
+                        /{}/MultiQueue:                    # - multicast subscription to the MultiQueue
+                            {{cot: Inf}}: []                      #   - on all points having Cot::Inf
                     
                     let realRetain:
                         input fn Retain:
@@ -409,11 +440,11 @@ mod fn_retain {
                         in2 fn Retain:
                             key: 'RealRetain'
                             input fn Export:
-                                send-to: /AppTest/TaskTestReceiver.in-queue
+                                send-to: '/{}/TaskTestReceiver.in-queue'
                                 input fn Add:
                                     input1: realRetain
-                                    input2: point real '/AppTest/Load'
-            ").unwrap(),
+                                    input2: point real '/{}/Load'
+            ", self_id, self_id, self_id)).unwrap(),
         );
         trace!("config: {:?}", config);
         debug!("Task config points: {:#?}", config.points());
@@ -427,7 +458,7 @@ mod fn_retain {
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
-                send-to:
+                # send-to:
             ").unwrap(),
         );
         let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
@@ -446,7 +477,7 @@ mod fn_retain {
             (format!("/{}/Load", self_id), Value::Real(1.1)),
         ];
         let total_count = test_data.len();
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/RealRetain.json", self_id), PointConfigType::Real)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/RealRetain.json", self_id), PointConfigType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let mut target_data = vec![
             Value::Real(initial + 0.1),
@@ -538,9 +569,18 @@ mod fn_retain {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let initial = load(self_id, &format!("./assets/retain/{}/RetainTask/RealRetainEveryCycle.json", self_id), PointConfigType::Real)
+        let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", self_id), PointConfigType::Real)
             .map_or(0.0, |init| init.as_real().value);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(
+            self_id,
+            RetainConf::new(
+                Some("./assets/testing/retain/"),
+                Some(RetainPointConf::new(
+                    "point/id.json", 
+                    Some(RetainPointConfApi::new("public.tags", "0.0.0.0:8080", "123!@#", "crane_data_server"))
+                )),
+            ),
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"

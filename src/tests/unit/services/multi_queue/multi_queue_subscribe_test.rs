@@ -1,10 +1,12 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{info, trace, warn};
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point::Point}, services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use crate::services::{safe_lock::SafeLock, services::Services};
 #[cfg(test)]
 
 mod multi_queue {
     use log::debug;
+    use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::{
@@ -13,7 +15,7 @@ mod multi_queue {
     };
     use crate::{
         conf::multi_queue_config::MultiQueueConfig,
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, service::service::Service, services::Services},
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services},
         tests::unit::services::multi_queue::{mock_send_service::MockSendService, multi_queue_subscribe_test::MockReceiver},
     };
     ///
@@ -59,7 +61,7 @@ mod multi_queue {
         let conf = serde_yaml::from_str(&conf).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(self_id, &conf);
         debug!("mqConf: {:?}", mq_conf);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let mut receiver_handles = vec![];
@@ -180,7 +182,7 @@ impl Object for MockReceiver {
     fn id(&self) -> &str {
         self.id.as_str()
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -199,7 +201,7 @@ impl Debug for MockReceiver {
 impl Service for MockReceiver {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let recv_limit = self.recv_limit;

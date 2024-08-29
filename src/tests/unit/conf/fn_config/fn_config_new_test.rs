@@ -2,10 +2,11 @@
 
 mod tests {
     use log::debug;
+    use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name};
     use std::sync::Once;
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::{conf_tree::ConfTree, fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig}, point_config::name::Name};
+    use crate::conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig};
     ///
     ///
     static INIT: Once = Once::new();

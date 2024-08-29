@@ -3,15 +3,10 @@ use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use log::{trace, warn};
+use sal_sync::services::entity::{name::Name, point::{point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType}, status::status::Status};
 use crate::{
-    conf::{
-        point_config::{name::Name, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType},
-        profinet_client_config::profinet_db_config::ProfinetDbConfig
-    },
-    core_::{
-        filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
-        point::point::Point, status::status::Status
-    },
+    conf::profinet_client_config::profinet_db_config::ProfinetDbConfig,
+    core_::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
     services::profinet_client::{
         parse_point::ParsePoint,
         s7::{

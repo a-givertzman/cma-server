@@ -22,4 +22,5 @@ cache.json
 
 #retain points
 assets/retain/
+assets/testing/
 retain_points.json

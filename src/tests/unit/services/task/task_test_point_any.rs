@@ -2,12 +2,13 @@
 
 mod task {
     use log::{trace, info};
+    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{point_config::name::Name, task_config::TaskConfig},
-        services::{safe_lock::SafeLock, service::service::Service, services::Services, task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver}},
+        conf::task_config::TaskConfig,
+        services::{safe_lock::SafeLock, services::Services, task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver}},
     };
     ///
     ///
@@ -54,7 +55,7 @@ mod task {
         "#, self_name)).unwrap();
         let config = TaskConfig::from_yaml(&self_name, &conf);
         trace!("config: {:?}", &config);
-        let services = Arc::new(RwLock::new(Services::new(&self_name)));
+        let services = Arc::new(RwLock::new(Services::new(&self_name, RetainConf::new(None::<&str>, None))));
         let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
             &self_name.join(),
             "",

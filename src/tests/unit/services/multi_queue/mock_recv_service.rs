@@ -1,8 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
 use log::{info, trace, warn};
-use crate::{
-    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::point::Point}, services::service::{service::Service, service_handles::ServiceHandles}
-};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use crate::core_::constants::constants::RECV_TIMEOUT;
 ///
 /// 
 pub struct MockRecvService {
@@ -66,7 +65,7 @@ impl Debug for MockRecvService {
 impl Service for MockRecvService {
     //
     //
-    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point::Point> {
+    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<Point> {
         match self.rx_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -74,7 +73,7 @@ impl Service for MockRecvService {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

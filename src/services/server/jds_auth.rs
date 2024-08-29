@@ -1,5 +1,6 @@
 use log::debug;
-use crate::{core_::auth::{secret::auth_secret::AuthSecret, ssh::auth_ssh_path::AuthSshPath}, conf::conf_tree::ConfTree};
+use sal_sync::services::conf::conf_tree::ConfTree;
+use crate::core_::auth::{secret::auth_secret::AuthSecret, ssh::auth_ssh_path::AuthSshPath};
 ///
 /// Jds-protocol specific kind of auturization on the TcpServer
 #[derive(Debug, Clone, PartialEq)]
@@ -24,14 +25,14 @@ impl TcpServerAuth {
                 }
             }
             "auth-secret" => {
-                let token = match value.asStr("pass") {
+                let token = match value.as_str("pass") {
                     Ok(token) => token,
                     Err(_) => panic!("TcpServerAuth.new | 'pass' - not found in 'auth-secret'"),
                 };
                 TcpServerAuth::Secret(AuthSecret::new(token))
             }
             "auth-ssh" => {
-                let path = match value.asStr("path") {
+                let path = match value.as_str("path") {
                     Ok(path) => path,
                     Err(_) => panic!("TcpServerAuth.new | 'path' - not found in 'auth-ssh'"),
                 };

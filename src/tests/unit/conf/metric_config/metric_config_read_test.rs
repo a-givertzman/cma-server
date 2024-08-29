@@ -1,12 +1,12 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
 
 mod tests{
     use log::trace;
+    use sal_sync::services::entity::name::Name;
     use std::{sync::Once, env};
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig, metric_config::MetricConfig}, point_config::name::Name};
+    use crate::conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig, metric_config::MetricConfig};
     ///
     ///
     static INIT: Once = Once::new();
@@ -70,8 +70,8 @@ mod tests{
         // let (initial, switches) = init_each();
         trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/conf/metric_config/metric_config_test.yaml";
-        let metricConfig = MetricConfig::read(self_id, &self_name, path);
-        trace!("fnConfig: {:?}", metricConfig);
-        assert_eq!(metricConfig, target);
+        let metric_config = MetricConfig::read(self_id, &self_name, path);
+        trace!("fnConfig: {:?}", metric_config);
+        assert_eq!(metric_config, target);
     }
 }

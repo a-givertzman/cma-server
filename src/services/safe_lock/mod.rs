@@ -1,8 +1,12 @@
 pub mod lock_timer;
 use std::{net::TcpStream, sync::{atomic::AtomicUsize, mpsc::Receiver, Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard}, time::Duration};
 use log::{info, trace};
-use crate::{core_::types::type_of::TypeOf, services::safe_lock::lock_timer::LockTimer, tcp::{steam_read::TcpStreamRead, tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive}};
-use super::{multi_queue::subscriptions::Subscriptions, server::connections::TcpServerConnections, service::service::Service, services::Services};
+use sal_sync::services::{service::service::Service, subscription::subscriptions::Subscriptions, types::type_of::TypeOf};
+use crate::{
+    services::safe_lock::lock_timer::LockTimer, 
+    tcp::{steam_read::TcpStreamRead, tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive},
+};
+use super::{server::connections::TcpServerConnections, services::Services};
 ///
 /// Defines methods to wrap the lock method on the kind of Mutex / RwLock.. etc...
 ///  - for measure lock by timer to detect the dedlock 

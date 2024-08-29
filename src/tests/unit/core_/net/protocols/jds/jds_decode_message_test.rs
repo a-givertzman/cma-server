@@ -4,11 +4,12 @@ mod jds_decode_message {
     use chrono::{DateTime, Utc};
     use log::{info, debug, trace, error, warn};
     use rand::Rng;
+    use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::{
-        cot::cot::Cot, failure::errors_limit::ErrorLimit, net::{connection_status::ConnectionStatus, protocols::jds::jds_decode_message::JdsDecodeMessage}, point::{point_hlr::PointHlr, point::Point}, status::status::Status, types::bool::Bool
+        failure::errors_limit::ErrorLimit, net::{connection_status::ConnectionStatus, protocols::jds::jds_decode_message::JdsDecodeMessage},
     }, tcp::tcp_stream_write::OpResult};
     ///
     ///

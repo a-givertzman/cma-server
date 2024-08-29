@@ -2,18 +2,17 @@
 
 mod cma_recorder {
     use log::{debug, info, trace};
+    use sal_sync::services::{entity::{name::Name, point::point::Point}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
     use std::{env, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, task_config::TaskConfig},
-        core_::point::point::Point,
+        conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
         services::{
-            multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, service::service::Service, services::Services,
+            multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services,
             task::{task::Task, task_test_receiver::TaskTestReceiver},
         },
         tests::unit::services::task::task_test_producer::TaskTestProducer,
-        // tests::unit::services::cma_recorder::task_test_producer::TaskTestProducer
     };
     ///
     ///
@@ -45,7 +44,10 @@ mod cma_recorder {
         //
         // can be changed
         trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("point/id.json", None))
+        ))));
         let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/fn_rec_op_cycle_metric.yaml");
         trace!("config: {:?}", config);
         debug!("Task config points: {:#?}", config.points());

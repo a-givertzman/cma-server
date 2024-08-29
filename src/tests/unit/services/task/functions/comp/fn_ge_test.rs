@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod fn_gt {
     use log::{debug, info};
+    use sal_sync::services::entity::point::point::ToPoint;
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
-        core_::{point::point::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
+        core_::types::fn_in_out_ref::FnInOutRef, 
         services::task::nested_function::{comp::fn_gt::FnGt, fn_::FnOut, fn_input::FnInput}
     };
     ///

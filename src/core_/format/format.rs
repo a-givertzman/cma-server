@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use log::trace;
 use regex::RegexBuilder;
-use crate::core_::point::point::Point;
+use sal_sync::services::entity::point::point::Point;
 ///
 /// Replaces input markers {marker name} with the concrete values
 ///

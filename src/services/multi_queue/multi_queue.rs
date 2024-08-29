@@ -1,14 +1,16 @@
 use std::{collections::HashMap, fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use log::{debug, error, info, trace, warn};
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}},
+    service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
+    subscription::{subscription_criteria::SubscriptionCriteria, subscriptions::Subscriptions},
+};
 use crate::{
-    conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name}, 
-    core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point::Point}}, 
-    services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria, queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
-    },
+    conf::multi_queue_config::MultiQueueConfig, 
+    core_::constants::constants::RECV_TIMEOUT, 
+    services::{safe_lock::SafeLock, services::Services},
 };
 use concat_string::concat_string;
-use super::subscriptions::Subscriptions;
 ///
 /// - Receives points into the MPSC queue in the blocking mode
 /// - If new point received, immediately sends it to the all subscribed consumers
@@ -20,7 +22,7 @@ pub struct MultiQueue {
     subscriptions_changed: Arc<AtomicBool>,
     rx_send: HashMap<String, Sender<Point>>,
     rx_recv: Vec<Receiver<Point>>,
-    send_queues: Vec<QueueName>,
+    send_queues: Vec<LinkName>,
     services: Arc<RwLock<Services>>,
     receiver_dictionary: HashMap<usize, String>,
     exit: Arc<AtomicBool>,
@@ -205,7 +207,7 @@ impl Service for MultiQueue {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();

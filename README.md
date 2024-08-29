@@ -387,6 +387,15 @@ service Task FaultDetection:
 ```yaml
 name: ApplicationName
 description: Short explanation / purpose etc.
+retain:
+    path: assets/retain/
+    point:
+        path: point/id.json
+        api:
+            table: public.tags
+            address: 0.0.0.0:8080
+            auth_token: 123!@#
+            database: crane_data_server
 
 service MultiQueue:
     in queue in-queue:

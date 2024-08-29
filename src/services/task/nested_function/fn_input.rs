@@ -1,7 +1,8 @@
 use log::{error, trace};
 use concat_string::concat_string;
+use sal_sync::services::{entity::{point::{point::{Point, ToPoint}, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-use crate::{conf::fn_::{fn_conf_keywd::FnConfPointType, fn_config::FnConfig}, core_::{point::{point_hlr::PointHlr, point::{Point, ToPoint}}, status::status::Status, types::bool::Bool}};
+use crate::conf::fn_::{fn_conf_keywd::FnConfPointType, fn_config::FnConfig};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// 

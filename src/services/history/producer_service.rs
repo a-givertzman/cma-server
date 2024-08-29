@@ -4,13 +4,21 @@ use concat_string::concat_string;
 use indexmap::IndexMap;
 use log::{info, trace, warn};
 use rand::Rng;
+use sal_sync::services::{
+    entity::{
+        cot::Cot, name::Name, object::Object,
+        point::{
+            point::Point, point_config::PointConfig, point_config_history::PointConfigHistory,
+            point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId,
+        },
+        status::status::Status,
+    },
+    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
+    types::bool::Bool,
+};
 use serde_json::json;
 use testing::entities::test_value::Value;
-use crate::{
-    conf::point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}, 
-    core_::{cot::cot::Cot, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status, types::bool::Bool}, 
-    services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services, task::service_cycle::ServiceCycle},
-};
+use crate::services::{safe_lock::SafeLock, services::Services};
 use super::producer_service_config::ProducerServiceConfig;
 ///
 /// Service for debuging / testing purposes
@@ -40,22 +48,22 @@ impl ProducerService {
         let mut gen_points = IndexMap::new();
         for point_conf in points {
             match point_conf.type_ {
-                crate::conf::point_config::point_config_type::PointConfigType::Bool => {
+                PointConfigType::Bool => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Int => {
+                PointConfigType::Int => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Real => {
+                PointConfigType::Real => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Double => {
+                PointConfigType::Double => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::String => {
+                PointConfigType::String => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Json => {
+                PointConfigType::Json => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
             }
@@ -84,7 +92,7 @@ impl Object for ProducerService {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -103,7 +111,7 @@ impl Debug for ProducerService {
 impl Service for ProducerService {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();

@@ -2,12 +2,14 @@ use std::{hash::BuildHasherDefault, str::FromStr, time::Duration};
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, trace, warn};
-use crate::core_::types::map::IndexMapFxHasher;
+use sal_sync::{
+    collections::map::IndexMapFxHasher,
+    services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe},
+};
 use super::{
     conf_duration::ConfDuration,
-    conf_keywd::{ConfKeywd, ConfKind}, conf_subscribe::ConfSubscribe, conf_tree::ConfTree,
+    conf_keywd::{ConfKeywd, ConfKind},
     diag_keywd::DiagKeywd, fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
-    point_config::{name::Name, point_config::PointConfig},
 };
 ///
 /// Result getting parameter
@@ -31,7 +33,7 @@ impl ServiceConfig {
     ///
     /// Creates new instance of ServiceConfig
     pub fn new(parent: &str, conf: ConfTree) -> Self {
-        let keys = conf.subNodes().unwrap().map(|conf| conf.key).collect();
+        let keys = conf.sub_nodes().unwrap().map(|conf| conf.key).collect();
         Self {
             id: format!("{}/ServiceConfig", parent),
             key: conf.key.clone(),
@@ -134,7 +136,7 @@ impl ServiceConfig {
     /// Returns general parameter by keyword
     pub fn get_param_by_keyword(&mut self, keyword_prefix: &str, keyword_kind: ConfKind) -> Result<(ConfKeywd, ConfTree), String> {
         let self_conf = self.conf.clone();
-        for node in self_conf.subNodes().unwrap() {
+        for node in self_conf.sub_nodes().unwrap() {
             if let Ok(keyword) = ConfKeywd::from_str(&node.key) {
                 if keyword.kind() == keyword_kind && keyword.prefix() == keyword_prefix {
                     match self.remove_key(&node.key) {

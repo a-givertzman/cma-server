@@ -4,10 +4,11 @@
 mod tests {
     use log::trace;
     use log::{debug, info};
+    use sal_sync::services::entity::point::point::ToPoint;
     use std::sync::Once;
     use regex::RegexBuilder;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::core_::{format::format::Format, point::point::ToPoint};
+    use crate::core_::format::format::Format;
     ///
     ///
     static INIT: Once = Once::new();

@@ -6,7 +6,8 @@ mod profinet_client {
     use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{conf::{multi_queue_config::MultiQueueConfig, point_config::name::Name, profinet_client_config::profinet_client_config::ProfinetClientConfig}, core_::{aprox_eq::aprox_eq::AproxEq, cot::cot::Cot, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point}, status::status::Status}, services::{multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, service::service::Service, services::Services}};
+    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, retain::retain_conf::RetainConf, service::service::Service};
+    use crate::{conf::{multi_queue_config::MultiQueueConfig, profinet_client_config::profinet_client_config::ProfinetClientConfig}, core_::aprox_eq::aprox_eq::AproxEq, services::{multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::SafeLock, services::Services}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -35,7 +36,7 @@ mod profinet_client {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let conf = r#"
             service MultiQueue:
                 in queue in-queue:

@@ -4,18 +4,14 @@ use std::{
     thread::{self, JoinHandle}, time::Duration,
 };
 use log::{debug, error, info, warn};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, service::service_cycle::ServiceCycle, subscription::subscription_criteria::SubscriptionCriteria}};
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
     core_::{
-        cot::cot::Cot, failure::errors_limit::ErrorLimit,
-        point::{point_hlr::PointHlr, point::Point},
+        failure::errors_limit::ErrorLimit,
         state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
-        status::status::Status, types::map::IndexMapFxHasher,
     },
-    services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria,
-        safe_lock::SafeLock, services::Services, slmp_client::slmp_db::SlmpDb, task::service_cycle::ServiceCycle,
-    },
+    services::{safe_lock::SafeLock, services::Services, slmp_client::slmp_db::SlmpDb},
 };
 
 use super::slmp_read::SlmpRead;

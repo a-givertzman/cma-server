@@ -21,20 +21,19 @@ use concat_string::concat_string;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{
+    cot::Cot, name::Name, object::Object,
+    point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId},
+    status::status::Status,
+}, service::{service::Service, service_handles::ServiceHandles}, subscription::subscription_criteria::SubscriptionCriteria, types::bool::Bool}};
 use serde::Serialize;
 use serde_json::json;
 use crate::{
-    conf::{cache_service_config::CacheServiceConfig, point_config::{name::Name, point_config::PointConfig, point_config_type::PointConfigType}},
-    core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, object::object::Object, point::{point_hlr::PointHlr, point_tx_id::PointTxId, point::Point},
-        status::status::Status,
-        types::{bool::Bool, map::IndexMapFxHasher},
-    },
+    conf::cache_service_config::CacheServiceConfig,
+    core_::constants::constants::RECV_TIMEOUT,
     services::{
         cache::delay_store::DelyStore,
-        multi_queue::subscription_criteria::SubscriptionCriteria,
         safe_lock::SafeLock,
-        service::{service::Service, service_handles::ServiceHandles},
         services::Services,
     }
 };
@@ -293,7 +292,7 @@ impl Object for CacheService {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -313,7 +312,7 @@ impl Debug for CacheService {
 impl Service for CacheService {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();

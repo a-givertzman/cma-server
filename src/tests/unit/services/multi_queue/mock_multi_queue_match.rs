@@ -1,11 +1,12 @@
 #![allow(non_snake_case)]
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use log::{error, info, trace, warn};
-use crate::{
-    conf::point_config::name::Name, core_::{object::object::Object, point::{point_tx_id::PointTxId, point::Point}}, services::{
-        multi_queue::{subscription_criteria::SubscriptionCriteria, subscriptions::Subscriptions}, queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services 
-    }
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}},
+    service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
+    subscription::{subscription_criteria::SubscriptionCriteria, subscriptions::Subscriptions}
 };
+use crate::services::{safe_lock::SafeLock, services::Services};
 ///
 /// - Receives points into the MPSC queue in the blocking mode
 /// - If new point received, immediately sends it to the all subscribed consumers
@@ -102,7 +103,7 @@ impl Service for MockMultiQueueMatch {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
@@ -110,7 +111,7 @@ impl Service for MockMultiQueueMatch {
         let subscriptions = self.subscriptions.clone();
         let mut staticSubscriptions: HashMap<usize, Sender<Point>> = HashMap::new();
         for sendQueue in &self.sendQueues {
-            let txSend = self.services.rlock(&self_id).get_link(&QueueName::new(sendQueue)).unwrap_or_else(|err| {
+            let txSend = self.services.rlock(&self_id).get_link(&LinkName::new(sendQueue)).unwrap_or_else(|err| {
                 panic!("{}.run | services.get_link error: {:#?}", self.id, err);
             });
             staticSubscriptions.insert(PointTxId::from_str(sendQueue), txSend);

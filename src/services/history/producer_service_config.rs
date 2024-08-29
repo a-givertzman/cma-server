@@ -1,12 +1,11 @@
 use indexmap::IndexMap;
 use log::{trace, debug};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName};
 use std::{fs, str::FromStr, time::Duration};
-use crate::{conf::{
-    conf_tree::ConfTree, 
+use crate::conf::{
     fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
-    point_config::{name::Name, point_config::PointConfig}, 
     service_config::ServiceConfig,
-}, services::queue_name::QueueName};
+};
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -28,7 +27,7 @@ use crate::{conf::{
 pub struct ProducerServiceConfig {
     pub(crate) name: Name,
     pub(crate) cycle: Option<Duration>,
-    pub(crate) send_to: QueueName,
+    pub(crate) send_to: LinkName,
     pub(crate) debug: bool,
     // pub(crate) subscribe: ConfSubscribe,
     pub(crate) nodes: IndexMap<String, PointConfig>,
@@ -63,7 +62,7 @@ impl ProducerServiceConfig {
         debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = self_conf.get_duration("cycle");
         debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let send_to = QueueName::new(self_conf.get_send_to().unwrap()).validate();
+        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
         debug!("{}.new | send_to: '{}'", self_id, send_to);
         let debug = self_conf.get_param_value("debug").unwrap_or(serde_yaml::Value::Bool(false)).as_bool().unwrap();
         debug!("{}.new | debug: '{}'", self_id, debug);

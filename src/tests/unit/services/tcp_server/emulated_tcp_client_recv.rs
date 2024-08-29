@@ -1,13 +1,17 @@
 use log::{info, trace, warn, debug};
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::point::Point},
+    service::{service::Service, service_handles::ServiceHandles},
+};
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    conf::point_config::name::Name, core_::{
+    core_::{
         net::{
             connection_status::ConnectionStatus,
             protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize},
-        }, object::object::Object, point::point::Point, state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged}
-    }, services::service::{service::Service, service_handles::ServiceHandles}, tcp::tcp_stream_write::OpResult
+        }, state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged}
+    }, tcp::tcp_stream_write::OpResult
 };
 
 
@@ -157,7 +161,7 @@ impl Debug for EmulatedTcpClientRecv {
 impl Service for EmulatedTcpClientRecv {
     //
     //
-    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point::Point> {
+    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<Point> {
         panic!("{}.get_link | Does not support static producer", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -166,7 +170,7 @@ impl Service for EmulatedTcpClientRecv {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

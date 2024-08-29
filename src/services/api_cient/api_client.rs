@@ -1,13 +1,12 @@
 use concat_string::concat_string;
 use log::{info, debug, trace, warn};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
-    conf::{api_client_config::ApiClientConfig, point_config::name::Name}, 
-    core_::{object::object::Object, point::point::Point, retain_buffer::retain_buffer::RetainBuffer}, 
-    services::{service::{service::Service, service_handles::ServiceHandles}, task::service_cycle::ServiceCycle},
+    conf::api_client_config::ApiClientConfig, 
+    core_::retain_buffer::retain_buffer::RetainBuffer,
 };
-
 ///
 /// - Holding single input queue
 /// - Received string messages pops from the queue into the end of local buffer
@@ -117,7 +116,7 @@ impl Service for ApiClient {
     }
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

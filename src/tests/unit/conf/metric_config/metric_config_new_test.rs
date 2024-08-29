@@ -1,12 +1,12 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
 
 mod tests {
     use log::debug;
+    use sal_sync::services::entity::name::Name;
     use std::sync::Once;
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig, metric_config::MetricConfig}, point_config::name::Name};
+    use crate::conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig, metric_config::MetricConfig};
     ///
     ///
     static INIT: Once = Once::new();
@@ -107,9 +107,9 @@ mod tests {
             // let fnKeyword = FnConfigKeyword::from_str(conf.as_str().unwrap()).unwrap();
             // debug!("\tfnKeyword: {:?}", fnKeyword);
             let mut vars = vec![];
-            let fnConfig = MetricConfig::from_yaml(self_id, &self_name, &conf, &mut vars);
-            debug!("\tfnConfig: {:?}", fnConfig);
-            assert_eq!(fnConfig, target);
+            let fn_config = MetricConfig::from_yaml(self_id, &self_name, &conf, &mut vars);
+            debug!("\tfnConfig: {:?}", fn_config);
+            assert_eq!(fn_config, target);
         }
     }
 }

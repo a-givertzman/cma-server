@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
-use crate::{conf::point_config::point_config_address::PointConfigAddress, core_::{point::point::Point, status::status::Status}};
-
+use sal_sync::services::entity::{point::{point::Point, point_config_address::PointConfigAddress}, status::status::Status};
 ///
 /// Returns updated points parsed from the data slice from the S7 device,
 pub trait ParsePoint {

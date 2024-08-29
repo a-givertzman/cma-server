@@ -1,11 +1,8 @@
 use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, RwLock}};
 use log::{error, warn, LevelFilter};
+use sal_sync::services::entity::{name::Name, object::Object, point::point::Point};
 use crate::{
-    conf::point_config::name::Name, core_::{
-        net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
-        object::object::Object, 
-        point::point::Point,
-    }, 
+    core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
     services::{server::jds_cnnection::Shared, services::Services},
     tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult},
 };

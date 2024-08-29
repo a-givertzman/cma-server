@@ -1,12 +1,11 @@
 use log::{info, warn, LevelFilter};
+use sal_sync::services::{entity::point::point::Point, service::service_cycle::ServiceCycle};
 use std::{
     io::BufReader, net::TcpStream, 
     sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex}, 
     thread::{self, JoinHandle}, time::Duration,
 };
-use crate::{core_::{
-    net::connection_status::ConnectionStatus, point::point::Point
-}, services::{safe_lock::SafeLock, task::service_cycle::ServiceCycle}, tcp::tcp_stream_write::OpResult};
+use crate::{core_::net::connection_status::ConnectionStatus, services::safe_lock::SafeLock, tcp::tcp_stream_write::OpResult};
 use super::steam_read::TcpStreamRead;
 
 ///

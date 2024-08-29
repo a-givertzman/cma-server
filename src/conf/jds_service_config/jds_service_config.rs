@@ -1,12 +1,7 @@
 use std::fs;
 use log::{debug, error, trace};
-use crate::conf::{
-    conf_tree::ConfTree, 
-    point_config::point_config::PointConfig, 
-    service_config::ServiceConfig,
-};
-
-
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::point::point_config::PointConfig};
+use crate::conf::service_config::ServiceConfig;
 ///
 /// Creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -64,7 +59,7 @@ impl JdsServiceConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
     pub(crate) fn from_yaml(value: &serde_yaml::Value) -> JdsServiceConfig {
-        Self::new(&mut ConfTree::newRoot(value.clone()))
+        Self::new(&mut ConfTree::new_root(value.clone()))
     }
     ///
     /// reads config from path
