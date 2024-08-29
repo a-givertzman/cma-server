@@ -9,13 +9,10 @@
 //! ```
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
 use log::{info, warn};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use crate::{
-    conf::{point_config::name::Name, udp_client_config::udp_client_config::UdpClientConfig}, 
-    core_::{object::object::Object, point::point::Point},
-    services::{
-        service::{service::Service, service_handles::ServiceHandles},
-        services::Services,
-    },
+    conf::udp_client_config::udp_client_config::UdpClientConfig, 
+    services::services::Services,
 };
 ///
 /// Do something ...
@@ -47,7 +44,7 @@ impl Object for UdpClient {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         todo!()
     }
 }
@@ -75,7 +72,7 @@ impl Service for UdpClient {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
