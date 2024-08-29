@@ -87,7 +87,7 @@ mod multi_queue {
         debug!("mqConf: {:?}", mq_conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+            Some(RetainPointConf::new("point/id.json", None))
         ))));
         let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());

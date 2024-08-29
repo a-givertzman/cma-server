@@ -43,7 +43,7 @@ mod fn_point {
         trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+            Some(RetainPointConf::new("point/id.json", None))
         ))));
         let config = TaskConfig::from_yaml(
             &self_name,

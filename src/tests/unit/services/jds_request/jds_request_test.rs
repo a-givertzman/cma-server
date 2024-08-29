@@ -86,7 +86,7 @@ mod jds_routes {
         // Configuring Services
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+            Some(RetainPointConf::new("point/id.json", None))
         ))));
         //
         // Configuring MultiQueue service
@@ -238,7 +238,7 @@ mod jds_routes {
         // Configuring MultiQueue service
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+            Some(RetainPointConf::new("point/id.json", None))
         ))));
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
@@ -344,8 +344,8 @@ mod jds_routes {
         //
         // Configuring MultiQueue service
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            None::<&str>,
-            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("point/id.json", None))
         ))));
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
@@ -528,7 +528,7 @@ mod jds_routes {
         // Configuring MultiQueue service
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+            Some(RetainPointConf::new("point/id.json", None))
         ))));
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:

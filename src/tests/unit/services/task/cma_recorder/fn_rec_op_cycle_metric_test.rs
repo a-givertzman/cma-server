@@ -46,7 +46,7 @@ mod cma_recorder {
         trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("assets/testing/retain/point/id.json", None))
+            Some(RetainPointConf::new("point/id.json", None))
         ))));
         let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/fn_rec_op_cycle_metric.yaml");
         trace!("config: {:?}", config);
