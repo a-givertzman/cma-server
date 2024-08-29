@@ -3,9 +3,11 @@ use log::{debug, error, trace};
 use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::{
-    conf_keywd::ConfKind, diag_keywd::DiagKeywd, profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig},
-    service_config::ServiceConfig,
+    conf_keywd::ConfKind, diag_keywd::DiagKeywd,
+    service_config::ServiceConfig, udp_client_config::keywd::{self, Keywd},
 };
+
+use super::udp_client_db_config::UdpClientDbConfig;
 ///
 /// Creates config from serde_yaml::Value
 /// 
@@ -52,7 +54,7 @@ pub struct UdpClientConfig {
     pub(crate) rack: u64,
     pub(crate) slot: u64,
     pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
-    pub(crate) dbs: IndexMap<String, ProfinetDbConfig>,
+    pub(crate) dbs: IndexMap<String, UdpClientDbConfig>,
 }
 //
 // 
@@ -93,12 +95,12 @@ impl UdpClientConfig {
         let mut dbs = IndexMap::new();
         for key in &self_conf.keys {
             let keyword = Keywd::from_str(key).unwrap();
-            if keyword.kind() == Kind::Db {
+            if keyword.kind() == keywd::Kind::Db {
                 let db_name = keyword.name();
                 let mut device_conf = self_conf.get(key).unwrap();
                 debug!("{}.new | DB '{}'", self_id, db_name);
                 trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
-                let node_conf = ProfinetDbConfig::new(&self_name, &db_name, &mut device_conf);
+                let node_conf = UdpClientDbConfig::new(&self_name, &db_name, &mut device_conf);
                 dbs.insert(
                     db_name,
                     node_conf,
