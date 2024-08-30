@@ -169,6 +169,10 @@ impl Debug for TcpServer {
 }
 //
 //
+unsafe impl Send for TcpServer {}
+unsafe impl Sync for TcpServer {}
+//
+//
 impl Service for TcpServer {
     //
     //

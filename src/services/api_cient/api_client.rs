@@ -104,6 +104,10 @@ impl Debug for ApiClient {
     }
 }
 //
+//
+unsafe impl Send for ApiClient {}
+unsafe impl Sync for ApiClient {}
+//
 // 
 impl Service for ApiClient {
     //

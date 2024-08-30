@@ -3,7 +3,7 @@
 mod task {
     use log::{trace, info};
     use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
-    use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -56,7 +56,7 @@ mod task {
         let config = TaskConfig::from_yaml(&self_name, &conf);
         trace!("config: {:?}", &config);
         let services = Arc::new(RwLock::new(Services::new(&self_name, RetainConf::new(None::<&str>, None))));
-        let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
+        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             &self_name.join(),
             "",
             "in-queue",
@@ -84,33 +84,33 @@ mod task {
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
         assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
-        let producer = Arc::new(Mutex::new(TaskTestProducer::new(
+        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
             &self_name.join(),
             &Name::new(self_name, "TaskAny.in-queue").join(),
             Duration::ZERO,
             services.clone(),
             test_data,
         )));
-        let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
+        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
         services.wlock(self_id).insert(task.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
         info!("receiver runing - ok");
-        let task_handle = task.lock().unwrap().run().unwrap();
+        let task_handle = task.write().unwrap().run().unwrap();
         info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.lock().unwrap().run().unwrap();
+        let producer_handle = producer.write().unwrap().run().unwrap();
         info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
-        producer.lock().unwrap().exit();
-        task.lock().unwrap().exit();
+        producer.read().unwrap().exit();
+        task.read().unwrap().exit();
         services.rlock(self_id).exit();
         task_handle.wait().unwrap();
         producer_handle.wait().unwrap();
         services_handle.wait().unwrap();
-        let sent = producer.lock().unwrap().sent().lock().unwrap().len();
-        let result = receiver.lock().unwrap().received().lock().unwrap().len();
+        let sent = producer.read().unwrap().sent().read().unwrap().len();
+        let result = receiver.read().unwrap().received().read().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);

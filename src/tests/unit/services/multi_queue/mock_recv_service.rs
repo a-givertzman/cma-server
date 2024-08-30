@@ -1,4 +1,5 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread};
+use egui::mutex::RwLock;
 use log::{info, trace, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use crate::core_::constants::constants::RECV_TIMEOUT;
@@ -9,7 +10,7 @@ pub struct MockRecvService {
     name: Name,
     rx_send: HashMap<String, Sender<Point>>,
     rx_recv: Vec<Receiver<Point>>,
-    received: Arc<Mutex<Vec<Point>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -24,7 +25,7 @@ impl MockRecvService {
             name,
             rx_send: HashMap::from([(rx_queue.to_string(), send)]),
             rx_recv: vec![recv],
-            received: Arc::new(Mutex::new(vec![])),
+            received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -36,7 +37,7 @@ impl MockRecvService {
     // }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -60,6 +61,10 @@ impl Debug for MockRecvService {
             .finish()
     }
 }
+//
+//
+unsafe impl Send for MockRecvService {}
+unsafe impl Sync for MockRecvService {}
 //
 // 
 impl Service for MockRecvService {
@@ -89,7 +94,7 @@ impl Service for MockRecvService {
                         match in_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().push(point);
                                 received_count += 1;
                             }
                             Err(_) => {}
@@ -107,7 +112,7 @@ impl Service for MockRecvService {
                         match in_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().push(point);
                             }
                             Err(_) => {}
                         };

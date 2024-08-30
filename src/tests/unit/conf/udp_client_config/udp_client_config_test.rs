@@ -1,9 +1,7 @@
 #[cfg(test)]
 
 mod udp_client_config {
-    use std::{hash::BuildHasherDefault, sync::Once, time::Duration};
-    use hashers::fx_hash::FxHasher;
-    use indexmap::IndexMap;
+    use std::{sync::Once, time::Duration};
     use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -77,8 +75,8 @@ mod udp_client_config {
                     ),
                     reconnect: Duration::from_secs(1),
                     protocol: "udp-raw".to_owned(),
-                    local_address: "192.168.100.100:15180".to_owned(),
-                    remote_address: "192.168.100.241:15180".to_owned(),
+                    local_addr: "192.168.100.100:15180".to_owned(),
+                    remote_addr: "192.168.100.241:15180".to_owned(),
                     diagnosis: IndexMapFxHasher::from_iter([
                         (DiagKeywd::Status, PointConfig {
                             id: 0,
@@ -174,8 +172,8 @@ mod udp_client_config {
                     ),
                     reconnect: Duration::from_secs(3),
                     protocol: "udp-raw".to_owned(),
-                    local_address: "192.168.100.100:15180".to_owned(),
-                    remote_address: "192.168.100.241:15180".to_owned(),
+                    local_addr: "192.168.100.100:15180".to_owned(),
+                    remote_addr: "192.168.100.241:15180".to_owned(),
                     diagnosis: IndexMapFxHasher::from_iter([]),
                     dbs: IndexMapFxHasher::from_iter([
                         ("data".to_owned(), UdpClientDbConfig {

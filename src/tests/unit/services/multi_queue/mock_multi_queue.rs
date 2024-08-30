@@ -62,6 +62,10 @@ impl Debug for MockMultiQueue {
     }
 }
 //
+//
+unsafe impl Send for MockMultiQueue {}
+unsafe impl Sync for MockMultiQueue {}
+//
 // 
 impl Service for MockMultiQueue {
     //

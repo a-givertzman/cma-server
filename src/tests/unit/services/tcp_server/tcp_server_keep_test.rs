@@ -1,10 +1,8 @@
 #[cfg(test)]
 
 mod tcp_server {
-    use sal_sync::services::{
-        entity::name::Name, retain::retain_conf::RetainConf, service::service::Service
-    };
-    use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
+    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
+    use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
     use testing::{
         entities::test_value::Value,
         stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues, wait::WaitTread},
@@ -69,7 +67,7 @@ mod tcp_server {
         "#, tcp_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(Mutex::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
         services.wlock(self_id).insert(tcp_server.clone());
         let mq_conf = r#"
             service MultiQueue:
@@ -79,9 +77,9 @@ mod tcp_server {
         "#;
         let mq_conf = serde_yaml::from_str(mq_conf).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(&self_name, &mq_conf);
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
-        let producer = Arc::new(Mutex::new(TaskTestProducer::new(
+        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
             self_id,
             &Name::new(&self_name, "MultiQueue.in-queue").join(),
             Duration::from_millis(100),
@@ -89,7 +87,7 @@ mod tcp_server {
             test_data.clone(),
         )));
         services.wlock(self_id).insert(producer.clone());
-        let emulated_tcp_client_recv = Arc::new(Mutex::new(EmulatedTcpClientRecv::new(
+        let emulated_tcp_client_recv = Arc::new(RwLock::new(EmulatedTcpClientRecv::new(
             self_id,
             &tcp_addr,
             Some(iterations),
@@ -97,26 +95,26 @@ mod tcp_server {
             vec![25, 50, 75],
         )));
         let services_handle = services.wlock(self_id).run().unwrap();
-        let mq_service_handle = mq_service.lock().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.lock().unwrap().run().unwrap();
+        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
+        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let emulated_tcp_client_recv_handle = emulated_tcp_client_recv.lock().unwrap().run().unwrap();
+        let emulated_tcp_client_recv_handle = emulated_tcp_client_recv.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.lock().unwrap().run().unwrap();
-        emulated_tcp_client_recv.lock().unwrap().wait_marker_received();
-        let received = emulated_tcp_client_recv.lock().unwrap().received();
-        let received = received.lock().unwrap();
+        let producer_handle = producer.write().unwrap().run().unwrap();
+        emulated_tcp_client_recv.read().unwrap().wait_marker_received();
+        let received = emulated_tcp_client_recv.read().unwrap().received();
+        let received = received.read().unwrap();
         let target = 0.75;
         let result = (received.len() as f32) / (total_count as f32);
         // println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", total_count);
-        println!("sent events: {:?}", producer.lock().unwrap().sent().lock().unwrap().len());
+        println!("sent events: {:?}", producer.read().unwrap().sent().read().unwrap().len());
         println!("recv events: {:?} ({}%)", received.len(), result * 100.0);
         assert!(result >= target, "\nresult: {:?}\ntarget: {:?}", result, target);
-        emulated_tcp_client_recv.lock().unwrap().exit();
-        producer.lock().unwrap().exit();
-        tcp_server.lock().unwrap().exit();
-        mq_service.lock().unwrap().exit();
+        emulated_tcp_client_recv.read().unwrap().exit();
+        producer.read().unwrap().exit();
+        tcp_server.read().unwrap().exit();
+        mq_service.read().unwrap().exit();
         services.rlock(self_id).exit();
         emulated_tcp_client_recv_handle.wait().unwrap();
         producer_handle.wait().unwrap();
@@ -161,7 +159,7 @@ mod tcp_server {
         "#, tcp_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(Mutex::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
         services.wlock(self_id).insert(tcp_server.clone());
 
         let mq_conf = format!(r#"
@@ -173,16 +171,16 @@ mod tcp_server {
         "#, self_name);
         let mq_conf = serde_yaml::from_str(&mq_conf).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(self_name, &mq_conf);
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());        // "MultiQueue",
-        let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
+        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             self_id,
             "",
             "queue",
             iterations,
         )));
         services.wlock(self_id).insert(receiver.clone());
-        let emulated_tcp_client = Arc::new(Mutex::new(EmulatedTcpClientSend::new(
+        let emulated_tcp_client = Arc::new(RwLock::new(EmulatedTcpClientSend::new(
             self_id,
             "/test/Jds/",
             &tcp_addr,
@@ -191,17 +189,17 @@ mod tcp_server {
             true,
         )));
         let services_handle = services.wlock(self_id).run().unwrap();
-        let mq_service_handle = mq_service.lock().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.lock().unwrap().run().unwrap();
+        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
+        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let emulated_tcp_client_handle = emulated_tcp_client.lock().unwrap().run().unwrap();
+        let emulated_tcp_client_handle = emulated_tcp_client.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
         receiver_handle.wait().unwrap();
-        emulated_tcp_client.lock().unwrap().exit();
+        emulated_tcp_client.read().unwrap().exit();
         emulated_tcp_client_handle.wait().unwrap();
-        let received = receiver.lock().unwrap().received();
-        let mut received = received.lock().unwrap();
+        let received = receiver.read().unwrap().received();
+        let mut received = received.write().unwrap();
         let target = total_count;
         let result = received.len();
         assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
@@ -210,8 +208,8 @@ mod tcp_server {
             let target = value.as_int();
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        tcp_server.lock().unwrap().exit();
-        mq_service.lock().unwrap().exit();
+        tcp_server.read().unwrap().exit();
+        mq_service.read().unwrap().exit();
         services.rlock(self_id).exit();
         tcp_server_handle.wait().unwrap();
         mq_service_handle.wait().unwrap();

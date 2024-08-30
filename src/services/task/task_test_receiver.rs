@@ -1,5 +1,5 @@
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread};
 use log::{info, warn, trace, debug};
 ///
 /// 
@@ -9,7 +9,7 @@ pub struct TaskTestReceiver {
     iterations: usize, 
     in_send: HashMap<String, Sender<Point>>,
     in_recv: Vec<Receiver<Point>>,
-    received: Arc<Mutex<Vec<Point>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -26,13 +26,13 @@ impl TaskTestReceiver {
             iterations,
             in_send: HashMap::from([(recv_queue.to_string(), send)]),
             in_recv: vec![recv],
-            received: Arc::new(Mutex::new(vec![])),
+            received: Arc::new(RwLock::new(vec![])),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -46,6 +46,10 @@ impl Object for TaskTestReceiver {
         self.name.clone()
     }
 }
+//
+//
+unsafe impl Send for TaskTestReceiver {}
+unsafe impl Sync for TaskTestReceiver {}
 //
 // 
 impl Debug for TaskTestReceiver {
@@ -90,7 +94,7 @@ impl Service for TaskTestReceiver {
                         trace!("{}.run | received Point: {:#?}", self_id, point);
                         // debug!("{}.run | value: {}\treceived SQL: {:?}", value, sql);
                         count += 1;
-                        received.lock().unwrap().push(point.clone());
+                        received.write().unwrap().push(point.clone());
                         if count >= iterations {
                             break 'main;
                         }

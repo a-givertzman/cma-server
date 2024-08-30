@@ -118,6 +118,10 @@ impl Debug for SlmpClient {
     }
 }
 //
+//
+unsafe impl Send for SlmpClient {}
+unsafe impl Sync for SlmpClient {}
+//
 // 
 impl Service for SlmpClient {
     //

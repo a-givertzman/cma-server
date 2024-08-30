@@ -73,6 +73,10 @@ impl Debug for MockTcpServer {
     }
 }
 //
+//
+unsafe impl Send for MockTcpServer {}
+unsafe impl Sync for MockTcpServer {}
+//
 // 
 impl Service for MockTcpServer {
     //

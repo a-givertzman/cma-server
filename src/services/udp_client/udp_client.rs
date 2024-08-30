@@ -26,12 +26,11 @@
 //! - `COUNT` - length of the array in the `DATA` field
 //! - `DATA` - array of values of type specified in the `TYPE` field
 //! 
-use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
+use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread};
 use log::{info, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use crate::{
-    conf::udp_client_config::udp_client_config::UdpClientConfig, 
-    services::services::Services,
+    conf::udp_client_config::udp_client_config::UdpClientConfig, core_::state::change_notify::ChangeNotify, services::services::Services
 };
 ///
 /// Do something ...
@@ -39,7 +38,7 @@ pub struct UdpClient {
     id: String,
     name: Name,
     conf: UdpClientConfig,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -47,7 +46,7 @@ pub struct UdpClient {
 impl UdpClient {
     //
     /// Crteates new instance of the UdpClient 
-    pub fn new(parent: impl Into<String>, conf: UdpClientConfig, services: Arc<Mutex<Services>>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: UdpClientConfig, services: Arc<RwLock<Services>>) -> Self {
         Self {
             id: conf.name.join(),
             name: conf.name.clone(),
@@ -77,27 +76,46 @@ impl std::fmt::Debug for UdpClient {
             .finish()
     }
 }
+///
+/// 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum State {
+    Start,
+    Exit,
+    UdpBindError
+}
+//
+//
+unsafe impl Send for UdpClient {}
+unsafe impl Sync for UdpClient {}
 //
 // 
 impl Service for UdpClient {
     //
     // 
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
-        panic!("{}.get_link | Does not support get_link", self.id())
-        // match self.rxSend.get(name) {
-        //     Some(send) => send.clone(),
-        //     None => panic!("{}.run | link '{:?}' - not found", self.id, name),
-        // }
-    }
-    //
-    //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
+        let local_addr = self.conf.local_addr.clone();
+        let remote_addr = self.conf.remote_addr.clone();
+        let reconnect = self.conf.reconnect;
         let exit = self.exit.clone();
         info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
+        let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
+            let self_id = &self_id;
+            // let notify = notify(&self_id);
+            let mut notify: ChangeNotify<_, String> = ChangeNotify::new(self_id, State::Start, vec![
+                (State::Start,          Box::new(|message| log::info!("{}", message))),
+                (State::Exit,           Box::new(|message| log::info!("{}", message))),
+                (State::UdpBindError,   Box::new(|message| log::info!("{}", message))),
+            ]);
             loop {
+                match UdpSocket::bind(&local_addr) {
+                    Ok(socket) => {
+                        
+                    }
+                    Err(err) => notify.add(State::UdpBindError, format!("{}.run | UdpSocket::bind error: {:#?}", self_id, err)),
+                }
                 if exit.load(Ordering::SeqCst) {
                     break;
                 }

@@ -132,7 +132,7 @@ impl ProfinetClient {
                             match client.connect() {
                                 Ok(_) => {
                                     status = Status::Ok;
-                                    is_connected.add(true, &format!("{}.read | Connection established", self_id));
+                                    is_connected.add(true, format!("{}.read | Connection established", self_id));
                                     Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
                                     'read: while !exit.load(Ordering::SeqCst) {
                                         cycle.start();
@@ -167,7 +167,7 @@ impl ProfinetClient {
                                     }
                                 }
                                 Err(err) => {
-                                    is_connected.add(false, &format!("{}.read | Connection lost: {:?}", self_id, err));
+                                    is_connected.add(false, format!("{}.read | Connection lost: {:?}", self_id, err));
                                     trace!("{}.read | Connection error: {:?}", self_id, err);
                                 }
                             }
@@ -230,7 +230,7 @@ impl ProfinetClient {
                 thread::sleep(conf.reconnect_cycle);
                 match client.connect() {
                     Ok(_) => {
-                        is_connected.add(true, &format!("{}.write | Connection established", self_id));
+                        is_connected.add(true, format!("{}.write | Connection established", self_id));
                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
                         'write: while !exit.load(Ordering::SeqCst) {
                             match rx_recv.recv_timeout(RECV_TIMEOUT) {
@@ -299,7 +299,7 @@ impl ProfinetClient {
                         }
                     }
                     Err(err) => {
-                        is_connected.add(false, &format!("{}.write | Connection lost: {:?}", self_id, err));
+                        is_connected.add(false, format!("{}.write | Connection lost: {:?}", self_id, err));
                         trace!("{}.write | Connection error: {:?}", self_id, err);
                     }
                 }
@@ -386,6 +386,10 @@ impl Debug for ProfinetClient {
             .finish()
     }
 }
+//
+//
+unsafe impl Send for ProfinetClient {}
+unsafe impl Sync for ProfinetClient {}
 //
 //
 impl Service for ProfinetClient {

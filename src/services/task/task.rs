@@ -130,6 +130,10 @@ impl Debug for Task {
 }
 //
 //
+unsafe impl Send for Task {}
+unsafe impl Sync for Task {}
+//
+//
 impl Service for Task {
     //
     //

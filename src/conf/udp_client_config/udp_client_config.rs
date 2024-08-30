@@ -48,8 +48,8 @@ pub struct UdpClientConfig {
     pub(crate) cycle: Option<Duration>,
     pub(crate) reconnect: Duration,
     pub(crate) protocol: String,
-    pub(crate) local_address: String,
-    pub(crate) remote_address: String,
+    pub(crate) local_addr: String,
+    pub(crate) remote_addr: String,
     pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
     pub(crate) dbs: IndexMapFxHasher<String, UdpClientDbConfig>,
 }
@@ -110,8 +110,8 @@ impl UdpClientConfig {
             cycle,
             reconnect,
             protocol,
-            local_address,
-            remote_address,
+            local_addr: local_address,
+            remote_addr: remote_address,
             diagnosis,
             dbs,
         }

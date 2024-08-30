@@ -4,7 +4,7 @@ mod jds_routes {
     use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::{link_name::LinkName, service::Service}};
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, sync::{Arc, Mutex, Once, RwLock}, thread, time::Duration};
+    use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, sync::{Arc, Once, RwLock}, thread, time::Duration};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, tcp_server_config::TcpServerConfig},
         core_::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
@@ -98,7 +98,7 @@ mod jds_routes {
                     - {}/MockRecvService0.in-queue
         "#, self_name)).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -117,7 +117,7 @@ mod jds_routes {
         "#, tcp_server_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(Mutex::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -176,21 +176,21 @@ mod jds_routes {
         let test_items_count = test_data.len();
         //
         // preparing MockServicePoints with the Vec<PontConfig>
-        let service_points = Arc::new(Mutex::new(MockServicePoints::new(self_id, point_configs(&self_name))));
+        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
         services.wlock(self_id).insert(service_points);
         //
         // Configuring Receiver
         mock_recv_service::COUNT.reset(0);
-        let receiver = Arc::new(Mutex::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count))));
+        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count))));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
         let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.lock().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.lock().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
+        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -203,14 +203,14 @@ mod jds_routes {
             tcp_stream.write_all(&request).unwrap();
         }
         thread::sleep(Duration::from_millis(2000));
-        receiver.lock().unwrap().exit();
+        receiver.write().unwrap().exit();
         receiver_handle.wait().unwrap();
-        let received = receiver.lock().unwrap().received();
-        let result = received.lock().unwrap().len();
+        let received = receiver.write().unwrap().received();
+        let result = received.write().len();
         assert!(result == 0, "All points must be rejected, but some of them passed: \nresult: {:?}\ntarget: {:?}", result, 0);
-        receiver.lock().unwrap().exit();
-        tcp_server.lock().unwrap().exit();
-        mq_service.lock().unwrap().exit();
+        receiver.write().unwrap().exit();
+        tcp_server.write().unwrap().exit();
+        mq_service.write().unwrap().exit();
         services.rlock(self_id).exit();
         //
         // Waiting while all services being finished
@@ -248,7 +248,7 @@ mod jds_routes {
                     - {}/MockRecvService0.in-queue
         "#, self_name)).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -268,7 +268,7 @@ mod jds_routes {
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(Mutex::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -276,21 +276,21 @@ mod jds_routes {
         let self_name = Name::new(self_id, "Jds");
         //
         // preparing MockServicePoints with the Vec<PontConfig>
-        let service_points = Arc::new(Mutex::new(MockServicePoints::new(self_id, point_configs(&self_name))));
+        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
         services.wlock(self_id).insert(service_points);
         //
         // Configuring Receiver
         mock_recv_service::COUNT.reset(0);
-        let receiver = Arc::new(Mutex::new(MockRecvService::new(self_id, "in-queue", None)));
+        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", None)));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
         let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.lock().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.lock().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
+        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -314,9 +314,9 @@ mod jds_routes {
         println!("{} | Auth.Secret request successful!\n", self_id);
         //
         // Stopping all services
-        receiver.lock().unwrap().exit();
-        tcp_server.lock().unwrap().exit();
-        mq_service.lock().unwrap().exit();
+        receiver.write().unwrap().exit();
+        tcp_server.write().unwrap().exit();
+        mq_service.write().unwrap().exit();
         services.rlock(self_id).exit();
         //
         // Waiting while all services being finished
@@ -355,7 +355,7 @@ mod jds_routes {
                     - {}/MockRecvService0.in-queue
         "#, self_name)).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -375,7 +375,7 @@ mod jds_routes {
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(Mutex::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -427,21 +427,21 @@ mod jds_routes {
         let test_items_count = test_data.len();
         //
         // preparing MockServicePoints with the Vec<PontConfig>
-        let service_points = Arc::new(Mutex::new(MockServicePoints::new(self_id, point_configs(&self_name))));
+        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
         services.wlock(self_id).insert(service_points);
         //
         // Configuring Receiver
         mock_recv_service::COUNT.reset(0);
-        let receiver = Arc::new(Mutex::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2))));
+        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2))));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
         let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.lock().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.lock().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
+        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -496,9 +496,9 @@ mod jds_routes {
         println!("{} | Points request successful!\n", self_id);
         //
         // Stopping all services
-        receiver.lock().unwrap().exit();
-        tcp_server.lock().unwrap().exit();
-        mq_service.lock().unwrap().exit();
+        receiver.write().unwrap().exit();
+        tcp_server.write().unwrap().exit();
+        mq_service.write().unwrap().exit();
         services.rlock(self_id).exit();
         //
         // Waiting while all services being finished
@@ -538,7 +538,7 @@ mod jds_routes {
                     - {}/MockRecvService0.in-queue
         "#, self_id)).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -556,7 +556,7 @@ mod jds_routes {
         "#, tcp_addr, self_id);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(Mutex::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -608,15 +608,15 @@ mod jds_routes {
         let test_items_count = test_data.len();
         //
         // Configuring Receiver
-        let receiver = Arc::new(Mutex::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2))));
+        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2))));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         //
         // Starting all services
         let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.lock().unwrap().run().unwrap();
-        let jds_service_handle = tcp_server.lock().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
+        let jds_service_handle = tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(200));
         //
@@ -643,14 +643,14 @@ mod jds_routes {
         thread::sleep(Duration::from_millis(800));
         //
         // Stopping all services
-        receiver.lock().unwrap().exit();
-        tcp_server.lock().unwrap().exit();
-        mq_service.lock().unwrap().exit();
+        receiver.write().unwrap().exit();
+        tcp_server.write().unwrap().exit();
+        mq_service.write().unwrap().exit();
         services.rlock(self_id).exit();
         //
         // Verivications
-        let received = receiver.lock().unwrap().received();
-        let received_len = received.lock().unwrap().len();
+        let received = receiver.write().unwrap().received();
+        let received_len = received.read().len();
         let result = received_len;
         let target = test_items_count * 2;
         println!("{} | Total received: {}", self_id, received_len);
@@ -659,7 +659,7 @@ mod jds_routes {
         // Verifing JdsService replies
         let mut replies = 0;
         let mut reply_errors = 0;
-        for point in received.lock().unwrap().iter() {
+        for point in received.read().iter() {
             match point.cot() {
                 // Cot::Inf => todo!(),
                 // Cot::Act => todo!(),

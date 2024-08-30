@@ -4,7 +4,7 @@ use sal_sync::services::{
     service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
     subscription::subscription_criteria::SubscriptionCriteria
 };
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
 use concat_string::concat_string;
 use crate::{core_::state::change_notify::ChangeNotify, services::safe_lock::SafeLock};
@@ -25,7 +25,7 @@ enum NotifyState {
 pub struct Services {
     id: String,
     name: Name,
-    map: Arc<RwLock<HashMap<String, Arc<Mutex<dyn Service + Send>>>>>,
+    map: Arc<RwLock<HashMap<String, Arc<RwLock<dyn Service>>>>>,
     retain_conf: RetainConf,
     retain_point_id: Option<Arc<RwLock<RetainPointId>>>,
     points_requested: Arc<AtomicUsize>,
@@ -75,7 +75,7 @@ impl Services {
     }
     ///
     /// Prepairing retained points id's
-    fn prepare_point_ids(self_id: &str, notify: &mut ChangeNotify<NotifyState>, retain_point_id: &Option<Arc<RwLock<RetainPointId>>>, services: &Arc<RwLock<HashMap<String, Arc<Mutex<dyn Service + Send>>>>>) {
+    fn prepare_point_ids(self_id: &str, notify: &mut ChangeNotify<NotifyState, String>, retain_point_id: &Option<Arc<RwLock<RetainPointId>>>, services: &Arc<RwLock<HashMap<String, Arc<RwLock<dyn Service>>>>>) {
         match retain_point_id {
             Some(retain_point_id) => {
                 info!("{}.prepare_point_ids | Preparing Points id's...", self_id);
@@ -105,7 +105,7 @@ impl Services {
                     Err(err) => error!("{}.prepare_point_ids | Services read access error: {:#?}", self_id, err),
                 }
             }
-            None => notify.add(NotifyState::RetainPointNotConfiguredWarn, &format!("{}.run | Retain->Point - not configured", self_id)),
+            None => notify.add(NotifyState::RetainPointNotConfiguredWarn, format!("{}.run | Retain->Point - not configured", self_id)),
         }
     }
     ///
@@ -165,16 +165,16 @@ impl Services {
                                             }
                                         },
                                         None => {
-                                            notify.add(NotifyState::RetainPointNotConfiguredWarn, &format!("{}.run | Retain->Point - not configured", self_id));
+                                            notify.add(NotifyState::RetainPointNotConfiguredWarn, format!("{}.run | Retain->Point - not configured", self_id));
                                             sink.add(vec![]);
                                         }
                                     }
                                 }
-                                None => notify.add(NotifyState::PointsRequestsIsEmpty, &format!("{}.run | Points requests is empty", self_id)),
+                                None => notify.add(NotifyState::PointsRequestsIsEmpty, format!("{}.run | Points requests is empty", self_id)),
                             }
                         }
                         Err(err) => {
-                            notify.add(NotifyState::PointsRequestsAccessError, &format!("{}.run | Points requests access error: {:#?}", self_id, err));
+                            notify.add(NotifyState::PointsRequestsAccessError, format!("{}.run | Points requests access error: {:#?}", self_id, err));
                         }
                     }
                 }
@@ -204,7 +204,7 @@ impl Services {
     }
     ///
     /// Returns all holding services in the map<service id, service reference>
-    pub fn all(&self) -> HashMap<String, Arc<Mutex<dyn Service + Send>>> {
+    pub fn all(&self) -> HashMap<String, Arc<RwLock<dyn Service>>> {
         let mut map = HashMap::new();
         match self.map.read() {
             Ok(services) => services.clone_into(&mut map),
@@ -214,8 +214,8 @@ impl Services {
     }
     ///
     /// Inserts a new service into the collection
-    pub fn insert(&mut self, service: Arc<Mutex<dyn Service + Send>>) {
-        let name = service.slock(&self.id).name().join();
+    pub fn insert(&mut self, service: Arc<RwLock<dyn Service>>) {
+        let name = service.rlock(&self.id).name().join();
         match self.map.write() {
             Ok(mut services) => {
                 if services.contains_key(&name) {
@@ -228,7 +228,7 @@ impl Services {
     }
     ///
     /// Returns Service
-    pub fn get(&self, name: &str) -> Option<Arc<Mutex<dyn Service>>> {
+    pub fn get(&self, name: &str) -> Option<Arc<RwLock<dyn Service>>> {
         match self.map.read() {
             Ok(services) => {
                 match services.get(name) {

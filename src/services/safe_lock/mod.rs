@@ -45,6 +45,60 @@ impl SafeLock<dyn Service> for Arc<Mutex<dyn Service>> {
 }
 //
 // 
+impl SafeLock<dyn Service> for Arc<RwLock<dyn Service>> {
+    fn slock(&self, parent: impl Into<String>) -> MutexGuard<'_, (dyn Service + 'static)> {
+        panic!("SafeLock.slock | Lock from {} on '{}' - Does not implemented", parent.into(), self.type_of())
+    }
+    fn rlock<'a>(&'a self, parent: impl Into<String>) -> RwLockReadGuard<'a, (dyn Service + 'static)> {
+        let self_id = format!("{:?}/SafeLock", self.type_of());
+        let lock_timer = LockTimer::new(&self_id, self.type_of(), Duration::from_millis(10_000));
+        lock_timer.run().unwrap();
+        info!("SafeLock.rlock | Lock from '{}' on '{}'...", parent.into(), self_id);
+        let rwlock_guard = self.read().unwrap();
+        info!("SafeLock.rlock | Lock '{}' - ok", self_id);
+        lock_timer.exit();
+        rwlock_guard
+    }
+    fn wlock<'a>(&'a self, parent: impl Into<String>) -> RwLockWriteGuard<'a, (dyn Service + 'static)> {
+        let self_id = format!("{:?}/SafeLock", self.type_of());
+        let lock_timer = LockTimer::new(&self_id, self.type_of(), Duration::from_millis(10_000));
+        lock_timer.run().unwrap();
+        info!("SafeLock.wlock | Lock from '{}' on '{}'...", parent.into(), self_id);
+        let mutax_guard = self.write().unwrap();
+        info!("SafeLock.wlock | Lock '{}' - ok", self_id);
+        lock_timer.exit();
+        mutax_guard
+    }
+}
+//
+// 
+impl SafeLock<dyn Service + Send> for Arc<RwLock<dyn Service + Send>> {
+    fn slock(&self, parent: impl Into<String>) -> MutexGuard<'_, (dyn Service + Send + 'static)> {
+        panic!("SafeLock.slock | Lock from {} on '{}' - Does not implemented", parent.into(), self.type_of())
+    }
+    fn rlock<'a>(&'a self, parent: impl Into<String>) -> RwLockReadGuard<'a, (dyn Service + Send + 'static)> {
+        let self_id = format!("{:?}/SafeLock", self.type_of());
+        let lock_timer = LockTimer::new(&self_id, self.type_of(), Duration::from_millis(10_000));
+        lock_timer.run().unwrap();
+        info!("SafeLock.rlock | Lock from '{}' on '{}'...", parent.into(), self_id);
+        let rwlock_guard = self.read().unwrap();
+        info!("SafeLock.rlock | Lock '{}' - ok", self_id);
+        lock_timer.exit();
+        rwlock_guard
+    }
+    fn wlock<'a>(&'a self, parent: impl Into<String>) -> RwLockWriteGuard<'a, (dyn Service + Send + 'static)> {
+        let self_id = format!("{:?}/SafeLock", self.type_of());
+        let lock_timer = LockTimer::new(&self_id, self.type_of(), Duration::from_millis(10_000));
+        lock_timer.run().unwrap();
+        info!("SafeLock.wlock | Lock from '{}' on '{}'...", parent.into(), self_id);
+        let mutax_guard = self.write().unwrap();
+        info!("SafeLock.wlock | Lock '{}' - ok", self_id);
+        lock_timer.exit();
+        mutax_guard
+    }
+}
+//
+// 
 impl SafeLock<dyn Service + Send> for Arc<Mutex<dyn Service + Send>> {
     fn slock(&self, parent: impl Into<String>) -> MutexGuard<'_, (dyn Service + Send + 'static)> {
         let self_id = format!("{:?}/SafeLock", self.type_of());

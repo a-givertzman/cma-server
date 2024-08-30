@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod multi_queue {
-    use std::{collections::HashMap, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{collections::HashMap, sync::{Arc, RwLock, Once}, thread, time::{Duration, Instant}};
     use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -42,11 +42,11 @@ mod multi_queue {
         let receiver_count = 3;
         let producer_count = 3;
         let total_count = iterations * producer_count;
-        let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
+        let mut receivers: HashMap<String, Arc<RwLock<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         for i in 0..receiver_count {
-            let receiver = Arc::new(Mutex::new(MockRecvService::new(
+            let receiver = Arc::new(RwLock::new(MockRecvService::new(
                 self_id,
                 "rx-queue",
                 Some(total_count)
@@ -58,7 +58,7 @@ mod multi_queue {
         }
         println!(" All receivers created");
         println!(" Creating Mock Multiqueue...");
-        let mq_service = Arc::new(Mutex::new(MockMultiQueue::new(
+        let mq_service = Arc::new(RwLock::new(MockMultiQueue::new(
             self_id,
             receivers.keys().map(|v| {
                 format!("{}.rx-queue", v)
@@ -104,10 +104,10 @@ mod multi_queue {
         let test_data: Vec<Value> = test_data.collect();
         let services_handle = services.wlock(self_id).run().unwrap();
         println!(" Trying to start Multiqueue...:");
-        mq_service.lock().unwrap().run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
         let mut recv_handles  = vec![];
         for (_recv_id, recv) in &receivers {
-            let h = recv.lock().unwrap().run().unwrap();
+            let h = recv.write().unwrap().run().unwrap();
             recv_handles.push(h)
         }
         for i in 0..producer_count {
@@ -151,11 +151,11 @@ mod multi_queue {
         let receiver_count = 3;
         let producer_count = 3;
         let total_count = iterations * producer_count;
-        let mut receivers: HashMap<String, Arc<Mutex<MockRecvService>>> = HashMap::new();
+        let mut receivers: HashMap<String, Arc<RwLock<MockRecvService>>> = HashMap::new();
         let mut producers: HashMap<String, MockSendService> = HashMap::new();
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         for i in 0..receiver_count {
-            let receiver = Arc::new(Mutex::new(MockRecvService::new(
+            let receiver = Arc::new(RwLock::new(MockRecvService::new(
                 self_id,
                 "rx-queue",
                 Some(total_count)
@@ -167,7 +167,7 @@ mod multi_queue {
         }
         println!(" All receivers created");
         println!(" Creating Mock Multiqueue...");
-        let mq_service = Arc::new(Mutex::new(MockMultiQueueMatch::new(
+        let mq_service = Arc::new(RwLock::new(MockMultiQueueMatch::new(
             self_id,
             receivers.keys().map(|v| {
                 format!("{}.rx-queue", v)
@@ -196,10 +196,10 @@ mod multi_queue {
         let services_handle = services.wlock(self_id).run().unwrap();
         thread::sleep(Duration::from_millis(50));
         println!(" Trying to start Multiqueue...:");
-        mq_service.lock().unwrap().run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
         let mut recv_handles  = vec![];
         for (_recv_id, recv) in &receivers {
-            let h = recv.lock().unwrap().run().unwrap();
+            let h = recv.write().unwrap().run().unwrap();
             recv_handles.push(h)
         }
         for i in 0..producer_count {
@@ -235,7 +235,7 @@ mod multi_queue {
         let mut total_sent = 0;
         let mut all_sent: HashMap<&'a str, usize> = HashMap::new();
         for (prod_id, prod) in producers {
-            let sent = prod.sent().lock().unwrap().len();
+            let sent = prod.sent().read().unwrap().len();
             total_sent += sent;
             all_sent.insert(prod_id, sent);
         }
@@ -243,11 +243,11 @@ mod multi_queue {
     }
     ///
     ///
-    fn get_received<'a>(receivers: &'a HashMap<String, Arc<Mutex<MockRecvService>>>) -> (usize, HashMap<&'a str, usize>) {
+    fn get_received<'a>(receivers: &'a HashMap<String, Arc<RwLock<MockRecvService>>>) -> (usize, HashMap<&'a str, usize>) {
         let mut total_received = 0;
         let mut all_received: HashMap<&'a str, usize> = HashMap::new();
         for (recv_id, recv) in receivers {
-            let recved = recv.lock().unwrap().received().lock().unwrap().len();
+            let recved = recv.read().unwrap().received().read().len();
             total_received += recved;
             all_received.insert(recv_id, recved);
         }

@@ -65,6 +65,10 @@ impl Debug for TcpClient {
     }
 }
 //
+//
+unsafe impl Send for TcpClient {}
+unsafe impl Sync for TcpClient {}
+//
 // 
 impl Service for TcpClient {
     //

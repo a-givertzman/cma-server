@@ -3,7 +3,7 @@
 mod task_nodes {
     use log::{info, debug, trace, warn};
     use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::{service::Service, service_handles::ServiceHandles}};
-    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
+    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Once, RwLock}, thread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
@@ -46,7 +46,7 @@ mod task_nodes {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
-        let mock_service = Arc::new(Mutex::new(MockService::new(self_id, "queue")));
+        let mock_service = Arc::new(RwLock::new(MockService::new(self_id, "queue")));
         services.wlock(self_id).insert(mock_service.clone());
         let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);
         let fn_count_count = fn_count::COUNT.load(Ordering::SeqCst);
@@ -101,7 +101,7 @@ mod task_nodes {
 
             ),
         ];
-        mock_service.lock().unwrap().run().unwrap();
+        mock_service.write().unwrap().run().unwrap();
         for (name, value, target_value) in test_data {
             let point = value.to_point(0, name);
             // let inputName = &point.name();
@@ -141,7 +141,7 @@ mod task_nodes {
                 None => panic!("input {:?} - not found in the current taskStuff", &name)
             };
         }
-        mock_service.lock().unwrap().exit();
+        mock_service.read().unwrap().exit();
     }
     ///
     ///
@@ -189,6 +189,10 @@ mod task_nodes {
                 .finish()
         }
     }
+    //
+    //
+    unsafe impl Send for MockService {}
+    unsafe impl Sync for MockService {}
     //
     //
     impl Service for MockService {

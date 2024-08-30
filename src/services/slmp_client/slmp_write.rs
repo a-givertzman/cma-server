@@ -94,7 +94,7 @@ impl SlmpWrite {
                     let (_, recv) = services.wlock(&self_id).subscribe(&conf.subscribe, &self_id, &points);
                     let mut error_limit = ErrorLimit::new(3);
                     'main: while !exit.get() {
-                        is_connected.add(true, &format!("{}.run | Connection established", self_id));
+                        is_connected.add(true, format!("{}.run | Connection established", self_id));
                         cycle.start();
                         match recv.recv_timeout(cycle_interval) {
                             Ok(point) => {

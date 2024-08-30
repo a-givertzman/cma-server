@@ -3,7 +3,7 @@
 mod multi_queue {
     use log::debug;
     use sal_sync::services::{retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
-    use std::{sync::{Arc, Mutex, Once, RwLock}, time::{Duration, Instant}};
+    use std::{sync::{Arc, RwLock, Once}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -89,13 +89,13 @@ mod multi_queue {
             Some("assets/testing/retain/"),
             Some(RetainPointConf::new("point/id.json", None))
         ))));
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let mut recv_handles = vec![];
         let mut recv_services = vec![];
         let timer = Instant::now();
         mock_send_service::COUNT.reset(0);
-        let send_service = Arc::new(Mutex::new(MockSendService::new(
+        let send_service = Arc::new(RwLock::new(MockSendService::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             services.clone(),
@@ -105,7 +105,7 @@ mod multi_queue {
         services.wlock(self_id).insert(send_service.clone());
         mock_recv_service::COUNT.reset(0);
         for _ in 0..count {
-            let recv_service = Arc::new(Mutex::new(MockRecvService::new(
+            let recv_service = Arc::new(RwLock::new(MockRecvService::new(
                 self_id,
                 "in-queue",
                 Some(iterations),
@@ -114,28 +114,28 @@ mod multi_queue {
             recv_services.push(recv_service);
         }
         let services_handle = services.wlock(self_id).run().unwrap();
-        mq_service.lock().unwrap().run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
         for service in &mut recv_services {
-            let handle = service.lock().unwrap().run().unwrap();
+            let handle = service.write().unwrap().run().unwrap();
             recv_handles.push(handle);
         }
-        send_service.lock().unwrap().run().unwrap();
+        send_service.write().unwrap().run().unwrap();
         for thd in recv_handles {
             thd.wait().unwrap();
         }
         println!("\nelapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", total_count);
-        println!("sent events: {:?}\n", count * send_service.lock().unwrap().sent().lock().unwrap().len());
+        println!("sent events: {:?}\n", count * send_service.read().unwrap().sent().read().unwrap().len());
         let mut received = vec![];
         let target = test_data_len;
         for recv_service in &recv_services {
-            let len = recv_service.lock().unwrap().received().lock().unwrap().len();
+            let len = recv_service.read().unwrap().received().read().len();
             assert!(len == target, "\nresult: {:?}\ntarget: {:?}", len, target);
             received.push(len);
         }
         println!("recv events: {} {:?}", received.iter().sum::<usize>(), received);
         for service in recv_services {
-            service.lock().unwrap().exit();
+            service.read().unwrap().exit();
         }
         services.rlock(self_id).exit();
         services_handle.wait().unwrap();

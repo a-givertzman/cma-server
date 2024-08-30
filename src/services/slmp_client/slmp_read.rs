@@ -106,7 +106,7 @@ impl SlmpRead {
                     let mut dbs = dbs.write().unwrap();
                     let mut error_limit = ErrorLimit::new(3);
                     'main: while !exit.get() {
-                        is_connected.add(true, &format!("{}.read | Connection established", self_id));
+                        is_connected.add(true, format!("{}.read | Connection established", self_id));
                         cycle.start();
                         for (db_name, db) in dbs.iter_mut() {
                             trace!("{}.read | SlmpDb '{}' - reading...", self_id, db_name);

@@ -3,7 +3,7 @@ use sal_sync::services::{
     entity::{name::Name, object::Object, point::point::Point},
     service::{service::Service, service_handles::ServiceHandles},
 };
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex}, thread};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, RwLock}, thread};
 ///
 /// 
 pub struct MockMultiQueue {
@@ -11,7 +11,7 @@ pub struct MockMultiQueue {
     name: Name,
     send: Sender<Point>,
     recv: Vec<Receiver<Point>>,
-    received: Arc<Mutex<Vec<Point>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -24,12 +24,12 @@ impl MockMultiQueue {
             name,
             send,
             recv: vec![recv],
-            received: Arc::new(Mutex::new(vec![])),
+            received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
-    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -54,6 +54,10 @@ impl Debug for MockMultiQueue {
     }
 }
 //
+//
+unsafe impl Send for MockMultiQueue {}
+unsafe impl Sync for MockMultiQueue {}
+//
 // 
 impl Service for MockMultiQueue {
     //
@@ -77,7 +81,7 @@ impl Service for MockMultiQueue {
                     'main: loop {
                         match recv.recv() {
                             Ok(point) => {
-                                received.lock().unwrap().push(point);
+                                received.write().unwrap().push(point);
                                 received_count += 1;
                                 if received_count >= recv_limit {
                                     break;
@@ -96,7 +100,7 @@ impl Service for MockMultiQueue {
                     'main: loop {
                         match recv.recv() {
                             Ok(point) => {
-                                received.lock().unwrap().push(point);
+                                received.write().unwrap().push(point);
                             }
                             Err(err) => {
                                 warn!("{}.run | recv error: {:?}", self_id, err);

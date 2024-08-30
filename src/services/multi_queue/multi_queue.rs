@@ -112,6 +112,10 @@ impl Debug for MultiQueue {
 }
 //
 //
+unsafe impl Send for MultiQueue {}
+unsafe impl Sync for MultiQueue {}
+//
+//
 impl Service for MultiQueue {
     //
     //
