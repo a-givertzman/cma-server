@@ -15,7 +15,7 @@
 //! 
 //! |Field name:   | SYN | ADDR | TYPE | COUNT | DATA        |
 //! |---           | --- | ---- | ---- | ----- | ----        |
-//! |Data type:    | u8  | u8   | u8   | u8    | u8[1024]    | 
+//! |Data type:    | u8  | u8   | u8   | u32    | u8[1024]    | 
 //! |Example value:| 22  | 0    | 16   | 1024  | [u16; 1024] |
 //! - `SYN` = 22 - message starts with
 //! - `ADDR` = 0...255 - an address of the input channel (0 - first input channel)
@@ -44,6 +44,10 @@ pub struct UdpClient {
 //
 //
 impl UdpClient {
+    /// Message starts with
+    pub const SYN: u8 = 22;
+    /// Start message ends with
+    pub const EOT: u8 = 4;
     //
     /// Crteates new instance of the UdpClient 
     pub fn new(parent: impl Into<String>, conf: UdpClientConfig, services: Arc<RwLock<Services>>) -> Self {
@@ -63,7 +67,7 @@ impl Object for UdpClient {
         &self.id
     }
     fn name(&self) -> Name {
-        todo!()
+        self.name.clone()
     }
 }
 //
@@ -103,7 +107,6 @@ impl Service for UdpClient {
         info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
             let self_id = &self_id;
-            // let notify = notify(&self_id);
             let mut notify: ChangeNotify<_, String> = ChangeNotify::new(self_id, State::Start, vec![
                 (State::Start,          Box::new(|message| log::info!("{}", message))),
                 (State::Exit,           Box::new(|message| log::info!("{}", message))),

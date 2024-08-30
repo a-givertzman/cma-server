@@ -1,1 +1,1 @@
-pub mod moc_service_points;
+pub mod mock_service_points;
