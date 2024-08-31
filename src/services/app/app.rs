@@ -76,7 +76,7 @@ impl App {
         let services_iter = services.rlock(&self_id).all();
         for (name, service) in services_iter {
             info!("{}.run |         Starting service: {}...", self_id, name);
-            let handles = service.slock(&self_id).run();
+            let handles = service.wlock(&self_id).run();
             match handles {
                 Ok(handles) => {
                     app.write().unwrap().insert_handles(&name, handles);
@@ -182,7 +182,7 @@ impl App {
                                     let services_iter = services.rlock(&self_id).all();
                                     for (_id, service) in services_iter {
                                         println!("{}.run Stopping service '{}'...", self_id, _id);
-                                        service.slock(&self_id).exit();
+                                        service.rlock(&self_id).exit();
                                         println!("{}.run Stopping service '{}' - Ok", self_id, _id);
                                     }
                                     services.rlock(&self_id).exit();

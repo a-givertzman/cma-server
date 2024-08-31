@@ -139,9 +139,9 @@ impl SafeLock<Services> for Arc<RwLock<Services>> {
         lock_timer.run().unwrap();
         SERVICES_LOCK_COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let count = SERVICES_LOCK_COUNT.load(std::sync::atomic::Ordering::SeqCst);
-        info!("SafeLock.slock | Lock ({}) from '{}' on {:?}...", count, parent.into(), self_id);
+        info!("SafeLock.rlock | Lock ({}) from '{}' on {:?}...", count, parent.into(), self_id);
         let mutax_guard = self.read().unwrap();
-        info!("SafeLock.slock | Lock {:?} - ok", self_id);
+        info!("SafeLock.rlock | Lock {:?} - ok", self_id);
         SERVICES_LOCK_COUNT.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
         lock_timer.exit();
         mutax_guard
@@ -152,9 +152,9 @@ impl SafeLock<Services> for Arc<RwLock<Services>> {
         lock_timer.run().unwrap();
         SERVICES_LOCK_COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let count = SERVICES_LOCK_COUNT.load(std::sync::atomic::Ordering::SeqCst);
-        info!("SafeLock.slock | Lock ({}) from '{}' on {:?}...", count, parent.into(), self_id);
+        info!("SafeLock.wlock | Lock ({}) from '{}' on {:?}...", count, parent.into(), self_id);
         let mutax_guard = self.write().unwrap();
-        info!("SafeLock.slock | Lock {:?} - ok", self_id);
+        info!("SafeLock.wlock | Lock {:?} - ok", self_id);
         SERVICES_LOCK_COUNT.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
         lock_timer.exit();
         mutax_guard

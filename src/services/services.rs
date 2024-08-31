@@ -82,7 +82,7 @@ impl Services {
                 match services.read() {
                     Ok(services) => {
                         for (service_id, service) in services.iter() {
-                            let service_points = service.slock(self_id).points();
+                            let service_points = service.rlock(self_id).points();
                             match retain_point_id.write() {
                                 Ok(mut retain_point_id) => {
                                     retain_point_id.insert(&service_id, service_points);
@@ -313,7 +313,7 @@ impl Services {
         //     let mut points = vec![];
         //     for (service_id, service) in &self.map {
         //         if service_id != requester_name {
-        //             let mut service_points = service.slock(&self.id).points();
+        //             let mut service_points = service.rlock(&self.id).points();
         //             points.append(&mut service_points);
         //         }
         //     };
