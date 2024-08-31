@@ -61,12 +61,12 @@ mod tests {
 
         let services_handle = services.wlock(self_id).run().unwrap();
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
-        // let udp_client_handle = udp_client.write().unwrap().run().unwrap();
+        let udp_client_handle = udp_client.write().unwrap().run().unwrap();
         let udp_server_handle = udp_server.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_secs(10));
         
         udp_client.write().unwrap().exit();
-        // udp_client_handle.wait().unwrap();
+        udp_client_handle.wait().unwrap();
         udp_server.read().unwrap().exit();
         multi_queue.read().unwrap().exit();
         services.read().unwrap().exit();
