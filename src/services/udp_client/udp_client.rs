@@ -145,6 +145,13 @@ impl Service for UdpClient {
                                                         Ok(data) => {
                                                             let data: &Vec<u8> = data;
                                                             log::debug!("{}.run | {}: data: {:?}", self_id, src_addr, data);
+                                                            let words = data.chunks(2);
+                                                            let mut values = vec![];
+                                                            for w in words {
+                                                                let value: i16 = i16::from_be_bytes(w.try_into().unwrap());
+                                                                values.push(value);
+                                                            }
+                                                            log::debug!("{}.run | {}: values: {:?}", self_id, src_addr, values);
                                                         }
                                                         Err(err) => {
                                                             log::error!("{}.run | {}: Error message length: {}, expected {}, \n\t error: {:#?}", self_id, src_addr, buf.len(), Self::HEAD_LEN + count, err);
