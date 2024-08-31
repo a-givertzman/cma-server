@@ -129,15 +129,15 @@ impl Service for UdpClient {
                                     match socket.recv_from(&mut buf) {
                                         Ok((_, src_addr)) => {
                                             match buf.as_slice() {
-                                                // Empty message
+                                                // Empty message received
                                                 &[] => {
-                                                    log::debug!("{}.run | {}: Empty message", self_id, src_addr);
+                                                    log::debug!("{}.run | {}: Empty message received", self_id, src_addr);
                                                 }
-                                                // Start ACK
+                                                // Start ACK received
                                                 &[UdpClient::SYN, UdpClient::EOT, ..] => {
-                                                    log::debug!("{}.run | {}: Start message", self_id, src_addr);
+                                                    log::debug!("{}.run | {}: Start message ACK received", self_id, src_addr);
                                                 }
-                                                // Data message
+                                                // Data message received
                                                 &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
                                                     count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
                                                     log::debug!("{}.run | {}: addr: {} type: {} count: {}", self_id, src_addr, addr, type_, count);

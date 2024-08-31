@@ -6,8 +6,8 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, thread};
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, thread, time::Duration};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
     core_::state::change_notify::ChangeNotify, services::{services::Services, udp_client::udp_client::UdpClient} 
@@ -19,6 +19,7 @@ pub struct MockUdpServerConfig {
     pub name: Name,
     pub local_addr: String,
     pub channel: u8,
+    pub cycle: Duration,
 }
 ///
 /// Do something ...
@@ -27,7 +28,7 @@ pub struct MockUdpServer {
     name: Name,
     conf: MockUdpServerConfig,
     services: Arc<RwLock<Services>>,
-    test_data: Vec<u16>,
+    test_data: Vec<i16>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -35,7 +36,7 @@ pub struct MockUdpServer {
 impl MockUdpServer {
     //
     /// Crteates new instance of the MockUdpServer 
-    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<RwLock<Services>>, test_data: &[u16]) -> Self {
+    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<RwLock<Services>>, test_data: &[i16]) -> Self {
         Self {
             id: format!("{}/MockUdpServer({})", parent.into(), conf.name),
             name: conf.name.clone(),
@@ -94,7 +95,7 @@ impl Service for MockUdpServer {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();
-        
+        let cycle = ServiceCycle::new(&self_id, conf.cycle);
         let test_data = self.test_data.clone();
         let exit = self.exit.clone();
         log::info!("{}.run | Preparing thread...", self_id);

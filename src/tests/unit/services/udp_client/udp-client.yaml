@@ -5,9 +5,10 @@ service UdpClient:
     cycle: 1 ms                         # operating cycle time of the device
     reconnect: 100 ms                  # reconnect timeout when connection is lost
     protocol: 'udp-raw'
-    local-address: 127.0.0.1:15180
+    local-address: 127.0.0.1:15181
+    remote-address: 127.0.0.1:15180
     # local-address: 192.168.100.100:15180
-    remote-address: 192.168.100.241:15180
+    # remote-address: 192.168.100.241:15180
     diagnosis:                          # internal diagnosis
         point Status:                   # Ok(0) / Invalid(10)
             type: 'Int'
