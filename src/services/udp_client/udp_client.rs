@@ -158,6 +158,9 @@ impl Service for UdpClient {
             'main: loop {
                 match UdpSocket::bind(&conf.local_addr) {
                     Ok(socket) => {
+                        if let Err(err) = socket.set_read_timeout(Some(Duration::from_millis(100))) {
+                            log::error!("{}.run | Socket Set timeout error: {:?}", self_id, err);
+                        }
                         match socket.send_to(&[Self::SYN, Self::EOT], &conf.remote_addr) {
                             Ok(_) => {
                                 log::debug!("{}.run | Start message sent to'{}'", self_id, conf.remote_addr);

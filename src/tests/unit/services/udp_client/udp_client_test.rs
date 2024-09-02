@@ -73,6 +73,11 @@ mod tests {
         thread::sleep(Duration::from_secs(100));
         
         receiver_handle.wait().unwrap();
+        let received = receiver.read().unwrap().received();
+        let received = received.read().unwrap();
+        for point in received.iter() {
+            log::debug!("point: {:?} | {}", point.value(), point.name())
+        }
         udp_client.write().unwrap().exit();
         udp_client_handle.wait().unwrap();
         udp_server.read().unwrap().exit();
@@ -81,11 +86,6 @@ mod tests {
         udp_server_handle.wait().unwrap();
         // multi_queue_handle.wait().unwrap();
         services_handle.wait().unwrap();
-        let received = receiver.read().unwrap().received();
-        let received = received.read().unwrap();
-        for point in received.iter() {
-            log::debug!("point: {:?} | {}", point.value(), point.name())
-        }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         test_duration.exit();
     }

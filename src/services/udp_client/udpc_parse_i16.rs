@@ -72,7 +72,7 @@ impl UdpcParseI16 {
                 // log::debug!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
                 match word.try_into() {
                     Ok(v) => {
-                        log::debug!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
+                        log::trace!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
                         is_changed = true;
                         self.values.push(Some(i16::from_be_bytes(v)));
                     }
