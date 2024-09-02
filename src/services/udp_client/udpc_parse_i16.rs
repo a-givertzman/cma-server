@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{
     cot::Cot,
@@ -16,7 +18,7 @@ pub struct UdpcParseI16 {
     pub type_: PointConfigType,
     pub tx_id: usize,
     pub name: String,
-    pub values: Vec<Option<i16>>,
+    pub values: VecDeque<Option<i16>>,
     pub status: Status,
     pub size: usize,
     pub history: PointConfigHistory,
@@ -45,7 +47,7 @@ impl UdpcParseI16 {
             type_: config.type_.clone(),
             tx_id,
             name,
-            values: vec![None; size],
+            values: VecDeque::new(),
             status: Status::Invalid,
             is_changed: false,
             size,
@@ -66,7 +68,7 @@ impl UdpcParseI16 {
         let mut is_changed = false;
         if ! bytes.is_empty() {
             let words = bytes.chunks(2);
-            self.values = vec![];
+            self.values = VecDeque::new();
             log::debug!("{}.run | words: {:?}", self.id, words.len());
             for (index, word) in words.enumerate() {
                 // log::debug!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
@@ -74,7 +76,7 @@ impl UdpcParseI16 {
                     Ok(v) => {
                         log::trace!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
                         is_changed = true;
-                        self.values.push(Some(i16::from_be_bytes(v)));
+                        self.values.push_back(Some(i16::from_be_bytes(v)));
                     }
                     Err(err) => {
                         log::warn!("{}.convert | Error: {} \n\t on index {}, bytes: {:?}", self.id, err, index, word);
@@ -90,7 +92,7 @@ impl UdpcParseI16 {
     ///
     ///
     fn to_point(&mut self) -> Option<Point> {
-        match self.values.pop() {
+        match self.values.pop_front() {
             Some(value) => {
                 let (status, value) = match value {
                     Some(value) => {
