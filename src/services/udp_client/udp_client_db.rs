@@ -79,7 +79,7 @@ impl UdpClientDb {
         let mtu = 4096;
         let mut buf = vec![0; mtu];
         let count: usize;
-        let mut message = String::new();
+        let mut messages = String::new();
         let status = Status::Ok;
         match socket.recv_from(&mut buf) {
             Ok((_, src_addr)) => {
@@ -99,8 +99,9 @@ impl UdpClientDb {
                                     while let Some(point) = parse_point.next() {
                                         // debug!("{}.read | point: {:?}", self.id, point);
                                         if let Err(err) = tx_send.send(point) {
-                                            message = format!("{}.read | send error: {}", self.id, err);
+                                            let message = format!("{}.read | send error: {}", self.id, err);
                                             warn!("{}", message);
+                                            messages.push_str(&message);
                                         }
                                     }
                                 }
@@ -115,15 +116,28 @@ impl UdpClientDb {
                     }
                 }
             }
-            Err(err) => self.notify.add(State::UdpRecvError, format!("{}.read | UdpSocket recv error: {:#?}", self.id, err)),
+            Err(err) => {
+                // self.notify.add(State::UdpRecvError, format!("{}.read | UdpSocket recv error: {:#?}", self.id, err));
+                match err.kind() {
+                    std::io::ErrorKind::WouldBlock => {
+                        let message = &format!("{}.read | Socket read timeout", self.id);
+                        log::debug!("{}", message);
+                    },
+                    std::io::ErrorKind::TimedOut => {
+                        let message = &format!("{}.read | Socket read timeout", self.id);
+                        log::debug!("{}", message);
+                    }
+                    _ => {
+                        let message = format!("{}.read | Read error: {:#?}", self.id, err);
+                        log::debug!("{}", message);
+                        messages.push_str(&message);
+                    },
+                }
+            }
         }
-
-        // trace!("{}.read | bytes: {:?}", self.id, bytes);
-        // let timestamp = Utc::now();
-        // let mut message = String::new();
-        match message.is_empty() {
+        match messages.is_empty() {
             true => Ok(()),
-            false => Err(message),
+            false => Err(messages),
         }
     }
     ///

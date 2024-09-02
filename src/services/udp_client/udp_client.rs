@@ -195,6 +195,9 @@ impl Service for UdpClient {
                                                             }
                                                             None => {},
                                                         }
+                                                        if exit.load(Ordering::SeqCst) {
+                                                            break 'main;
+                                                        }
                                                     }
                                                 }
                                                 // Unexpected Data message received

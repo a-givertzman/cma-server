@@ -95,10 +95,10 @@ impl Service for TaskTestReceiver {
                 }
                 match in_recv.recv() {
                     Ok(point) => {
+                        count += 1;
                         debug!("{}.run | received: {}/{}, (value: {:?})", self_id, count, iterations, point.value());
                         trace!("{}.run | received Point: {:#?}", self_id, point);
                         // debug!("{}.run | value: {}\treceived SQL: {:?}", value, sql);
-                        count += 1;
                         received.write().unwrap().push(point.clone());
                         if count >= iterations {
                             break 'main;

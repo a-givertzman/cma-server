@@ -73,7 +73,7 @@ mod tests {
         thread::sleep(Duration::from_secs(100));
         
         receiver_handle.wait().unwrap();
-        let received = receiver.read().unwrap().received();
+        let received = receiver.try_read().unwrap().received();
         let received = received.read().unwrap();
         for point in received.iter() {
             log::debug!("point: {:?} | {}", point.value(), point.name())
