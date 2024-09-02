@@ -146,7 +146,7 @@ impl Service for MockUdpServer {
                                                 }
                                                 match socket.send_to(&buf, src_addr) {
                                                     Ok(sent_len) => {
-                                                        log::debug!("{}.run | Sent to {}: data ({}): \n\t{:?}", self_id, src_addr, sent_len, buf);
+                                                        log::trace!("{}.run | Sent to {}: data ({}): \n\t{:?}", self_id, src_addr, sent_len, buf);
                                                     }
                                                     Err(err) => {
                                                         log::error!("{}.run | Send to {}: error: {:#?}", self_id, src_addr, err);

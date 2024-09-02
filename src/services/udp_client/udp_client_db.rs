@@ -88,16 +88,16 @@ impl UdpClientDb {
                     // Data message received
                     &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
                         count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                        log::debug!("{}.read | {}: addr: {} type: {} count: {}", self.id, src_addr, addr, type_, count);
+                        log::trace!("{}.read | {}: addr: {} type: {} count: {}", self.id, src_addr, addr, type_, count);
                         match &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)].try_into() {
                             Ok(data) => {
                                 let bytes: &Vec<u8> = data;
-                                log::debug!("{}.read | bytes: {:?}", self.id, bytes);
-                                log::debug!("{}.read | points: {:?}", self.id, self.points.iter().map(|(name, _)| name).collect::<Vec<&String>>());
+                                log::trace!("{}.read | bytes: {:?}", self.id, bytes);
+                                log::trace!("{}.read | points: {:?}", self.id, self.points.iter().map(|(name, _)| name).collect::<Vec<&String>>());
                                 for (_, parse_point) in &mut self.points {
                                     parse_point.add(bytes, status, timestamp);
                                     while let Some(point) = parse_point.next() {
-                                        // debug!("{}.read | point: {:?}", self.id, point);
+                                        // log::debug!("{}.read | point: {:?}", self.id, point);
                                         if let Err(err) = tx_send.send(point) {
                                             let message = format!("{}.read | send error: {}", self.id, err);
                                             warn!("{}", message);
@@ -129,7 +129,7 @@ impl UdpClientDb {
                     }
                     _ => {
                         let message = format!("{}.read | Read error: {:#?}", self.id, err);
-                        log::debug!("{}", message);
+                        log::error!("{}", message);
                         messages.push_str(&message);
                     },
                 }

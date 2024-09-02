@@ -1,6 +1,5 @@
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread};
-use log::{info, warn, trace, debug};
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -80,7 +79,7 @@ impl Service for TaskTestReceiver {
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
-        info!("{}.run | Starting...", self_id);
+        log::info!("{}.run | Starting...", self_id);
         let exit = self.exit.clone();
         let received = self.received.clone();
         let mut count = 0;
@@ -88,7 +87,7 @@ impl Service for TaskTestReceiver {
         let in_recv = self.in_recv.pop().unwrap();
         let iterations = self.iterations;
         let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
-            // info!("Task({}).run | prepared", name);
+            // log::info!("Task({}).run | prepared", name);
             'main: loop {
                 if exit.load(Ordering::Relaxed) {
                     break 'main;
@@ -96,8 +95,8 @@ impl Service for TaskTestReceiver {
                 match in_recv.recv() {
                     Ok(point) => {
                         count += 1;
-                        debug!("{}.run | received: {}/{}, (value: {:?})", self_id, count, iterations, point.value());
-                        trace!("{}.run | received Point: {:#?}", self_id, point);
+                        log::trace!("{}.run | received: {}/{}, (value: {:?})", self_id, count, iterations, point.value());
+                        log::trace!("{}.run | received Point: {:#?}", self_id, point);
                         // debug!("{}.run | value: {}\treceived SQL: {:?}", value, sql);
                         received.write().unwrap().push(point.clone());
                         if count >= iterations {
@@ -116,10 +115,10 @@ impl Service for TaskTestReceiver {
                         }
                     }
                     Err(err) => {
-                        warn!("{}.run | Error receiving from queue: {:?}", self_id, err);
+                        log::warn!("{}.run | Error receiving from queue: {:?}", self_id, err);
                         // error_count += 1;
                         // if errorCount > 10 {
-                        //     warn!("{}.run | Error receiving count > 10, exit...", self_id);
+                        //     log::warn!("{}.run | Error receiving count > 10, exit...", self_id);
                         //     break 'inner;
                         // }        
                     }
@@ -128,18 +127,18 @@ impl Service for TaskTestReceiver {
                     break 'main;
                 }
             };
-            info!("{}.run | received {} Point's", self_id, count);
-            info!("{}.run | exit", self_id);
+            log::info!("{}.run | received {} Point's", self_id, count);
+            log::info!("{}.run | exit", self_id);
             // thread::sleep(Duration::from_secs_f32(2.1));
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }
