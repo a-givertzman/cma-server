@@ -70,11 +70,17 @@ mod tests {
         let udp_server_handle = udp_server.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
         let udp_client_handle = udp_client.write().unwrap().run().unwrap();
-        thread::sleep(Duration::from_secs(100));
+        thread::sleep(Duration::from_millis(100));
         
+        log::debug!("{} | wait for receiver...", self_id);
         receiver_handle.wait().unwrap();
+        log::debug!("{} | wait for receiver - finished", self_id);
+        log::debug!("{} | get received...", self_id);
         let received = receiver.try_read().unwrap().received();
+        log::debug!("{} | get received - ok", self_id);
+        log::debug!("{} | get received points...", self_id);
         let received = received.read().unwrap();
+        log::debug!("{} | get received points - ok", self_id);
         for point in received.iter() {
             log::debug!("point: {:?} | {}", point.value(), point.name())
         }

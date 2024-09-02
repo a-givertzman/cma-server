@@ -10,7 +10,7 @@ use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, A
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
-    core_::state::change_notify::ChangeNotify, services::{services::Services, udp_client::udp_client::UdpClient} 
+    core_::{failure::errors_limit::ErrorLimit, state::change_notify::ChangeNotify}, services::{services::Services, udp_client::udp_client::UdpClient} 
 };
 ///
 /// 
@@ -115,9 +115,14 @@ impl Service for MockUdpServer {
                         let mtu = 4096;
                         let mut buf = vec![0; mtu];
                         let count = 8;
-                        'main: loop {
+                        let mut error_limit = ErrorLimit::new(3);
+                        if let Err(err) = socket.set_read_timeout(Some(Duration::from_millis(100))) {
+                            log::error!("{}.run | Socket Set timeout error: {:?}", self_id, err);
+                        }
+                        'read: loop {
                             match socket.recv_from(&mut buf) {
                                 Ok((_, src_addr)) => {
+                                    error_limit.reset();
                                     match buf.as_slice() {
                                         // Empty message
                                         &[] => log::debug!("{}.run | {}: Empty message received", self_id, src_addr),
@@ -149,12 +154,36 @@ impl Service for MockUdpServer {
                                                     }
                                                 }
                                             }
-                                            break 'main;
+                                            break 'read;
                                         }
                                         _ => log::warn!("{}.run | {}: Unknown message format: {:#?}...", self_id, src_addr, &buf[..=10]),
                                     }
                                 }
-                                Err(err) => notify.add(State::UdpRecvError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err)),
+                                Err(err) => {
+                                    // notify.add(State::UdpRecvError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err)),
+                                    match err.kind() {
+                                        std::io::ErrorKind::WouldBlock => {
+                                            let message = &format!("{}.run | Socket read timeout", self_id);
+                                            log::debug!("{}", message);
+                                        },
+                                        std::io::ErrorKind::TimedOut => {
+                                            let message = &format!("{}.run | Socket read timeout", self_id);
+                                            log::debug!("{}", message);
+                                        }
+                                        _ => {
+                                            let message = format!("{}.run | Read error: {:#?}", self_id, err);
+                                            log::debug!("{}", message);
+                                            if error_limit.add().is_err() {
+                                                log::error!("{}.run | Socket read errors limit exceeded, trying to reconnect...", self_id);
+                                                break 'read;
+                                            }
+                                        },
+                                    }
+
+                                }
+                            }
+                            if exit.load(Ordering::SeqCst) {
+                                break 'read;
                             }
                         }
                     }

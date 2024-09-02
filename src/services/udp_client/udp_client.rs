@@ -168,6 +168,7 @@ impl Service for UdpClient {
                                 'session: loop {
                                     match socket.recv_from(&mut buf) {
                                         Ok((_, src_addr)) => {
+                                            error_limit.reset();
                                             match buf.as_slice() {
                                                 // Empty message received
                                                 &[] => {
@@ -182,12 +183,12 @@ impl Service for UdpClient {
                                                                 match db_data.read(&socket, &send) {
                                                                     Ok(_) => {
                                                                         error_limit.reset();
-                                                                        log::trace!("{}.read | UdpClientDb '{}' - reading from '{}' - ok", self_id, db_data.name, src_addr);
+                                                                        log::trace!("{}.run | UdpClientDb '{}' - reading from '{}' - ok", self_id, db_data.name, src_addr);
                                                                     }
                                                                     Err(err) => {
-                                                                        warn!("{}.read | UdpClientDb '{}' - reading from '{}' - error: {:?}", self_id, db_data.name, src_addr, err);
+                                                                        warn!("{}.run | UdpClientDb '{}' - reading from '{}' - error: {:?}", self_id, db_data.name, src_addr, err);
                                                                         if error_limit.add().is_err() {
-                                                                            log::error!("{}.read | UdpClientDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_data.name);
+                                                                            log::error!("{}.run | UdpClientDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_data.name);
                                                                             break 'session;
                                                                         }
                                                                     }
@@ -210,7 +211,27 @@ impl Service for UdpClient {
                                                 }
                                             }
                                         }
-                                        Err(err) => notify.add(State::UdpRecvError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err)),
+                                        Err(err) => {
+                                            // notify.add(State::UdpRecvError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err)),
+                                            match err.kind() {
+                                                std::io::ErrorKind::WouldBlock => {
+                                                    let message = &format!("{}.run | Socket read timeout", self_id);
+                                                    log::debug!("{}", message);
+                                                },
+                                                std::io::ErrorKind::TimedOut => {
+                                                    let message = &format!("{}.run | Socket read timeout", self_id);
+                                                    log::debug!("{}", message);
+                                                }
+                                                _ => {
+                                                    let message = format!("{}.run | Read error: {:#?}", self_id, err);
+                                                    log::debug!("{}", message);
+                                                    if error_limit.add().is_err() {
+                                                        log::error!("{}.run | Socket read errors limit exceeded, trying to reconnect...", self_id);
+                                                        break 'session;
+                                                    }
+                                                },
+                                            }
+                                        }
                                     }
                                     if exit.load(Ordering::SeqCst) {
                                         break 'main;
