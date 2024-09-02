@@ -154,7 +154,7 @@ impl Service for UdpClient {
             let mut count: usize;
             let send = services.rlock(self_id)
                 .get_link(&conf.send_to)
-                .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", self_id, conf.send_to, err));
+                .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", self_id, conf.send_to.name(), err));
             'main: loop {
                 match UdpSocket::bind(&conf.local_addr) {
                     Ok(socket) => {
@@ -162,7 +162,7 @@ impl Service for UdpClient {
                             Ok(_) => {
                                 log::debug!("{}.run | Start message sent to'{}'", self_id, conf.remote_addr);
                                 let mut error_limit = ErrorLimit::new(3);
-                                loop {
+                                'session: loop {
                                     match socket.recv_from(&mut buf) {
                                         Ok((_, src_addr)) => {
                                             match buf.as_slice() {
@@ -173,29 +173,32 @@ impl Service for UdpClient {
                                                 // Start ACK received
                                                 &[UdpClient::SYN, UdpClient::EOT, ..] => {
                                                     log::debug!("{}.run | {}: Start message ACK received", self_id, src_addr);
-                                                }
-                                                // Data message received
-                                                &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
-                                                    count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                                                    match dbs.get_mut(&Dbs::Data) {
-                                                        Some(db_data) => {
-                                                            match db_data.read(&socket, &send) {
-                                                                Ok(_) => {
-                                                                    error_limit.reset();
-                                                                    log::trace!("{}.read | UdpClientDb '{}' - reading - ok", self_id, db_data.name);
-                                                                }
-                                                                Err(err) => {
-                                                                    warn!("{}.read | UdpClientDb '{}' - reading - error: {:?}", self_id, db_data.name, err);
-                                                                    if error_limit.add().is_err() {
-                                                                        log::error!("{}.read | UdpClientDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_data.name);
-                                                                        break 'main;
+                                                    loop {
+                                                        match dbs.get_mut(&Dbs::Data) {
+                                                            Some(db_data) => {
+                                                                match db_data.read(&socket, &send) {
+                                                                    Ok(_) => {
+                                                                        error_limit.reset();
+                                                                        log::trace!("{}.read | UdpClientDb '{}' - reading from '{}' - ok", self_id, db_data.name, src_addr);
+                                                                    }
+                                                                    Err(err) => {
+                                                                        warn!("{}.read | UdpClientDb '{}' - reading from '{}' - error: {:?}", self_id, db_data.name, src_addr, err);
+                                                                        if error_limit.add().is_err() {
+                                                                            log::error!("{}.read | UdpClientDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_data.name);
+                                                                            break 'session;
+                                                                        }
                                                                     }
                                                                 }
                                                             }
+                                                            None => {},
                                                         }
-                                                        None => {},
                                                     }
                                                 }
+                                                // Unexpected Data message received
+                                                &[UdpClient::SYN, _addr, _type_, _c1,_c2,_c3, _c4, ..] => {
+                                                    log::warn!("{}.run | {}: Start message expected, but Data message received: {:#?}...", self_id, src_addr, &buf[..=10]);
+                                                }
+                                                // Unknown message received
                                                 _ => {
                                                     log::warn!("{}.run | {}: Unknown message format: {:#?}...", self_id, src_addr, &buf[..=10]);
                                                 }

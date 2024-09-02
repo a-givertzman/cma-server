@@ -251,7 +251,7 @@ impl Services {
         match name.split() {
             Ok((service, queue)) => {
                 match self.get(&service) {
-                    Some(srvc) => Ok(srvc.slock(&self.id).get_link(&queue)),
+                    Some(srvc) => Ok(srvc.wlock(&self.id).get_link(&queue)),
                     None => Err(format!("{}.get_link | service '{:?}' - not found", self.id, name)),
                 }
             }
@@ -264,7 +264,7 @@ impl Services {
     pub fn subscribe(&mut self, service: &str, receiver_name: &str, points: &[SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         match self.get(service) {
             Some(srvc) => {
-                let r = srvc.slock(&self.id).subscribe(receiver_name, points);
+                let r = srvc.wlock(&self.id).subscribe(receiver_name, points);
                 r
             }
             None => panic!("{}.subscribe | service '{:?}' - not found", self.id, service),
@@ -277,7 +277,7 @@ impl Services {
         // panic!("{}.extend_subscription | Not implemented yet", self.id);
         match self.get(service) {
             Some(srvc) => {
-                let r = srvc.slock(&self.id).extend_subscription(receiver_name, points);
+                let r = srvc.wlock(&self.id).extend_subscription(receiver_name, points);
                 r
             }
             None => panic!("{}.extend_suscription | service '{:?}' - not found", self.id, service),
@@ -289,7 +289,7 @@ impl Services {
     pub fn unsubscribe(&mut self, service: &str, receiver_name: &str, points: &[SubscriptionCriteria]) -> Result<(), String> {
         match self.get(service) {
             Some(srvc) => {
-                let r = srvc.slock(&self.id).unsubscribe(receiver_name, points);
+                let r = srvc.wlock(&self.id).unsubscribe(receiver_name, points);
                 r
             }
             None => panic!("{}.unsubscribe | service '{:?}' - not found", self.id, service),

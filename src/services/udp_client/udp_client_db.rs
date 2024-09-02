@@ -73,58 +73,49 @@ impl UdpClientDb {
     }
     ///
     /// Returns updated points from the current DB
-    ///     - parses raw data into the configured points
-    ///     - returns only points with updated value or status
+    /// - parses raw data into the configured points
+    /// - returns only points with updated value or status
     pub fn read(&mut self, socket: &UdpSocket, tx_send: &Sender<Point>) -> Result<(), String> {
         let mtu = 4096;
         let mut buf = vec![0; mtu];
-        let mut count: usize;
+        let count: usize;
         let mut message = String::new();
         let status = Status::Ok;
         match socket.recv_from(&mut buf) {
             Ok((_, src_addr)) => {
                 let timestamp = Utc::now();
                 match buf.as_slice() {
-                    // Empty message received
-                    &[] => {
-                        log::debug!("{}.run | {}: Empty message received", self.id, src_addr);
-                    }
-                    // Start ACK received
-                    &[UdpClient::SYN, UdpClient::EOT, ..] => {
-                        log::debug!("{}.run | {}: Start message ACK received", self.id, src_addr);
-                    }
                     // Data message received
                     &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
                         count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                        log::debug!("{}.run | {}: addr: {} type: {} count: {}", self.id, src_addr, addr, type_, count);
+                        log::debug!("{}.read | {}: addr: {} type: {} count: {}", self.id, src_addr, addr, type_, count);
                         match &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)].try_into() {
                             Ok(data) => {
                                 let bytes: &Vec<u8> = data;
+                                log::debug!("{}.read | bytes: {:?}", self.id, bytes);
+                                log::debug!("{}.read | points: {:?}", self.id, self.points.iter().map(|(name, _)| name).collect::<Vec<&String>>());
                                 for (_, parse_point) in &mut self.points {
-                                    if let Some(point) = parse_point.next(bytes, status, timestamp) {
+                                    parse_point.add(bytes, status, timestamp);
+                                    while let Some(point) = parse_point.next() {
                                         // debug!("{}.read | point: {:?}", self.id, point);
-                                        match tx_send.send(point) {
-                                            Ok(_) => {}
-                                            Err(err) => {
-                                                message = format!("{}.read | send error: {}", self.id, err);
-                                                warn!("{}", message);
-                                            }
+                                        if let Err(err) = tx_send.send(point) {
+                                            message = format!("{}.read | send error: {}", self.id, err);
+                                            warn!("{}", message);
                                         }
                                     }
                                 }
-
                             }
                             Err(err) => {
-                                log::error!("{}.run | {}: Error message length: {}, expected {}, \n\t error: {:#?}", self.id, src_addr, buf.len(), UdpClient::HEAD_LEN + count, err);
+                                log::error!("{}.read | {}: Error message length: {}, expected {}, \n\t error: {:#?}", self.id, src_addr, buf.len(), UdpClient::HEAD_LEN + count, err);
                             }
                         }
                     }
                     _ => {
-                        log::warn!("{}.run | {}: Unknown message format: {:#?}...", self.id, src_addr, &buf[..=10]);
+                        log::warn!("{}.read | {}: Unknown message format: {:#?}...", self.id, src_addr, &buf[..=10]);
                     }
                 }
             }
-            Err(err) => self.notify.add(State::UdpRecvError, format!("{}.run | UdpSocket recv error: {:#?}", self.id, err)),
+            Err(err) => self.notify.add(State::UdpRecvError, format!("{}.read | UdpSocket recv error: {:#?}", self.id, err)),
         }
 
         // trace!("{}.read | bytes: {:?}", self.id, bytes);

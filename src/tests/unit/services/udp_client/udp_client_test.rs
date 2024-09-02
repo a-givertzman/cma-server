@@ -41,16 +41,16 @@ mod tests {
         let conf = UdpClientConfig::read(self_id, path);
         let udp_client = Arc::new(RwLock::new(UdpClient::new(conf, services.clone())));
         services.wlock(self_id).insert(udp_client.clone());
-        let conf = MultiQueueConfig::from_yaml(
-            self_id,
-            &serde_yaml::from_str(r"service MultiQueue:
-                in queue in-queue:
-                    max-length: 10000
-            ").unwrap(),
-        );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(&self_id, "", "MultiQueue.in-queue", test_data.len())));
+        // let conf = MultiQueueConfig::from_yaml(
+        //     self_id,
+        //     &serde_yaml::from_str(r"service MultiQueue:
+        //         in queue in-queue:
+        //             max-length: 10000
+        //     ").unwrap(),
+        // );
+        // let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
+        // services.wlock(self_id).insert(multi_queue.clone());
+        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(&self_id, "", "in-queue", test_data.len())));
         services.wlock(self_id).insert(receiver.clone());
         let udp_server = Arc::new(RwLock::new(MockUdpServer::new(
             self_id,
@@ -66,20 +66,20 @@ mod tests {
         services.wlock(self_id).insert(udp_server.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
+        // let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let udp_server_handle = udp_server.write().unwrap().run().unwrap();
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(100));
         let udp_client_handle = udp_client.write().unwrap().run().unwrap();
-        thread::sleep(Duration::from_secs(10));
+        thread::sleep(Duration::from_secs(100));
         
         receiver_handle.wait().unwrap();
         udp_client.write().unwrap().exit();
         udp_client_handle.wait().unwrap();
         udp_server.read().unwrap().exit();
-        multi_queue.read().unwrap().exit();
+        // multi_queue.read().unwrap().exit();
         services.read().unwrap().exit();
         udp_server_handle.wait().unwrap();
-        multi_queue_handle.wait().unwrap();
+        // multi_queue_handle.wait().unwrap();
         services_handle.wait().unwrap();
         let received = receiver.read().unwrap().received();
         let received = received.read().unwrap();

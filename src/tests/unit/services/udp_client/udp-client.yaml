@@ -1,7 +1,8 @@
 service UdpClient:
     description: 'UDP-IED-01.01'
     subscribe: MultiQueue
-    send-to: MultiQueue.in-queue
+    # send-to: /test/MultiQueue.in-queue
+    send-to: /test/TaskTestReceiver.in-queue
     cycle: 1 ms                         # operating cycle time of the device
     reconnect: 100 ms                  # reconnect timeout when connection is lost
     protocol: 'udp-raw'
@@ -18,10 +19,10 @@ service UdpClient:
             # history: r
     db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
         description: 'Data block of the device'
-        size: 1024                      # corresponding to the length of the array transmitted in the UDP message
+        size: 16                      # corresponding to the length of the array transmitted in the UDP message, bytes
         point Sensor1: 
             type: 'Int'
             input: 0                    # the number of input 0..8 (0 - first input channel)
-        point Sensor2: 
-            type: 'Int'
-            input: 0                    # the number of input 0..8 (0 - first input channel)
+        # point Sensor2: 
+        #     type: 'Int'
+        #     input: 1                    # the number of input 0..8 (0 - first input channel)

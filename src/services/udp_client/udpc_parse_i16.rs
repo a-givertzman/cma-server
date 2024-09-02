@@ -24,7 +24,6 @@ pub struct UdpcParseI16 {
     pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
     is_changed: bool,
-    index: usize,
     prev: i16,
 }
 //
@@ -54,7 +53,6 @@ impl UdpcParseI16 {
             alarm: config.alarm,
             comment: config.comment.clone(),
             timestamp: Utc::now(),
-            index: 0,
             prev: 0,
         }
     }
@@ -66,25 +64,25 @@ impl UdpcParseI16 {
     ) -> Result<bool, String> {
         log::trace!("{}.run | bytes: {:?}", self.id, bytes);
         let mut is_changed = false;
-        if bytes.len() >= self.size {
+        if ! bytes.is_empty() {
             let words = bytes.chunks(2);
-            self.values = vec![None; self.size];
-            let mut errors = vec![];
+            self.values = vec![];
+            log::debug!("{}.run | words: {:?}", self.id, words.len());
             for (index, word) in words.enumerate() {
+                // log::debug!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
                 match word.try_into() {
                     Ok(v) => {
+                        log::debug!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
                         is_changed = true;
-                        self.values[index] = Some(i16::from_be_bytes(v));
+                        self.values.push(Some(i16::from_be_bytes(v)));
                     }
-                    Err(err) => errors.push(format!("{}.convert | Error: {} \n\t on index {}, bytes: {:?}", self.id, err, index, word)),
+                    Err(err) => {
+                        log::warn!("{}.convert | Error: {} \n\t on index {}, bytes: {:?}", self.id, err, index, word);
+                    }
                 }
             }
-            log::debug!("{}.run | values: {:?}", self.id, self.values);
-            if errors.is_empty() {
-                Ok(is_changed)
-            } else {
-                Err(errors.join("\n"))
-            }
+            log::debug!("{}.convert | is_changed: {}  |  values: {:?}", self.id, is_changed, self.values);
+            Ok(is_changed)
         } else {
             Err(format!("{}.convert | Size {} out of range for slice of length {}", self.id, self.size, bytes.len()))
         }
@@ -92,37 +90,31 @@ impl UdpcParseI16 {
     ///
     ///
     fn to_point(&mut self) -> Option<Point> {
-        if self.is_changed {
-            match self.values.get(self.index) {
-                Some(value) => {
-                    let (status, value) = match value {
-                        Some(value) => {
-                            self.prev = *value;
-                            (Status::Ok, *value)
-                        }
-                        None => (Status::Invalid, self.prev),
-                    };
-                    Some(Point::Int(PointHlr::new(
-                        self.tx_id,
-                        &self.name,
-                        value as i64,
-                        if status > self.status {status} else {self.status},
-                        Cot::Inf,
-                        self.timestamp,
-                    )))
-                }
-                None => {
-                    None
-                }
+        match self.values.pop() {
+            Some(value) => {
+                let (status, value) = match value {
+                    Some(value) => {
+                        self.prev = value;
+                        (Status::Ok, value)
+                    }
+                    None => (Status::Invalid, self.prev),
+                };
+                Some(Point::Int(PointHlr::new(
+                    self.tx_id,
+                    &self.name,
+                    value as i64,
+                    if status > self.status {status} else {self.status},
+                    Cot::Inf,
+                    self.timestamp,
+                )))
             }
-            // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
-        } else {
-            None
+            None => None,
         }
+        // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
     }
     //
     //
-    fn add_raw(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) {
+    fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) {
         match self.convert(bytes) {
             Ok(is_changed) => {
                 if is_changed || status != self.status {
@@ -147,9 +139,12 @@ impl ParsePoint for UdpcParseI16 {
     }
     //
     //
-    fn next(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, status, timestamp);
-        self.is_changed = false;
+    fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) {
+        self.add(bytes, status, timestamp)
+    }
+    //
+    //
+    fn next(&mut self) -> Option<Point> {
         self.to_point()
     }
     //

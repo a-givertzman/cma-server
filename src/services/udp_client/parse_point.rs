@@ -7,8 +7,11 @@ pub trait ParsePoint: Send + Sync {
     /// Returns the type of the configured point
     fn type_(&self) -> PointConfigType;
     ///
+    /// Adding new raw data to be parsed 
+    fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>);
+    ///
     /// Returns new point parsed from the data slice [bytes] with the given [timestamp] and Status::Ok
-    fn next(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) -> Option<Point>;
+    fn next(&mut self) -> Option<Point>;
     ///
     /// Returns true if value or status was updated since last call [addRaw()]
     fn is_changed(&self) -> bool;
