@@ -16,7 +16,11 @@ pub struct TaskTestReceiver {
 // 
 impl TaskTestReceiver {
     ///
-    /// 
+    /// Creates new instance TaskTestReceiver
+    /// - `index` - Index of instance (TaskTestReceiver1, TaskTestReceiver2,...etc)
+    /// - `recv_queue` - name of the link used for receiving Point's
+    /// - `iterations` - count down with each received Point, when zero TaskTestReceiver exits
+    #[allow(unused)]
     pub fn new(parent: &str, index: impl Into<String>, recv_queue: &str, iterations: usize) -> Self {
         let (send, recv): (Sender<Point>, Receiver<Point>) = mpsc::channel();
         let name = Name::new(parent, format!("TaskTestReceiver{}", index.into()));
@@ -31,7 +35,8 @@ impl TaskTestReceiver {
         }
     }
     ///
-    /// 
+    /// Returns vector of received Pont's
+    #[allow(unused)]
     pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }

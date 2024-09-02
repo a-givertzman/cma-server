@@ -1,4 +1,4 @@
-use std::{fs, io::Write, sync::mpsc::Sender, time::Duration};
+use std::{fs, io::Write, sync::mpsc::Sender};
 use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
@@ -26,7 +26,6 @@ pub struct ProfinetDb {
     pub number: u32,
     pub offset: u32,
     pub size: u32,
-    pub cycle: Option<Duration>,
     pub points: IndexMap<String, Box<dyn ParsePoint>>,
 }
 //
@@ -46,12 +45,12 @@ impl ProfinetDb {
             number: conf.number as u32,
             offset: conf.offset as u32,
             size: conf.size as u32,
-            cycle: conf.cycle,
             points: Self::configure_parse_points(&self_id, tx_id, conf),
         }
     }
     ///
     /// Writes Point's to the log file
+    #[allow(unused)]
     fn log(self_id: &str, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
@@ -125,7 +124,7 @@ impl ProfinetDb {
                             trace!("{}.read | bytes: {:?}", self.id, bytes);
                             let timestamp = Utc::now();
                             let mut message = String::new();
-                            for (_key, parse_point) in &mut self.points {
+                            for (_, parse_point) in &mut self.points {
                                 if let Some(point) = parse_point.next(&bytes, timestamp) {
                                     // debug!("{}.read | point: {:?}", self.id, point);
                                     match tx_send.send(point) {
@@ -271,7 +270,7 @@ impl ProfinetDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::new(0i64, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
             None => Box::new(FilterEmpty::new(0)),

@@ -246,7 +246,7 @@ impl Services {
         }
     }
     ///
-    /// Returns copy of the Sender - service's incoming queue
+    /// Returns copy of the Sender - service's incoming queue by service link name (Service.link)
     pub fn get_link(&self, name: &LinkName) -> Result<Sender<Point>, String> {
         match name.split() {
             Ok((service, queue)) => {

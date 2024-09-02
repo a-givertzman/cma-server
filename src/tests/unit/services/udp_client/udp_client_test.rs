@@ -5,7 +5,7 @@ mod tests {
     use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-        use crate::{conf::{multi_queue_config::MultiQueueConfig, udp_client_config::udp_client_config::UdpClientConfig}, services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services, udp_client::udp_client::UdpClient}, tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig}};
+        use crate::{conf::{multi_queue_config::MultiQueueConfig, udp_client_config::udp_client_config::UdpClientConfig}, services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services, task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient}, tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -39,7 +39,7 @@ mod tests {
         ))));
         let path = "./src/tests/unit/services/udp_client/udp-client.yaml";
         let conf = UdpClientConfig::read(self_id, path);
-        let udp_client = Arc::new(RwLock::new(UdpClient::new(self_id, conf, services.clone())));
+        let udp_client = Arc::new(RwLock::new(UdpClient::new(conf, services.clone())));
         services.wlock(self_id).insert(udp_client.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
@@ -50,7 +50,8 @@ mod tests {
         );
         let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
         services.wlock(self_id).insert(multi_queue.clone());
-
+        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(&self_id, "", "MultiQueue.in-queue", test_data.len())));
+        services.wlock(self_id).insert(receiver.clone());
         let udp_server = Arc::new(RwLock::new(MockUdpServer::new(
             self_id,
             MockUdpServerConfig {
@@ -63,14 +64,15 @@ mod tests {
             &test_data,
         )));
         services.wlock(self_id).insert(udp_server.clone());
-
         let services_handle = services.wlock(self_id).run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let udp_server_handle = udp_server.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(50));
         let udp_client_handle = udp_client.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_secs(10));
         
+        receiver_handle.wait().unwrap();
         udp_client.write().unwrap().exit();
         udp_client_handle.wait().unwrap();
         udp_server.read().unwrap().exit();
@@ -79,6 +81,11 @@ mod tests {
         udp_server_handle.wait().unwrap();
         multi_queue_handle.wait().unwrap();
         services_handle.wait().unwrap();
+        let received = receiver.read().unwrap().received();
+        let received = received.read().unwrap();
+        for point in received.iter() {
+            log::debug!("point: {:?} | {}", point.value(), point.name())
+        }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         test_duration.exit();
     }

@@ -28,15 +28,26 @@
 //! - `COUNT` - length of the array in the `DATA` field
 //! - `DATA` - array of values of type specified in the `TYPE` field
 //! 
-use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{hash::BuildHasherDefault, net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
+use hashers::fx_hash::FxHasher;
+use indexmap::IndexMap;
 use log::{info, warn};
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}}};
 use crate::{
-    conf::udp_client_config::udp_client_config::UdpClientConfig, core_::state::change_notify::ChangeNotify, services::services::Services
+    conf::udp_client_config::udp_client_config::UdpClientConfig, core_::{failure::errors_limit::ErrorLimit, state::change_notify::ChangeNotify}, services::{safe_lock::SafeLock, services::Services}
 };
+use super::udp_client_db::UdpClientDb;
+///
+/// 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum Dbs {
+    Data,
+    Unknown(String),
+}
 ///
 /// Do something ...
 pub struct UdpClient {
+    tx_id: usize,
     id: String,
     name: Name,
     conf: UdpClientConfig,
@@ -54,14 +65,33 @@ impl UdpClient {
     pub const HEAD_LEN: usize = 7;
     //
     /// Crteates new instance of the UdpClient 
-    pub fn new(parent: impl Into<String>, conf: UdpClientConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: UdpClientConfig, services: Arc<RwLock<Services>>) -> Self {
+        let tx_id = PointTxId::from_str(&conf.name.join());
         Self {
+            tx_id,
             id: conf.name.join(),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             exit: Arc::new(AtomicBool::new(false)),
         }
+    }
+    ///
+    ///
+    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &UdpClientConfig) -> IndexMapFxHasher<Dbs, UdpClientDb> {
+        let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
+        for (db_name, db_conf) in &conf.dbs {
+            log::info!("{}.build_dbs | Configuring UdpClientDb: {:?}...", self_id, db_name);
+            let db = UdpClientDb::new(self_id, tx_id, &db_conf);
+            if db_name.ends_with("data") {
+                dbs.insert(Dbs::Data, db);
+            } else {
+                dbs.insert(Dbs::Data, db);
+                log::error!("{}.build_dbs | Unknown kind of DB '{}' in Configuring: {:#?} - ok", self_id, db_name, conf);
+            }
+            log::info!("{}.build_dbs | Configuring UdpClientDb: {:?} - ok", self_id, db_name);
+        }
+        dbs
     }
 }
 //
@@ -105,8 +135,10 @@ impl Service for UdpClient {
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
+        let tx_id = self.tx_id;
         let conf = self.conf.clone();
         let exit = self.exit.clone();
+        let services = self.services.clone();
         info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
             let self_id = &self_id;
@@ -116,15 +148,20 @@ impl Service for UdpClient {
                 (State::UdpBindError,   Box::new(|message| log::error!("{}", message))),
                 (State::UdpRecvError,   Box::new(|message| log::error!("{}", message))),
             ]);
+            let mut dbs = Self::build_dbs(self_id, tx_id, &conf);
             let mtu = 4096;
             let mut buf = vec![0; mtu];
             let mut count: usize;
+            let send = services.rlock(self_id)
+                .get_link(&conf.send_to)
+                .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", self_id, conf.send_to, err));
             'main: loop {
                 match UdpSocket::bind(&conf.local_addr) {
                     Ok(socket) => {
                         match socket.send_to(&[Self::SYN, Self::EOT], &conf.remote_addr) {
                             Ok(_) => {
                                 log::debug!("{}.run | Start message sent to'{}'", self_id, conf.remote_addr);
+                                let mut error_limit = ErrorLimit::new(3);
                                 loop {
                                     match socket.recv_from(&mut buf) {
                                         Ok((_, src_addr)) => {
@@ -140,22 +177,23 @@ impl Service for UdpClient {
                                                 // Data message received
                                                 &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
                                                     count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                                                    log::debug!("{}.run | {}: addr: {} type: {} count: {}", self_id, src_addr, addr, type_, count);
-                                                    match &buf[Self::HEAD_LEN..(Self::HEAD_LEN + count)].try_into() {
-                                                        Ok(data) => {
-                                                            let data: &Vec<u8> = data;
-                                                            log::debug!("{}.run | {}: data: {:?}", self_id, src_addr, data);
-                                                            let words = data.chunks(2);
-                                                            let mut values = vec![];
-                                                            for w in words {
-                                                                let value: i16 = i16::from_be_bytes(w.try_into().unwrap());
-                                                                values.push(value);
+                                                    match dbs.get_mut(&Dbs::Data) {
+                                                        Some(db_data) => {
+                                                            match db_data.read(&socket, &send) {
+                                                                Ok(_) => {
+                                                                    error_limit.reset();
+                                                                    log::trace!("{}.read | UdpClientDb '{}' - reading - ok", self_id, db_data.name);
+                                                                }
+                                                                Err(err) => {
+                                                                    warn!("{}.read | UdpClientDb '{}' - reading - error: {:?}", self_id, db_data.name, err);
+                                                                    if error_limit.add().is_err() {
+                                                                        log::error!("{}.read | UdpClientDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_data.name);
+                                                                        break 'main;
+                                                                    }
+                                                                }
                                                             }
-                                                            log::debug!("{}.run | {}: values: {:?}", self_id, src_addr, values);
                                                         }
-                                                        Err(err) => {
-                                                            log::error!("{}.run | {}: Error message length: {}, expected {}, \n\t error: {:#?}", self_id, src_addr, buf.len(), Self::HEAD_LEN + count, err);
-                                                        }
+                                                        None => {},
                                                     }
                                                 }
                                                 _ => {
