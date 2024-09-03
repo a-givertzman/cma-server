@@ -101,7 +101,7 @@ impl UdpClientDb {
                                     log::warn!("{}", message);
                                 }
                             }
-                            log::debug!("{}.parse | values: {:?}", self.id, values);
+                            log::trace!("{}.parse | values: {:?}", self.id, values);
                         }
                     }
                     Err(err) => {

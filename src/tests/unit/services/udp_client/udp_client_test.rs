@@ -39,11 +39,21 @@ mod udp_client {
         test_duration.run().unwrap();
         let mut rng = rand::thread_rng();
         let rng = &mut rng;
-        let count = 1024;
+        ////////////////////////////////////////////////////////
+        //     Configure here                                 //
+        ////////////////////////////////////////////////////////
+        // Total test values                                  //
+        let count = 100_000;
+        // Values<i16> in DATA field of UDP message
+        let message_length = 1024;
+        // Sampling frequency                                 //
+        let freq = 300_000.0; // Hz
+        ////////////////////////////////////////////////////////
+        // Messages sent per second
+        let messages_per_sec = freq / (message_length as f64);
         let test_data: Vec<i16> = (0..count).map(|_| rng.gen_range(-2048..2048) as i16).collect();
+        // let test_data: Vec<i16> = (0..count).collect();
         log::info!("{}.random_i16 | test data len: {}", self_id, test_data.len());
-        // let test_data = [0, 1, 2, -3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127];
-        let test_data: Vec<i16> = (0..count).collect();
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
             Some(RetainPointConf::new("point/id.json", None))
@@ -69,9 +79,9 @@ mod udp_client {
                 name: Name::new(self_id, "MockUdpServer"),
                 local_addr: "127.0.0.1:15180".to_owned(),
                 channel: 0,
-                count: 128,
+                count: 512,
                 mtu: 1500,
-                cycle: Duration::from_secs_f64(1.0 / 300_000.0),
+                cycle: Duration::from_secs_f64(1.0 / messages_per_sec),
             },
             services.clone(),
             &test_data,
@@ -108,11 +118,13 @@ mod udp_client {
         log::debug!("{} | get received points...", self_id);
         let received = received.read().unwrap();
         log::debug!("{} | get received points - ok", self_id);
+        log::info!("Sampling freq: {}", freq);
+        log::info!("Messages sent per second: {}", messages_per_sec);
         log::info!("Total test values: {}", test_data.len());
         log::info!("Total received: {}", received.len());
         log::info!("Total elapsed: {:?}", elapsed);
         let mut test_data_clone = test_data.clone();
-        for (step, point) in received.iter().enumerate() {
+        for (_, point) in received.iter().enumerate() {
             let result = point.value().as_int() as i16;
             if let Some(index) = test_data_clone.iter().position(|value| *value == result) {
                 test_data_clone.swap_remove(index);
@@ -120,8 +132,6 @@ mod udp_client {
                 log::warn!("missed: {:?}", result);
             }
         }
-        // log::trace!("missed values: {:?}", test_data_clone);
-        
         let mut test_data_iter = test_data.iter();
         for (step, point) in received.iter().enumerate() {
             log::trace!("point: {:?} | {}", point.value(), point.name());

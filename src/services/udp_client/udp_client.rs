@@ -140,7 +140,7 @@ impl UdpClient {
                                 }
                                 _ => {
                                     let message = format!("{}.handshake | Read start message error: {:#?}", self_id, err);
-                                    log::debug!("{}", message);
+                                    log::warn!("{}", message);
                                 },
                             }
                             if error_limit.add().is_err() {
