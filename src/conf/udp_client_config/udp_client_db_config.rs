@@ -10,7 +10,7 @@ use crate::conf::{
 pub struct UdpClientDbConfig {
     pub(crate) name: Name,
     pub(crate) description: String,
-    pub(crate) size: u64,
+    /// `Values<i16>` in the DATA field of the single UDP message, not bytes
     // pub(crate) cycle: Option<Duration>,
     pub(crate) points: Vec<PointConfig>,
 }
@@ -31,8 +31,6 @@ impl UdpClientDbConfig {
         // log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let description = self_conf.get_param_value("description").unwrap_or(serde_yaml::Value::String(String::new())).as_str().unwrap().to_string();
         log::debug!("{}.new | description: {:?}", self_id, description);
-        let size = self_conf.get_param_value("size").unwrap().as_u64().unwrap();
-        log::debug!("{}.new | size: {:?}", self_id, size);
         let mut points = vec![];
         for key in &self_conf.keys {
             let keyword = FnConfKeywd::from_str(key).unwrap();
@@ -52,7 +50,6 @@ impl UdpClientDbConfig {
         Self {
             name: self_name,
             description,
-            size,
             // cycle,
             points,
         }

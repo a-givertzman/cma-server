@@ -1,5 +1,5 @@
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread, time::Duration};
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -92,7 +92,7 @@ impl Service for TaskTestReceiver {
                 if exit.load(Ordering::Relaxed) {
                     break 'main;
                 }
-                match in_recv.recv() {
+                match in_recv.recv_timeout(Duration::from_millis(100)) {
                     Ok(point) => {
                         count += 1;
                         log::trace!("{}.run | received: {}/{}, (value: {:?})", self_id, count, iterations, point.value());
@@ -115,7 +115,10 @@ impl Service for TaskTestReceiver {
                         }
                     }
                     Err(err) => {
-                        log::warn!("{}.run | Error receiving from queue: {:?}", self_id, err);
+                        match err {
+                            mpsc::RecvTimeoutError::Timeout => {},
+                            mpsc::RecvTimeoutError::Disconnected => log::error!("{}.run | Error receiving from queue: {:?}", self_id, err),
+                        }
                         // error_count += 1;
                         // if errorCount > 10 {
                         //     log::warn!("{}.run | Error receiving count > 10, exit...", self_id);

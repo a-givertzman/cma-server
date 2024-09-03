@@ -19,7 +19,6 @@ service UdpClient:
             # history: r
     db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
         description: 'Data block of the device'
-        size: 16                      # corresponding to the length of the array transmitted in the UDP message, bytes
         point Sensor1: 
             type: 'Int'
             input: 0                    # the number of input 0..8 (0 - first input channel)

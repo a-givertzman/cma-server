@@ -20,7 +20,7 @@ pub struct UdpcParseI16 {
     pub name: String,
     pub values: VecDeque<Option<i16>>,
     pub status: Status,
-    pub size: usize,
+    // pub size: usize,
     pub history: PointConfigHistory,
     pub alarm: Option<u8>,
     pub comment: Option<String>,
@@ -35,11 +35,11 @@ impl UdpcParseI16 {
     /// Size in the bytes in the Device address area
     const SIZE: usize = 2;
     ///
-    /// - `size` - length of the array caming from the assoscieated channel
+    /// - `size` - `Values<i16>` in the array coming from the associated channel
     pub fn new(
         tx_id: usize,
         name: String,
-        size: usize,
+        // size: usize,
         config: &PointConfig,
     ) -> UdpcParseI16 {
         UdpcParseI16 {
@@ -50,7 +50,7 @@ impl UdpcParseI16 {
             values: VecDeque::new(),
             status: Status::Invalid,
             is_changed: false,
-            size,
+            // size,
             history: config.history.clone(),
             alarm: config.alarm,
             comment: config.comment.clone(),
@@ -86,7 +86,7 @@ impl UdpcParseI16 {
             log::trace!("{}.convert | is_changed: {}  |  values: {:?}", self.id, is_changed, self.values);
             Ok(is_changed)
         } else {
-            Err(format!("{}.convert | Size {} out of range for slice of length {}", self.id, self.size, bytes.len()))
+            Err(format!("{}.convert | Size out of range for slice of length {}", self.id, bytes.len()))
         }
     }
     ///

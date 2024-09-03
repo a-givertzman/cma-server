@@ -19,6 +19,10 @@ pub struct MockUdpServerConfig {
     pub name: Name,
     pub local_addr: String,
     pub channel: u8,
+    /// `Values<i16>` in the DATA field of the single UDP message, not bytes
+    pub count: usize,
+    /// Maximum Transmission Unit, default 1500, [Resolve IPv4 Fragmentation, MTU...](https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/25885-pmtud-ipfrag.html)
+    pub mtu: usize,
     pub cycle: Duration,
 }
 ///
@@ -116,9 +120,7 @@ impl Service for MockUdpServer {
             'main: loop {
                 match UdpSocket::bind(&local_addr) {
                     Ok(socket) => {
-                        let mtu = 4096;
-                        let mut buf = vec![0; mtu];
-                        let count = 8;
+                        let mut buf = vec![0; conf.mtu];
                         let mut error_limit = ErrorLimit::new(3);
                         if let Err(err) = socket.set_read_timeout(Some(Duration::from_millis(100))) {
                             log::error!("{}.run | Socket Set timeout error: {:?}", self_id, err);
@@ -140,15 +142,18 @@ impl Service for MockUdpServer {
                                                     // notify.add(State::UdpSendError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err))                                                        
                                                 },
                                             }
-                                            let message_windows = test_data.chunks(count);
+                                            let message_windows = test_data.chunks(conf.count);
                                             for message in message_windows {
                                                 cycle.start();
                                                 log::trace!("{}.run | words: \n\t{:?}", self_id, message);
                                                 let mut buf = vec![UdpClient::SYN, conf.channel, 16];
-                                                buf.extend(((count * 2) as u32).to_be_bytes());
-                                                for b in message {
-                                                    buf.extend(b.to_be_bytes());
-                                                }
+                                                buf.extend(((conf.count * 2) as u32).to_be_bytes());
+                                                // let data = unsafe { message.align_to::<u8>() };
+                                                // let data = message.into_iter().map(|v| {v.to_be_bytes()});
+                                                buf.extend(message.into_iter().flat_map(|v| {v.to_be_bytes()}));
+                                                // for b in message {
+                                                //     buf.extend(b.to_be_bytes());
+                                                // }
                                                 match socket.send_to(&buf, src_addr) {
                                                     Ok(sent_len) => {
                                                         log::trace!("{}.run | Sent to {}: data ({}): \n\t{:?}", self_id, src_addr, sent_len, buf);

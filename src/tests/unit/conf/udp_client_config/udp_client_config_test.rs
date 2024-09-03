@@ -57,7 +57,6 @@ mod udp_client_config {
                             # history: r
                     db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
                         description: 'Data block of the device'
-                        size: 1024                      # corresponding to the length of the array transmitted in the UDP message
                         point Sensor1: 
                             type: 'Int'
                             input: 0                    # the number of input 0..8 (0 - first input channel)
@@ -104,7 +103,6 @@ mod udp_client_config {
                         ("data".to_owned(), UdpClientDbConfig {
                             name: Name::new(self_id, "UdpClient/data"),
                             description: "Data block of the device".to_owned(),
-                            size: 1024,
                             points: [
                                 PointConfig {
                                     id: 0,
@@ -147,7 +145,6 @@ mod udp_client_config {
                     mtu: 4096
                     db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
                         description: 'Data block of the device'
-                        size: 1024                      # corresponding to the length of the array transmitted in the UDP message
                         point Sensor1: 
                             type: 'Int'
                             input: 0                    # the number of input 0..8 (0 - first input channel)
@@ -182,7 +179,6 @@ mod udp_client_config {
                         ("data".to_owned(), UdpClientDbConfig {
                             name: Name::new(self_id, "UdpIed01/data"),
                             description: "Data block of the device".to_owned(),
-                            size: 1024,
                             points: [
                                 PointConfig {
                                     id: 0,

@@ -28,7 +28,6 @@ pub struct UdpClientDb {
     id: String,
     pub name: Name,
     pub description: String,
-    pub size: u32,
     mtu: usize,
     pub points: IndexMap<String, Box<dyn ParsePoint>>,
     notify: ChangeNotify<State, String>,
@@ -47,7 +46,6 @@ impl UdpClientDb {
             id: self_id.clone(),
             name: conf.name.clone(),
             description: conf.description.clone(),
-            size: conf.size as u32,
             mtu,
             points: Self::configure_parse_points(&self_id, tx_id, conf),
             notify: ChangeNotify::new(self_id, State::Start, vec![
@@ -55,8 +53,8 @@ impl UdpClientDb {
                 (State::Exit,           Box::new(|message| log::info!("{}", message))),
                 (State::UdpBindError,   Box::new(|message| log::error!("{}", message))),
                 (State::UdpRecvError,   Box::new(|message| log::error!("{}", message))),
-                (State::WouldBlock,   Box::new(|message| log::error!("{}", message))),
-                (State::TimedOut,   Box::new(|message| log::error!("{}", message))),
+                (State::WouldBlock,   Box::new(|message| log::debug!("{}", message))),
+                (State::TimedOut,   Box::new(|message| log::debug!("{}", message))),
             ]),
         }
     }
@@ -81,25 +79,29 @@ impl UdpClientDb {
     fn parse(&mut self, buf: &[u8], timestamp: DateTime<Utc>, tx_send: &Sender<Point>) {
         let count: usize;
         let status = Status::Ok;
+        // log::debug!("{}.parse | message: {:?}", self.id, buf);
         match buf {
             // Data message received
             &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
                 count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                log::trace!("{}.parse | addr: {} type: {} count: {}", self.id, addr, type_, count);
+                // log::debug!("{}.parse | addr: {} type: {} count: {}  |  {:?}", self.id, addr, type_, count, &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)]);
                 match &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)].try_into() {
                     Ok(data) => {
                         let bytes: &Vec<u8> = data;
                         log::trace!("{}.parse | bytes: {:?}", self.id, bytes);
                         log::trace!("{}.parse | points: {:?}", self.id, self.points.iter().map(|(name, _)| name).collect::<Vec<&String>>());
                         for (_, parse_point) in &mut self.points {
+                            let mut values = vec![];
                             parse_point.add(bytes, status, timestamp);
                             while let Some(point) = parse_point.next() {
+                                values.push(point.value().as_int());
                                 // log::debug!("{}.parse | point: {:?}", self.id, point);
                                 if let Err(err) = tx_send.send(point) {
                                     let message = format!("{}.parse | send error: {}", self.id, err);
                                     log::warn!("{}", message);
                                 }
                             }
+                            log::debug!("{}.parse | values: {:?}", self.id, values);
                         }
                     }
                     Err(err) => {
@@ -214,7 +216,7 @@ impl UdpClientDb {
                 //     (point_conf.name.clone(), Self::box_bool(tx_id, point_conf.name.clone(), point_conf))
                 // }
                 PointConfigType::Int => {
-                    (point_conf.name.clone(), Self::box_i16(tx_id, point_conf.name.clone(), conf.size as usize, point_conf))
+                    (point_conf.name.clone(), Self::box_i16(tx_id, point_conf.name.clone(), point_conf))
                 }
                 // PointConfigType::Real => {
                 //     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
@@ -233,11 +235,10 @@ impl UdpClientDb {
     // }
     ///
     ///
-    fn box_i16(tx_id: usize, name: String, size: usize, config: &PointConfig) -> Box<dyn ParsePoint> {
+    fn box_i16(tx_id: usize, name: String, config: &PointConfig) -> Box<dyn ParsePoint> {
         Box::new(UdpcParseI16::new(
             tx_id,
             name,
-            size,
             config,
         ))
     }
