@@ -11,7 +11,7 @@ use crate::{
         failure::errors_limit::ErrorLimit,
         state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
     },
-    services::{safe_lock::SafeLock, services::Services, slmp_client::slmp_db::SlmpDb},
+    services::{safe_lock::rwlock::SafeLock, services::Services, slmp_client::slmp_db::SlmpDb},
 };
 
 use super::slmp_read::SlmpRead;

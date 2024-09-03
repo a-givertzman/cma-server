@@ -6,7 +6,7 @@ mod multi_queue {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        services::{safe_lock::SafeLock, services::Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
+        services::{safe_lock::rwlock::SafeLock, services::Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
     };
     ///
     ///
@@ -30,7 +30,7 @@ mod multi_queue {
     #[ignore = "Performance test"]
     #[test]
     fn performance() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -138,7 +138,7 @@ mod multi_queue {
     #[ignore = "Performance test"]
     #[test]
     fn match_performance() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

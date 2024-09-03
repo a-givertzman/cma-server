@@ -1,14 +1,20 @@
 #[cfg(test)]
 
 mod jds_routes {
-    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::{link_name::LinkName, service::Service}};
+    use sal_sync::services::{
+        entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
+        retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::{link_name::LinkName, service::Service},
+    };
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, sync::{Arc, Once, RwLock}, thread, time::Duration};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, tcp_server_config::TcpServerConfig},
         core_::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, server::tcp_server::TcpServer, services::Services, task::nested_function::reset_counter::AtomicReset},
+        services::{
+            multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer,
+            services::Services, task::nested_function::reset_counter::AtomicReset,
+        },
         tests::unit::services::{multi_queue::mock_recv_service::{self, MockRecvService}, service::mock_service_points::MockServicePoints},
     };
     ///
@@ -73,7 +79,7 @@ mod jds_routes {
     ///
     #[test]
     fn reject() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -225,7 +231,7 @@ mod jds_routes {
     ///
     #[test]
     fn request_auth_secret() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -332,7 +338,7 @@ mod jds_routes {
     ///
     #[test]
     fn request_points() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -515,7 +521,7 @@ mod jds_routes {
     #[test]
     #[ignore = "To be implementes..."]
     fn auth_ssh() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

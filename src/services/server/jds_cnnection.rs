@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, 
-    mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::Instant, 
+    mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
 };
 use hashers::fx_hash::FxHasher;
 use log::{debug, error, info, trace, warn};
@@ -17,7 +17,7 @@ use crate::{
         },
     }, 
     services::{
-        safe_lock::SafeLock, 
+        safe_lock::rwlock::SafeLock, 
         server::{
             connections::Action, 
             jds_request::JdsRequest, 
@@ -159,7 +159,7 @@ impl JdsConnection {
             let buffered = rx_max_length > 0;
             let mut tcp_read_alive = TcpReadAlive::new(
                 &self_id,
-                Arc::new(Mutex::new(JdsRoutes::new(
+                Arc::new(RwLock::new(JdsRoutes::new(
                     &self_id,
                     &self_name,
                     services.clone(),
@@ -202,7 +202,7 @@ impl JdsConnection {
             let tcp_write_alive = TcpWriteAlive::new(
                 &self_id,
                 None,
-                Arc::new(Mutex::new(TcpStreamWrite::new(
+                Arc::new(RwLock::new(TcpStreamWrite::new(
                     format!("{}/TcpWriteAlive", self_id),
                     buffered,
                     Some(rx_max_length as usize),

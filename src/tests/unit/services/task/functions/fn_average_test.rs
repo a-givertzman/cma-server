@@ -54,7 +54,7 @@ mod fn_average {
     ///
     #[test]
     fn test_bool() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
         info!("{}", self_id);
@@ -105,7 +105,7 @@ mod fn_average {
     ///
     #[test]
     fn test_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
         info!("{}", self_id);
@@ -149,7 +149,7 @@ mod fn_average {
     ///
     #[test]
     fn test_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
         info!("{}", self_id);
@@ -193,7 +193,7 @@ mod fn_average {
     /// Real points on input, enable - is variable during the test
     #[test]
     fn test_real_enable() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real_enable";
         info!("{}", self_id);
@@ -259,7 +259,7 @@ mod fn_average {
     /// Double points on input, enable - is variable during the test
     #[test]
     fn test_double_enable() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_double_enable";
         info!("{}", self_id);

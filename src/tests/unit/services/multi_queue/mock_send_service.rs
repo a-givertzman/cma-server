@@ -3,7 +3,7 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, R
 use log::{info, warn, trace};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::SafeLock, services::Services};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
 ///
 pub struct MockSendService {

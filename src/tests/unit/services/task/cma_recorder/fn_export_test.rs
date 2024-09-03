@@ -8,7 +8,7 @@ mod fn_export {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer,
     };
     ///
@@ -29,7 +29,7 @@ mod fn_export {
     /// Testing Task function 'Export' with 'enable' input used
     #[test]
     fn export_point_with_enable() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -176,7 +176,7 @@ mod fn_export {
     /// Testing Task function 'Export' with default 'enable' = true
     #[test]
     fn export_point_without_enable() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -309,7 +309,7 @@ mod fn_export {
     /// Testing Task function 'Export' with default 'enable' = true
     #[test]
     fn export_unconfigured_point() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

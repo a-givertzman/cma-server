@@ -33,7 +33,7 @@ mod fn_is_changed_value {
     /// Testing accumulation of the Bool's
     #[test]
     fn is_changed_bool() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "is_changed_bool";
         info!("{}", self_id);

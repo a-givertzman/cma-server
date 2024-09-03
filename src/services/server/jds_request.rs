@@ -8,7 +8,7 @@ use crate::{
         auth::ssh::auth_ssh::AuthSsh,
         net::protocols::jds::request_kind::RequestKind,
     }, services::{
-        safe_lock::SafeLock,
+        safe_lock::rwlock::SafeLock,
         server::{jds_routes::RouterReply, jds_cnnection::JdsState},
         services::Services,
     }
@@ -217,7 +217,7 @@ impl JdsRequest {
     fn yield_gi(self_id: &str, receiver_name: &str, services: Arc<RwLock<Services>>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
         match services.rlock(self_id).get(cache_service) {
             Some(cache) => {
-                let recv = cache.slock(self_id).gi(receiver_name, points);
+                let recv = cache.rlock(self_id).gi(receiver_name, points);
                 match shared.req_reply_send.pop() {
                     Some(send) => {
                         shared.req_reply_send.push(send.clone());

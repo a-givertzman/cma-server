@@ -11,7 +11,7 @@ mod tcp_client {
     use crate::{
         conf::tcp_client_config::TcpClientConfig,
         core_::net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize},
-        services::{safe_lock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
+        services::{safe_lock::rwlock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
         tcp::steam_read::StreamRead, tests::unit::services::tcp_client::mock_multiqueue::MockMultiQueue,
     };
     ///
@@ -100,7 +100,7 @@ mod tcp_client {
         let handle = multi_queue.write().unwrap().run().unwrap();
         debug!("Running service {} - ok", multi_queue_service_id);
         debug!("Running service {}...", tcp_client_service_id);
-        tcp_client.slock(self_id).run().unwrap();
+        tcp_client.wlock(self_id).run().unwrap();
         debug!("Running service {} - ok", tcp_client_service_id);
         mock_tcp_server(addr.to_string(), iterations, test_data.clone(), sent.clone(), multi_queue.clone());
         thread::sleep(Duration::from_micros(100));

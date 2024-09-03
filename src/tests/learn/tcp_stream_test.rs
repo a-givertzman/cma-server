@@ -26,7 +26,7 @@ mod tcp_stream {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn strean_bytes() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -66,7 +66,7 @@ mod tcp_stream {
     // #[ignore = "Learn - all must be ignored"]
     #[test]
     fn stream_read() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

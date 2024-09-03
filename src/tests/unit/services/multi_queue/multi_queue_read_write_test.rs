@@ -8,7 +8,7 @@ mod multi_queue {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::multi_queue_config::MultiQueueConfig,
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services},
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services},
         tests::unit::services::multi_queue::mock_recv_send_service::MockRecvSendService,
     };
     ///
@@ -30,7 +30,7 @@ mod multi_queue {
     /// - action: read-write
     #[test]
     fn read_write() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

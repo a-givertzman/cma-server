@@ -1,6 +1,12 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
-use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status}, service::{service::Service, service_handles::ServiceHandles}}};
+use sal_sync::{
+    collections::map::IndexMapFxHasher,
+    services::{
+        entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status},
+        service::{service::Service, service_handles::ServiceHandles},
+    },
+};
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{diag_keywd::DiagKeywd, slmp_client_config::slmp_client_config::SlmpClientConfig},
@@ -8,7 +14,7 @@ use crate::{
         constants::constants::RECV_TIMEOUT, state::exit_notify::ExitNotify,
     },
     services::{
-        diagnosis::diag_point::DiagPoint, safe_lock::SafeLock,
+        diagnosis::diag_point::DiagPoint, safe_lock::rwlock::SafeLock,
         services::Services, slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
     },
     tcp::tcp_client_connect::TcpClientConnect,

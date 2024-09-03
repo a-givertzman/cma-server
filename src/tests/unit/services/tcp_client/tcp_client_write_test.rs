@@ -8,7 +8,7 @@ mod tcp_client {
     use crate::{
         conf::tcp_client_config::TcpClientConfig,
         core_::net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}},
-        services::{safe_lock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
+        services::{safe_lock::rwlock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
         tcp::tcp_stream_write::OpResult, tests::unit::services::tcp_client::mock_multiqueue::MockMultiQueue,
     };
     ///
@@ -97,10 +97,10 @@ mod tcp_client {
         thread::sleep(Duration::from_micros(100));
         let tcp_client = services.rlock(self_id).get(&tcp_client_service_id).unwrap();
         debug!("Running service {}...", tcp_client_service_id);
-        tcp_client.slock(self_id).run().unwrap();
+        tcp_client.wlock(self_id).run().unwrap();
         debug!("Running service {} - ok", tcp_client_service_id);
         let timer = Instant::now();
-        let send = tcp_client.slock(self_id).get_link("link");
+        let send = tcp_client.wlock(self_id).get_link("link");
         debug!("Test - setup - ok");
         debug!("Sending points...");
         for value in test_data {

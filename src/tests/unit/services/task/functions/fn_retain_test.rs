@@ -11,7 +11,7 @@ mod fn_retain {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig}, core_::aprox_eq::aprox_eq::AproxEq, services::{
-            multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services,
+            multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services,
             task::{task::Task, task_test_receiver::TaskTestReceiver}
         }, tests::unit::services::task::task_test_producer::TaskTestProducer
     };
@@ -99,7 +99,7 @@ mod fn_retain {
     /// Testing Task function 'Retain' for int value
     #[test]
     fn retain_point_bool() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -239,7 +239,7 @@ mod fn_retain {
     /// Testing Task function 'Retain' for int value
     #[test]
     fn retain_point_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -394,7 +394,7 @@ mod fn_retain {
     /// Testing Task function 'Retain' for real value
     #[test]
     fn retain_point_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -556,7 +556,7 @@ mod fn_retain {
     ///  - using [every-cycle] = true
     #[test]
     fn retain_every_cycle_point_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

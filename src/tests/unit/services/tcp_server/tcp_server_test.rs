@@ -7,7 +7,7 @@ mod tcp_server {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, tcp_server_config::TcpServerConfig},
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, server::tcp_server::TcpServer, services::Services,
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer, services::Services,
             task::{task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver}
         },
         tests::unit::services::tcp_server::{emulated_tcp_client_recv::EmulatedTcpClientRecv, emulated_tcp_client_send::EmulatedTcpClientSend},
@@ -30,7 +30,7 @@ mod tcp_server {
     /// Testing sending points from the TcpServer
     #[test]
     fn send() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -125,7 +125,7 @@ mod tcp_server {
     /// Testing receiving points on the TcpServer
     #[test]
     fn receive() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

@@ -8,7 +8,7 @@ mod task {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
-        services::{safe_lock::SafeLock, services::Services, task::task::Task},
+        services::{safe_lock::rwlock::SafeLock, services::Services, task::task::Task},
     };
     ///
     ///
@@ -28,7 +28,7 @@ mod task {
     ///
     #[test]
     fn points() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

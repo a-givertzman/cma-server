@@ -7,7 +7,7 @@ use sal_sync::services::{
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
 use concat_string::concat_string;
-use crate::{core_::state::change_notify::ChangeNotify, services::safe_lock::SafeLock};
+use crate::{core_::state::change_notify::ChangeNotify, services::safe_lock::rwlock::SafeLock};
 ///
 /// States of the Services behavior for logging
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

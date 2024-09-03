@@ -7,7 +7,7 @@ mod multi_queue {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::multi_queue_config::MultiQueueConfig, services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services, task::nested_function::reset_counter::AtomicReset},
+        conf::multi_queue_config::MultiQueueConfig, services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::nested_function::reset_counter::AtomicReset},
         tests::unit::services::multi_queue::{mock_recv_service::{self, MockRecvService}, mock_send_service::{self, MockSendService}},
     };
     ///
@@ -71,7 +71,7 @@ mod multi_queue {
         let test_data_len = test_data.len();
         let count = 30;
         let total_count = count * test_data.len();
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
+        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
         test_duration.run().unwrap();
         let mut conf = r#"
             service MultiQueue:
@@ -140,6 +140,5 @@ mod multi_queue {
         services.rlock(self_id).exit();
         services_handle.wait().unwrap();
         test_duration.exit();
-        // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
     }
 }

@@ -2,7 +2,7 @@ use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Po
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{debug, warn, info, trace};
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::SafeLock, services::Services};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 
 ///
 /// 

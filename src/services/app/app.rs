@@ -18,7 +18,7 @@ use crate::{
         api_cient::api_client::ApiClient, cache::cache_service::CacheService,
         history::{producer_service::ProducerService, producer_service_config::ProducerServiceConfig},
         multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient,
-        safe_lock::SafeLock, server::tcp_server::TcpServer,
+        safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer,
         services::Services, slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient,
     }
 };

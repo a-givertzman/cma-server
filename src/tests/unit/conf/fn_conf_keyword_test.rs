@@ -105,7 +105,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for valid input with options
     #[test]
     fn valid_options() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         debug!("valid_options");

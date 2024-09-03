@@ -8,7 +8,7 @@ mod task_nodes {
     use crate::{
         conf::task_config::TaskConfig,
         services::{
-            safe_lock::SafeLock, services::Services,
+            safe_lock::rwlock::SafeLock, services::Services,
             task::{nested_function::{comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric}, task_nodes::TaskNodes}
         },
     };
@@ -34,7 +34,7 @@ mod task_nodes {
     ///
     #[test]
     fn test() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

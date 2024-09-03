@@ -8,7 +8,7 @@ mod udp_client {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::udp_client_config::udp_client_config::UdpClientConfig,
-        services::{safe_lock::SafeLock, services::Services, task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient},
+        services::{safe_lock::rwlock::SafeLock, services::Services, task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient},
         tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig},
     };
     ///
@@ -29,7 +29,7 @@ mod udp_client {
     /// Testing UdpClient basic functionality
     #[test]
     fn random_i16() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         log::debug!("");

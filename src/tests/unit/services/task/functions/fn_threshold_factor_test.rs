@@ -52,7 +52,7 @@ mod fn_threshold_factor {
     /// Threshold Int's
     #[test]
     fn fn_threshold_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_int";
         info!("{}", self_id);
@@ -103,7 +103,7 @@ mod fn_threshold_factor {
     /// Threshold Real's
     #[test]
     fn fn_threshold_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_real";
         info!("{}", self_id);
@@ -156,7 +156,7 @@ mod fn_threshold_factor {
     /// Threshold Double's
     #[test]
     fn fn_threshold_double() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_double";
         info!("{}", self_id);

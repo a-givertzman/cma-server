@@ -20,7 +20,7 @@ use crate::{
     services::{
         diagnosis::diag_point::DiagPoint,
         profinet_client::{profinet_db::ProfinetDb, s7::s7_client::S7Client},
-        safe_lock::SafeLock,
+        safe_lock::rwlock::SafeLock,
         services::Services,
     },
 };

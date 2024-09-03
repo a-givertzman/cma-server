@@ -24,7 +24,7 @@ mod tests {
     ///
     #[test]
     fn test_FilterThresholdAbs_pos() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_FilterThresholdAbs_neg() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

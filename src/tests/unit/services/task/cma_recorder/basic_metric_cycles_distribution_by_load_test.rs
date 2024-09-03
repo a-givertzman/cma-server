@@ -10,7 +10,7 @@ mod cma_recorder {
     use crate::{
         conf::{api_client_config::ApiClientConfig, multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
         services::{
-            api_cient::api_client::ApiClient, multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock,
+            api_cient::api_client::ApiClient, multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock,
             services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver},
         },
         tests::unit::services::task::task_test_producer::TaskTestProducer,
@@ -33,7 +33,7 @@ mod cma_recorder {
     /// Testing the Recorder | Basic metric - 'distribution by load' metric only (count & load per cycle)
     #[test]
     fn operating_metric_cycles_distribution_by_load_test() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

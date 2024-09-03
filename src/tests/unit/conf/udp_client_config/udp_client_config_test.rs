@@ -25,7 +25,7 @@ mod udp_client_config {
     /// Testing such functionality / behavior
     #[test]
     fn new() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         log::debug!("");
