@@ -68,7 +68,7 @@ mod udp_client {
                 name: Name::new(self_id, "MockUdpServer"),
                 local_addr: "127.0.0.1:15180".to_owned(),
                 channel: 0,
-                cycle: Duration::from_millis(50),
+                cycle: Duration::ZERO,
             },
             services.clone(),
             &test_data,
@@ -76,14 +76,20 @@ mod udp_client {
         services.wlock(self_id).insert(udp_server.clone());
         let time = Instant::now();
         let services_handle = services.wlock(self_id).run().unwrap();
+        thread::sleep(Duration::from_millis(10));
         let receiver_handle = receiver.write().unwrap().run().unwrap();
         // let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
-        let udp_server_handle = udp_server.write().unwrap().run().unwrap();
-        thread::sleep(Duration::from_millis(50));
         let udp_client_handle = udp_client.write().unwrap().run().unwrap();
-        thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(100));
+        let udp_server_handle = udp_server.write().unwrap().run().unwrap();
         
-        log::debug!("{} | wait for receiver...", self_id);
+        let mut received = 0;
+        while received < test_data.len() {
+            thread::sleep(Duration::from_millis(500));
+            let r = receiver.try_read().unwrap().received();
+            received = r.read().unwrap().len();
+            log::debug!("{} | receiver {}/{} ...", self_id, received, test_data.len());
+        }
         receiver_handle.wait().unwrap();
         let elapsed = time.elapsed();
         log::debug!("{} | wait for receiver - finished", self_id);

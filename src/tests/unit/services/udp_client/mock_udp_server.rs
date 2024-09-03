@@ -75,7 +75,9 @@ enum State {
     Exit,
     UdpBindError,
     UdpRecvError,
-    UdpSendError
+    UdpSendError,
+    WouldBlock,
+    TimedOut,
 }
 //
 // 
@@ -95,7 +97,7 @@ impl Service for MockUdpServer {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();
-        let cycle = ServiceCycle::new(&self_id, conf.cycle);
+        let mut cycle = ServiceCycle::new(&self_id, conf.cycle);
         let test_data = self.test_data.clone();
         let exit = self.exit.clone();
         log::info!("{}.run | Preparing thread...", self_id);
@@ -107,9 +109,11 @@ impl Service for MockUdpServer {
                 (State::UdpBindError,   Box::new(|message| log::error!("{}", message))),
                 (State::UdpRecvError,   Box::new(|message| log::error!("{}", message))),
                 (State::UdpSendError,   Box::new(|message| log::error!("{}", message))),
+                (State::WouldBlock,   Box::new(|message| log::error!("{}", message))),
+                (State::TimedOut,   Box::new(|message| log::error!("{}", message))),
             ]);
             let local_addr =  conf.local_addr;
-            loop {
+            'main: loop {
                 match UdpSocket::bind(&local_addr) {
                     Ok(socket) => {
                         let mtu = 4096;
@@ -127,7 +131,7 @@ impl Service for MockUdpServer {
                                         // Empty message
                                         &[] => log::debug!("{}.run | {}: Empty message received", self_id, src_addr),
                                         // Start of communication
-                                        &[UdpClient::SYN, UdpClient::EOT, ..] => {
+                                        &[UdpClient::SYN, UdpClient::EOT] | &[UdpClient::SYN, UdpClient::EOT, ..] => {
                                             log::debug!("{}.run | {}: Start message received", self_id, src_addr);
                                             match socket.send_to(&[UdpClient::SYN, UdpClient::EOT], src_addr) {
                                                 Ok(_) => log::debug!("{}.run | {}: Start message ACK sent", self_id, src_addr),
@@ -136,12 +140,13 @@ impl Service for MockUdpServer {
                                                     // notify.add(State::UdpSendError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err))                                                        
                                                 },
                                             }
-                                            let word_windows = test_data.chunks(count);
-                                            for words in word_windows {
-                                                log::debug!("{}.run | words: \n\t{:?}", self_id, words);
+                                            let message_windows = test_data.chunks(count);
+                                            for message in message_windows {
+                                                cycle.start();
+                                                log::trace!("{}.run | words: \n\t{:?}", self_id, message);
                                                 let mut buf = vec![UdpClient::SYN, conf.channel, 16];
                                                 buf.extend(((count * 2) as u32).to_be_bytes());
-                                                for b in words {
+                                                for b in message {
                                                     buf.extend(b.to_be_bytes());
                                                 }
                                                 match socket.send_to(&buf, src_addr) {
@@ -149,26 +154,31 @@ impl Service for MockUdpServer {
                                                         log::trace!("{}.run | Sent to {}: data ({}): \n\t{:?}", self_id, src_addr, sent_len, buf);
                                                     }
                                                     Err(err) => {
-                                                        log::error!("{}.run | Send to {}: error: {:#?}", self_id, src_addr, err);
-                                                        // notify.add(State::UdpSendError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err))                                                        
+                                                        // log::error!("{}.run | Send to {}: error: {:#?}", self_id, src_addr, err);
+                                                        notify.add(State::UdpSendError, format!("{}.run | Socket send error: {:#?}", self_id, err))                                                        
                                                     }
                                                 }
+                                                if !cycle.interval().is_zero() {
+                                                    cycle.wait();
+                                                }
                                             }
-                                            break 'read;
+                                            log::info!("{}.run | Sent: {} values of <i16>", self_id, test_data.len());
+                                            while !exit.load(Ordering::SeqCst) {
+                                                thread::sleep(Duration::from_millis(100));
+                                            }
+                                            break 'main;
                                         }
-                                        _ => log::warn!("{}.run | {}: Unknown message format: {:#?}...", self_id, src_addr, &buf[..=10]),
+                                        _ => log::warn!("{}.run | {}: Unknown message format: {:?}...", self_id, src_addr, &buf[..=10]),
                                     }
                                 }
                                 Err(err) => {
                                     // notify.add(State::UdpRecvError, format!("{}.run | UdpSocket recv error: {:#?}", self_id, err)),
                                     match err.kind() {
                                         std::io::ErrorKind::WouldBlock => {
-                                            let message = &format!("{}.run | Socket read timeout", self_id);
-                                            log::debug!("{}", message);
+                                            notify.add(State::WouldBlock, format!("{}.run | Socket read timeout", self_id));
                                         },
                                         std::io::ErrorKind::TimedOut => {
-                                            let message = &format!("{}.run | Socket read timeout", self_id);
-                                            log::debug!("{}", message);
+                                            notify.add(State::TimedOut, format!("{}.run | Socket read timeout", self_id));
                                         }
                                         _ => {
                                             let message = format!("{}.run | Read error: {:#?}", self_id, err);
@@ -179,11 +189,10 @@ impl Service for MockUdpServer {
                                             }
                                         },
                                     }
-
                                 }
                             }
                             if exit.load(Ordering::SeqCst) {
-                                break 'read;
+                                break 'main;
                             }
                         }
                     }
@@ -193,6 +202,7 @@ impl Service for MockUdpServer {
                     break;
                 }
             }
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {

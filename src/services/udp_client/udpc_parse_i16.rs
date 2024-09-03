@@ -69,7 +69,7 @@ impl UdpcParseI16 {
         if ! bytes.is_empty() {
             let words = bytes.chunks(2);
             self.values = VecDeque::new();
-            log::debug!("{}.run | words: {:?}", self.id, words.len());
+            log::trace!("{}.run | words: {:?}", self.id, words.len());
             for (index, word) in words.enumerate() {
                 // log::debug!("{}.run | index: {}  |  word: {:?}", self.id, index, word);
                 match word.try_into() {
@@ -83,7 +83,7 @@ impl UdpcParseI16 {
                     }
                 }
             }
-            log::debug!("{}.convert | is_changed: {}  |  values: {:?}", self.id, is_changed, self.values);
+            log::trace!("{}.convert | is_changed: {}  |  values: {:?}", self.id, is_changed, self.values);
             Ok(is_changed)
         } else {
             Err(format!("{}.convert | Size {} out of range for slice of length {}", self.id, self.size, bytes.len()))
@@ -169,7 +169,7 @@ impl ParsePoint for UdpcParseI16 {
     fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
         match point.try_as_int() {
             Ok(point) => {
-                log::debug!("{}.write | converting '{}' into i16...", self.id, point.value);
+                log::trace!("{}.write | converting '{}' into i16...", self.id, point.value);
                 match i16::try_from(point.value) {
                     Ok(value) => {
                         Ok(value.to_le_bytes().to_vec())

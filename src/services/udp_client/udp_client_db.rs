@@ -1,15 +1,14 @@
 use std::{fs, io::Write, net::UdpSocket, sync::mpsc::Sender};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use log::{trace, warn};
 use sal_sync::services::entity::{
-    name::Name, point::{point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType},
+    name::Name, point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType},
     status::status::Status
 };
 use crate::{
     conf::udp_client_config::udp_client_db_config::UdpClientDbConfig,
-    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, state::change_notify::ChangeNotify},
+    core_::state::change_notify::ChangeNotify,
 };
 use super::{parse_point::ParsePoint, udp_client::UdpClient, udpc_parse_i16::UdpcParseI16};
 ///
@@ -20,6 +19,8 @@ enum State {
     Exit,
     UdpBindError,
     UdpRecvError,
+    WouldBlock,
+    TimedOut,
 }
 ///
 /// Reads data from Vibro-analytics microcontroller (Sub MC)
@@ -28,6 +29,7 @@ pub struct UdpClientDb {
     pub name: Name,
     pub description: String,
     pub size: u32,
+    mtu: usize,
     pub points: IndexMap<String, Box<dyn ParsePoint>>,
     notify: ChangeNotify<State, String>,
 }
@@ -39,19 +41,22 @@ impl UdpClientDb {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [ProfinetDB]
-    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &UdpClientDbConfig) -> Self {
+    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &UdpClientDbConfig, mtu: usize) -> Self {
         let self_id = format!("{}/UdpClientDb({})", parent_id.into(), conf.name);
         Self {
             id: self_id.clone(),
             name: conf.name.clone(),
             description: conf.description.clone(),
             size: conf.size as u32,
+            mtu,
             points: Self::configure_parse_points(&self_id, tx_id, conf),
             notify: ChangeNotify::new(self_id, State::Start, vec![
                 (State::Start,          Box::new(|message| log::info!("{}", message))),
                 (State::Exit,           Box::new(|message| log::info!("{}", message))),
                 (State::UdpBindError,   Box::new(|message| log::error!("{}", message))),
                 (State::UdpRecvError,   Box::new(|message| log::error!("{}", message))),
+                (State::WouldBlock,   Box::new(|message| log::error!("{}", message))),
+                (State::TimedOut,   Box::new(|message| log::error!("{}", message))),
             ]),
         }
     }
@@ -66,8 +71,44 @@ impl UdpClientDb {
             }
             Err(err) => {
                 if log::max_level() >= log::LevelFilter::Trace {
-                    warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
+                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
                 }
+            }
+        }
+    }
+    ///
+    /// 
+    fn parse(&mut self, buf: &[u8], timestamp: DateTime<Utc>, tx_send: &Sender<Point>) {
+        let count: usize;
+        let status = Status::Ok;
+        match buf {
+            // Data message received
+            &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
+                count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
+                log::trace!("{}.parse | addr: {} type: {} count: {}", self.id, addr, type_, count);
+                match &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)].try_into() {
+                    Ok(data) => {
+                        let bytes: &Vec<u8> = data;
+                        log::trace!("{}.parse | bytes: {:?}", self.id, bytes);
+                        log::trace!("{}.parse | points: {:?}", self.id, self.points.iter().map(|(name, _)| name).collect::<Vec<&String>>());
+                        for (_, parse_point) in &mut self.points {
+                            parse_point.add(bytes, status, timestamp);
+                            while let Some(point) = parse_point.next() {
+                                // log::debug!("{}.parse | point: {:?}", self.id, point);
+                                if let Err(err) = tx_send.send(point) {
+                                    let message = format!("{}.parse | send error: {}", self.id, err);
+                                    log::warn!("{}", message);
+                                }
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        log::error!("{}.parse | Error message length: {}, expected {}, \n\t error: {:#?}", self.id, buf.len(), UdpClient::HEAD_LEN + count, err);
+                    }
+                }
+            }
+            _ => {
+                log::warn!("{}.parse | Unknown message format: {:#?}...", self.id, &buf[..=10]);
             }
         }
     }
@@ -75,69 +116,35 @@ impl UdpClientDb {
     /// Returns updated points from the current DB
     /// - parses raw data into the configured points
     /// - returns only points with updated value or status
-    pub fn read(&mut self, socket: &UdpSocket, tx_send: &Sender<Point>) -> Result<(), String> {
-        let mtu = 4096;
-        let mut buf = vec![0; mtu];
-        let count: usize;
-        let mut messages = String::new();
-        let status = Status::Ok;
+    pub fn read(&mut self, socket: &UdpSocket, bytes: Vec<u8>, tx_send: &Sender<Point>) -> Result<(), String> {
+        if !bytes.is_empty() {
+            let timestamp = Utc::now();
+            self.parse(bytes.as_slice(), timestamp, tx_send);
+        }
+        let mut buf = vec![0; self.mtu];
         match socket.recv_from(&mut buf) {
-            Ok((_, src_addr)) => {
+            Ok((_, _)) => {
                 let timestamp = Utc::now();
-                match buf.as_slice() {
-                    // Data message received
-                    &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
-                        count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                        log::trace!("{}.read | {}: addr: {} type: {} count: {}", self.id, src_addr, addr, type_, count);
-                        match &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)].try_into() {
-                            Ok(data) => {
-                                let bytes: &Vec<u8> = data;
-                                log::trace!("{}.read | bytes: {:?}", self.id, bytes);
-                                log::trace!("{}.read | points: {:?}", self.id, self.points.iter().map(|(name, _)| name).collect::<Vec<&String>>());
-                                for (_, parse_point) in &mut self.points {
-                                    parse_point.add(bytes, status, timestamp);
-                                    while let Some(point) = parse_point.next() {
-                                        // log::debug!("{}.read | point: {:?}", self.id, point);
-                                        if let Err(err) = tx_send.send(point) {
-                                            let message = format!("{}.read | send error: {}", self.id, err);
-                                            warn!("{}", message);
-                                            messages.push_str(&message);
-                                        }
-                                    }
-                                }
-                            }
-                            Err(err) => {
-                                log::error!("{}.read | {}: Error message length: {}, expected {}, \n\t error: {:#?}", self.id, src_addr, buf.len(), UdpClient::HEAD_LEN + count, err);
-                            }
-                        }
-                    }
-                    _ => {
-                        log::warn!("{}.read | {}: Unknown message format: {:#?}...", self.id, src_addr, &buf[..=10]);
-                    }
-                }
+                self.parse(buf.as_slice(), timestamp, tx_send);
+                Ok(())
             }
             Err(err) => {
-                // self.notify.add(State::UdpRecvError, format!("{}.read | UdpSocket recv error: {:#?}", self.id, err));
                 match err.kind() {
                     std::io::ErrorKind::WouldBlock => {
-                        let message = &format!("{}.read | Socket read timeout", self.id);
-                        log::debug!("{}", message);
+                        self.notify.add(State::WouldBlock, format!("{}.read | Socket read timeout", self.id));
+                        Ok(())
                     },
                     std::io::ErrorKind::TimedOut => {
-                        let message = &format!("{}.read | Socket read timeout", self.id);
-                        log::debug!("{}", message);
+                        self.notify.add(State::TimedOut, format!("{}.read | Socket read timeout", self.id));
+                        Ok(())
                     }
                     _ => {
                         let message = format!("{}.read | Read error: {:#?}", self.id, err);
                         log::error!("{}", message);
-                        messages.push_str(&message);
+                        Err(message)
                     },
                 }
             }
-        }
-        match messages.is_empty() {
-            true => Ok(()),
-            false => Err(messages),
         }
     }
     ///
@@ -150,7 +157,7 @@ impl UdpClientDb {
     //                 Ok(_) => {}
     //                 Err(err) => {
     //                     message = format!("{}.yield_status | send error: {}", self.id, err);
-    //                     warn!("{}", message);
+    //                     log::warn!("{}", message);
     //                 }
     //             }
     //         }

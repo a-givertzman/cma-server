@@ -23,6 +23,7 @@ use super::udp_client_db_config::UdpClientDbConfig;
 ///    protocol: 'udp-raw'
 ///    local-address: 192.168.100.100:15180
 ///    remote-address: 192.168.100.241:15180
+///    mtu: 1500                           # Maximum Transmission Unit, default 1500
 ///    diagnosis:                          # internal diagnosis
 ///        point Status:                   # Ok(0) / Invalid(10)
 ///            type: 'Int'
@@ -41,17 +42,19 @@ use super::udp_client_db_config::UdpClientDbConfig;
 /// 
 #[derive(Debug, PartialEq, Clone)]
 pub struct UdpClientConfig {
-    pub(crate) name: Name,
-    pub(crate) description: String,
-    pub(crate) subscribe: ConfSubscribe,
-    pub(crate) send_to: LinkName,
-    pub(crate) cycle: Option<Duration>,
-    pub(crate) reconnect: Duration,
-    pub(crate) protocol: String,
-    pub(crate) local_addr: String,
-    pub(crate) remote_addr: String,
-    pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
-    pub(crate) dbs: IndexMapFxHasher<String, UdpClientDbConfig>,
+    pub name: Name,
+    pub description: String,
+    pub subscribe: ConfSubscribe,
+    pub send_to: LinkName,
+    pub cycle: Option<Duration>,
+    pub reconnect: Duration,
+    pub protocol: String,
+    pub local_addr: String,
+    pub remote_addr: String,
+    /// Maximum Transmission Unit, default 1500, [Resolve IPv4 Fragmentation, MTU...](https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/25885-pmtud-ipfrag.html)
+    pub mtu: usize,
+    pub diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
+    pub dbs: IndexMapFxHasher<String, UdpClientDbConfig>,
 }
 //
 // 
@@ -83,6 +86,8 @@ impl UdpClientConfig {
         log::debug!("{}.new | local-address: {:?}", self_id, local_address);
         let remote_address = self_conf.get_param_value("remote-address").unwrap().as_str().unwrap().to_string();
         log::debug!("{}.new | remote-address: {:?}", self_id, remote_address);
+        let mtu = self_conf.get_param_value("mtu");
+        log::debug!("{}.new | mtu: {:?}", self_id, mtu);
         let diagnosis = self_conf.get_diagnosis(&self_name);
         log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
@@ -112,6 +117,7 @@ impl UdpClientConfig {
             protocol,
             local_addr: local_address,
             remote_addr: remote_address,
+            mtu: mtu.unwrap_or(serde_yaml::Value::Null).as_u64().unwrap_or(1500) as usize,
             diagnosis,
             dbs,
         }

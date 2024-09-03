@@ -77,6 +77,7 @@ mod udp_client_config {
                     protocol: "udp-raw".to_owned(),
                     local_addr: "192.168.100.100:15180".to_owned(),
                     remote_addr: "192.168.100.241:15180".to_owned(),
+                    mtu: 1500,
                     diagnosis: IndexMapFxHasher::from_iter([
                         (DiagKeywd::Status, PointConfig {
                             id: 0,
@@ -143,6 +144,7 @@ mod udp_client_config {
                     protocol: 'udp-raw'
                     local-address: 192.168.100.100:15180
                     remote-address: 192.168.100.241:15180
+                    mtu: 4096
                     db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
                         description: 'Data block of the device'
                         size: 1024                      # corresponding to the length of the array transmitted in the UDP message
@@ -174,6 +176,7 @@ mod udp_client_config {
                     protocol: "udp-raw".to_owned(),
                     local_addr: "192.168.100.100:15180".to_owned(),
                     remote_addr: "192.168.100.241:15180".to_owned(),
+                    mtu: 4096,
                     diagnosis: IndexMapFxHasher::from_iter([]),
                     dbs: IndexMapFxHasher::from_iter([
                         ("data".to_owned(), UdpClientDbConfig {
