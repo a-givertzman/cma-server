@@ -2,13 +2,13 @@
 
 mod multi_queue {
     use log::debug;
-    use sal_sync::services::{retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
+    use sal_sync::services::{entity::object::Object, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
     use std::{sync::{Arc, RwLock, Once}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::multi_queue_config::MultiQueueConfig, services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::nested_function::reset_counter::AtomicReset},
-        tests::unit::services::multi_queue::{mock_recv_service::{self, MockRecvService}, mock_send_service::{self, MockSendService}},
+        tests::unit::services::multi_queue::{mock_recv_service::MockRecvService, mock_send_service::{self, MockSendService}},
     };
     ///
     ///
@@ -73,26 +73,36 @@ mod multi_queue {
         let total_count = count * test_data.len();
         let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
         test_duration.run().unwrap();
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("point/id.json", None))
+        ))));
+        let mut recv_services = vec![];
+        for _ in 0..count {
+            let recv_service = Arc::new(RwLock::new(MockRecvService::new(
+                self_id,
+                "in-queue",
+                Some(iterations),
+            )));
+            services.wlock(self_id).insert(recv_service.clone());
+            recv_services.push(recv_service);
+        }
         let mut conf = r#"
             service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
                 send-to:
         "#.to_string();
-        for i in 0..count {
-            conf = format!("{}\n                    - /{}/MockRecvService{}.in-queue", conf, self_id, i)
+        for s in &recv_services {
+            // conf = format!("{}\n                    - /{}/MockRecvService{}.in-queue", conf, self_id, i)
+            conf = format!("{}\n                    - {}.in-queue", conf, s.read().unwrap().name().join())
         }
         let conf = serde_yaml::from_str(&conf).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(self_id, &conf);
         debug!("mqConf: {:?}", mq_conf);
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
-        ))));
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let mut recv_handles = vec![];
-        let mut recv_services = vec![];
         let timer = Instant::now();
         mock_send_service::COUNT.reset(0);
         let send_service = Arc::new(RwLock::new(MockSendService::new(
@@ -103,16 +113,6 @@ mod multi_queue {
             None,
         )));
         services.wlock(self_id).insert(send_service.clone());
-        mock_recv_service::COUNT.reset(0);
-        for _ in 0..count {
-            let recv_service = Arc::new(RwLock::new(MockRecvService::new(
-                self_id,
-                "in-queue",
-                Some(iterations),
-            )));
-            services.wlock(self_id).insert(recv_service.clone());
-            recv_services.push(recv_service);
-        }
         let services_handle = services.wlock(self_id).run().unwrap();
         mq_service.write().unwrap().run().unwrap();
         for service in &mut recv_services {
