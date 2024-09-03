@@ -93,7 +93,7 @@ mod udp_client {
         let receiver_handle = receiver.write().unwrap().run().unwrap();
         // let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let udp_client_handle = udp_client.write().unwrap().run().unwrap();
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(10));
         let udp_server_handle = udp_server.write().unwrap().run().unwrap();
         
         let mut received = 0;
