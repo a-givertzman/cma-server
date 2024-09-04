@@ -2,10 +2,10 @@ use log::{info, warn, LevelFilter};
 use sal_sync::services::{entity::point::point::Point, service::service_cycle::ServiceCycle};
 use std::{
     io::BufReader, net::TcpStream, 
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex}, 
+    sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, 
     thread::{self, JoinHandle}, time::Duration,
 };
-use crate::{core_::net::connection_status::ConnectionStatus, services::safe_lock::SafeLock, tcp::tcp_stream_write::OpResult};
+use crate::{core_::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::OpResult};
 use super::steam_read::TcpStreamRead;
 
 ///
@@ -13,7 +13,7 @@ use super::steam_read::TcpStreamRead;
 #[derive(Debug)]
 pub struct TcpReadAlive {
     id: String,
-    stream_read: Arc<Mutex<dyn TcpStreamRead>>,
+    stream_read: Arc<RwLock<dyn TcpStreamRead>>,
     send: Sender<Point>,
     cycle: Option<Duration>,
     exit: Arc<AtomicBool>,
@@ -27,7 +27,7 @@ impl TcpReadAlive {
     /// - [exitPair] - notification from / to sibling pair to exit 
     pub fn new(
         parent: impl Into<String>, 
-        stream_read: Arc<Mutex<dyn TcpStreamRead>>,
+        stream_read: Arc<RwLock<dyn TcpStreamRead>>,
         dest: Sender<Point>, 
         cycle: Option<Duration>, 
         exit: Option<Arc<AtomicBool>>, 
@@ -57,7 +57,7 @@ impl TcpReadAlive {
         let handle = thread::Builder::new().name(format!("{} - Read", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
             let mut tcp_stream = BufReader::new(tcp_stream);
-            let mut tcp_stream_read = tcp_stream_read.slock(&self_id);
+            let mut tcp_stream_read = tcp_stream_read.write().unwrap();
             info!("{}.run | Main loop started", self_id);
             loop {
                 if let Some(cycle) = &mut cycle {cycle.start()}

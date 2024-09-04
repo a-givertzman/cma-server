@@ -53,7 +53,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_bool() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
         info!("{}", self_id);
@@ -93,7 +93,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
         info!("{}", self_id);
@@ -133,7 +133,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
         info!("{}", self_id);
@@ -173,7 +173,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_double() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
         info!("{}", self_id);

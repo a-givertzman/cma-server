@@ -33,7 +33,7 @@ mod fn_sub {
     #[ignore = "Task FnSub ignored for Bool's - not implemented, under discussion"]
     #[test]
     fn test_bool() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("test_bool");
         let mut value1_stored;

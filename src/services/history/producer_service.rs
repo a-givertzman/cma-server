@@ -18,7 +18,7 @@ use sal_sync::services::{
 };
 use serde_json::json;
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::SafeLock, services::Services};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 use super::producer_service_config::ProducerServiceConfig;
 ///
 /// Service for debuging / testing purposes
@@ -106,6 +106,10 @@ impl Debug for ProducerService {
             .finish()
     }
 }
+//
+//
+unsafe impl Send for ProducerService {}
+unsafe impl Sync for ProducerService {}
 //
 //
 impl Service for ProducerService {

@@ -1,14 +1,14 @@
 use sal_sync::services::service::service_cycle::ServiceCycle;
-use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread, time::Duration};
+use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{warn, LevelFilter, debug, info};
-use crate::services::safe_lock::SafeLock;
+use crate::services::safe_lock::rwlock::SafeLock;
 ///
 /// Opens a TCP connection to a remote host
 /// - returns connected Result<TcpStream, Err>
 pub struct TcpClientConnect {
     id: String,
     addr: SocketAddr,
-    stream: Arc<Mutex<Vec<TcpStream>>>,
+    stream: Arc<RwLock<Vec<TcpStream>>>,
     reconnect: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -30,7 +30,7 @@ impl TcpClientConnect {
         Self {
             id: format!("{}/TcpClientConnect", parent.into()),
             addr,
-            stream: Arc::new(Mutex::new(Vec::new())),
+            stream: Arc::new(RwLock::new(Vec::new())),
             reconnect,
             exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
         }
@@ -52,8 +52,8 @@ impl TcpClientConnect {
                 cycle.start();
                 match TcpStream::connect_timeout(&addr, Duration::from_millis(1000)) {
                     Ok(stream) => {
-                        self_stream.slock(&self_id).push(stream);
-                        info!("{}.connect | connected to: \n\t{:?}", id, self_stream.slock(&self_id).first().unwrap());
+                        self_stream.wlock(&self_id).push(stream);
+                        info!("{}.connect | connected to: \n\t{:?}", id, self_stream.rlock(&self_id).first().unwrap());
                         break;
                     }
                     Err(err) => {
@@ -71,16 +71,17 @@ impl TcpClientConnect {
             debug!("{}.connect | Exit", id);
         });
         handle.join().unwrap();
-        let mut tcp_stream = self.stream.slock(&self.id);
+        let mut tcp_stream = self.stream.wlock(&self.id);
         tcp_stream.pop()
     }
-    ///
-    /// Opens a TCP connection to a remote host with a timeout.
-    pub fn connect_timeout(&self, timeout: Duration) -> Result<TcpStream, std::io::Error> {
-        TcpStream::connect_timeout(&self.addr, timeout)
-    }
+    // ///
+    // /// Opens a TCP connection to a remote host with a timeout.
+    // pub fn connect_timeout(&self, timeout: Duration) -> Result<TcpStream, std::io::Error> {
+    //     TcpStream::connect_timeout(&self.addr, timeout)
+    // }
     ///
     /// Exit thread
+    #[allow(unused)]
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
     }

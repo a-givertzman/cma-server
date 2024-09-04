@@ -3,12 +3,12 @@
 mod fn_point {
     use log::{debug, info, trace};
     use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
-    use std::{env, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer,
     };
     ///
@@ -29,7 +29,7 @@ mod fn_point {
     ///
     #[test]
     fn export_point() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -70,8 +70,8 @@ mod fn_point {
         trace!("config: {:?}", config);
         debug!("Task config points: {:#?}", config.points());
 
-        let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
-        debug!("Task points: {:#?}", task.lock().unwrap().points());
+        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        debug!("Task points: {:#?}", task.read().unwrap().points());
 
         services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
@@ -82,7 +82,7 @@ mod fn_point {
                 send-to:
             ").unwrap(),
         );
-        let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
+        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
         services.wlock(self_id).insert(multi_queue.clone());
         let test_data = vec![
             (format!("/{}/Load", self_id), Value::Real(-7.035)),
@@ -99,7 +99,7 @@ mod fn_point {
             (format!("/{}/Load", self_id), Value::Real(7.035)),
         ];
         let total_count = test_data.len();
-        let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
+        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
@@ -107,7 +107,7 @@ mod fn_point {
         )));
         services.wlock(self_id).insert(receiver.clone());      // "TaskTestReceiver",
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
-        let producer = Arc::new(Mutex::new(TaskTestProducer::new(
+        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::ZERO,
@@ -116,33 +116,33 @@ mod fn_point {
         )));
         services.wlock(self_id).insert(producer.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
-        let multi_queue_handle = multi_queue.lock().unwrap().run().unwrap();
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
+        let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
         info!("receiver runing - ok");
-        let task_handle = task.lock().unwrap().run().unwrap();
+        let task_handle = task.write().unwrap().run().unwrap();
         info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.lock().unwrap().run().unwrap();
+        let producer_handle = producer.write().unwrap().run().unwrap();
         info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
-        producer.lock().unwrap().exit();
-        task.lock().unwrap().exit();
+        producer.read().unwrap().exit();
+        task.read().unwrap().exit();
         task_handle.wait().unwrap();
         producer_handle.wait().unwrap();
-        multi_queue.lock().unwrap().exit();
+        multi_queue.read().unwrap().exit();
         multi_queue_handle.wait().unwrap();
         services.rlock(self_id).exit();
         services_handle.wait().unwrap();
-        let sent = producer.lock().unwrap().sent().lock().unwrap().len();
-        let result = receiver.lock().unwrap().received().lock().unwrap().len();
+        let sent = producer.read().unwrap().sent().read().unwrap().len();
+        let result = receiver.read().unwrap().received().read().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == total_count, "\nresult: {:?}\ntarget: {:?}", result, total_count);
         let target_name = "/App/RecorderTask/Load002";
-        for (i, result) in receiver.lock().unwrap().received().lock().unwrap().iter().enumerate() {
+        for (i, result) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
             let (_, target) = test_data[i].clone();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);

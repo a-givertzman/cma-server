@@ -22,7 +22,7 @@ pub struct UiPlot {
     points: IndexMap<String, Vec<[f64; 2]>>,
     events: Vec<String>,
     #[allow(unused)]
-    status: Rc<RefCell<ChangeNotify<UiStatus>>>,
+    status: Rc<RefCell<ChangeNotify<UiStatus, String>>>,
 }
 //
 //

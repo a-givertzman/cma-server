@@ -3,12 +3,12 @@
 mod cma_recorder {
     use log::{debug, info, trace};
     use sal_sync::services::{entity::{name::Name, point::point::Point}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
-    use std::{env, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig}, 
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer
     };
     ///
@@ -29,7 +29,7 @@ mod cma_recorder {
     /// Testing the SQL generated after detected operating cycle finished
     #[test]
     fn operating_cycle_metric() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -124,8 +124,8 @@ mod cma_recorder {
         );
         trace!("config: {:?}", config);
         debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(Mutex::new(Task::new(config, services.clone())));
-        debug!("Task points: {:#?}", task.lock().unwrap().points());
+        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        debug!("Task points: {:#?}", task.read().unwrap().points());
         services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
@@ -135,7 +135,7 @@ mod cma_recorder {
                 send-to:
             ").unwrap(),
         );
-        let multi_queue = Arc::new(Mutex::new(MultiQueue::new(conf, services.clone())));
+        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
         services.wlock(self_id).insert(multi_queue.clone());
         let test_data = vec![
         //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth
@@ -231,7 +231,7 @@ mod cma_recorder {
         }).collect();
         let target_thrd_count = target_thrd.len();
         let target_smooth_count = target_smooth.len();
-        let receiver = Arc::new(Mutex::new(TaskTestReceiver::new(
+        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
@@ -241,7 +241,7 @@ mod cma_recorder {
         let test_data: Vec<(String, Value)> = test_data.into_iter().map(|(_, name, value, _, _, _)| {
             (name, value)
         }).collect();
-        let producer = Arc::new(Mutex::new(TaskTestProducer::new(
+        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::ZERO,
@@ -250,56 +250,56 @@ mod cma_recorder {
         )));
         services.wlock(self_id).insert(producer.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
-        let multi_queue_handle = multi_queue.lock().unwrap().run().unwrap();
-        let receiver_handle = receiver.lock().unwrap().run().unwrap();
+        let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
         info!("receiver runing - ok");
-        let task_handle = task.lock().unwrap().run().unwrap();
+        let task_handle = task.write().unwrap().run().unwrap();
         info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.lock().unwrap().run().unwrap();
+        let producer_handle = producer.write().unwrap().run().unwrap();
         info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
-        producer.lock().unwrap().exit();
-        task.lock().unwrap().exit();
+        producer.read().unwrap().exit();
+        task.read().unwrap().exit();
         task_handle.wait().unwrap();
         producer_handle.wait().unwrap();
-        multi_queue.lock().unwrap().exit();
+        multi_queue.read().unwrap().exit();
         multi_queue_handle.wait().unwrap();
         services.rlock(self_id).exit();
         services_handle.wait().unwrap();
-        let sent = producer.lock().unwrap().sent().lock().unwrap().len();
-        let result = receiver.lock().unwrap().received().lock().unwrap().len();
+        let sent = producer.read().unwrap().sent().read().unwrap().len();
+        let result = receiver.read().unwrap().received().read().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         println!("target smooth   : {:?}", target_smooth_count);
         println!("target threshold: {:?}", target_thrd_count);
-        for (i, result) in receiver.lock().unwrap().received().lock().unwrap().iter().enumerate() {
+        for (i, result) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
             // assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
         };
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == total_count_load, "\nresult: {:?}\ntarget: {:?}", result, total_count);
-        let smooth: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let smooth: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Smooth", self_id)
         }).collect();
         for (i, result) in smooth.iter().enumerate() {
             println!("smooth: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let thrd: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let thrd: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Threshold", self_id)
         }).collect();
         for (i, result) in thrd.iter().enumerate() {
             println!("threshold: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let op_cycle: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/OpCycle", self_id)
         }).collect();
         for (i, result) in op_cycle.iter().enumerate() {
             println!("op cycle: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle_sql: Vec<Point> = receiver.lock().unwrap().received().lock().unwrap().iter().cloned().filter(|point| {
+        let op_cycle_sql: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/OpCycleSql", self_id)
         }).collect();
         for (i, result) in op_cycle_sql.iter().enumerate() {

@@ -3,7 +3,7 @@ use sal_sync::services::{
     entity::{name::Name, object::Object, point::point::Point},
     service::{service::Service, service_handles::ServiceHandles},
 };
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread, time::Duration};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
     core_::{
@@ -25,7 +25,7 @@ pub struct EmulatedTcpClientRecv {
     id: String,
     name: Name,
     addr: SocketAddr,
-    received: Arc<Mutex<Vec<Point>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     must_received: Option<Value>,
     disconnect: Vec<i8>,
@@ -41,7 +41,7 @@ impl EmulatedTcpClientRecv {
             id: name.join(),
             name,
             addr: addr.parse().unwrap(),
-            received: Arc::new(Mutex::new(vec![])),
+            received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             must_received,
             disconnect,
@@ -56,7 +56,7 @@ impl EmulatedTcpClientRecv {
     }
     ///
     ///
-    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
     ///
@@ -109,13 +109,13 @@ impl EmulatedTcpClientRecv {
     ///
     pub fn wait_all_received(&self) {
         let recv_limit = self.recv_limit.unwrap_or(0);
-        info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.lock().unwrap().len(), recv_limit);
+        info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
         loop {
-            if self.received.lock().unwrap().len() >= recv_limit {
+            if self.received.read().unwrap().len() >= recv_limit {
                 break;
             }
             thread::sleep(Duration::from_millis(100));
-            trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.lock().unwrap().len(), recv_limit);
+            trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
         }
     }
     ///
@@ -206,7 +206,7 @@ impl Service for EmulatedTcpClientRecv {
                                                 match result {
                                                     OpResult::Ok(point) => {
                                                         debug!("{}.run | received: {:?}", self_id, point);
-                                                        received.lock().unwrap().push(point.clone());
+                                                        received.write().unwrap().push(point.clone());
                                                         received_count += 1;
                                                         progress_percent = (received_count as f32) / (recv_limit as f32);
                                                         switch_state.add(progress_percent);
@@ -266,7 +266,7 @@ impl Service for EmulatedTcpClientRecv {
                                             trace!("{}.run | received: {:?}", self_id, result);
                                             match result {
                                                 OpResult::Ok(point) => {
-                                                    received.lock().unwrap().push(point);
+                                                    received.write().unwrap().push(point);
                                                 }
                                                 OpResult::Err(err) => {
                                                     warn!("{}.run | read socket error: {:?}", self_id, err);

@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{info, warn, trace};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::SafeLock, services::Services};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
 ///
 pub struct MockSendService {
@@ -12,7 +12,7 @@ pub struct MockSendService {
     send_to: LinkName,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<Point>>>,
+    sent: Arc<RwLock<Vec<Point>>>,
     delay: Option<Duration>,
     exit: Arc<AtomicBool>,
 }
@@ -27,7 +27,7 @@ impl MockSendService {
             send_to: LinkName::new(send_to),
             services,
             test_data,
-            sent: Arc::new(Mutex::new(vec![])),
+            sent: Arc::new(RwLock::new(vec![])),
             delay,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -39,7 +39,7 @@ impl MockSendService {
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
         self.sent.clone()
     }
 }
@@ -63,6 +63,10 @@ impl Debug for MockSendService {
             .finish()
     }
 }
+//
+//
+unsafe impl Send for MockSendService {}
+unsafe impl Sync for MockSendService {}
 //
 // 
 impl Service for MockSendService {
@@ -94,7 +98,7 @@ impl Service for MockSendService {
                 match txSend.send(point.clone()) {
                     Ok(_) => {
                         trace!("{}.run | send: {:?}", self_id, point);
-                        sent.lock().unwrap().push(point);
+                        sent.write().unwrap().push(point);
                     }
                     Err(err) => {
                         warn!("{}.run | send error: {:?}", self_id, err);

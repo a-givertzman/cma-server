@@ -1,7 +1,6 @@
 #[cfg(test)]
 
 mod tests {
-    use log::{warn, info, debug};
     use std::{sync::Once, time::{Duration, Instant}};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -23,13 +22,13 @@ mod tests {
     /// Testing such functionality / behavior
     #[test]
     fn test_task_cycle() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
+        log::debug!();
         let self_id = "test";
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
+        log::debug!("\n{}", self_id);
+        let test_duration = TestDuration::new(self_id, Duration::from_secs(1));
         test_duration.run().unwrap();
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         test_duration.exit();

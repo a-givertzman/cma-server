@@ -1,28 +1,28 @@
 use log::{info, warn, debug, trace};
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread};
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},
     service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
 };
 use testing::entities::test_value::Value;
-use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::SafeLock, services::Services}};
+use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::rwlock::SafeLock, services::Services}};
 ///
 ///
 pub struct MockTcpServer {
     id: String,
     name: Name,
     multi_queue: LinkName,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<Point>>>,
-    received: Arc<Mutex<Vec<Point>>>,
+    sent: Arc<RwLock<Vec<Point>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
 //
 // 
 impl MockTcpServer {
-    pub fn new(parent: impl Into<String>, multi_queue: &str, services: Arc<Mutex<Services>>, test_data: Vec<Value>, recv_limit: Option<usize>) -> Self {
+    pub fn new(parent: impl Into<String>, multi_queue: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockTcpServer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             id: name.join(),
@@ -30,8 +30,8 @@ impl MockTcpServer {
             multi_queue: LinkName::new(multi_queue),
             services,
             test_data,
-            sent: Arc::new(Mutex::new(vec![])),
-            received: Arc::new(Mutex::new(vec![])),
+            sent: Arc::new(RwLock::new(vec![])),
+            received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -43,12 +43,12 @@ impl MockTcpServer {
     }
     ///
     /// 
-    // pub fn sent(&self) -> Arc<Mutex<Vec<PointType>>> {
+    // pub fn sent(&self) -> Arc<RwLock<Vec<PointType>>> {
     //     self.sent.clone()
     // }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -72,6 +72,10 @@ impl Debug for MockTcpServer {
             .finish()
     }
 }
+//
+//
+unsafe impl Send for MockTcpServer {}
+unsafe impl Sync for MockTcpServer {}
 //
 // 
 impl Service for MockTcpServer {
@@ -99,7 +103,7 @@ impl Service for MockTcpServer {
                         match rx_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().unwrap().push(point);
                                 received_count += 1;
                             }
                             Err(_) => {}
@@ -117,7 +121,7 @@ impl Service for MockTcpServer {
                         match rx_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().unwrap().push(point);
                             }
                             Err(_) => {}
                         };
@@ -141,7 +145,7 @@ impl Service for MockTcpServer {
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
                         trace!("{}.run | send: {:?}", self_id, point);
-                        sent.lock().unwrap().push(point);
+                        sent.write().unwrap().push(point);
                     }
                     Err(err) => {
                         warn!("{}.run | send error: {:?}", self_id, err);

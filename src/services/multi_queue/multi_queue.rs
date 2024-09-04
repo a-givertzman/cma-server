@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
+use std::{collections::HashMap, fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread};
 use log::{debug, error, info, trace, warn};
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}},
@@ -8,7 +8,7 @@ use sal_sync::services::{
 use crate::{
     conf::multi_queue_config::MultiQueueConfig, 
     core_::constants::constants::RECV_TIMEOUT, 
-    services::{safe_lock::SafeLock, services::Services},
+    services::{safe_lock::rwlock::SafeLock, services::Services},
 };
 use concat_string::concat_string;
 ///
@@ -18,7 +18,7 @@ use concat_string::concat_string;
 pub struct MultiQueue {
     id: String,
     name: Name,
-    subscriptions: Arc<Mutex<Subscriptions>>,
+    subscriptions: Arc<RwLock<Subscriptions>>,
     subscriptions_changed: Arc<AtomicBool>,
     rx_send: HashMap<String, Sender<Point>>,
     rx_recv: Vec<Receiver<Point>>,
@@ -40,7 +40,7 @@ impl MultiQueue {
         Self {
             id: self_id.clone(),
             name: conf.name.clone(),
-            subscriptions: Arc::new(Mutex::new(Subscriptions::new(self_id))),
+            subscriptions: Arc::new(RwLock::new(Subscriptions::new(self_id))),
             subscriptions_changed: Arc::new(AtomicBool::new(false)),
             rx_send: HashMap::from([(conf.rx, send)]),
             rx_recv: vec![recv],
@@ -112,6 +112,10 @@ impl Debug for MultiQueue {
 }
 //
 //
+unsafe impl Send for MultiQueue {}
+unsafe impl Sync for MultiQueue {}
+//
+//
 impl Service for MultiQueue {
     //
     //
@@ -128,12 +132,12 @@ impl Service for MultiQueue {
         let receiver_hash = PointTxId::from_str(receiver_name);
         self.receiver_dictionary.insert(receiver_hash, receiver_name.to_string());
         if points.is_empty() {
-            self.subscriptions.slock(&self.id).add_broadcast(receiver_hash, send.clone());
+            self.subscriptions.wlock(&self.id).add_broadcast(receiver_hash, send.clone());
             self.log("/broadcast.log", receiver_name, receiver_hash, points);
             debug!("{}.subscribe | Broadcast subscription registered, receiver: \n\t{} ({})", self.id, receiver_name, receiver_hash);
         } else {
             for subscription_criteria in points {
-                self.subscriptions.slock(&self.id).add_multicast(receiver_hash, &subscription_criteria.destination(), send.clone());
+                self.subscriptions.wlock(&self.id).add_multicast(receiver_hash, &subscription_criteria.destination(), send.clone());
             }
             self.log("/multicast.log", receiver_name, receiver_hash, points);
             debug!("{}.subscribe | Multicast subscription registered, receiver: \n\t{} ({}) \n\tpoints: {:#?}", self.id, receiver_name, receiver_hash, points.len());
@@ -154,7 +158,7 @@ impl Service for MultiQueue {
             let mut message = String::new();
             for subscription_criteria in points {
                 trace!("{}.extend_subscription | Multicast subscription extending for receiver: {} ({})...", self.id, receiver_name, receiver_hash);
-                if let Err(err) = self.subscriptions.slock(&self.id).extend_multicast(receiver_hash, &subscription_criteria.destination()) {
+                if let Err(err) = self.subscriptions.wlock(&self.id).extend_multicast(receiver_hash, &subscription_criteria.destination()) {
                     message = concat_string!(message, err, "\n");
                 };
             }
@@ -176,7 +180,7 @@ impl Service for MultiQueue {
         let mut changed = false;
         let receiver_hash = PointTxId::from_str(receiver_name);
         if points.is_empty() {
-            match self.subscriptions.slock(&self.id).remove_all(&receiver_hash) {
+            match self.subscriptions.wlock(&self.id).remove_all(&receiver_hash) {
                 Ok(_) => {
                     self.receiver_dictionary.remove(&receiver_hash);
                     changed |= true;
@@ -188,7 +192,7 @@ impl Service for MultiQueue {
             }
         } else {
             for subscription_criteria in points {
-                match self.subscriptions.slock(&self.id).remove(&receiver_hash, &subscription_criteria.destination()) {
+                match self.subscriptions.wlock(&self.id).remove(&receiver_hash, &subscription_criteria.destination()) {
                     Ok(_) => {
                         self.receiver_dictionary.remove(&receiver_hash);
                         changed |= true;
@@ -221,17 +225,17 @@ impl Service for MultiQueue {
                 panic!("{}.run | services.get_link error: {:#?}", self_id, err);
             });
             let receiver_hash = PointTxId::from_str(&receiver_name.name());
-            self.subscriptions.slock(&self_id).add_broadcast(receiver_hash, send.clone());
+            self.subscriptions.wlock(&self_id).add_broadcast(receiver_hash, send.clone());
             debug!("{}.run | Broadcast subscription registered, receiver: \n\t{} ({})", self.id, receiver_name, receiver_hash);
         }
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
-            let mut subscriptions = subscriptions_ref.slock(&self_id).clone();
+            let mut subscriptions = subscriptions_ref.wlock(&self_id).clone();
             loop {
                 if subscriptions_changed.load(Ordering::Relaxed) {
                     subscriptions_changed.store(false, Ordering::SeqCst);
                     debug!("{}.run | Subscriptions changes detected", self_id);
-                    subscriptions = subscriptions_ref.slock(&self_id).clone();
+                    subscriptions = subscriptions_ref.rlock(&self_id).clone();
                 }
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
@@ -256,7 +260,7 @@ impl Service for MultiQueue {
                     }
                 }
                 if exit.load(Ordering::SeqCst) {
-                    subscriptions_ref.slock(&self_id).exit();
+                    subscriptions_ref.wlock(&self_id).exit();
                     break;
                 }
             }

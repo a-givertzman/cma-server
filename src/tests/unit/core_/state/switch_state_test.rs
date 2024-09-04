@@ -67,7 +67,6 @@ mod tests {
                             target: ProcessState::Stop,
                         },
                     ],
-
                 },
                 Switch{
                     state: ProcessState::Progress,

@@ -3,9 +3,9 @@ use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_config::PointConfig, point_tx_id::PointTxId}},
     service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
 };
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::SafeLock, services::Services};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
 /// 
 pub struct TaskTestProducer {
@@ -16,7 +16,7 @@ pub struct TaskTestProducer {
     // rxSend: HashMap<String, Sender<PointType>>,
     services: Arc<RwLock<Services>>,
     test_data: Vec<(String, Value)>,
-    sent: Arc<Mutex<Vec<Point>>>,
+    sent: Arc<RwLock<Vec<Point>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -32,13 +32,13 @@ impl TaskTestProducer {
             // rxSend: HashMap::new(),
             services,
             test_data: test_data.to_vec(),
-            sent: Arc::new(Mutex::new(vec![])),
+            sent: Arc::new(RwLock::new(vec![])),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
         self.sent.clone()
     }
 }
@@ -63,6 +63,10 @@ impl Debug for TaskTestProducer {
     }
 }
 //
+//
+unsafe impl Send for TaskTestProducer {}
+unsafe impl Sync for TaskTestProducer {}
+//
 // 
 impl Service for TaskTestProducer {
     //
@@ -83,8 +87,8 @@ impl Service for TaskTestProducer {
                 let point = value.to_point(tx_id, &name);
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
-                        sent.lock().unwrap().push(point.clone());
-                        trace!("{}.run | sent points: {:?}", self_id, sent.lock().unwrap().len());
+                        sent.write().unwrap().push(point.clone());
+                        trace!("{}.run | sent points: {:?}", self_id, sent.read().unwrap().len());
                     }
                     Err(err) => {
                         warn!("{}.run | Error write to queue: {:?}", self_id, err);
@@ -94,7 +98,7 @@ impl Service for TaskTestProducer {
                     thread::sleep(cycle);
                 }
             }
-            info!("{}.run | All sent: {}", self_id, sent.lock().unwrap().len());
+            info!("{}.run | All sent: {}", self_id, sent.read().unwrap().len());
             // thread::sleep(Duration::from_secs_f32(0.1));
             // debug!("TaskTestProducer({}).run | calculating step - done ({:?})", name, cycle.elapsed());
         });

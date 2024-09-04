@@ -1,13 +1,13 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{info, trace, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
-use crate::services::{safe_lock::SafeLock, services::Services};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 #[cfg(test)]
 
 mod multi_queue {
     use log::debug;
     use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
-    use std::{sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::{
         entities::test_value::Value,
@@ -15,7 +15,7 @@ mod multi_queue {
     };
     use crate::{
         conf::multi_queue_config::MultiQueueConfig,
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::SafeLock, services::Services},
+        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services},
         tests::unit::services::multi_queue::{mock_send_service::MockSendService, multi_queue_subscribe_test::MockReceiver},
     };
     ///
@@ -62,12 +62,12 @@ mod multi_queue {
         let mq_conf = MultiQueueConfig::from_yaml(self_id, &conf);
         debug!("mqConf: {:?}", mq_conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
-        let mq_service = Arc::new(Mutex::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let mut receiver_handles = vec![];
         let mut receivers = vec![];
         for _ in 0..receiver_count {
-            let receiver = Arc::new(Mutex::new(MockReceiver::new(
+            let receiver = Arc::new(RwLock::new(MockReceiver::new(
                 self_id,
                 &format!("/{}/MultiQueue", self_id),
                 services.clone(),
@@ -76,9 +76,9 @@ mod multi_queue {
             services.wlock(self_id).insert(receiver.clone());
             receivers.push(receiver);
         }
-        let mq_handle = mq_service.lock().unwrap().run().unwrap();
+        let mq_handle = mq_service.write().unwrap().run().unwrap();
         for receiver in &receivers {
-            let h = receiver.lock().unwrap().run().unwrap();
+            let h = receiver.write().unwrap().run().unwrap();
             receiver_handles.push(h);
         }
         println!("All MockReceiver's threads - started");
@@ -101,7 +101,7 @@ mod multi_queue {
                 iterations,
             );
             let dynamic_test_data: Vec<Value> = dynamic_test_data.collect();
-            let sender = Arc::new(Mutex::new(MockSendService::new(
+            let sender = Arc::new(RwLock::new(MockSendService::new(
                 self_id,
                 &format!("/{}/MultiQueue.in-queue", self_id),
                 services.clone(),
@@ -113,7 +113,7 @@ mod multi_queue {
         }
         let services_handle = services.wlock(self_id).run().unwrap();
         for sender in &senders {
-            let sender_handle = sender.lock().unwrap().run().unwrap();
+            let sender_handle = sender.write().unwrap().run().unwrap();
             sender_handles.push(sender_handle);
         }
         for h in sender_handles {
@@ -123,7 +123,7 @@ mod multi_queue {
             h.wait().unwrap();
         }
         for receiver in &receivers {
-            receiver.lock().unwrap().exit();
+            receiver.read().unwrap().exit();
         }
         let elapsed = time.elapsed();
         println!("Total elapsed: {:?}", elapsed);
@@ -131,17 +131,17 @@ mod multi_queue {
         println!("Elapsed per event: {:?}", elapsed.div_f64(total_test_events as f64));
         let target = iterations;
         for sender in senders {
-            let sent = sender.lock().unwrap().sent();
-            let result = sent.lock().unwrap().len();
-            println!("\t {} sent: {:?}", sender.lock().unwrap().id(), result);
+            let sent = sender.read().unwrap().sent();
+            let result = sent.read().unwrap().len();
+            println!("\t {} sent: {:?}", sender.read().unwrap().id(), result);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         let target = total_test_events;
         for receiver in receivers {
-            let result = receiver.lock().unwrap().received.read().unwrap().len();
+            let result = receiver.read().unwrap().received.read().unwrap().len();
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        mq_service.lock().unwrap().exit();
+        mq_service.read().unwrap().exit();
         services.rlock(self_id).exit();
         mq_handle.wait().unwrap();
         services_handle.wait().unwrap();

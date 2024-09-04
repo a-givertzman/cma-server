@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 use log::{info, warn, trace};
 use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread};
 use testing::entities::test_value::Value;
-use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::SafeLock, services::Services}};
+use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::rwlock::SafeLock, services::Services}};
 ///
 /// 
 pub struct MockRecvSendService {
@@ -14,8 +14,8 @@ pub struct MockRecvSendService {
     send_to: LinkName,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<Point>>>,
-    received: Arc<Mutex<Vec<Point>>>,
+    sent: Arc<RwLock<Vec<Point>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recvLimit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -33,8 +33,8 @@ impl MockRecvSendService {
             send_to: LinkName::new(send_to),
             services,
             test_data,
-            sent: Arc::new(Mutex::new(vec![])),
-            received: Arc::new(Mutex::new(vec![])),
+            sent: Arc::new(RwLock::new(vec![])),
+            received: Arc::new(RwLock::new(vec![])),
             recvLimit,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -46,12 +46,12 @@ impl MockRecvSendService {
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
         self.sent.clone()
     }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<Point>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -75,6 +75,10 @@ impl Debug for MockRecvSendService {
             .finish()
     }
 }
+//
+//
+unsafe impl Send for MockRecvSendService {}
+unsafe impl Sync for MockRecvSendService {}
 //
 // 
 impl Service for MockRecvSendService {
@@ -104,7 +108,7 @@ impl Service for MockRecvSendService {
                         match rxRecv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().unwrap().push(point);
                                 receivedCount += 1;
                             }
                             Err(_) => {}
@@ -122,7 +126,7 @@ impl Service for MockRecvSendService {
                         match rxRecv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().unwrap().push(point);
                             }
                             Err(_) => {}
                         };
@@ -148,7 +152,7 @@ impl Service for MockRecvSendService {
                 match txSend.send(point.clone()) {
                     Ok(_) => {
                         trace!("{}.run | send: {:?}", self_id, point);
-                        sent.lock().unwrap().push(point);
+                        sent.write().unwrap().push(point);
                     }
                     Err(err) => {
                         warn!("{}.run | send error: {:?}", self_id, err);

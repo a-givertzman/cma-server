@@ -332,7 +332,7 @@ impl SlmpDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::new(0i64, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
             None => Box::new(FilterEmpty::new(0)),

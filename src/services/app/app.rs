@@ -1,7 +1,7 @@
 use linked_hash_map::LinkedHashMap;
 use log::{error, info, trace};
 use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, object::Object}, service::{service::Service, service_handles::ServiceHandles}};
-use std::{path::Path, process::exit, sync::{Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{path::Path, process::exit, sync::{Arc, RwLock}, thread, time::Duration};
 use libc::{
     SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
     // SIGFPE, SIGILL, SIGSEGV, 
@@ -18,7 +18,7 @@ use crate::{
         api_cient::api_client::ApiClient, cache::cache_service::CacheService,
         history::{producer_service::ProducerService, producer_service_config::ProducerServiceConfig},
         multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient,
-        safe_lock::SafeLock, server::tcp_server::TcpServer,
+        safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer,
         services::Services, slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient,
     }
 };
@@ -76,7 +76,7 @@ impl App {
         let services_iter = services.rlock(&self_id).all();
         for (name, service) in services_iter {
             info!("{}.run |         Starting service: {}...", self_id, name);
-            let handles = service.slock(&self_id).run();
+            let handles = service.wlock(&self_id).run();
             match handles {
                 Ok(handles) => {
                     app.write().unwrap().insert_handles(&name, handles);
@@ -110,33 +110,33 @@ impl App {
     }    
     ///
     /// Returns service by it's name
-    fn build_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: &mut ConfTree, services: Arc<RwLock<Services>>) -> Arc<Mutex<dyn Service + Send>> {
+    fn build_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: &mut ConfTree, services: Arc<RwLock<Services>>) -> Arc<RwLock<dyn Service>> {
         match node_name {
-            Services::API_CLIENT => Arc::new(Mutex::new(
+            Services::API_CLIENT => Arc::new(RwLock::new(
                 ApiClient::new(ApiClientConfig::new(parent, node_conf))
             )),
-            Services::MULTI_QUEUE => Arc::new(Mutex::new(
+            Services::MULTI_QUEUE => Arc::new(RwLock::new(
                 MultiQueue::new(MultiQueueConfig::new(parent, node_conf), services)
             )),
-            Services::PROFINET_CLIENT => Arc::new(Mutex::new(
+            Services::PROFINET_CLIENT => Arc::new(RwLock::new(
                 ProfinetClient::new(ProfinetClientConfig::new(parent, node_conf), services)
             )),
-            Services::TASK => Arc::new(Mutex::new(
+            Services::TASK => Arc::new(RwLock::new(
                 Task::new(TaskConfig::new(parent, node_conf), services.clone())
             )),
-            Services::TCP_CLIENT => Arc::new(Mutex::new(
+            Services::TCP_CLIENT => Arc::new(RwLock::new(
                 TcpClient::new(TcpClientConfig::new(parent, node_conf), services.clone())
             )),
-            Services::TCP_SERVER => Arc::new(Mutex::new(
+            Services::TCP_SERVER => Arc::new(RwLock::new(
                 TcpServer::new(TcpServerConfig::new(parent, node_conf), services.clone())
             )),
-            Services::PRODUCER_SERVICE => Arc::new(Mutex::new(
+            Services::PRODUCER_SERVICE => Arc::new(RwLock::new(
                 ProducerService::new(ProducerServiceConfig::new(parent, node_conf), services.clone())
             )),
-            Services::CACHE_SERVICE => Arc::new(Mutex::new(
+            Services::CACHE_SERVICE => Arc::new(RwLock::new(
                 CacheService::new(CacheServiceConfig::new(parent, node_conf), services.clone())
             )),
-            Services::SLMP_CLIENT => Arc::new(Mutex::new(
+            Services::SLMP_CLIENT => Arc::new(RwLock::new(
                 SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services)
             )),
             _ => {
@@ -182,7 +182,7 @@ impl App {
                                     let services_iter = services.rlock(&self_id).all();
                                     for (_id, service) in services_iter {
                                         println!("{}.run Stopping service '{}'...", self_id, _id);
-                                        service.slock(&self_id).exit();
+                                        service.rlock(&self_id).exit();
                                         println!("{}.run Stopping service '{}' - Ok", self_id, _id);
                                     }
                                     services.rlock(&self_id).exit();

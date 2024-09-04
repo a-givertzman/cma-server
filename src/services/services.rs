@@ -4,10 +4,10 @@ use sal_sync::services::{
     service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
     subscription::subscription_criteria::SubscriptionCriteria
 };
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
 use concat_string::concat_string;
-use crate::{core_::state::change_notify::ChangeNotify, services::safe_lock::SafeLock};
+use crate::{core_::state::change_notify::ChangeNotify, services::safe_lock::rwlock::SafeLock};
 ///
 /// States of the Services behavior for logging
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,7 +25,7 @@ enum NotifyState {
 pub struct Services {
     id: String,
     name: Name,
-    map: Arc<RwLock<HashMap<String, Arc<Mutex<dyn Service + Send>>>>>,
+    map: Arc<RwLock<HashMap<String, Arc<RwLock<dyn Service>>>>>,
     retain_conf: RetainConf,
     retain_point_id: Option<Arc<RwLock<RetainPointId>>>,
     points_requested: Arc<AtomicUsize>,
@@ -75,14 +75,14 @@ impl Services {
     }
     ///
     /// Prepairing retained points id's
-    fn prepare_point_ids(self_id: &str, notify: &mut ChangeNotify<NotifyState>, retain_point_id: &Option<Arc<RwLock<RetainPointId>>>, services: &Arc<RwLock<HashMap<String, Arc<Mutex<dyn Service + Send>>>>>) {
+    fn prepare_point_ids(self_id: &str, notify: &mut ChangeNotify<NotifyState, String>, retain_point_id: &Option<Arc<RwLock<RetainPointId>>>, services: &Arc<RwLock<HashMap<String, Arc<RwLock<dyn Service>>>>>) {
         match retain_point_id {
             Some(retain_point_id) => {
                 info!("{}.prepare_point_ids | Preparing Points id's...", self_id);
                 match services.read() {
                     Ok(services) => {
                         for (service_id, service) in services.iter() {
-                            let service_points = service.slock(self_id).points();
+                            let service_points = service.rlock(self_id).points();
                             match retain_point_id.write() {
                                 Ok(mut retain_point_id) => {
                                     retain_point_id.insert(&service_id, service_points);
@@ -105,7 +105,7 @@ impl Services {
                     Err(err) => error!("{}.prepare_point_ids | Services read access error: {:#?}", self_id, err),
                 }
             }
-            None => notify.add(NotifyState::RetainPointNotConfiguredWarn, &format!("{}.run | Retain->Point - not configured", self_id)),
+            None => notify.add(NotifyState::RetainPointNotConfiguredWarn, format!("{}.run | Retain->Point - not configured", self_id)),
         }
     }
     ///
@@ -165,16 +165,16 @@ impl Services {
                                             }
                                         },
                                         None => {
-                                            notify.add(NotifyState::RetainPointNotConfiguredWarn, &format!("{}.run | Retain->Point - not configured", self_id));
+                                            notify.add(NotifyState::RetainPointNotConfiguredWarn, format!("{}.run | Retain->Point - not configured", self_id));
                                             sink.add(vec![]);
                                         }
                                     }
                                 }
-                                None => notify.add(NotifyState::PointsRequestsIsEmpty, &format!("{}.run | Points requests is empty", self_id)),
+                                None => notify.add(NotifyState::PointsRequestsIsEmpty, format!("{}.run | Points requests is empty", self_id)),
                             }
                         }
                         Err(err) => {
-                            notify.add(NotifyState::PointsRequestsAccessError, &format!("{}.run | Points requests access error: {:#?}", self_id, err));
+                            notify.add(NotifyState::PointsRequestsAccessError, format!("{}.run | Points requests access error: {:#?}", self_id, err));
                         }
                     }
                 }
@@ -204,7 +204,7 @@ impl Services {
     }
     ///
     /// Returns all holding services in the map<service id, service reference>
-    pub fn all(&self) -> HashMap<String, Arc<Mutex<dyn Service + Send>>> {
+    pub fn all(&self) -> HashMap<String, Arc<RwLock<dyn Service>>> {
         let mut map = HashMap::new();
         match self.map.read() {
             Ok(services) => services.clone_into(&mut map),
@@ -214,8 +214,8 @@ impl Services {
     }
     ///
     /// Inserts a new service into the collection
-    pub fn insert(&mut self, service: Arc<Mutex<dyn Service + Send>>) {
-        let name = service.slock(&self.id).name().join();
+    pub fn insert(&mut self, service: Arc<RwLock<dyn Service>>) {
+        let name = service.rlock(&self.id).name().join();
         match self.map.write() {
             Ok(mut services) => {
                 if services.contains_key(&name) {
@@ -228,7 +228,7 @@ impl Services {
     }
     ///
     /// Returns Service
-    pub fn get(&self, name: &str) -> Option<Arc<Mutex<dyn Service>>> {
+    pub fn get(&self, name: &str) -> Option<Arc<RwLock<dyn Service>>> {
         match self.map.read() {
             Ok(services) => {
                 match services.get(name) {
@@ -246,12 +246,12 @@ impl Services {
         }
     }
     ///
-    /// Returns copy of the Sender - service's incoming queue
+    /// Returns copy of the Sender - service's incoming queue by service link name (Service.link)
     pub fn get_link(&self, name: &LinkName) -> Result<Sender<Point>, String> {
         match name.split() {
             Ok((service, queue)) => {
                 match self.get(&service) {
-                    Some(srvc) => Ok(srvc.slock(&self.id).get_link(&queue)),
+                    Some(srvc) => Ok(srvc.wlock(&self.id).get_link(&queue)),
                     None => Err(format!("{}.get_link | service '{:?}' - not found", self.id, name)),
                 }
             }
@@ -264,7 +264,7 @@ impl Services {
     pub fn subscribe(&mut self, service: &str, receiver_name: &str, points: &[SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         match self.get(service) {
             Some(srvc) => {
-                let r = srvc.slock(&self.id).subscribe(receiver_name, points);
+                let r = srvc.wlock(&self.id).subscribe(receiver_name, points);
                 r
             }
             None => panic!("{}.subscribe | service '{:?}' - not found", self.id, service),
@@ -277,7 +277,7 @@ impl Services {
         // panic!("{}.extend_subscription | Not implemented yet", self.id);
         match self.get(service) {
             Some(srvc) => {
-                let r = srvc.slock(&self.id).extend_subscription(receiver_name, points);
+                let r = srvc.wlock(&self.id).extend_subscription(receiver_name, points);
                 r
             }
             None => panic!("{}.extend_suscription | service '{:?}' - not found", self.id, service),
@@ -289,7 +289,7 @@ impl Services {
     pub fn unsubscribe(&mut self, service: &str, receiver_name: &str, points: &[SubscriptionCriteria]) -> Result<(), String> {
         match self.get(service) {
             Some(srvc) => {
-                let r = srvc.slock(&self.id).unsubscribe(receiver_name, points);
+                let r = srvc.wlock(&self.id).unsubscribe(receiver_name, points);
                 r
             }
             None => panic!("{}.unsubscribe | service '{:?}' - not found", self.id, service),
@@ -313,7 +313,7 @@ impl Services {
         //     let mut points = vec![];
         //     for (service_id, service) in &self.map {
         //         if service_id != requester_name {
-        //             let mut service_points = service.slock(&self.id).points();
+        //             let mut service_points = service.rlock(&self.id).points();
         //             points.append(&mut service_points);
         //         }
         //     };

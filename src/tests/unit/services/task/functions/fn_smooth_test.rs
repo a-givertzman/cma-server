@@ -54,7 +54,7 @@ mod fn_smooth {
     /// Threshold Reals's
     #[test]
     fn fn_smooth_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_smooth_real";
         info!("{}", self_id);
@@ -147,7 +147,7 @@ mod fn_smooth {
     /// Threshold Double's
     #[test]
     fn fn_smooth_double() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_smooth_double";
         info!("{}", self_id);

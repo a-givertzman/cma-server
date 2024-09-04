@@ -1,8 +1,8 @@
-use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, thread::{JoinHandle, self}, net::TcpStream, time::Duration};
+use std::{net::TcpStream, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
 use log::{info, warn};
 use sal_sync::services::service::service_cycle::ServiceCycle;
 use crate::{
-    core_::net::connection_status::ConnectionStatus, services::safe_lock::SafeLock, tcp::tcp_stream_write::{OpResult, TcpStreamWrite} 
+    core_::net::connection_status::ConnectionStatus, services::safe_lock::rwlock::SafeLock, tcp::tcp_stream_write::{OpResult, TcpStreamWrite} 
 };
 ///
 /// Transfering points from Channel Sender<PointType> to the JdsStream (socket)
@@ -10,7 +10,7 @@ use crate::{
 pub struct TcpWriteAlive {
     id: String,
     cycle: Option<Duration>,
-    stream_write: Arc<Mutex<TcpStreamWrite>>,
+    stream_write: Arc<RwLock<TcpStreamWrite>>,
     exit: Arc<AtomicBool>,
     exit_pair: Arc<AtomicBool>,
 }
@@ -22,7 +22,7 @@ impl TcpWriteAlive {
     /// - [parent] - the ID if the parent entity
     /// - [exit] - notification from parent to exit 
     /// - [exitPair] - notification from / to sibling pair to exit 
-    pub fn new(parent: impl Into<String>, cycle: Option<Duration>, stream_write: Arc<Mutex<TcpStreamWrite>>, exit: Option<Arc<AtomicBool>>, exit_pair: Option<Arc<AtomicBool>>) -> Self {
+    pub fn new(parent: impl Into<String>, cycle: Option<Duration>, stream_write: Arc<RwLock<TcpStreamWrite>>, exit: Option<Arc<AtomicBool>>, exit_pair: Option<Arc<AtomicBool>>) -> Self {
         Self {
             id: format!("{}/TcpWriteAlive", parent.into()),
             cycle,
@@ -43,7 +43,7 @@ impl TcpWriteAlive {
         info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Write", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
-            let mut stream_write = stream_write.slock(&self_id);
+            let mut stream_write = stream_write.wlock(&self_id);
             info!("{}.run | Main loop started", self_id);
             'main: loop {
                 if let Some(cycle) = &mut cycle {cycle.start()}

@@ -13,7 +13,7 @@ use crate::{
     core_::constants::constants::RECV_TIMEOUT,
     conf::task_config::TaskConfig, 
     services::{
-        safe_lock::SafeLock, services::Services, task::task_nodes::TaskNodes,
+        safe_lock::rwlock::SafeLock, services::Services, task::task_nodes::TaskNodes,
     },
 };
 ///
@@ -128,6 +128,10 @@ impl Debug for Task {
             .finish()
     }
 }
+//
+//
+unsafe impl Send for Task {}
+unsafe impl Sync for Task {}
 //
 //
 impl Service for Task {

@@ -6,23 +6,19 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
-use log::info;
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use std::{sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
 use crate::{
-    core_::{object::object::Object, point::point_type::PointType}, 
     conf::tcp_server_config::ServiceNameConfig,
-    services::{
-        services::Services,
-        service::service::Service,
-        service::service_handles::ServiceHandles, 
-    }, 
+    services::services::Services, 
 };
 ///
 /// Do something ...
 pub struct ServiceName {
     id: String,
+    name: Name,
     conf: ServiceNameConfig,
-    services: Arc<Mutex<Services>>,
+    services: Arc<RwLock<Services>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -30,7 +26,7 @@ pub struct ServiceName {
 impl ServiceName {
     //
     /// Crteates new instance of the ServiceName 
-    pub fn new(parent: impl Into<String>, conf: ServiceNameConfig, services: Arc<Mutex<Services>>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: ServiceNameConfig, services: Arc<RwLock<Services>>) -> Self {
         Self {
             id: format!("{}/ServiceName({})", parent.into(), conf.name),
             conf: conf.clone(),
@@ -45,10 +41,13 @@ impl Object for ServiceName {
     fn id(&self) -> &str {
         &self.id
     }
+    fn name(&self) -> Name {
+        self.name.clone()
+    }
 }
 //
 // 
-impl Debug for ServiceName {
+impl std::fmt::Debug for ServiceName {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("ServiceName")
@@ -61,7 +60,7 @@ impl Debug for ServiceName {
 impl Service for ServiceName {
     //
     // 
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -71,10 +70,10 @@ impl Service for ServiceName {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        info!("{}.run | Preparing thread...", self_id);
+        log::info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
             loop {
                 if exit.load(Ordering::SeqCst) {
@@ -84,12 +83,12 @@ impl Service for ServiceName {
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

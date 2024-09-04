@@ -15,3 +15,5 @@ mod tcp_server_config;
 mod profinet_client_config;
 
 mod diag_keywd_test;
+
+mod udp_client_config;

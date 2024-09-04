@@ -1,8 +1,8 @@
-use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
+use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{debug, warn, info, trace};
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::SafeLock, services::Services};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 
 ///
 /// 
@@ -14,12 +14,17 @@ pub struct TaskTestProducer {
     // rxSend: HashMap<String, Sender<PointType>>,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<Point>>>,
+    sent: Arc<RwLock<Vec<Point>>>,
     exit: Arc<AtomicBool>,
 }
 //
 // 
 impl TaskTestProducer {
+    /// Creates new instance TaskTestReceiver
+    /// - `send_to` - name of the link (Service.in-queue) used for sending Point's
+    /// - `cycle` - Duration of each send cycle
+    /// - `test_data` - Value's to be produced
+    #[allow(unused)]
     pub fn new(parent: &str, send_to: &str, cycle: Duration, services: Arc<RwLock<Services>>, test_data: Vec<Value>) -> Self {
         let name = Name::new(parent, format!("TaskTestProducer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
@@ -30,13 +35,14 @@ impl TaskTestProducer {
             // rxSend: HashMap::new(),
             services,
             test_data,
-            sent: Arc::new(Mutex::new(vec![])),
+            sent: Arc::new(RwLock::new(vec![])),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
-    /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<Point>>> {
+    /// Returns vector of sent Pont's
+    #[allow(unused)]
+    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
         self.sent.clone()
     }
 }
@@ -61,6 +67,10 @@ impl Debug for TaskTestProducer {
     }
 }
 //
+//
+unsafe impl Send for TaskTestProducer {}
+unsafe impl Sync for TaskTestProducer {}
+//
 // 
 impl Service for TaskTestProducer {
     //
@@ -68,8 +78,8 @@ impl Service for TaskTestProducer {
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
         let tx_id = PointTxId::from_str(&self_id);
-        let cycle = self.cycle;
-        let delayed = !cycle.is_zero();
+        let mut cycle = ServiceCycle::new(&self_id, self.cycle);
+        let delayed = !cycle.interval().is_zero();
         let tx_send = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
@@ -78,21 +88,22 @@ impl Service for TaskTestProducer {
         let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
             debug!("{}.run | calculating step...", self_id);
             for value in test_data {
+                cycle.start();
                 let point = value.to_point(tx_id, "/path/Point.Name");
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
-                        sent.lock().unwrap().push(point.clone());
-                        trace!("{}.run | sent points: {:?}", self_id, sent.lock().unwrap().len());
+                        sent.write().unwrap().push(point.clone());
+                        trace!("{}.run | sent points: {:?}", self_id, sent.read().unwrap().len());
                     }
                     Err(err) => {
                         warn!("{}.run | Error write to queue: {:?}", self_id, err);
                     }
                 }
                 if delayed {
-                    thread::sleep(cycle);
+                    cycle.wait();
                 }
             }
-            info!("{}.run | All sent: {}", self_id, sent.lock().unwrap().len());
+            info!("{}.run | All sent: {}", self_id, sent.read().unwrap().len());
             // thread::sleep(Duration::from_secs_f32(0.1));
             // debug!("TaskTestProducer({}).run | calculating step - done ({:?})", name, cycle.elapsed());
         });

@@ -5,13 +5,13 @@ mod tcp_client {
     use sal_sync::services::{
         entity::{object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::service::Service
     };
-    use std::{io::Write, net::TcpListener, sync::{Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{io::Write, net::TcpListener, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::tcp_client_config::TcpClientConfig,
         core_::net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize},
-        services::{safe_lock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
+        services::{safe_lock::rwlock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
         tcp::steam_read::StreamRead, tests::unit::services::tcp_client::mock_multiqueue::MockMultiQueue,
     };
     ///
@@ -87,20 +87,20 @@ mod tcp_client {
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
-        let multi_queue = Arc::new(Mutex::new(MockMultiQueue::new(self_id, "", Some(total_count))));
-        let tcp_client = Arc::new(Mutex::new(TcpClient::new(conf, services.clone())));
-        let multi_queue_service_id = multi_queue.lock().unwrap().id().to_owned();
-        let tcp_client_service_id = tcp_client.lock().unwrap().id().to_owned();
+        let multi_queue = Arc::new(RwLock::new(MockMultiQueue::new(self_id, "", Some(total_count))));
+        let tcp_client = Arc::new(RwLock::new(TcpClient::new(conf, services.clone())));
+        let multi_queue_service_id = multi_queue.read().unwrap().id().to_owned();
+        let tcp_client_service_id = tcp_client.read().unwrap().id().to_owned();
         services.wlock(self_id).insert(tcp_client.clone());
         services.wlock(self_id).insert(multi_queue.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
-        let sent = Arc::new(Mutex::new(vec![]));
+        let sent = Arc::new(RwLock::new(vec![]));
         let tcp_client = services.rlock(self_id).get(&tcp_client_service_id).unwrap();
         debug!("Running service {}...", multi_queue_service_id);
-        let handle = multi_queue.lock().unwrap().run().unwrap();
+        let handle = multi_queue.write().unwrap().run().unwrap();
         debug!("Running service {} - ok", multi_queue_service_id);
         debug!("Running service {}...", tcp_client_service_id);
-        tcp_client.slock(self_id).run().unwrap();
+        tcp_client.wlock(self_id).run().unwrap();
         debug!("Running service {} - ok", tcp_client_service_id);
         mock_tcp_server(addr.to_string(), iterations, test_data.clone(), sent.clone(), multi_queue.clone());
         thread::sleep(Duration::from_micros(100));
@@ -109,13 +109,13 @@ mod tcp_client {
         services.rlock(self_id).exit();
         handle.wait().unwrap();
         services_handle.wait().unwrap();
-        let mut sent = sent.lock().unwrap();
+        let mut sent = sent.write().unwrap();
         println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", total_count);
         println!("sent events: {:?}", sent.len());
-        let mq = multi_queue.lock().unwrap();
+        let mq = multi_queue.read().unwrap();
         let received = mq.received();
-        let mut received = received.lock().unwrap();
+        let mut received = received.write().unwrap();
         println!("recv events: {:?}", received.len());
         assert!(sent.len() == total_count, "sent: {:?}\ntarget: {:?}", sent.len(), total_count);
         assert!(received.len() == total_count, "received: {:?}\ntarget: {:?}", received.len(), total_count);
@@ -132,7 +132,7 @@ mod tcp_client {
     }
     ///
     /// TcpServer setup
-    fn mock_tcp_server(addr: String, count: usize, test_data: Vec<Value>, sent: Arc<Mutex<Vec<Point>>>, multiqueue: Arc<Mutex<MockMultiQueue>>) {
+    fn mock_tcp_server(addr: String, count: usize, test_data: Vec<Value>, sent: Arc<RwLock<Vec<Point>>>, multiqueue: Arc<RwLock<MockMultiQueue>>) {
         thread::spawn(move || {
             info!("TCP server | Preparing test server...");
             let (send, recv) = std::sync::mpsc::channel();
@@ -157,7 +157,7 @@ mod tcp_client {
                                         trace!("TCP server | send bytes: {:?}", bytes);
                                         match socket.write(&bytes) {
                                             Ok(_) => {
-                                                sent.lock().unwrap().push(point);
+                                                sent.write().unwrap().push(point);
                                             }
                                             Err(err) => {
                                                 warn!("TCP server | socket.wrtite error: {:?}", err);
@@ -169,9 +169,9 @@ mod tcp_client {
                                     }
                                 }
                             }
-                            info!("TCP server | all sent: {:?}", sent.lock().unwrap().len());
-                            let received = multiqueue.lock().unwrap().received();
-                            while received.lock().unwrap().len() < count {
+                            info!("TCP server | all sent: {:?}", sent.read().unwrap().len());
+                            let received = multiqueue.read().unwrap().received();
+                            while received.read().unwrap().len() < count {
                                 thread::sleep(Duration::from_millis(100));
                             }
                         }
