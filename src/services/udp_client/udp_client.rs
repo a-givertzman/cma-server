@@ -320,7 +320,6 @@ impl Service for UdpClient {
                 ],
             );
             let mut dbs = Self::build_dbs(self_id, tx_id, &conf);
-            let mut count: usize;
             let send = services.rlock(self_id)
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", self_id, conf.send_to.name(), err));
