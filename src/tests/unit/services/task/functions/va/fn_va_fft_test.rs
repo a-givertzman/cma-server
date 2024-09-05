@@ -35,10 +35,10 @@ mod fn_va_fft {
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
         // Sampling freq
-        let freq = 5000;
+        let freq = 10_000;
         let mut sampling_unit_circle = UnitCircle::new(freq);
         let unit_circle_1 = UnitCircle::new(2000);
-        let unit_circle_2 = UnitCircle::new(3000);
+        let unit_circle_2 = UnitCircle::new(300);
         let mut buf = vec![];
         let mut fft_result;
         let fft_len = 24;
@@ -56,7 +56,7 @@ mod fn_va_fft {
                 unit_circle_2.at_with(t, 30.0),
             ].iter().map(|(_angle, complex)| complex).sum();
             buf.push(value);
-            println!("x: {}  |  y: {}", t, round(value.abs(), 3));
+            // println!("x: {}  |  y: {}", t, round(value.abs(), 3));
             input.push(
                 (t, value.abs())
             );
@@ -73,10 +73,11 @@ mod fn_va_fft {
                 buf = vec![];
             }
         }
+        let input_len = input.len();
         series.push(
             input,
         );
-        plot(fft_len, series).unwrap();
+        plot(input_len / 2, series).unwrap();
         let delta = (freq as f64) / (fft_len as f64);
         let mut f = vec![0.0];
         while f.last().unwrap().to_owned() < (freq as f64) {
@@ -97,7 +98,7 @@ mod fn_va_fft {
     /// 
     fn plot(x_lables: usize, series: Vec<Vec<(f64, f64)>>) -> Result<(), Box<dyn std::error::Error>> {
         let colors = colors(7);
-        let root = BitMapBackend::new("src/tests/unit/services/task/functions/va/1.png", (100000, 1024)).into_drawing_area();
+        let root = BitMapBackend::new("src/tests/unit/services/task/functions/va/plot_1.png", (100000, 1024)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root.margin(10, 10, 10, 10);
         // After this point, we should be able to construct a chart context
@@ -105,8 +106,8 @@ mod fn_va_fft {
             // Set the caption of the chart
             .caption("Plot", ("sans-serif", 40).into_font())
             // Set the size of the label region
-            .x_label_area_size(20)
-            .y_label_area_size(40)
+            // .x_label_area_size(20)
+            // .y_label_area_size(40)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_cartesian_2d(0f64..3f64, -3f64..50f64)?;
     
@@ -131,7 +132,7 @@ mod fn_va_fft {
             // Similarly, we can draw point series
             chart.draw_series(PointSeries::of_element(
                 ser,
-                5,
+                3,
                 colors[i],
                 &|c, s, st| {
                     return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
