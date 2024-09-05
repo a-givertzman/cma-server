@@ -2,7 +2,7 @@
 
 mod fn_va_fft {
     use plotters::prelude::*;
-    use std::{f64::consts::PI, sync::Once, time::Duration};
+    use std::{f64::consts::PI, sync::Once, time::{Duration, Instant}};
     use rustfft::{num_complex::{Complex, ComplexFloat}, FftPlanner};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -36,13 +36,15 @@ mod fn_va_fft {
         test_duration.run().unwrap();
         // Sampling freq
         let freq = 10_000;
+        // FFT Window size
+        let fft_len = 30_000;
+        let frequencies = frequencies(freq, fft_len);
         let mut sampling_unit_circle = UnitCircle::new(freq);
         let unit_circle_1 = UnitCircle::new(833);
         let unit_circle_2 = UnitCircle::new(2500);
         let unit_circle_3 = UnitCircle::new(5000);
         let mut buf = vec![];
         let mut fft_result;
-        let fft_len = 24;
         let fft = FftPlanner::new().plan_fft_forward(fft_len);
         // let pif2 = 2.0 * PI * (freq as f64);
         let mut input = vec![];
@@ -51,7 +53,8 @@ mod fn_va_fft {
 
         // Time of sampling, sec
         let mut t = 0.0;
-        let until = 0.5;
+        let until = 1.5;
+
         while t < until {
             (t, _, _) = sampling_unit_circle.next();
             let value: Complex<f64> = [
@@ -66,11 +69,21 @@ mod fn_va_fft {
             );
             if buf.len() >= fft_len {
                 fft_result = buf;
+                let timer = Instant::now();
                 fft.process(&mut fft_result);
+                let elapsed = timer.elapsed();
+                // average_elapsed.add(elapsed);
                 let fft_scalar: Vec<f64> = fft_result.iter().map(|complex| {
                     round(complex.abs() * y_scale, 3)
                 }).collect();
-                println!("{}  |  {:?}", t, fft_scalar);
+                // println!("{}  |  {:?}", t, fft_scalar);
+                for (i, value) in fft_scalar.iter().enumerate() {
+                    if *value > 1.0 {
+                        let freq_i = frequencies[i];
+                        println!("{}  |  freq: {},   amp: {}", t, freq_i, value);
+                    }
+                }
+                println!("elapsed  |  {:?}", elapsed);
                 // series.push(
                 //     fft_scalar.into_iter().map(|y|, )
                 // );
@@ -82,15 +95,21 @@ mod fn_va_fft {
             input,
         );
         plot(input_len / 2, series).unwrap();
-        let delta = (freq as f64) / (fft_len as f64);
+        // println!("{:?}", f);
+        // println!("Average FFT elapsed {:?}", average_elapsed.eval());
+        test_duration.exit();
+    }
+    ///
+    /// List of frequencies
+    fn frequencies(smpling_freq: usize, fft_len: usize) -> Vec<f64> {
+        let delta = (smpling_freq as f64) / (fft_len as f64);
         let mut f = vec![0.0];
-        while f.last().unwrap().to_owned() < (freq as f64) {
+        while f.last().unwrap().to_owned() < (smpling_freq as f64) {
             f.push(
                 round(f.last().unwrap() + delta, 3)
             );
         }
-        println!("{:?}", f);
-        test_duration.exit();
+        f
     }
     ///
     /// Returns float rounded to the specified digits
@@ -188,11 +207,32 @@ mod fn_va_fft {
         let b = u8::from_str_radix(&s[4..6], 16).unwrap();
         RGBColor(r, g, b)
     }
-    // pub fn encode_hex(bytes: &[u8]) -> String {
-    //     let mut s = String::with_capacity(bytes.len() * 2);
-    //     for &b in bytes {
-    //         write!(&mut s, "{:02x}", b).unwrap();
+    struct Average<T> {
+        count: u32,
+        sum: T,
+    }
+    // impl Average<f64> {
+    //     pub fn new() -> Self {
+    //         Self { count: 0, sum: 0.0 }
     //     }
-    //     s
+    //     pub fn add(&mut self, value: f64) {
+    //         self.sum = self.sum + value;
+    //         self.count += 1;
+    //     }
+    //     pub fn eval(&self) -> f64 {
+    //         self.sum / (self.count as f64)
+    //     }
     // }
+    impl Average<std::time::Duration> {
+        pub fn new() -> Self {
+            Self { count: 0, sum: std::time::Duration::ZERO }
+        }
+        pub fn add(&mut self, value: std::time::Duration) {
+            self.sum = self.sum + value;
+            self.count += 1;
+        }
+        pub fn eval(&self) -> std::time::Duration {
+            self.sum / self.count
+        }
+    }
 }
