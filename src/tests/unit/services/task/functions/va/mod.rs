@@ -15,3 +15,4 @@
 
 //! mod fn_va_fft_test;
 mod unit_circle_test;
+mod fn_va_fft_test;

@@ -61,6 +61,8 @@ rustfft = "^6.2"
 
 derivative = "^2.2"
 
+plotters = "^0.3"
+
 # [[bin]]
 # name = "task_test"
 # path = "src/task_test.rs"

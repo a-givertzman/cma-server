@@ -111,7 +111,7 @@ impl FnVaFft {
             }
         };
         if self.fft_buf.len() < self.len {
-            let (_, unit_complex) = self.unit_circle.next();
+            let (_, _, unit_complex) = self.unit_circle.next();
             self.fft_buf.push(
                 Complex {
                     re: value * unit_complex.re,

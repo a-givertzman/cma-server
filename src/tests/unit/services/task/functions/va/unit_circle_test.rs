@@ -6,7 +6,7 @@ mod unit_circle {
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 
-    use crate::core_::aprox_eq::aprox_eq::AproxEq;
+    use crate::{core_::aprox_eq::aprox_eq::AproxEq, services::task::nested_function::va::unit_circle::UnitCircle};
     ///
     ///
     static INIT: Once = Once::new();
@@ -54,9 +54,10 @@ mod unit_circle {
             (315,   7.0*PI/4.0,  2.0f64.sqrt()/2.0,   -2.0f64.sqrt()/2.0),
             (360,       2.0*PI,  1.0f64,               0.0f64           ),
         ];
+        let mut unit_circle = UnitCircle::new(freq);
         let mut targets_iter = targets.into_iter();
         for (angle, complex) in test_data {
-            let (target_angle_grad, target_angle, target_re, target_im) = targets_iter.next().unwrap();
+            let (target_angle_grad, mut target_angle, target_re, target_im) = targets_iter.next().unwrap();
             log::debug!("target angle: {} ({}), complex: ({}, {}i)   |   result angle: {} ({}), complex: {}", target_angle, target_angle_grad, target_re, target_im, angle, 180.0 * angle / PI, complex);
             let result = complex.re * complex.re + complex.im * complex.im;
             let target = 1.0;
@@ -70,6 +71,18 @@ mod unit_circle {
             let result = complex.im;
             let target = target_im;
             assert!(result.aprox_eq(target, 8), "angle {} ({}) \nresult: {:?}\ntarget: {:?}", angle, target_angle_grad, result, target);
+
+            let (time, angle, complex) = unit_circle.next();
+            let k = (target_angle / (2.0 * PI)).trunc();
+            let result = angle + 2.0 * PI * k;
+            let target = target_angle;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, angle, target_angle_grad, result, target);
+            let result = complex.re;
+            let target = target_re;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, angle, target_angle_grad, result, target);
+            let result = complex.im;
+            let target = target_im;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, angle, target_angle_grad, result, target);
         }
         test_duration.exit();
     }
@@ -110,9 +123,10 @@ mod unit_circle {
             (330,  11.0*PI/6.0,  3.0f64.sqrt()/2.0,   -1.0f64/2.0),
             (360,       2.0*PI,  1.0f64,               0.0f64           ),
         ];
+        let mut unit_circle = UnitCircle::new(freq);
         let mut targets_iter = targets.into_iter();
         for (angle, complex) in test_data {
-            let (target_angle_grad, target_angle, target_re, target_im) = targets_iter.next().unwrap();
+            let (target_angle_grad, mut target_angle, target_re, target_im) = targets_iter.next().unwrap();
             log::debug!("target angle: {} ({}), complex: ({}, {}i)   |   result angle: {} ({}), complex: {}", target_angle, target_angle_grad, target_re, target_im, angle, 180.0 * angle / PI, complex);
             let result = complex.re * complex.re + complex.im * complex.im;
             let target = 1.0;
@@ -126,10 +140,23 @@ mod unit_circle {
             let result = complex.im;
             let target = target_im;
             assert!(result.aprox_eq(target, 8), "angle {} ({}) \nresult: {:?}\ntarget: {:?}", angle, target_angle_grad, result, target);
-        }        test_duration.exit();
+
+            let (time, angle, complex) = unit_circle.next();
+            let k = (target_angle / (2.0 * PI)).trunc();
+            let result = angle + 2.0 * PI * k;
+            let target = target_angle;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, angle, target_angle_grad, result, target);
+            let result = complex.re;
+            let target = target_re;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, angle, target_angle_grad, result, target);
+            let result = complex.im;
+            let target = target_im;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, angle, target_angle_grad, result, target);
+        }
+        test_duration.exit();
     }
     ///
-    /// Testing UnutCycle   0,  45,  90, 135, 180, 225, 270, 315, 360 grad
+    /// Testing UnutCycle step deppending on specified sampling frequency
     #[test]
     fn next() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -150,17 +177,31 @@ mod unit_circle {
             let complex = Complex::new(angle.cos(), angle.sin());
             (angle, complex)
         });
-        for (angle, complex) in test_data {
-            log::trace!("angle: {}  |  complex: {}", angle, complex);
-            let result = complex.re * complex.re + complex.im * complex.im;
+        let mut unit_circle = UnitCircle::new(freq);
+        for (target_angle, target_complex) in test_data {
+            log::trace!("angle: {}  |  complex: {}", target_angle, target_complex);
+            let result = target_complex.re * target_complex.re + target_complex.im * target_complex.im;
             let target = 1.0;
-            assert!(result.aprox_eq(target, 8), "angle {} \nresult: {:?}\ntarget: {:?}", angle, result, target);
+            assert!(result.aprox_eq(target, 8), "angle {} \nresult: {:?}\ntarget: {:?}", target_angle, result, target);
+            let result = target_complex.re;
+            let target = target_angle.cos();
+            assert!(result.aprox_eq(target, 8), "angle {} ({}) \nresult: {:?}\ntarget: {:?}", target_angle, 180.0 * target_angle / PI, result, target);
+            let result = target_complex.im;
+            let target = target_angle.sin();
+            assert!(result.aprox_eq(target, 8), "angle {} ({}) \nresult: {:?}\ntarget: {:?}", target_angle, 180.0 * target_angle / PI, result, target);
+
+
+            let (time, angle, complex) = unit_circle.next();
+            let k = (target_angle / (2.0 * PI)).trunc();
+            let result = angle + 2.0 * PI * k;
+            let target = target_angle;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, target_angle, 180.0 * target_angle / PI, result, target);
             let result = complex.re;
-            let target = angle.cos();
-            assert!(result.aprox_eq(target, 8), "angle {} ({}) \nresult: {:?}\ntarget: {:?}", angle, 180.0 * angle / PI, result, target);
+            let target = target_complex.re;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, target_angle, 180.0 * target_angle / PI, result, target);
             let result = complex.im;
-            let target = angle.sin();
-            assert!(result.aprox_eq(target, 8), "angle {} ({}) \nresult: {:?}\ntarget: {:?}", angle, 180.0 * angle / PI, result, target);
+            let target = target_complex.im;
+            assert!(result.aprox_eq(target, 8), "time, sec: {}  angle {} ({}) \nresult: {:?}\ntarget: {:?}", time, target_angle, 180.0 * target_angle / PI, result, target);
         }
         test_duration.exit();
     }
