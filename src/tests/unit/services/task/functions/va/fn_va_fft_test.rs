@@ -37,8 +37,9 @@ mod fn_va_fft {
         // Sampling freq
         let freq = 10_000;
         let mut sampling_unit_circle = UnitCircle::new(freq);
-        let unit_circle_1 = UnitCircle::new(2000);
-        let unit_circle_2 = UnitCircle::new(300);
+        let unit_circle_1 = UnitCircle::new(833);
+        let unit_circle_2 = UnitCircle::new(2500);
+        let unit_circle_3 = UnitCircle::new(5000);
         let mut buf = vec![];
         let mut fft_result;
         let fft_len = 24;
@@ -46,6 +47,8 @@ mod fn_va_fft {
         // let pif2 = 2.0 * PI * (freq as f64);
         let mut input = vec![];
         let mut series = vec![];
+        let y_scale = 1.0 / (fft_len as f64);
+
         // Time of sampling, sec
         let mut t = 0.0;
         let until = 0.5;
@@ -54,6 +57,7 @@ mod fn_va_fft {
             let value: Complex<f64> = [
                 unit_circle_1.at_with(t, 10.0),
                 unit_circle_2.at_with(t, 30.0),
+                unit_circle_3.at_with(t, 70.0),
             ].iter().map(|(_angle, complex)| complex).sum();
             buf.push(value);
             // println!("x: {}  |  y: {}", t, round(value.abs(), 3));
@@ -64,7 +68,7 @@ mod fn_va_fft {
                 fft_result = buf;
                 fft.process(&mut fft_result);
                 let fft_scalar: Vec<f64> = fft_result.iter().map(|complex| {
-                    round(complex.abs(), 3)
+                    round(complex.abs() * y_scale, 3)
                 }).collect();
                 println!("{}  |  {:?}", t, fft_scalar);
                 // series.push(
@@ -106,8 +110,8 @@ mod fn_va_fft {
             // Set the caption of the chart
             .caption("Plot", ("sans-serif", 40).into_font())
             // Set the size of the label region
-            // .x_label_area_size(20)
-            // .y_label_area_size(40)
+            .x_label_area_size(20)
+            .y_label_area_size(40)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_cartesian_2d(0f64..3f64, -3f64..50f64)?;
     
@@ -137,7 +141,7 @@ mod fn_va_fft {
                 &|c, s, st| {
                     return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
                     + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
-                    + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
+                    // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
                 },
             ))?;
         }
