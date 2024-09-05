@@ -2,7 +2,7 @@
 
 mod fn_va_fft {
     use plotters::prelude::*;
-    use std::{f64::consts::PI, sync::Once, time::{Duration, Instant}};
+    use std::{f64::consts::PI, sync::Once, thread, time::{Duration, Instant}};
     use rustfft::{num_complex::{Complex, ComplexFloat}, FftPlanner};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -35,7 +35,7 @@ mod fn_va_fft {
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
         // Sampling freq
-        let freq = 10_000;
+        let freq = 300_000;
         // FFT Window size
         let fft_len = 30_000;
         let frequencies = frequencies(freq, fft_len);
@@ -44,17 +44,17 @@ mod fn_va_fft {
         let unit_circle_2 = UnitCircle::new(2500);
         let unit_circle_3 = UnitCircle::new(5000);
         let mut buf = vec![];
-        let mut fft_result;
         let fft = FftPlanner::new().plan_fft_forward(fft_len);
-        // let pif2 = 2.0 * PI * (freq as f64);
         let mut input = vec![];
         let mut series = vec![];
         let y_scale = 1.0 / (fft_len as f64);
 
         // Time of sampling, sec
         let mut t = 0.0;
-        let until = 1.5;
+        let until = 6.0;
 
+        let mut steps = 0;
+        let mut fft_procs = 0;
         while t < until {
             (t, _, _) = sampling_unit_circle.next();
             let value: Complex<f64> = [
@@ -68,12 +68,10 @@ mod fn_va_fft {
                 (t, value.abs())
             );
             if buf.len() >= fft_len {
-                fft_result = buf;
                 let timer = Instant::now();
-                fft.process(&mut fft_result);
+                fft.process(&mut buf);
                 let elapsed = timer.elapsed();
-                // average_elapsed.add(elapsed);
-                let fft_scalar: Vec<f64> = fft_result.iter().map(|complex| {
+                let fft_scalar: Vec<f64> = buf.iter().map(|complex| {
                     round(complex.abs() * y_scale, 3)
                 }).collect();
                 // println!("{}  |  {:?}", t, fft_scalar);
@@ -88,15 +86,19 @@ mod fn_va_fft {
                 //     fft_scalar.into_iter().map(|y|, )
                 // );
                 buf = vec![];
+                thread::sleep(Duration::from_millis(100));
+                fft_procs += 1;
             }
+            steps += 1;
         }
+        println!("Total steps: {}", steps);
+        println!("Total FFT's: {}", fft_procs);
         let input_len = input.len();
         series.push(
             input,
         );
         plot(input_len / 2, series).unwrap();
         // println!("{:?}", f);
-        // println!("Average FFT elapsed {:?}", average_elapsed.eval());
         test_duration.exit();
     }
     ///
