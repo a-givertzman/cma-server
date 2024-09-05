@@ -33,7 +33,7 @@ mod fn_va_fft {
         let self_id = "test";
         log::debug!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
-        test_duration.run().unwrap();
+        // test_duration.run().unwrap();
         // Sampling freq
         let freq = 300_000;
         // FFT Window size
@@ -51,7 +51,7 @@ mod fn_va_fft {
 
         // Time of sampling, sec
         let mut t = 0.0;
-        let until = 6.0;
+        let until = 2.0;
 
         let mut steps = 0;
         let mut fft_procs = 0;
@@ -133,7 +133,7 @@ mod fn_va_fft {
             .x_label_area_size(20)
             .y_label_area_size(40)
             // Finally attach a coordinate on the drawing area and make a chart context
-            .build_cartesian_2d(0f64..3f64, -3f64..50f64)?;
+            .build_cartesian_2d(0f64..3f64, -3f64..150f64)?;
     
         // Then we can draw a mesh
         chart
