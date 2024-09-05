@@ -32,7 +32,7 @@ mod fn_va_fft {
         log::debug!("");
         let self_id = "test";
         log::debug!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
+        let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
         test_duration.run().unwrap();
         // Sampling freq
         let freq = 300_000;
@@ -86,7 +86,6 @@ mod fn_va_fft {
                 //     fft_scalar.into_iter().map(|y|, )
                 // );
                 buf = vec![];
-                thread::sleep(Duration::from_millis(100));
                 fft_procs += 1;
             }
             steps += 1;
