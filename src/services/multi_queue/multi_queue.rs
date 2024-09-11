@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread};
+use std::{collections::HashMap, fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use log::{debug, error, info, trace, warn};
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}},
@@ -21,7 +21,7 @@ pub struct MultiQueue {
     subscriptions: Arc<RwLock<Subscriptions>>,
     subscriptions_changed: Arc<AtomicBool>,
     rx_send: HashMap<String, Sender<Point>>,
-    rx_recv: Vec<Receiver<Point>>,
+    rx_recv: Mutex<Option<Receiver<Point>>>,
     send_queues: Vec<LinkName>,
     services: Arc<RwLock<Services>>,
     receiver_dictionary: HashMap<usize, String>,
@@ -43,7 +43,7 @@ impl MultiQueue {
             subscriptions: Arc::new(RwLock::new(Subscriptions::new(self_id))),
             subscriptions_changed: Arc::new(AtomicBool::new(false)),
             rx_send: HashMap::from([(conf.rx, send)]),
-            rx_recv: vec![recv],
+            rx_recv: Mutex::new(Some(recv)),
             send_queues,
             services,
             receiver_dictionary: HashMap::new(),
@@ -110,10 +110,6 @@ impl Debug for MultiQueue {
             .finish()
     }
 }
-//
-//
-unsafe impl Send for MultiQueue {}
-unsafe impl Sync for MultiQueue {}
 //
 //
 impl Service for MultiQueue {
@@ -216,7 +212,7 @@ impl Service for MultiQueue {
         let self_id = self.id.clone();
         let self_name = self.name.clone();
         let exit = self.exit.clone();
-        let recv = self.rx_recv.pop().unwrap();
+        let recv = self.rx_recv.lock().unwrap().take().unwrap();
         let subscriptions_ref = self.subscriptions.clone();
         let subscriptions_changed = self.subscriptions_changed.clone();
         // let receiver_dictionary = self.receiver_dictionary.clone();

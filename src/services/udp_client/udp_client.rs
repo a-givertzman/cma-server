@@ -237,10 +237,6 @@ enum State {
 }
 //
 //
-unsafe impl Send for UdpClient {}
-unsafe impl Sync for UdpClient {}
-//
-//
 static SELF_ID: std::sync::LazyLock<RwLock<String>> = std::sync::LazyLock::new(|| RwLock::new(String::new()));
 //
 // 

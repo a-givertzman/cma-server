@@ -1,6 +1,5 @@
 use std::{
-    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, 
-    mpsc::{self, Sender}, Arc, RwLock},
+    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, mpsc::{self, Sender}, Arc, Mutex, RwLock},
     thread::{self, JoinHandle}, time::Duration,
 };
 use log::{debug, error, info, warn};
@@ -25,7 +24,7 @@ pub struct SlmpWrite {
     // name: Name,
     conf: SlmpClientConfig,
     dest: Sender<Point>,
-    dbs: Arc<RwLock<IndexMapFxHasher<String, SlmpDb>>>,
+    dbs: Arc<Mutex<IndexMapFxHasher<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
     services: Arc<RwLock<Services>>,
     status: Arc<AtomicU32>,
@@ -53,7 +52,7 @@ impl SlmpWrite {
             // name,
             conf,
             dest,
-            dbs: Arc::new(RwLock::new(dbs)),
+            dbs: Arc::new(Mutex::new(dbs)),
             // diagnosis,
             services,
             status,
@@ -87,7 +86,7 @@ impl SlmpWrite {
                         ],
                     );
                     let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
-                    let mut dbs = dbs.write().unwrap();
+                    let mut dbs = dbs.lock().unwrap();
                     let points = conf.points().iter().map(|point_conf| {
                         SubscriptionCriteria::new(&point_conf.name, Cot::Act)
                     }).collect::<Vec<SubscriptionCriteria>>();

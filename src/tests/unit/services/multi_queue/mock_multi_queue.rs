@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use log::{info, warn, error, trace};
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}},
@@ -15,7 +15,7 @@ pub struct MockMultiQueue {
     name: Name,
     subscriptions: Arc<RwLock<Subscriptions>>,
     rx_send: HashMap<String, Sender<Point>>,
-    rx_recv: Vec<Receiver<Point>>,
+    rx_recv: Mutex<Option<Receiver<Point>>>,
     send_queues: Vec<String>,
     services: Arc<RwLock<Services>>,
     exit: Arc<AtomicBool>,
@@ -34,7 +34,7 @@ impl MockMultiQueue {
             name: name.clone(),
             subscriptions: Arc::new(RwLock::new(Subscriptions::new(name))),
             rx_send: HashMap::from([(rx_queue.into(), send)]),
-            rx_recv: vec![recv],
+            rx_recv: Mutex::new(Some(recv)),
             send_queues: tx_queues,
             services,
             exit: Arc::new(AtomicBool::new(false)),
@@ -63,10 +63,6 @@ impl Debug for MockMultiQueue {
 }
 //
 //
-unsafe impl Send for MockMultiQueue {}
-unsafe impl Sync for MockMultiQueue {}
-//
-// 
 impl Service for MockMultiQueue {
     //
     //
@@ -110,11 +106,11 @@ impl Service for MockMultiQueue {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let recv = self.rx_recv.pop().unwrap();
+        let recv = self.rx_recv.lock().unwrap().take().unwrap();
         let subscriptions = self.subscriptions.clone();
         let mut static_subscriptions: HashMap<usize, Sender<Point>> = HashMap::new();
         for send_queue in &self.send_queues {
-            let tx_send = self.services.rlock(&self_id).get_link(&LinkName::new(send_queue)).unwrap_or_else(|err| {
+            let tx_send = self.services.rlock(&self_id).get_link(&LinkName::from_str(send_queue).unwrap()).unwrap_or_else(|err| {
                 panic!("{}.run | services.get_link error: {:#?}", self.id, err);
             });
             static_subscriptions.insert(PointTxId::from_str(send_queue), tx_send);

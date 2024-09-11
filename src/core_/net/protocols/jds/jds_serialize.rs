@@ -4,7 +4,6 @@ use sal_sync::services::entity::{name::Name, object::Object, point::point::Point
 use crate::{
     core_::{constants::constants::RECV_TIMEOUT, failure::recv_error::RecvError}, tcp::steam_read::StreamRead
 };
-
 ///
 /// Converts PointType into the squence of bytes
 /// useng PointType -> Point<type> -> JSON -> bytes conversion
@@ -61,6 +60,3 @@ impl StreamRead<serde_json::Value, RecvError> for JdsSerialize {
         }
     }
 }
-///
-/// 
-unsafe impl Sync for JdsSerialize {}

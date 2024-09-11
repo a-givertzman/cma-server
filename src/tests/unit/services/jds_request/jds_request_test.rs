@@ -2,20 +2,20 @@
 
 mod jds_routes {
     use sal_sync::services::{
-        entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
+        entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
         retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::{link_name::LinkName, service::Service},
     };
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, sync::{Arc, Once, RwLock}, thread, time::Duration};
+    use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once, RwLock}, thread, time::Duration};
     use crate::{
         conf::{multi_queue_config::MultiQueueConfig, tcp_server_config::TcpServerConfig},
         core_::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
         services::{
             multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer,
-            services::Services, task::nested_function::reset_counter::AtomicReset,
+            services::Services,
         },
-        tests::unit::services::{multi_queue::mock_recv_service::{self, MockRecvService}, service::mock_service_points::MockServicePoints},
+        tests::unit::services::{multi_queue::mock_recv_service::MockRecvService, service::mock_service_points::MockServicePoints},
     };
     ///
     static INIT: Once = Once::new();
@@ -84,48 +84,9 @@ mod jds_routes {
         init_each();
         println!();
         let self_id = "jds_request_test";
-        let self_name = Name::new(self_id, "");
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
         test_duration.run().unwrap();
-        //
-        // Configuring Services
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
-        ))));
-        //
-        // Configuring MultiQueue service
-        let conf = serde_yaml::from_str(&format!(r#"
-            service MultiQueue:
-                in queue in-queue:
-                    max-length: 10000
-                send-to:
-                    - {}/MockRecvService0.in-queue
-        "#, self_name)).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
-        services.wlock(self_id).insert(mq_service.clone());
-        //
-        // Configuring TcpServer service
-        let tcp_port = TestSession::free_tcp_port_str();
-        let tcp_server_addr = format!("127.0.0.1:{}", tcp_port);
-        let conf = format!(r#"
-            service TcpServer:
-                cycle: 1 ms
-                reconnect: 1 s  # default 3 s
-                address: {}
-                auth-secret:
-                    pass: password      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
-                in queue link:
-                    max-length: 10000
-                send-to: {}/MultiQueue.in-queue
-        "#, tcp_server_addr, self_name);
-        let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
-        services.wlock(self_id).insert(tcp_server.clone());
-        println!("{} | TcpServer - ready", self_id);
         //
         // Preparing test data
         let self_name = Name::new(self_id, "Jds");
@@ -179,17 +140,54 @@ mod jds_routes {
                 chrono::offset::Utc::now(),
             )),
         ];
-        let test_items_count = test_data.len();
+        let test_items_count = test_data.len();        
+        //
+        // Configuring Services
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("point/id.json", None))
+        ))));
+        //
+        // Configuring Receiver
+        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count))));
+        services.wlock(self_id).insert(receiver.clone());
+        println!("{} | MockRecvService - ready", self_id);
+        //
+        // Configuring MultiQueue service
+        let conf = serde_yaml::from_str(&format!(r#"
+            service MultiQueue:
+                in queue in-queue:
+                    max-length: 10000
+                send-to:
+                    - {}.in-queue
+        "#, receiver.read().unwrap().name().join())).unwrap();
+        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
+        services.wlock(self_id).insert(mq_service.clone());
+        //
+        // Configuring TcpServer service
+        let tcp_port = TestSession::free_tcp_port_str();
+        let tcp_server_addr = format!("127.0.0.1:{}", tcp_port);
+        let conf = format!(r#"
+            service TcpServer:
+                cycle: 1 ms
+                reconnect: 1 s  # default 3 s
+                address: {}
+                auth-secret:
+                    pass: password      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
+                in queue link:
+                    max-length: 10000
+                send-to: {}/MultiQueue.in-queue
+        "#, tcp_server_addr, self_name);
+        let conf = serde_yaml::from_str(&conf).unwrap();
+        let conf = TcpServerConfig::from_yaml(&self_name, &conf);
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
+        services.wlock(self_id).insert(tcp_server.clone());
+        println!("{} | TcpServer - ready", self_id);
         //
         // preparing MockServicePoints with the Vec<PontConfig>
         let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
         services.wlock(self_id).insert(service_points);
-        //
-        // Configuring Receiver
-        mock_recv_service::COUNT.reset(0);
-        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count))));
-        services.wlock(self_id).insert(receiver.clone());
-        println!("{} | MockRecvService - ready", self_id);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
@@ -246,13 +244,18 @@ mod jds_routes {
             Some("assets/testing/retain/"),
             Some(RetainPointConf::new("point/id.json", None))
         ))));
+        //
+        // Configuring Receiver
+        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", None)));
+        services.wlock(self_id).insert(receiver.clone());
+        println!("{} | MockRecvService - ready", self_id);
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
                 send-to:
-                    - {}/MockRecvService0.in-queue
-        "#, self_name)).unwrap();
+                    - {}.in-queue
+        "#, receiver.read().unwrap().name().join())).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
@@ -284,12 +287,6 @@ mod jds_routes {
         // preparing MockServicePoints with the Vec<PontConfig>
         let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
         services.wlock(self_id).insert(service_points);
-        //
-        // Configuring Receiver
-        mock_recv_service::COUNT.reset(0);
-        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", None)));
-        services.wlock(self_id).insert(receiver.clone());
-        println!("{} | MockRecvService - ready", self_id);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
@@ -343,47 +340,9 @@ mod jds_routes {
         init_each();
         println!();
         let self_id = "jds_request_test";
-        let self_name = Name::new(self_id, "");
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
         test_duration.run().unwrap();
-        //
-        // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
-        ))));
-        let conf = serde_yaml::from_str(&format!(r#"
-            service MultiQueue:
-                in queue in-queue:
-                    max-length: 10000
-                send-to:
-                    - {}/MockRecvService0.in-queue
-        "#, self_name)).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
-        services.wlock(self_id).insert(mq_service.clone());
-        //
-        // Configuring TcpServer service
-        let secret = "123!@#qwe";
-        let tcp_port = TestSession::free_tcp_port_str();
-        let tcp_server_addr = format!("127.0.0.1:{}", tcp_port);
-        let conf = format!(r#"
-            service TcpServer:
-                cycle: 1 ms
-                reconnect: 1 s  # default 3 s
-                address: {}
-                auth-secret:
-                    pass: {}      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
-                in queue link:
-                    max-length: 10000
-                send-to: {}/MultiQueue.in-queue
-        "#, tcp_server_addr, secret, self_name);
-        let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
-        services.wlock(self_id).insert(tcp_server.clone());
-        println!("{} | TcpServer - ready", self_id);
         //
         // Preparing test data
         let tx_id = PointTxId::from_str(self_id);
@@ -432,15 +391,51 @@ mod jds_routes {
         ];
         let test_items_count = test_data.len();
         //
-        // preparing MockServicePoints with the Vec<PontConfig>
-        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
-        services.wlock(self_id).insert(service_points);
+        // Configuring MultiQueue service
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("point/id.json", None))
+        ))));
         //
         // Configuring Receiver
-        mock_recv_service::COUNT.reset(0);
         let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2))));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
+        let conf = serde_yaml::from_str(&format!(r#"
+            service MultiQueue:
+                in queue in-queue:
+                    max-length: 10000
+                send-to:
+                    - {}.in-queue
+        "#, receiver.read().unwrap().name().join())).unwrap();
+        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
+        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
+        services.wlock(self_id).insert(mq_service.clone());
+        //
+        // Configuring TcpServer service
+        let secret = "123!@#qwe";
+        let tcp_port = TestSession::free_tcp_port_str();
+        let tcp_server_addr = format!("127.0.0.1:{}", tcp_port);
+        let conf = format!(r#"
+            service TcpServer:
+                cycle: 1 ms
+                reconnect: 1 s  # default 3 s
+                address: {}
+                auth-secret:
+                    pass: {}      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
+                in queue link:
+                    max-length: 10000
+                send-to: {}/MultiQueue.in-queue
+        "#, tcp_server_addr, secret, self_name);
+        let conf = serde_yaml::from_str(&conf).unwrap();
+        let conf = TcpServerConfig::from_yaml(&self_name, &conf);
+        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
+        services.wlock(self_id).insert(tcp_server.clone());
+        println!("{} | TcpServer - ready", self_id);
+        //
+        // preparing MockServicePoints with the Vec<PontConfig>
+        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
+        services.wlock(self_id).insert(service_points);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
@@ -628,7 +623,7 @@ mod jds_routes {
         //
         // Sending test events
         println!("{} | Try to get send from MultiQueue...", self_id);
-        let send = services.wlock(self_id).get_link(&LinkName::new("MultiQueue.in-queue")).unwrap();
+        let send = services.wlock(self_id).get_link(&LinkName::from_str("MultiQueue.in-queue").unwrap()).unwrap();
         println!("{} | Try to get send from MultiQueue - ok", self_id);
         let mut sent = 0;
         for point in test_data {

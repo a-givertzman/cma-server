@@ -1,5 +1,5 @@
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -7,7 +7,7 @@ pub struct TaskTestReceiver {
     name: Name,
     iterations: usize, 
     in_send: HashMap<String, Sender<Point>>,
-    in_recv: Vec<Receiver<Point>>,
+    in_recv: Mutex<Option<Receiver<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
     exit: Arc<AtomicBool>,
 }
@@ -28,7 +28,7 @@ impl TaskTestReceiver {
             name,
             iterations,
             in_send: HashMap::from([(recv_queue.to_string(), send)]),
-            in_recv: vec![recv],
+            in_recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -52,10 +52,6 @@ impl Object for TaskTestReceiver {
 }
 //
 //
-unsafe impl Send for TaskTestReceiver {}
-unsafe impl Sync for TaskTestReceiver {}
-//
-// 
 impl Debug for TaskTestReceiver {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -84,7 +80,7 @@ impl Service for TaskTestReceiver {
         let received = self.received.clone();
         let mut count = 0;
         // let mut error_count = 0;
-        let in_recv = self.in_recv.pop().unwrap();
+        let in_recv = self.in_recv.lock().unwrap().take().unwrap();
         let iterations = self.iterations;
         let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
             // log::info!("Task({}).run | prepared", name);

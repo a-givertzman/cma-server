@@ -1,7 +1,7 @@
 use concat_string::concat_string;
 use log::{info, debug, trace, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::api_client_config::ApiClientConfig, 
@@ -15,7 +15,7 @@ use crate::{
 pub struct ApiClient {
     id: String,
     name: Name,
-    recv: Vec<Receiver<Point>>,
+    recv: Mutex<Option<Receiver<Point>>>,
     send: HashMap<String, Sender<Point>>,
     conf: ApiClientConfig,
     exit: Arc<AtomicBool>,
@@ -31,7 +31,7 @@ impl ApiClient {
         Self {
             id: format!("{}", conf.name),
             name: conf.name.clone(),
-            recv: vec![recv],
+            recv: Mutex::new(Some(recv)),
             send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             exit: Arc::new(AtomicBool::new(false)),
@@ -105,10 +105,6 @@ impl Debug for ApiClient {
 }
 //
 //
-unsafe impl Send for ApiClient {}
-unsafe impl Sync for ApiClient {}
-//
-// 
 impl Service for ApiClient {
     //
     //
@@ -125,7 +121,7 @@ impl Service for ApiClient {
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
-        let recv = self.recv.pop().unwrap();
+        let recv = self.recv.lock().unwrap().take().unwrap();
         let (cyclic, cycle_interval) = match conf.cycle {
             Some(interval) => (interval > Duration::ZERO, interval),
             None => (false, Duration::ZERO),

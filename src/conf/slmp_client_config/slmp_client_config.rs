@@ -64,7 +64,7 @@ impl SlmpClientConfig {
         debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::new(self_conf.get_send_to().unwrap());
+        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
         debug!("{}.new | send-to: '{}'", self_id, send_to);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | description: {:?}", self_id, description);

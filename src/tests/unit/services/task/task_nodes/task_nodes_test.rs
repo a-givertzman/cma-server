@@ -3,7 +3,7 @@
 mod task_nodes {
     use log::{info, debug, trace, warn};
     use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::{service::Service, service_handles::ServiceHandles}};
-    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Once, RwLock}, thread};
+    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
@@ -149,7 +149,7 @@ mod task_nodes {
         id: String,
         name: Name,
         links: HashMap<String, Sender<Point>>,
-        rx_recv: Vec<Receiver<Point>>,
+        rx_recv: Mutex<Option<Receiver<Point>>>,
         exit: Arc<AtomicBool>,
     }
     //
@@ -164,7 +164,7 @@ mod task_nodes {
                 links: HashMap::from([
                     (link_name.to_string(), send),
                 ]),
-                rx_recv: vec![recv],
+                rx_recv: Mutex::new(Some(recv)),
                 exit: Arc::new(AtomicBool::new(false)),
             }
         }
@@ -191,10 +191,6 @@ mod task_nodes {
     }
     //
     //
-    unsafe impl Send for MockService {}
-    unsafe impl Sync for MockService {}
-    //
-    //
     impl Service for MockService {
         //
         //
@@ -210,7 +206,7 @@ mod task_nodes {
             info!("{}.run | Starting...", self.id);
             let self_id = self.id.clone();
             let exit = self.exit.clone();
-            let rx_recv = self.rx_recv.pop().unwrap();
+            let rx_recv = self.rx_recv.lock().unwrap().take().unwrap();
             let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
                 loop {
                     match rx_recv.recv() {

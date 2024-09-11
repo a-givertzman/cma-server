@@ -388,10 +388,6 @@ impl Debug for ProfinetClient {
 }
 //
 //
-unsafe impl Send for ProfinetClient {}
-unsafe impl Sync for ProfinetClient {}
-//
-//
 impl Service for ProfinetClient {
     //
     //

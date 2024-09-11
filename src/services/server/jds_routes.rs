@@ -87,7 +87,7 @@ impl<F> Object for JdsRoutes<F> {
 impl<F> TcpStreamRead for JdsRoutes<F> where
     //    parent_id, name
     F: Fn(String, Name, Point, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
-    F: Send + Sync {
+    F: Send {
     ///
     /// Reads single point from source
     fn read(&mut self, tcp_stream: &mut BufReader<TcpStream>) -> ConnectionStatus<OpResult<Point, String>, String> {

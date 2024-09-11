@@ -1,5 +1,5 @@
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{info, warn};
 use testing::stuff::wait::WaitTread;
 use crate::{
@@ -18,11 +18,11 @@ pub struct TcpClient {
     id: String,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
-    in_recv: Vec<Receiver<Point>>,
+    in_recv: Mutex<Option<Receiver<Point>>>,
     conf: TcpClientConfig,
     services: Arc<RwLock<Services>>,
-    tcp_recv_alive: Option<Arc<RwLock<TcpReadAlive>>>,
-    tcp_send_alive: Option<Arc<RwLock<TcpWriteAlive>>>,
+    // tcp_recv_alive: Option<Arc<RwLock<TcpReadAlive>>>,
+    // tcp_send_alive: Option<Arc<RwLock<TcpWriteAlive>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -36,12 +36,12 @@ impl TcpClient {
         Self {
             id: conf.name.join(),
             name: conf.name.clone(),
-            in_recv: vec![recv],
+            in_recv: Mutex::new(Some(recv)),
             in_send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             services,
-            tcp_recv_alive: None,
-            tcp_send_alive: None,
+            // tcp_recv_alive: None,
+            // tcp_send_alive: None,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -66,10 +66,6 @@ impl Debug for TcpClient {
 }
 //
 //
-unsafe impl Send for TcpClient {}
-unsafe impl Sync for TcpClient {}
-//
-// 
 impl Service for TcpClient {
     //
     // 
@@ -91,7 +87,7 @@ impl Service for TcpClient {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
         let buffered = conf.rx_buffered; // TODO Read this from config
-        let in_recv = self.in_recv.pop().unwrap();
+        let in_recv = self.in_recv.lock().unwrap().take().unwrap();
         // let (cyclic, cycleInterval) = match conf.cycle {
         //     Some(interval) => (interval > Duration::ZERO, interval),
         //     None => (false, Duration::ZERO),
@@ -105,23 +101,23 @@ impl Service for TcpClient {
         );
         let mut tcp_read_alive = TcpReadAlive::new(
             &self_id,
-            Arc::new(RwLock::new(
+            Box::new(
                 JdsDeserialize::new(
                     self_id.clone(),
                     JdsDecodeMessage::new(
                         &self_id,
                     ),
                 ),
-            )),
+            ),
             tx_send,
             Some(Duration::from_millis(10)),
             Some(exit.clone()),
             Some(exit_pair.clone()),
         );
-        let tcp_write_alive = TcpWriteAlive::new(
+        let mut tcp_write_alive = TcpWriteAlive::new(
             &self_id,
             None,
-            Arc::new(RwLock::new(TcpStreamWrite::new(
+            TcpStreamWrite::new(
                 &self_id,
                 buffered,
                 Some(conf.rx_max_len as usize),
@@ -132,7 +128,7 @@ impl Service for TcpClient {
                         in_recv,
                     ),
                 )),
-            ))),
+            ),
             Some(exit.clone()),
             Some(exit_pair.clone()),
         );
@@ -169,18 +165,18 @@ impl Service for TcpClient {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
-        match &self.tcp_recv_alive {
-            Some(tcp_recv_alive) => {
-                tcp_recv_alive.rlock(&self.id).exit()
-            }
-            None => {}
-        }
-        match &self.tcp_send_alive {
-            Some(tcp_send_alive) => {
-                tcp_send_alive.rlock(&self.id).exit()
-            }
-            None => {}
-        }
+        // match &self.tcp_recv_alive {
+        //     Some(tcp_recv_alive) => {
+        //         tcp_recv_alive.rlock(&self.id).exit()
+        //     }
+        //     None => {}
+        // }
+        // match &self.tcp_send_alive {
+        //     Some(tcp_send_alive) => {
+        //         tcp_send_alive.rlock(&self.id).exit()
+        //     }
+        //     None => {}
+        // }
     }
     //
     //

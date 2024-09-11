@@ -4,8 +4,7 @@ use sal_sync::services::{
     subscription::subscription_criteria::SubscriptionCriteria,
 };
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, 
-    mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Duration,
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::Duration,
 };
 use log::{debug, error, info, trace, warn};
 use concat_string::concat_string;
@@ -25,7 +24,7 @@ pub struct Task {
     id: String,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
-    rx_recv: Vec<Receiver<Point>>,
+    rx_recv: Mutex<Option<Receiver<Point>>>,
     services: Arc<RwLock<Services>>,
     conf: TaskConfig,
     exit: Arc<AtomicBool>,
@@ -42,7 +41,7 @@ impl Task {
             id: conf.name.join(),
             name: conf.name.clone(),
             in_send: HashMap::from([(conf.rx.clone(), send)]),
-            rx_recv: vec![recv],
+            rx_recv: Mutex::new(Some(recv)),
             services,
             conf,
             exit: Arc::new(AtomicBool::new(false)),
@@ -103,7 +102,10 @@ impl Task {
                 rx_recv
             }
             None => {
-                self.rx_recv.pop().unwrap()
+                match self.rx_recv.lock() {
+                    Ok(mut rx_recv) => rx_recv.take().unwrap(),
+                    Err(err) => panic!("{}.subscribe | self.rx_recv - is not initialized, \n\t error: {:#?}", self.id, err),
+                }
             }
         }
     }
@@ -128,10 +130,6 @@ impl Debug for Task {
             .finish()
     }
 }
-//
-//
-unsafe impl Send for Task {}
-unsafe impl Sync for Task {}
 //
 //
 impl Service for Task {

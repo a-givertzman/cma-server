@@ -56,6 +56,3 @@ impl StreamRead<Vec<u8>, RecvError> for JdsEncodeMessage {
         }
     }
 }
-///
-/// 
-unsafe impl Sync for JdsEncodeMessage {}

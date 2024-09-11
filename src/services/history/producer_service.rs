@@ -108,10 +108,6 @@ impl Debug for ProducerService {
 }
 //
 //
-unsafe impl Send for ProducerService {}
-unsafe impl Sync for ProducerService {}
-//
-//
 impl Service for ProducerService {
     //
     // 

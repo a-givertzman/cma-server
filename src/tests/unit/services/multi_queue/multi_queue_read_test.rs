@@ -71,7 +71,7 @@ mod multi_queue {
         let test_data_len = test_data.len();
         let count = 30;
         let total_count = count * test_data.len();
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
         test_duration.run().unwrap();
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),

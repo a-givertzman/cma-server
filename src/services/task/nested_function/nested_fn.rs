@@ -111,8 +111,9 @@ impl NestedFn {
                         let queue_name = queue_name.conf.as_str().unwrap();
                         let send_queue = {
                             let services_lock = services.rlock(&self_id);
-                            services_lock.get_link(&LinkName::new(queue_name)).unwrap_or_else(|err| {
-                            panic!("{}.function | services.get_link error: {:#?}", self_id, err);
+                            let link_name = LinkName::from_str(queue_name).unwrap();
+                            services_lock.get_link(&link_name).unwrap_or_else(|err| {
+                                panic!("{}.function | services.get_link error: {:#?}", self_id, err);
                             })
                         };
                         Rc::new(RefCell::new(Box::new(
@@ -316,7 +317,8 @@ impl NestedFn {
                                 };
                                 {
                                     let services_lock = services.rlock(&self_id);
-                                    services_lock.get_link(&LinkName::new(queue_name)).map_or(None, |send| Some(send))
+                                    let link_name = LinkName::from_str(queue_name).unwrap();
+                                    services_lock.get_link(&link_name).map_or(None, |send| Some(send))
                                 }
                             }
                             Err(_) => {
@@ -575,7 +577,8 @@ impl NestedFn {
                                 };
                                 {
                                     let services_lock = services.rlock(&self_id);
-                                    services_lock.get_link(&LinkName::new(queue_name)).map_or(None, |send| Some(send))
+                                    let link_name = LinkName::from_str(queue_name).unwrap();
+                                    services_lock.get_link(&link_name).map_or(None, |send| Some(send))
                                 }
                             }
                             Err(_) => {
@@ -732,7 +735,8 @@ impl NestedFn {
                 let services_lock = services.rlock(&self_id);
                 let send_to = match &conf.send_to {
                     Some(send_to) => {
-                        Some(services_lock.get_link(&LinkName::new(send_to)).unwrap_or_else(|err| {
+                        let link_name = LinkName::from_str(send_to).unwrap();
+                        Some(services_lock.get_link(&link_name).unwrap_or_else(|err| {
                             panic!("{}.function | services.get_link error: {:#?}", self_id, err);
                         }))
                     }
