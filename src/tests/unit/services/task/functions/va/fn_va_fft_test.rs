@@ -62,7 +62,7 @@ mod fn_va_fft {
 
         let mut rnd = rand::thread_rng();
         let mut test_freqs = vec![];
-        let circles: Vec<(f64, UnitCircle)> = (0..rnd.gen_range(5..20)).map(|_| {
+        let circles: Vec<(f64, UnitCircle)> = (0..rnd.gen_range(1..20)).map(|_| {
             let test_amp = rnd.gen_range(50.0..200.0);
             let test_freq = rnd.gen_range(sampling_freq / 1000..sampling_freq / 10);
             test_freqs.push((test_freq as f64, test_amp));
