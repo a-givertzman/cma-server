@@ -62,7 +62,7 @@ pub struct Shared {
     pub subscribe_receiver: String,
     pub jds_state: JdsState,
     pub auth: TcpServerAuth,
-    pub connection_id: String,
+    // pub connection_id: String,
     pub cache: Option<String>,
     pub req_reply_send: Vec<Sender<Point>>,
 }
@@ -117,7 +117,7 @@ impl JdsConnection {
                     _                   => JdsState::Unknown,
                 }, 
                 auth: conf.auth.clone(),
-                connection_id: self.connection_id.clone(),
+                // connection_id: self.connection_id.clone(),
                 cache: conf.cache.clone(),
                 req_reply_send: vec![],
         }));

@@ -38,11 +38,6 @@ impl MockTcpServer {
     }
     ///
     /// 
-    pub fn id(&self) -> String {
-        self.id.clone()
-    }
-    ///
-    /// 
     // pub fn sent(&self) -> Arc<RwLock<Vec<PointType>>> {
     //     self.sent.clone()
     // }

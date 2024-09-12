@@ -41,11 +41,6 @@ impl MockRecvSendService {
     }
     ///
     /// 
-    pub fn id(&self) -> String {
-        self.id.clone()
-    }
-    ///
-    /// 
     pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
         self.sent.clone()
     }
