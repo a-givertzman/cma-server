@@ -55,9 +55,9 @@ mod fn_va_fft {
         let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
         // test_duration.run().unwrap();
         // Sampling freq
-        let sampling_freq = 300_000;
+        let sampling_freq = 1000;
         // FFT Window size
-        let fft_len = 262_144; //131_072;
+        let fft_len = 100; //131_072;
         let frequencies = frequencies(sampling_freq, fft_len);
         let mut sampling_unit_circle = UnitCircle::new(sampling_freq);
 
@@ -69,7 +69,7 @@ mod fn_va_fft {
         let y_scale = 1.0 / (fft_len as f64);
 
         // Time of sampling, sec
-        let until = 10.0;
+        let until = 1.0;
         let mut t = 0.0;
         // Allowed accuracy for detected frequency
         let freq_accuracy = 0.15;
@@ -90,7 +90,7 @@ mod fn_va_fft {
         //
         // Configuring FnVaFft
         let enable = init_each(Some("true"), FnConfPointType::Bool);
-        let input = init_each(None, FnConfPointType::Double);
+        let fn_va_fft_input = init_each(None, FnConfPointType::Double);
         let conf = serde_yaml::from_str(&format!(r#"
             fn VaFft:
                 enable: const bool true         # optional, default true
@@ -98,15 +98,14 @@ mod fn_va_fft {
                 conf point Fft:                 # full name will be: /App/Task/Ffr.freq
                     type: 'Double'
                 input: point string /AppTest/Exit
-                freq: 300000                    # Sampling freq
-                window: 512
-                len: 30000                      # Length of the                         
+                freq: 1000                    # Sampling freq
+                len: 100                      # Length of the                         
         "#, receiver.read().unwrap().name())).unwrap();
         let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
             crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
             _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
         };
-        let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), input.clone(), conf, services.clone());
+        let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
         //
         // Runing all services
         let services_handle = services.wlock(self_id).run().unwrap();
@@ -131,34 +130,47 @@ mod fn_va_fft {
         while t < until {
             (t, _, _) = sampling_unit_circle.next();
             let value: Complex<f64> = circles.iter()
-                .map(|(amp, circle)| circle.at_with(t, *amp))
+                .map(|(amp, circle)| {
+                    circle.at_with(t, *amp)
+                })
                 .map(|(_angle, complex)| complex).sum();
             buf.push(value);
-            input.borrow_mut().add(&value.abs().to_point(tx_id, &format!("")));
+            // Processing FnVaFft
+            let val = value.abs();
+            println!("t: {},  complex:  {},   module: {}", t, value, val);
+            let timer = Instant::now();
+            fn_va_fft_input.borrow_mut().add(&val.to_point(tx_id, &format!("t: {}", t)));
+            fn_va_fft.out();
+            let va_fft_elapsed = timer.elapsed();
+            // println!("FnVaFft elapsed  |  {:?}", elapsed);
             // println!("x: {}  |  y: {}", t, round(value.abs(), 3));
             if buf.len() >= fft_len {
+                
                 // Processing pure FFT algorithm
                 let timer = Instant::now();
                 fft.process(&mut buf);
                 let elapsed = timer.elapsed();
                 println!("Pure FFT elapsed  |  {:?}", elapsed);
-                // Processing FnVaFft
-                let timer = Instant::now();
-                fn_va_fft.out();
-                let received = receiver.read().unwrap().received().read().unwrap().to_vec();
-                receiver.write().unwrap().clear_received();
-                for point in &received {
-                    va_fft_buf.push(point.as_double().value)
-                }
-                let elapsed = timer.elapsed();
-                println!("FnVaFft elapsed  |  {:?}, \t received: {}", elapsed, received.len());
                 let fft_scalar: Vec<f64> = buf.iter().map(|complex| {
                     round(complex.abs() * y_scale, 3)
                 }).collect();
+
+                // Receiving FnVaFft results
+                while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                let received = receiver.read().unwrap().received().read().unwrap().to_vec();
+                receiver.write().unwrap().clear_received();
+                println!("FnVaFft elapsed  |  {:?}, \t received: {}", va_fft_elapsed, received.len());
+                for point in &received {
+                    va_fft_buf.push(point.as_double().value)
+                }
+
                 if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
                     log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
                     // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
                 }
+                va_fft_buf = vec![];
                 // println!("{}  |  {:?}", t, fft_scalar);
                 // freq index  amplitude
                 let mut sub_results = vec![];

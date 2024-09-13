@@ -69,10 +69,12 @@ impl FnVaFft {
             Ok(len) => len.as_param().conf.as_u64().unwrap() as usize,
             Err(_) => panic!("{}.new | Parameter 'len' - missed", self_id),
         };
+        log::debug!("{}.new | fft_len: {:?}", self_id, fft_len);
         let sampling_freq = match conf.param("freq") {
             Ok(freq) => freq.as_param().conf.as_u64().unwrap() as usize,
             Err(_) => panic!("{}.new | Parameter 'freq' - missed", self_id),
         };
+        log::debug!("{}.new | sampling_freq: {:?}", self_id, sampling_freq);
         let point_conf = match conf.clone().input_conf("conf") {
             Ok(conf) => match conf {
                 FnConfKind::PointConf(conf) => match conf.conf.type_ {
@@ -86,12 +88,14 @@ impl FnVaFft {
                     type: 'Real'
             "#).unwrap()),
         };
+        log::debug!("{}.new | point_conf: {:#?}", self_id, point_conf);
         let send_to = match conf.param("send-to") {
             Ok(send_to) => {
                 let send_to = match send_to {
                     FnConfKind::Param(send_to) => LinkName::from_str(send_to.conf.as_str().unwrap()).unwrap(),
                     _ => panic!("{}.new | Parameter 'send-to' - invalid type (string expected): {:#?}", self_id, send_to),
                 };
+                log::debug!("{}.new | send-to: {:?}", self_id, send_to);
                 let services_lock = services.rlock(&self_id);
                 services_lock.get_link(&send_to).map_or(None, |send| Some(send))
             }
@@ -161,16 +165,20 @@ impl FnVaFft {
                 0.0
             }
         };
-        if self.fft_buf.len() < self.len {
-            let (_, _, unit_complex) = self.unit_circle.next();
-            self.fft_buf.push(
-                Complex {
-                    re: value * unit_complex.re,
-                    im: value * unit_complex.im,
-                },
-            )
-        }
+        let (t, angle, unit_complex) = self.unit_circle.next();
+        log::trace!("{}.out | fft.process next t: {},  angle: {}, buf.len: {} ...", self.id, t, angle, self.fft_buf.len());
+        let complex = 
+        Complex {
+            re: value * unit_complex.re,
+            im: value * unit_complex.im,
+        };
+        self.fft_buf.push(
+            complex
+        );
+        log::debug!("{}.out | t: {},  complex: {}", self.id, t, complex);
         if self.fft_buf.len() >= self.len {
+        // if self.fft_buf.len() >= self.len {
+            log::debug!("{}.out | fft.process bub {:?}...", self.id, self.fft_buf.len());
             if enable {
                 self.fft.process(self.fft_buf.as_mut_slice());
                 let mut missed_freq_index = 0;

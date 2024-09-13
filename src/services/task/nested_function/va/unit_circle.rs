@@ -61,7 +61,7 @@ impl UnitCircle {
     /// Returns complex at time `t, sec`
     pub fn complex(&self, t: f64) -> Complex<f64> {
         let angle = self.angle(t);
-        Complex::new(angle.sin(), angle.cos())
+        Complex::new(angle.cos(), angle.sin())
     }
     ///
     /// Returns (angle, complex) at a time `t, sec`
