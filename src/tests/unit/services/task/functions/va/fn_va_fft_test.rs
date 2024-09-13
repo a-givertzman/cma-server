@@ -155,8 +155,9 @@ mod fn_va_fft {
                 let fft_scalar: Vec<f64> = buf.iter().map(|complex| {
                     round(complex.abs() * y_scale, 3)
                 }).collect();
-                if va_fft_buf == fft_scalar {
-                    log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
+                if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
+                    log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
+                    // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
                 }
                 // println!("{}  |  {:?}", t, fft_scalar);
                 // freq index  amplitude
@@ -283,4 +284,44 @@ mod fn_va_fft {
         let factor = 10.0f64.powi(digits as i32);
         (value * factor).round() / factor
     }
+    ///
+    /// Comparasion of vectors
+    fn compare_vecs(v1: &[f64], v2: &[f64]) -> Result<(), (String, String)> {
+        let mut result1 = String::new();
+        let mut result2 = String::new();
+        let (long, short, r1, r2) = if v1.len() >= v2.len() {
+            (v1, v2, &mut result1, &mut result2)
+        } else {
+            (v2, v1, &mut result2, &mut result1)
+        };
+        let mut short_iter = short.into_iter();
+        let mut matched = true;
+        for value1 in long {
+            match short_iter.next() {
+                Some(value2) => {
+                    if value1 == value2 {
+                        r1.push_str(&format!("| {:.3} ",round(*value1, 3)));
+                        r2.push_str(&format!("| {:.3} ",round(*value2, 3)));
+                    } else {
+                        matched = false;
+                        r1.push_str(&format!("| - {:.3} - ",round(*value1, 3)));
+                        r2.push_str(&format!("| - {:.3} - ",round(*value2, 3)));
+                    }
+                }
+                None => {
+                    matched = false;
+                    let value1 = format!("| {:.3} ",round(*value1, 3));
+                    let alignment = value1.len();
+                    r1.push_str(&value1);
+                    r2.push_str(&format!("| {:fill$} ", "-", fill = alignment - 3));
+                }
+            }
+        }
+        if matched {
+            Ok(())
+        } else {
+            Err((result1, result2))
+        }
+    }
+
 }
