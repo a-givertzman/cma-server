@@ -3,11 +3,11 @@
 mod task_config_new {
     use indexmap::IndexMap;
     use log::{info, debug};
-    use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, subscription::conf_subscribe::ConfSubscribe};
+    use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, subscription::conf_subscribe::ConfSubscribe, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::{
-        fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind, fn_conf_options::FnConfOptions, fn_config::FnConfig}, task_config::TaskConfig
+        fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig}, task_config::TaskConfig
     };
     ///
     ///

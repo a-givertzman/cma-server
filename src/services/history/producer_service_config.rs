@@ -1,11 +1,8 @@
 use indexmap::IndexMap;
 use log::{trace, debug};
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
 use std::{fs, str::FromStr, time::Duration};
-use crate::conf::{
-    fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
-    service_config::ServiceConfig,
-};
+use crate::conf::service_config::ServiceConfig;
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml

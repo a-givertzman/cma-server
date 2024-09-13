@@ -39,6 +39,12 @@ impl TaskTestReceiver {
     pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
+    ///
+    /// Clearing vector of received Pont's
+    #[allow(unused)]
+    pub fn clear_received(&self) {
+        *self.received.write().unwrap() = vec![];
+    }
 }
 //
 // 

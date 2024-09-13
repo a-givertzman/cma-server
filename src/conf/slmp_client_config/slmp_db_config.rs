@@ -1,11 +1,8 @@
 use log::{debug, trace};
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
 use std::{str::FromStr, time::Duration};
 use crate::{
-    conf::{
-        fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName}, 
-        service_config::ServiceConfig,
-    }, 
+    conf::service_config::ServiceConfig, 
     services::slmp_client::slmp::device_code::DeviceCode,
 };
 ///

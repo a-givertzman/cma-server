@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod fn_threshold_factor {
     use log::{debug, info};
-    use sal_sync::services::entity::point::point::ToPoint;
+    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use testing::entities::test_value::Value;
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        conf::fn_::fn_config::FnConfig, 
         core_::types::fn_in_out_ref::FnInOutRef,
         services::task::nested_function::{
-            filter::fn_threshold::FnThreshold, fn_::FnOut, fn_input::FnInput
+            filter::fn_threshold::FnThreshold, fn_::FnOut, fn_input::FnInput,
         }
     };
     ///

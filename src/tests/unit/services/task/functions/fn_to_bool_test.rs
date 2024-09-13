@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod fn_to_bool {
     use log::{debug, info};
-    use sal_sync::services::entity::point::point::ToPoint;
+    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        conf::fn_::fn_config::FnConfig, 
         core_::types::fn_in_out_ref::FnInOutRef, 
-        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_to_bool::{self, FnToBool}, reset_counter::AtomicReset}
+        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_to_bool::{self, FnToBool}, reset_counter::AtomicReset},
     };
     ///
     ///

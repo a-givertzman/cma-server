@@ -2,13 +2,22 @@
 
 mod fn_va_fft {
     use core::f64;
-    use std::{hash::BuildHasherDefault, sync::Once, time::{Duration, Instant}};
+    use std::{cell::RefCell, rc::Rc, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use rand::Rng;
     use rustfft::{num_complex::{Complex, ComplexFloat}, FftPlanner};
-    use sal_sync::collections::map::IndexMapFxHasher;
-    use testing::stuff::max_test_duration::TestDuration;
+    use sal_sync::{
+        collections::map::IndexMapFxHasher,
+        services::{
+            entity::{name::Name, object::Object, point::{point::ToPoint, point_tx_id::PointTxId}}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf},
+            service::service::Service, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions},
+        },
+    };
+    use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{core_::failure::errors_limit::ErrorLimit, services::task::nested_function::va::unit_circle::UnitCircle, tests::unit::services::task::functions::va::plot};
+    use crate::{
+        conf::fn_::fn_config::FnConfig, core_::{failure::errors_limit::ErrorLimit, types::fn_in_out_ref::FnInOutRef},
+        services::{safe_lock::rwlock::SafeLock, services::Services, task::{nested_function::{fn_::FnOut, fn_input::FnInput, va::{fn_va_fft::FnVaFft, unit_circle::UnitCircle}}, task_test_receiver::TaskTestReceiver}},
+    };
     ///
     /// Colors
     const YELLOW: &str = "\x1b[0;33m";
@@ -26,17 +35,23 @@ mod fn_va_fft {
     ///
     /// returns:
     ///  - ...
-    fn init_each() -> () {}
+    fn init_each(default: Option<&str>, type_: FnConfPointType) -> FnInOutRef {
+        let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: default.map(|d| d.into()), ..Default::default()}, ..Default::default()};
+        Rc::new(RefCell::new(Box::new(
+            FnInput::new("test", 0, &mut conf)
+        )))
+    }
     ///
     /// Testing FFT it self behavior
     #[test]
     fn fft_anderstending() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
-        init_each();
         log::debug!("");
         let self_id = "test";
-        log::debug!("\n{}", self_id);
+        let self_name = Name::new("", self_id);
+        let tx_id = PointTxId::from_str(&self_id);
+        log::debug!("{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
         // test_duration.run().unwrap();
         // Sampling freq
@@ -46,10 +61,11 @@ mod fn_va_fft {
         let frequencies = frequencies(sampling_freq, fft_len);
         let mut sampling_unit_circle = UnitCircle::new(sampling_freq);
 
+        let mut va_fft_buf = vec![];
         let mut buf = vec![];
         let fft = FftPlanner::new().plan_fft_forward(fft_len);
-        let mut input = vec![];
-        let mut series = vec![];
+        // let mut input = vec![];
+        // let mut series = vec![];
         let y_scale = 1.0 / (fft_len as f64);
 
         // Time of sampling, sec
@@ -60,6 +76,44 @@ mod fn_va_fft {
         // Allowed accuracy for amplitude in the detected frequency
         let amp_accuracy = 0.25;
 
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+            Some("assets/testing/retain/"),
+            Some(RetainPointConf::new("point/id.json", None))
+        ))));
+        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+            self_id,
+            "",
+            "in-queue",
+            usize::MAX,
+        )));
+        services.wlock(self_id).insert(receiver.clone());
+        //
+        // Configuring FnVaFft
+        let enable = init_each(Some("true"), FnConfPointType::Bool);
+        let input = init_each(None, FnConfPointType::Double);
+        let conf = serde_yaml::from_str(&format!(r#"
+            fn VaFft:
+                enable: const bool true         # optional, default true
+                send-to: {}.in-queue
+                conf point Fft:                 # full name will be: /App/Task/Ffr.freq
+                    type: 'Double'
+                input: point string /AppTest/Exit
+                freq: 300000                    # Sampling freq
+                window: 512
+                len: 30000                      # Length of the                         
+        "#, receiver.read().unwrap().name())).unwrap();
+        let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
+            crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
+            _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
+        };
+        let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), input.clone(), conf, services.clone());
+        //
+        // Runing all services
+        let services_handle = services.wlock(self_id).run().unwrap();
+        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        thread::sleep(Duration::from_millis(50));
+        log::debug!("{} | All services started", self_id);
+
         let mut rnd = rand::thread_rng();
         let mut test_freqs = vec![];
         let circles: Vec<(f64, UnitCircle)> = (0..rnd.gen_range(1..20)).map(|_| {
@@ -67,8 +121,7 @@ mod fn_va_fft {
             let test_freq = rnd.gen_range(sampling_freq / 1000..sampling_freq / 10);
             test_freqs.push((test_freq as f64, test_amp));
             (test_amp, UnitCircle::new(test_freq))
-        })
-        .collect();
+        }).collect();
         test_freqs.sort_by(|(freq1, _amp1), (freq2, _amp2)| {
             freq1.partial_cmp(freq2).unwrap()
         });
@@ -81,17 +134,30 @@ mod fn_va_fft {
                 .map(|(amp, circle)| circle.at_with(t, *amp))
                 .map(|(_angle, complex)| complex).sum();
             buf.push(value);
+            input.borrow_mut().add(&value.abs().to_point(tx_id, &format!("")));
             // println!("x: {}  |  y: {}", t, round(value.abs(), 3));
-            input.push(
-                (t, value.abs())
-            );
             if buf.len() >= fft_len {
+                // Processing pure FFT algorithm
                 let timer = Instant::now();
                 fft.process(&mut buf);
                 let elapsed = timer.elapsed();
+                println!("Pure FFT elapsed  |  {:?}", elapsed);
+                // Processing FnVaFft
+                let timer = Instant::now();
+                fn_va_fft.out();
+                let received = receiver.read().unwrap().received().read().unwrap().to_vec();
+                receiver.write().unwrap().clear_received();
+                for point in &received {
+                    va_fft_buf.push(point.as_double().value)
+                }
+                let elapsed = timer.elapsed();
+                println!("FnVaFft elapsed  |  {:?}, \t received: {}", elapsed, received.len());
                 let fft_scalar: Vec<f64> = buf.iter().map(|complex| {
                     round(complex.abs() * y_scale, 3)
                 }).collect();
+                if va_fft_buf == fft_scalar {
+                    log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
+                }
                 // println!("{}  |  {:?}", t, fft_scalar);
                 // freq index  amplitude
                 let mut sub_results = vec![];
@@ -118,7 +184,6 @@ mod fn_va_fft {
                     };
                 }
                 results.push(sub_results);
-                println!("elapsed  |  {:?}", elapsed);
                 // series.push(
                 //     fft_scalar.into_iter().map(|y|, )
                 // );
@@ -172,11 +237,15 @@ mod fn_va_fft {
                 }
             }
         }
+        receiver.read().unwrap().exit();
+        services.rlock(self_id).exit();
+        services_handle.wait().unwrap();
+        receiver_handle.wait().unwrap();
         // Plotting, disabled by default
         // let input_len = input.len();
-        series.push(
-            input,
-        );
+        // series.push(
+        //     input,
+        // );
         // plot::plot("src/tests/unit/services/task/functions/va/plot_input.png", input_len / 2, series).unwrap();
         // println!("{:?}", f);
         test_duration.exit();
@@ -197,7 +266,7 @@ mod fn_va_fft {
         result
     }
     ///
-    /// List of frequencies
+    /// List of FFT frequencies
     fn frequencies(smpling_freq: usize, fft_len: usize) -> Vec<f64> {
         let delta = (smpling_freq as f64) / (fft_len as f64);
         let mut f = vec![0.0];
