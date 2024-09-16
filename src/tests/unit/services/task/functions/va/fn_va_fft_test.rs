@@ -128,7 +128,7 @@ mod fn_va_fft {
         let mut steps = 0;
         let mut fft_operations = 0;
         while t < until {
-            (t, _, _) = sampling_unit_circle.next();
+            t = sampling_unit_circle.next();
             let value: Complex<f64> = circles.iter()
                 .map(|(amp, circle)| {
                     circle.at_with(t, *amp)

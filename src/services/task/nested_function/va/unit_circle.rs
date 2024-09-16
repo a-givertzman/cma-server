@@ -6,8 +6,8 @@ pub struct UnitCircle {
     freq: usize,
     step: usize,
     global_step: f64,
-    angles: Vec<f64>,
-    complex: Vec<Complex<f64>>,
+    // angles: Vec<f64>,
+    // complex: Vec<Complex<f64>>,
     /// `2 x Pi x f`
     pi2f: f64,
 }
@@ -20,20 +20,20 @@ impl UnitCircle {
     ///
     /// Returns new instance of UnitCircle corresponding to `freq`
     pub fn new(freq: usize) -> Self {
-        let delta = std::f64::consts::PI * 2.0 / (freq as f64);
-        let angles: Vec<f64> = (0..freq).map(|i| delta * (i as f64)).collect();
-        let complex: Vec<Complex<f64>> = angles.iter().map(|angle| {
-            Complex {
-                re: angle.cos(),
-                im: angle.sin()
-            }
-        }).collect();
+        // let delta = std::f64::consts::PI * 2.0 / (freq as f64);
+        // let angles: Vec<f64> = (0..freq).map(|i| delta * (i as f64)).collect();
+        // let complex: Vec<Complex<f64>> = angles.iter().map(|angle| {
+        //     Complex {
+        //         re: angle.cos(),
+        //         im: angle.sin()
+        //     }
+        // }).collect();
         Self {
             freq,
             step: 0,
             global_step: 0.0,
-            angles,
-            complex,
+            // angles,
+            // complex,
             pi2f: Self::PI2 * freq as f64,
         }
     }
@@ -43,13 +43,11 @@ impl UnitCircle {
         self.step = 0;
     }
     ///
-    /// Returns next `t, secs`, `angle, rad` and corresponding `complex` value
-    pub fn next(&mut self) -> (f64, f64, Complex<f64>) {
+    /// Returns next `t, secs`, having Δt = 1 / `freq`
+    pub fn next(&mut self) -> f64 {
         let t = self.global_step / (self.freq as f64);
-        let result = (t, self.angles[self.step], self.complex[self.step]);
-        self.step = (self.step + 1) % self.freq;
         self.global_step += 1.0;
-        result
+        t
     }
     ///
     /// Returns (`angle`, `complex`) at time `t, sec`

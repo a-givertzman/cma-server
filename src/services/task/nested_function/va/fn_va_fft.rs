@@ -165,7 +165,8 @@ impl FnVaFft {
                 0.0
             }
         };
-        let (t, angle, unit_complex) = self.unit_circle.next();
+        let t = self.unit_circle.next();
+        let (angle, unit_complex) = self.unit_circle.at(t);
         log::trace!("{}.out | fft.process next t: {},  angle: {}, buf.len: {} ...", self.id, t, angle, self.fft_buf.len());
         let complex = 
         Complex {
