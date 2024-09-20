@@ -63,7 +63,10 @@ mod fft_buf {
                         fft.process(buf);
                         log::debug!("main | freq: {}  Elapsed: {:?}", sampl_freq, time.elapsed());
                         // log::debug!("main | t: {:.4},  fft: {:?}", t, buf);
-                        let fft_scalar: Vec<f64> = buf.iter().take(fft_size / 2).map(|val| val.abs() * fft_amp_factor).collect();
+                        // 
+                        // Take half of the FFT results, because it's mirrired
+                        // First elebent of fft_buf have to be skeeped because it refers to DC
+                        let fft_scalar: Vec<f64> = buf.iter().take(fft_size / 2).skip(1).map(|val| val.abs() * fft_amp_factor).collect();
                         log::trace!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
                         ffts.push(fft_scalar);
                     }
@@ -79,8 +82,7 @@ mod fft_buf {
             for (step, fft) in ffts.into_iter().enumerate() {
                 let mut error_limit = ErrorLimit::new(3);
                 let mut detected_freqs = 0;
-                // First elebent of fft_buf have to be skeeped because it refers to DC
-                for (i, amp) in fft.into_iter().skip(1).enumerate() {
+                for (i, amp) in fft.into_iter().enumerate() {
                     let freq = fft_buf.freq_of(i);
                     log::trace!("main | fft.freq[{}]: {}", i, freq);
                     if amp > 1.0 && freq > 0.0 {
