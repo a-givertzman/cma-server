@@ -130,7 +130,7 @@ mod fn_va_fft {
                 let time = Instant::now();
                 fn_va_fft_input.borrow_mut().add(&value.to_point(tx_id, &format!("t: {}", t)));
                 fn_va_fft.out();
-                log::debug!("main | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
+                log::trace!("main | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
 
                 match fft_buf.add(value) {
                     Some(buf) => {
