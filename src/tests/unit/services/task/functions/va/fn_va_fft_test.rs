@@ -141,24 +141,24 @@ mod fn_va_fft {
                         log::debug!("main | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
                         // log::debug!("main | t: {:.4},  fft: {:?}", t, buf);
                         let fft_scalar: Vec<f64> = buf.iter().take(fft_size / 2).skip(1).map(|val| val.abs() * fft_amp_factor).collect();
-                        log::debug!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
+                        log::trace!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
                         ffts.push(fft_scalar.clone());
 
-        
                         // Receiving FnVaFft results
                         let time = Instant::now();
-                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() / 2 {
+                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
                             thread::sleep(Duration::from_millis(10));
                         }
                         let received = receiver.read().unwrap().received().read().unwrap().to_vec();
                         receiver.write().unwrap().clear_received();
                         println!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
+                        log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         for point in &received {
                             va_fft_buf.push(point.as_double().value)
                         }
         
                         if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
-                            log::error!("main | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
+                            panic!("main | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
                             // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
                         }
                         va_fft_buf = vec![];
