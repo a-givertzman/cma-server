@@ -55,6 +55,8 @@ pub struct FnVaFft {
     fft: Arc<dyn Fft<f64>>,
     /// Vector of frequences correponding to the FFT.len ( Sampling `freq` / `len`) 
     fft_freqs: Vec<String>,
+    /// The factor to restore the amplitude from FFT results
+    amp_factor: f64,
     #[derivative(Debug="ignore")]
     fft_buf: FftBuf,
     sampl_freq: usize,
@@ -119,6 +121,7 @@ impl FnVaFft {
             input,
             fft: FftPlanner::new().plan_fft_forward(fft_size),
             fft_freqs: (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect(),  //Self::frequencies(sampl_freq, fft_size),    //.iter().map(|f| f.to_string()).collect(),
+            amp_factor: fft_buf.amp_factor(),
             fft_buf,
             sampl_freq,
             tx_send: send_to,
@@ -145,7 +148,7 @@ impl FnVaFft {
         let value = match input {
             Point::Int(point) => point.to_double().value,
             Point::Real(point) => point.to_double().value,
-            Point::Double(point) => point.to_double().value,
+            Point::Double(point) => point.value,
             _ => {
                 log::error!("{}.out | Invalid input type '{:?}' Point: {}", self.id, input.type_(), input.name());
                 0.0
@@ -170,11 +173,12 @@ impl FnVaFft {
                                 strcat!(&self.point_conf.name "." format!("Invalid index {:?}", index).as_str())
                             },
                         };
+                        let amplitude = amplitude.abs() * self.amp_factor;
                         log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
                         let point = Point::Double(PointHlr::new(
                             self.tx_id,
                             &point_name,
-                            amplitude.abs(),
+                            amplitude,
                             input.status(),
                             input.cot(),
                             input.timestamp(),

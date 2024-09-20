@@ -140,14 +140,14 @@ mod fn_va_fft {
                         fft.process(buf);
                         log::debug!("main | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
                         // log::debug!("main | t: {:.4},  fft: {:?}", t, buf);
-                        let fft_scalar: Vec<f64> = buf.iter().take(fft_size / 2).map(|val| val.abs() * fft_amp_factor).collect();
-                        log::trace!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
+                        let fft_scalar: Vec<f64> = buf.iter().take(fft_size / 2).skip(1).map(|val| val.abs() * fft_amp_factor).collect();
+                        log::debug!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
                         ffts.push(fft_scalar.clone());
 
         
                         // Receiving FnVaFft results
                         let time = Instant::now();
-                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
+                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() / 2 {
                             thread::sleep(Duration::from_millis(10));
                         }
                         let received = receiver.read().unwrap().received().read().unwrap().to_vec();
