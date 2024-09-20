@@ -3,8 +3,7 @@
 mod fn_va_fft {
     use core::f64;
     use std::{cell::RefCell, f64::consts::PI, rc::Rc, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
-    use rand::Rng;
-    use rustfft::{num_complex::{Complex, ComplexFloat}, Fft, FftPlanner};
+    use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
     use sal_sync::{
         collections::map::IndexMapFxHasher,
         services::{
@@ -82,6 +81,8 @@ mod fn_va_fft {
                 "in-queue",
                 usize::MAX,
             )));
+            let receiver_name = receiver.read().unwrap().name().join();
+            log::debug!("{} | receiver: '{}'", self_id, receiver_name);
             services.wlock(self_id).insert(receiver.clone());
             //
             // Configuring FnVaFft
@@ -96,7 +97,7 @@ mod fn_va_fft {
                     input: point string /AppTest/Exit
                     freq: {}                        # Sampling freq
                     len: {}                         # Length of the                         
-            "#, receiver.read().unwrap().name(), sampl_freq, fft_size)).unwrap();
+            "#, receiver_name, sampl_freq, fft_size)).unwrap();
             let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
                 crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
                 _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
@@ -119,51 +120,53 @@ mod fn_va_fft {
             log::debug!("main | fft_buf.amp_factor: {}", fft_amp_factor);
             assert!(fft_amp_factor == 1.0 / ((fft_size as f64) / 2.0), "\nresult: {:?}\ntarget: {:?}", fft_amp_factor, 1.0 / ((fft_size as f64) / 2.0));
             let mut ffts: Vec< Vec<f64> > = vec![];
-            for _ in 0..fft_size * target_ffts {
-                let mut fft_scalar: Vec<f64> = vec![];
+            for step in 0..fft_size * target_ffts {
                 let t = fft_buf.time();
                 let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
                     val + amp * (2. * PI *  freq * t).sin()
                 });
-                // Pure FFT process
+
+                // FnVaFft process
+                let time = Instant::now();
+                fn_va_fft_input.borrow_mut().add(&value.to_point(tx_id, &format!("t: {}", t)));
+                fn_va_fft.out();
+                log::debug!("main | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
+
                 match fft_buf.add(value) {
                     Some(buf) => {
+                        // Pure FFT process
                         // log::debug!("main | t: {:.4},  buf: {:?}", t, buf);
                         let time = Instant::now();
                         fft.process(buf);
                         log::debug!("main | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
                         // log::debug!("main | t: {:.4},  fft: {:?}", t, buf);
-                        fft_scalar = buf.iter().take(fft_size / 2).map(|val| val.abs() * fft_amp_factor).collect();
+                        let fft_scalar: Vec<f64> = buf.iter().take(fft_size / 2).map(|val| val.abs() * fft_amp_factor).collect();
                         log::trace!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
                         ffts.push(fft_scalar.clone());
+
+        
+                        // Receiving FnVaFft results
+                        let time = Instant::now();
+                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
+                            thread::sleep(Duration::from_millis(10));
+                        }
+                        let received = receiver.read().unwrap().received().read().unwrap().to_vec();
+                        receiver.write().unwrap().clear_received();
+                        println!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
+                        for point in &received {
+                            va_fft_buf.push(point.as_double().value)
+                        }
+        
+                        if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
+                            log::error!("main | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
+                            // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
+                        }
+                        va_fft_buf = vec![];
                     }
                     None => {
                         log::trace!("main | t: {:.4}", t);
                     },
                 };
-                // FnVaFft process
-                let time = Instant::now();
-                fn_va_fft_input.borrow_mut().add(&value.to_point(tx_id, &format!("t: {}", t)));
-                fn_va_fft.out();
-                log::debug!("main | freq: {}  FnVaFft Elapsed: {:?}", sampl_freq, time.elapsed());
-
-                // Receiving FnVaFft results
-                let time = Instant::now();
-                while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
-                    thread::sleep(Duration::from_millis(10));
-                }
-                let received = receiver.read().unwrap().received().read().unwrap().to_vec();
-                receiver.write().unwrap().clear_received();
-                println!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
-                for point in &received {
-                    va_fft_buf.push(point.as_double().value)
-                }
-
-                if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
-                    log::error!("main | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
-                    // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
-                }
-                va_fft_buf = vec![];
             }
 
             receiver.read().unwrap().exit();

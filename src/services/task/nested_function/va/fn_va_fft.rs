@@ -130,7 +130,7 @@ impl FnVaFft {
         if let Some(tx_send) = tx_send {
             match tx_send.send(point) {
                 Ok(_) => {
-                    // log::trace!("{}.out | Point sent: {:#?}", self.id, point);
+                    // log::debug!("{}.out | Point sent: {:#?}", self_id, point);
                 }
                 Err(err) => {
                     // log::error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
