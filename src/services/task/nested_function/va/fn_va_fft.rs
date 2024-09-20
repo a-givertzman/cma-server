@@ -1,7 +1,7 @@
 use chrono::Utc;
 use concat_in_place::strcat;
 use derivative::Derivative;
-use rustfft::{num_complex::{Complex, ComplexFloat}, Fft, FftPlanner};
+use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::services::{
     entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::link_name::LinkName, types::bool::Bool
 };
@@ -12,7 +12,8 @@ use crate::{
         fn_kind::FnKind, fn_result::FnResult,
     }}
 };
-use super::unit_circle::UnitCircle;
+
+use super::fft_buff::FftBuf;
 ///
 /// Global static counter of FnVaFft instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
@@ -37,6 +38,9 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///     window: 512
 ///     len: 30000                      # Length of the FFT sequence processing at a time, also defining number of frequencies returned from the FFT
 /// ```
+/// 
+/// References
+/// [Restore FFT frequences](https://stackoverflow.com/a/4371627/17986285)
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct FnVaFft {
@@ -45,15 +49,15 @@ pub struct FnVaFft {
     kind: FnKind,
     enable: Option<FnInOutRef>,
     point_conf: PointConfig,
-    len: usize,
+    fft_size: usize,
     input: FnInOutRef,
     #[derivative(Debug="ignore")]
     fft: Arc<dyn Fft<f64>>,
-    #[derivative(Debug="ignore")]
-    fft_buf: Vec<Complex<f64>>,
     /// Vector of frequences correponding to the FFT.len ( Sampling `freq` / `len`) 
-    fft_frequences: Vec<String>,
-    unit_circle: UnitCircle,
+    fft_freqs: Vec<String>,
+    #[derivative(Debug="ignore")]
+    fft_buf: FftBuf,
+    sampl_freq: usize,
     tx_send: Option<Sender<Point>>,
 }
 //
@@ -65,16 +69,16 @@ impl FnVaFft {
     pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef, conf: FnConfig, services: Arc<RwLock<Services>>) -> Self {
         let parent = parent.into();
         let self_id = format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
-        let fft_len = match conf.param("len") {
+        let fft_size = match conf.param("len") {
             Ok(len) => len.as_param().conf.as_u64().unwrap() as usize,
             Err(_) => panic!("{}.new | Parameter 'len' - missed", self_id),
         };
-        log::debug!("{}.new | fft_len: {:?}", self_id, fft_len);
-        let sampling_freq = match conf.param("freq") {
+        log::debug!("{}.new | fft_len: {:?}", self_id, fft_size);
+        let sampl_freq = match conf.param("freq") {
             Ok(freq) => freq.as_param().conf.as_u64().unwrap() as usize,
             Err(_) => panic!("{}.new | Parameter 'freq' - missed", self_id),
         };
-        log::debug!("{}.new | sampling_freq: {:?}", self_id, sampling_freq);
+        log::debug!("{}.new | sampl_freq: {:?}", self_id, sampl_freq);
         let point_conf = match conf.clone().input_conf("conf") {
             Ok(conf) => match conf {
                 FnConfKind::PointConf(conf) => match conf.conf.type_ {
@@ -104,51 +108,33 @@ impl FnVaFft {
                 None
             },
         };
-
+        let fft_buf = FftBuf::new(fft_size, sampl_freq);
         Self {
             tx_id: PointTxId::from_str(&self_id),
             id: self_id,
             kind: FnKind::Fn,
             enable,
             point_conf,
-            len: fft_len,
+            fft_size,
             input,
-            fft: FftPlanner::new().plan_fft_forward(fft_len),
-            fft_buf: vec![],
-            fft_frequences: Self::frequencies(sampling_freq, fft_len).iter().map(|f| f.to_string()).collect(),
-            unit_circle: UnitCircle::new(sampling_freq),
+            fft: FftPlanner::new().plan_fft_forward(fft_size),
+            fft_freqs: (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect(),  //Self::frequencies(sampl_freq, fft_size),    //.iter().map(|f| f.to_string()).collect(),
+            fft_buf,
+            sampl_freq,
             tx_send: send_to,
         }
     }
     ///
-    /// List of FFT frequencies
-    fn frequencies(smpling_freq: usize, fft_len: usize) -> Vec<f64> {
-        let delta = (smpling_freq as f64) / (fft_len as f64);
-        let mut f = vec![0.0];
-        ///
-        /// Returns float rounded to the specified digits
-        fn round(value: f64, digits: usize) -> f64 {
-            let factor = 10.0f64.powi(digits as i32);
-            (value * factor).round() / factor
-        }
-        while f.last().unwrap().to_owned() < (smpling_freq as f64) {
-            f.push(
-                round(f.last().unwrap() + delta, 3)
-            );
-        }
-        f
-    }
-    ///
     /// Sending FFT results as Point's to the external service if 'send-to' specified
-    fn send(&self, point: Point) {
-        if let Some(tx_send) = &self.tx_send {
+    fn send(self_id: &str, tx_send: &Option<Sender<Point>>, point: Point) {
+        if let Some(tx_send) = tx_send {
             match tx_send.send(point) {
                 Ok(_) => {
                     // log::trace!("{}.out | Point sent: {:#?}", self.id, point);
                 }
                 Err(err) => {
                     // log::error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
-                    log::error!("{}.out | Send error: {:#?}", self.id, err);
+                    log::error!("{}.out | Send error: {:#?}", self_id, err);
                 }
             };
         }
@@ -165,51 +151,41 @@ impl FnVaFft {
                 0.0
             }
         };
-        let t = self.unit_circle.next();
-        let (angle, unit_complex) = self.unit_circle.at(t);
-        log::trace!("{}.out | fft.process next t: {},  angle: {}, buf.len: {} ...", self.id, t, angle, self.fft_buf.len());
-        let complex = 
-        Complex {
-            re: value * unit_complex.re,
-            im: value * unit_complex.im,
-        };
-        self.fft_buf.push(
-            complex
-        );
-        log::debug!("{}.out | t: {},  complex: {}", self.id, t, complex);
-        if self.fft_buf.len() >= self.len {
-        // if self.fft_buf.len() >= self.len {
-            log::debug!("{}.out | fft.process bub {:?}...", self.id, self.fft_buf.len());
-            if enable {
-                self.fft.process(self.fft_buf.as_mut_slice());
-                let mut missed_freq_index = 0;
-                let mut prev_freq = "0";
-                for (i, amplitude) in self.fft_buf.iter().enumerate() {
-                    let point_name = match self.fft_frequences.get(i) {
-                        Some(freq) => {
-                            missed_freq_index = 0;
-                            prev_freq = freq;
-                            strcat!(&self.point_conf.name "." freq)  
-                        }
-                        None => {
-                            missed_freq_index += 1;
-                            strcat!(&self.point_conf.name "." prev_freq "+" missed_freq_index.to_string().as_str())  
-                        },
-                    };
-                    let point = Point::Double(PointHlr::new(
-                        self.tx_id,
-                        &point_name,
-                        amplitude.abs(),
-                        input.status(),
-                        input.cot(),
-                        input.timestamp(),
-                    ));
-                    log::trace!("{}.out | point: {:#?}", self.id, amplitude);
-                    self.send(point);
+        // let t = self.fft_buf.time();
+        // log::trace!("{}.out | fft.process next t: {},  angle: {}, buf.len: {} ...", self.id, t, "--", self.fft_buf.len());
+        // log::debug!("{}.out | t: {},  complex: {}", self.id, t, complex);
+        match self.fft_buf.add(value) {
+            Some(buf) => {
+                log::debug!("{}.out | fft.process buf {:?}...", self.id, buf.len());
+                if enable {
+                    self.fft.process(buf);
+                    // First elebent of fft_buf have to be skeeped because it refers to DC
+                    for (index, amplitude) in buf.iter().take(self.fft_size / 2).skip(1).enumerate() {
+                        let point_name = match self.fft_freqs.get(index) {
+                            Some(freq) => {
+                                strcat!(&self.point_conf.name "." freq)
+                            },
+                            None => {
+                                log::error!("{}.out | Not found freq by index {}, withing fft buf of size: {}", self.id, index, self.fft_size);
+                                strcat!(&self.point_conf.name "." format!("Invalid index {:?}", index).as_str())
+                            },
+                        };
+                        log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
+                        let point = Point::Double(PointHlr::new(
+                            self.tx_id,
+                            &point_name,
+                            amplitude.abs(),
+                            input.status(),
+                            input.cot(),
+                            input.timestamp(),
+                        ));
+                        log::trace!("{}.out | point: {:#?}", self.id, point);
+                        Self::send(&self.id, &self.tx_send, point);
+                    }
                 }
             }
-            self.fft_buf = vec![];
-        }
+            None => {},
+        };
     }
 }
 //
@@ -272,8 +248,7 @@ impl FnOut for FnVaFft {
     //
     fn reset(&mut self) {
         self.input.borrow_mut().reset();
-        self.unit_circle.reset();
-        self.fft_buf = vec![];
+        self.fft_buf.reset();
     }
 }
 //

@@ -12,6 +12,7 @@
 //! - FFT filtering - removing periodical components
 //! - Noise reduction filtering - Trend extruction
 //! 
+pub mod fft_buff;
 pub mod fn_va_fft;
-pub mod sampling_freq;
+// pub mod sampling_freq;
 pub mod unit_circle;

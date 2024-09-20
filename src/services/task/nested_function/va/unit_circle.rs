@@ -1,80 +1,71 @@
 use rustfft::num_complex::Complex;
 ///
-/// Implements an UnitCircle, splitted into sectors corresponding to the specified frequence 
+/// Implements an UnitCircle usable for FFT, 
+/// - Splitted into sectors corresponding to the specified frequence 
+/// - Calculates angular frequency `ω = 2π•f`
+/// - Calculates angle at specific `α = 𝑓(t) = 2π•f•t`
 #[derive(Debug)]
 pub struct UnitCircle {
-    freq: usize,
-    step: usize,
-    global_step: f64,
-    // angles: Vec<f64>,
-    // complex: Vec<Complex<f64>>,
-    /// `2 x Pi x f`
+    pub freq: usize,
+    /// Angular frequency `ω = 2π•f`
     pi2f: f64,
 }
 //
 //
 impl UnitCircle {
     ///
-    /// `2 x Pi`
+    /// `Returns 2π`
     pub const PI2: f64 = std::f64::consts::PI * 2.0;
+
     ///
-    /// Returns new instance of UnitCircle corresponding to `freq`
+    /// Returns new instance of SamplingFreq corresponding to `freq`
+    /// - `freq` - sampling frequency, Hz
     pub fn new(freq: usize) -> Self {
-        // let delta = std::f64::consts::PI * 2.0 / (freq as f64);
-        // let angles: Vec<f64> = (0..freq).map(|i| delta * (i as f64)).collect();
-        // let complex: Vec<Complex<f64>> = angles.iter().map(|angle| {
-        //     Complex {
-        //         re: angle.cos(),
-        //         im: angle.sin()
-        //     }
-        // }).collect();
         Self {
             freq,
-            step: 0,
-            global_step: 0.0,
-            // angles,
-            // complex,
             pi2f: Self::PI2 * freq as f64,
         }
     }
     ///
-    /// Resets current angle to zero
-    pub fn reset(&mut self) {
-        self.step = 0;
-    }
-    ///
-    /// Returns next `t, secs`, having Δt = 1 / `freq`
-    pub fn next(&mut self) -> f64 {
-        let t = self.global_step / (self.freq as f64);
-        self.global_step += 1.0;
-        t
-    }
-    ///
-    /// Returns (`angle`, `complex`) at time `t, sec`
-    /// - `angle = 2 x Pi x f x t`, radians
+    /// Returns `angle` in radians at time `t, sec`
+    /// - `α = 𝑓(t) = 2π•f•t`
     pub fn angle(&self, t: f64) -> f64 {
         self.pi2f * t
     }
     ///
-    /// Returns complex at time `t, sec`
+    /// Returns complex value at time `t, sec`
+    /// - `α = 𝑓(t) = 2π•f•t`, radians
+    /// - `complex = cos(α) + sin(α)i`
     pub fn complex(&self, t: f64) -> Complex<f64> {
         let angle = self.angle(t);
         Complex::new(angle.cos(), angle.sin())
     }
     ///
-    /// Returns (angle, complex) at a time `t, sec`
-    /// - `angle = 2 x Pi x f x t`, radians
-    /// - `complex = cos(angle) + sin(angle) i`
+    /// Returns (α, complex) at a time `t, sec`
+    /// - `α = 𝑓(t) = 2π•f•t`, radians
+    /// - `complex = cos(α) + sin(α)i`
     pub fn at(&self, t: f64) -> (f64, Complex<f64>) {
         let angle = self.angle(t);
         (angle, Complex::new(angle.cos(), angle.sin()))
     }
     ///
-    /// Returns `(angle, amp x complex)` at a time `t, sec`
-    /// - `angle = 2 x Pi x f x t`, radians
-    /// - `complex = cos(angle) + sin(angle) i`
+    /// Returns `(α, amp • complex)` at a time `t, sec`
+    /// - `α = 𝑓(t) = 2π•f•t`, radians
+    /// - `complex = amp•cos(α) + amp•sin(α)i`
     pub fn at_with(&self, t: f64, amp: f64) -> (f64, Complex<f64>) {
         let angle = self.angle(t);
+        self.at_angle_with(angle, amp)
+    }
+    ///
+    /// Returns `(α, complex)` at an `angle, rad`
+    /// - `complex = cos(α) + sin(α)i`
+    pub fn at_angle(&self, angle: f64) -> (f64, Complex<f64>) {
+        (angle, Complex::new(angle.cos(), angle.sin()))
+    }
+    ///
+    /// Returns `(α, amp • complex)` at an `angle, rad` with `amp` multiplier
+    /// - `complex = amp•cos(α) + amp•sin(α)i`
+    pub fn at_angle_with(&self, angle: f64, amp: f64) -> (f64, Complex<f64>) {
         (angle, Complex::new(amp * angle.cos(), amp * angle.sin()))
     }
 }
