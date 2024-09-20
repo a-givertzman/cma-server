@@ -94,9 +94,9 @@ mod fn_va_fft {
                     conf point Fft:                 # full name will be: /App/Task/Ffr.freq
                         type: 'Double'
                     input: point string /AppTest/Exit
-                    freq: 1000                    # Sampling freq
-                    len: 100                      # Length of the                         
-            "#, receiver.read().unwrap().name())).unwrap();
+                    freq: {}                        # Sampling freq
+                    len: {}                         # Length of the                         
+            "#, receiver.read().unwrap().name(), sampl_freq, fft_size)).unwrap();
             let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
                 crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
                 _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
