@@ -21,7 +21,7 @@ mod fft_buf {
     ///  - ...
     fn init_each() -> () {}
     ///
-    /// Testing such functionality / behavior
+    /// Testing FftBuf basic functionality
     #[test]
     fn basic() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
