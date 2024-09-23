@@ -35,8 +35,11 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///         type: 'Real'                # Double / Real / Int
 ///     input: point string /AppTest/Exit
 ///     freq: 300000                    # Sampling freq
-///     window: 512
 ///     len: 30000                      # Length of the FFT sequence processing at a time, also defining number of frequencies returned from the FFT
+///     window: 512
+///     filter:                 # Filter conf, for each frequency to be filtered on fly
+///         threshold: 0.5      #   absolute threshold delta
+///         factor: 1.5         #   multiplier for absolute threshold delta - in this case the delta will be accumulated
 /// ```
 /// 
 /// References
@@ -61,8 +64,8 @@ pub struct FnVaFft {
     #[derivative(Debug="ignore")]
     fft_buf: FftBuf,
     sampl_freq: usize,
-    threshold: Option<PointConfigFilter>,
-    filters: Vec<Box<dyn Filter<Item = Point> + Send>>,
+    /// FFT Freq (name, filter)
+    filters: Vec<(String, Box<dyn Filter<Item = f64>>)>,
     tx_send: Option<Sender<Point>>,
 }
 //
@@ -86,11 +89,19 @@ impl FnVaFft {
         log::debug!("{}.new | sampl_freq: {:?}", self_id, sampl_freq);
         let point_conf = Self::export_point_conf(parent, &self_id, &conf);
         log::debug!("{}.new | point_conf: {:#?}", self_id, point_conf);
-        let threshold = Self::threshold_conf(&self_id, &conf);
-        log::debug!("{}.new | threshold: {:#?}", self_id, threshold);
+        let threshold_conf = Self::threshold_conf(&self_id, &conf);
+        log::debug!("{}.new | threshold: {:#?}", self_id, threshold_conf);
         let send_to = Self::send_to_conf(&self_id, &conf, &services);
-        log::debug!("{}.new | send_to: {:#?}", self_id, threshold);
+        log::debug!("{}.new | send_to: {:#?}", self_id, threshold_conf);
         let fft_buf = FftBuf::new(fft_size, sampl_freq);
+        let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
+        let filters = (0..fft_size / 2).map(|i| {
+            let freq_name = match fft_freqs.get(i) {
+                Some(freq) => strcat!(&point_conf.name "." freq),
+                None => panic!("{}.out | Freq index {} out of the fft_size {}", self_id, i, fft_size),
+            };
+            (freq_name, Self::filter(threshold_conf.clone()))
+        }).collect();
         Self {
             tx_id: PointTxId::from_str(&self_id),
             id: self_id,
@@ -100,18 +111,17 @@ impl FnVaFft {
             fft_size,
             input,
             fft: FftPlanner::new().plan_fft_forward(fft_size),
-            fft_freqs: (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect(),
+            fft_freqs,
             amp_factor: fft_buf.amp_factor(),
             fft_buf,
             sampl_freq,
-            threshold,
-            filters: vec![],
+            filters,
             tx_send: send_to,
         }
     }
     ///
-    ///
-    fn filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64> + Send> {
+    /// Returns Threshold (key filter)
+    fn filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64>> {
         match conf {
             Some(conf) => {
                 Box::new(
@@ -220,27 +230,26 @@ impl FnVaFft {
                     self.fft.process(buf);
                     // First elebent of fft_buf have to be skeeped because it refers to DC
                     for (index, amplitude) in buf.iter().take(self.fft_size / 2).skip(1).enumerate() {
-                        let point_name = match self.fft_freqs.get(index) {
-                            Some(freq) => {
-                                strcat!(&self.point_conf.name "." freq)
-                            },
-                            None => {
-                                log::error!("{}.out | Not found freq by index {}, withing fft buf of size: {}", self.id, index, self.fft_size);
-                                strcat!(&self.point_conf.name "." format!("Invalid index {:?}", index).as_str())
-                            },
-                        };
-                        let amplitude = amplitude.abs() * self.amp_factor;
-                        log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
-                        let point = Point::Double(PointHlr::new(
-                            self.tx_id,
-                            &point_name,
-                            amplitude,
-                            input.status(),
-                            input.cot(),
-                            input.timestamp(),
-                        ));
-                        log::trace!("{}.out | point: {:#?}", self.id, point);
-                        Self::send(&self.id, &self.tx_send, point);
+                        match self.filters.get_mut(index) {
+                            Some((freq_name, filter)) => {
+                                filter.add(value);
+                                if filter.is_changed() {
+                                    let amplitude = amplitude.abs() * self.amp_factor;
+                                    log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
+                                    let point = Point::Double(PointHlr::new(
+                                        self.tx_id,
+                                        &freq_name,
+                                        amplitude,
+                                        input.status(),
+                                        input.cot(),
+                                        input.timestamp(),
+                                    ));
+                                    log::trace!("{}.out | point: {:#?}", self.id, point);
+                                    Self::send(&self.id, &self.tx_send, point);
+                                }
+                            }
+                            None => log::error!("{}.out | Fft filter index {} out of size {}", self.id, index, self.filters.len()),
+                        }
                     }
                 }
             }
