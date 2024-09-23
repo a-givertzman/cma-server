@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 ///
 /// Holds single value
 /// - call add(value) to apply new value
@@ -18,14 +19,14 @@ pub trait Filter: std::fmt::Debug {
 /// Pass input value as is
 #[derive(Debug, Clone)]
 pub struct FilterEmpty<T> {
-    value: T,
+    value: RefCell<Option<T>>,
     is_changed: bool,
 }
 //
 // 
 impl<T> FilterEmpty<T> {
     pub fn new(initial: T) -> Self {
-        Self { value: initial, is_changed: true }
+        Self { value: RefCell::new(Some(initial)), is_changed: true }
     }
 }
 //
@@ -35,16 +36,15 @@ impl<T: Copy + std::fmt::Debug + std::cmp::PartialEq> Filter for FilterEmpty<T> 
     //
     //
     fn value(&self) -> Self::Item {
-        self.value
+        self.value.borrow_mut().take().unwrap()
     }
     //
     //
     fn add(&mut self, value: Self::Item) {
-        if value != self.value {
+        if Some(value) != *self.value.borrow() {
             self.is_changed = true;
-            self.value = value;
-        } else {
-            self.is_changed = false;
+            *self.value.borrow_mut() = Some(value);
+        // } else {
         }
     }
     //
