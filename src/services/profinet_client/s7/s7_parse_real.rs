@@ -5,8 +5,7 @@ use sal_sync::services::entity::{
 };
 use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
-use crate::{core_::filter::filter::Filter, services::profinet_client::parse_point::ParsePoint};
-
+use crate::{core_::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
 ///
 ///
 #[derive(Debug)]
@@ -14,13 +13,13 @@ pub struct S7ParseReal {
     pub tx_id: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = f32>>,
-    pub status: Status,
+    pub status: Box<dyn Filter<Item = Status>>,
     pub offset: Option<u32>,
     pub history: PointConfigHistory,
     pub alarm: Option<u8>,
     pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
-    is_changed: bool,
+
 }
 //
 //
@@ -36,8 +35,7 @@ impl S7ParseReal {
         S7ParseReal {
             tx_id,
             value: filter,
-            status: Status::Invalid,
-            is_changed: false,
+            status: Box::new(FilterEmpty::new(Some(Status::Invalid))),
             name,
             offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
             history: config.history.clone(),
@@ -64,13 +62,13 @@ impl S7ParseReal {
     }
     ///
     ///
-    fn to_point(&self) -> Option<Point> {
-        if self.is_changed {
+    fn to_point(&mut self) -> Option<Point> {
+        if let Some(value) = self.value.value() {
             Some(Point::Real(PointHlr::new(
                 self.tx_id,
                 &self.name,
-                self.value.value(),
-                self.status,
+                value,
+                self.status.value().unwrap_or(Status::Invalid),
                 Cot::Inf,
                 self.timestamp,
             )))
@@ -90,18 +88,16 @@ impl S7ParseReal {
         let result = self.convert(bytes, self.offset.unwrap() as usize, 0);
         match result {
             Ok(new_val) => {
-                let status = Status::Ok;
-                if (new_val) != self.value.value() || self.status != status {
-                    self.value.add(new_val);
-                    self.status = status;
-                    self.timestamp = timestamp;
-                    self.is_changed = true;
-                }
+                self.value.add(new_val);
+                self.status.add(Status::Ok);
             }
             Err(e) => {
-                self.status = Status::Invalid;
+                self.status.add(Status::Invalid);
                 warn!("S7ParseReal.addRaw | convertion error: {:?}", e);
             }
+        }
+        if self.is_changed() {
+            self.timestamp = timestamp;
         }
     }
 }
@@ -118,28 +114,21 @@ impl ParsePoint for S7ParseReal {
     //
     fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_raw(bytes, timestamp);
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
+        self.to_point()
     }
     //
     //
     fn next_status(&mut self, status: Status) -> Option<Point> {
-        if self.status != status {
-            self.status = status;
+        self.status.add(status);
+        if self.is_changed() {
             self.timestamp = Utc::now();
-            self.is_changed = true;
         }
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
+        self.to_point()
     }
     //
     //
     fn is_changed(&self) -> bool {
-        self.is_changed
+        self.value.is_changed() || self.status.is_changed()
     }
     //
     //

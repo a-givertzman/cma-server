@@ -45,9 +45,9 @@ mod fn_va_fft {
         )))
     }
     ///
-    /// Testing FftBuf basic functionality
-    #[test]
-    fn basic() {
+    /// Testing FftBuf with empty filter
+    // #[test]
+    fn empty_filter() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         // init_each();
@@ -151,8 +151,181 @@ mod fn_va_fft {
                             match fft_filters.get_mut(index) {
                                 Some((_freq_name, filter)) => {
                                     filter.add(val.abs() * fft_amp_factor);
-                                    if filter.is_changed() {
-                                        fft_scalar.push(filter.value());
+                                    if let Some(filter_value) = filter.value() {
+                                        fft_scalar.push(filter_value);
+                                    }
+                                }
+                                None => panic!("main | fft_filters index {} out of size {}", index, fft_filters.len()),
+                            }
+                        }
+                        log::trace!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
+                        ffts.push(fft_scalar.clone());
+
+                        // Receiving FnVaFft results
+                        let time = Instant::now();
+                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
+                            thread::sleep(Duration::from_millis(3));
+                        }
+                        let received = receiver.read().unwrap().received().read().unwrap().to_vec();
+                        receiver.write().unwrap().clear_received();
+                        log::debug!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
+                        log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
+                        let mut va_fft_buf = vec![];
+                        for point in &received {
+                            va_fft_buf.push(point.as_double().value)
+                        }
+
+                        log::debug!("main |           target: {:?}", fft_scalar.iter().filter_map(|val| {
+                            if *val > 1.0 {
+                                Some(format!("{:.3}", val))
+                            } else {
+                                None
+                            }
+                        }).collect::<Vec<String>>());
+                        log::debug!("main | FnVaFft received: {:?}", received.iter().filter_map(|v| {
+                            let val = v.as_double().value;
+                            if val > 1.0 {
+                                Some(format!("{:.3}", v.as_double().value))
+                            } else {
+                                None
+                            }
+                        }).collect::<Vec<String>>());
+
+                        if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
+                            panic!("main | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
+                            // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
+                        }
+                    }
+                    None => {
+                        log::trace!("main | t: {:.4}", t);
+                    },
+                };
+            }
+
+            receiver.read().unwrap().exit();
+            services.rlock(self_id).exit();
+            services_handle.wait().unwrap();
+            receiver_handle.wait().unwrap();
+
+            log::trace!("main | ffts: {}", ffts.len());
+            let result = ffts.len();
+            let target = target_ffts;
+            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+        }
+        // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+        test_duration.exit();
+    }
+    ///
+    /// Testing FftBuf with absolute threshold filter
+    #[test]
+    fn absolute_threshold_filter() {
+        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        init_once();
+        // init_each();
+        log::debug!("");
+        let self_id = "test";
+        let self_name = Name::new("", self_id);
+        let tx_id = PointTxId::from_str(&self_id);
+        log::debug!("\n{}", self_id);
+        let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
+        test_duration.run().unwrap();
+        let test_data = [
+            // sampl_freq   fft_size    ffts    target
+            (     12,            12,    1,      vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
+            (     16,            16,    2,      vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
+            (    128,           128,    2,      vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
+            (    256,           256,    2,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), (  37.0, 20.0), (  112.0, 12.0), (  126.0, 15.0)]),
+            ( 10_000,        10_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
+            ( 30_000,        30_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
+            (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
+        ];
+        for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
+            let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
+                Some("assets/testing/retain/"),
+                Some(RetainPointConf::new("point/id.json", None))
+            ))));
+            let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+                self_id,
+                "",
+                "in-queue",
+                usize::MAX,
+            )));
+            let receiver_name = receiver.read().unwrap().name().join();
+            log::debug!("{} | receiver: '{}'", self_id, receiver_name);
+            services.wlock(self_id).insert(receiver.clone());
+            //
+            // Configuring FnVaFft
+            let enable = init_each(Some("true"), FnConfPointType::Bool);
+            let fn_va_fft_input = init_each(None, FnConfPointType::Double);
+            let export_point_name = "Fft";
+            let conf = serde_yaml::from_str(&format!(r#"
+                fn VaFft:
+                    enable: const bool true         # optional, default true
+                    send-to: {}.in-queue
+                    conf point {}:                 # full name will be: /App/Task/Ffr.freq
+                        type: 'Double'
+                    input: point string /AppTest/Exit
+                    freq: {}                        # Sampling freq
+                    len: {}                         # Length of the
+                    filter:
+                        threshold: 5.0
+            "#, receiver_name, export_point_name, sampl_freq, fft_size)).unwrap();
+            let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
+                crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
+                _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
+            };
+            let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
+
+            //
+            // Runing all services
+            let services_handle = services.wlock(self_id).run().unwrap();
+            let receiver_handle = receiver.write().unwrap().run().unwrap();
+            thread::sleep(Duration::from_millis(50));
+            log::debug!("{} | All services started", self_id);
+    
+            let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
+            let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
+            log::debug!("main | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
+            assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
+            let fft_amp_factor = fft_buf.amp_factor();
+            log::debug!("main | fft_buf.amp_factor: {}", fft_amp_factor);
+            assert!(fft_amp_factor == 1.0 / ((fft_size as f64) / 2.0), "\nresult: {:?}\ntarget: {:?}", fft_amp_factor, 1.0 / ((fft_size as f64) / 2.0));
+            let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
+            let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
+                let freq_name = match fft_freqs.get(i) {
+                    Some(freq) => strcat!(self_id export_point_name "." freq),
+                    None => panic!("{}.out | Freq index {} out of the fft_size {}", self_id, i, fft_size),
+                };
+                (freq_name, filter(Some(PointConfigFilter { threshold: 5.0, factor: None })))
+            }).collect();
+            let mut ffts: Vec< Vec<f64> > = vec![];
+            for step in 0..fft_size * target_ffts {
+                let t = fft_buf.time();
+                let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
+                    val + amp * (2. * PI *  freq * t).sin()
+                });
+
+                // FnVaFft process
+                let time = Instant::now();
+                fn_va_fft_input.borrow_mut().add(&value.to_point(tx_id, &format!("t: {}", t)));
+                fn_va_fft.out();
+                log::trace!("main | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
+
+                match fft_buf.add(value) {
+                    Some(buf) => {
+                        // Pure FFT process
+                        log::trace!("main | t: {:.4},  buf: {:?}", t, buf);
+                        let time = Instant::now();
+                        fft.process(buf);
+                        log::debug!("main | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
+                        // log::debug!("main | t: {:.4},  fft: {:?}", t, buf);
+                        let mut fft_scalar: Vec<f64> = vec![];  //buf.iter().take(fft_size / 2).skip(1).map(|val| val.abs() * fft_amp_factor).collect();
+                        for (index, val) in buf.iter().take(fft_size / 2).skip(1).enumerate() {
+                            match fft_filters.get_mut(index) {
+                                Some((_freq_name, filter)) => {
+                                    filter.add(val.abs() * fft_amp_factor);
+                                    if let Some(filter_value) = filter.value() {
+                                        fft_scalar.push(filter_value);
                                     }
                                 }
                                 None => panic!("main | fft_filters index {} out of size {}", index, fft_filters.len()),
@@ -221,10 +394,10 @@ mod fn_va_fft {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0.0f64, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<f64>::new(0.0)),
+            None => Box::new(FilterEmpty::<f64>::new(None)),
         }
     }
     ///

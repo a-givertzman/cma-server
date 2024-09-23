@@ -270,10 +270,10 @@ impl ProfinetDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0i64, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::new(0)),
+            None => Box::new(FilterEmpty::new(None)),
         }
     }
     ///
@@ -282,10 +282,10 @@ impl ProfinetDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0.0f32, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<f32>::new(0.0)),
+            None => Box::new(FilterEmpty::<f32>::new(None)),
         }
     }
     // ///

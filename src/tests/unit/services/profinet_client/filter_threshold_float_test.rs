@@ -24,7 +24,7 @@ mod tests {
     ///
     #[test]
     fn test_FilterThresholdAbs_pos() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -57,7 +57,7 @@ mod tests {
             (0.0, 0.0),
         ];
         let threasold = 0.15;
-        let mut filter = FilterThreshold::new(0.0, threasold, 0.0);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 0.0);
         let mut prev = 0.0;
         for (value, target) in test_data {
             filter.add(value);
@@ -66,12 +66,13 @@ mod tests {
                 prev = value;
             }
             let result = filter.value();
-            println!("{}    in: {}   |   out: {}   |   diff: {}", self_id, value, result, diff);
-            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
+            assert!(result == Some(target), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();
     }
-
+    ///
+    /// Testing FilterThreshold with absolute threshold and negative input
     #[test]
     fn test_FilterThresholdAbs_neg() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -127,7 +128,7 @@ mod tests {
             (-1.0, -1.0),
         ];
         let threasold = 0.15;
-        let mut filter = FilterThreshold::new(0.0, threasold, 0.0);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 0.0);
         let mut prev = 0.0;
         for (value, target) in test_data {
             filter.add(value);
@@ -136,13 +137,13 @@ mod tests {
                 prev = value;
             }
             let result = filter.value();
-            println!("{}    in: {}   |   out: {}   |   diff: {}", self_id, value, result, diff);
-            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
+            assert!(result == Some(target), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();
     }
-
-
+    ///
+    /// Testing FilterThreshold with factor and pisitive input
     #[test]
     fn test_FilterThreshold_factor_pos() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -178,7 +179,7 @@ mod tests {
             (0.0, 0.3),
         ];
         let threasold = 1.0;
-        let mut filter = FilterThreshold::new(0.0, threasold, 1.5);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 1.5);
         let mut prev = 0.0;
         for (value, target) in test_data {
             filter.add(value);
@@ -187,12 +188,13 @@ mod tests {
                 prev = value;
             }
             let result = filter.value();
-            println!("{}    in: {}   |   out: {}   |   diff: {}", self_id, value, result, diff);
-            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
+            assert!(result == Some(target), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();
     }
-
+    ///
+    /// Testing FilterThreshold with factor and negative input
     #[test]
     fn test_FilterThreshold_factor_neg() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -248,7 +250,7 @@ mod tests {
             (-1.0, -1.0),
         ];
         let threasold = 1.0;
-        let mut filter = FilterThreshold::new(0.0, threasold, 1.5);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 1.5);
         let mut prev = 0.0;
         for (value, target) in test_data {
             filter.add(value);
@@ -257,8 +259,8 @@ mod tests {
                 prev = value;
             }
             let result = filter.value();
-            println!("{}    in: {}   |   out: {}   |   diff: {}", self_id, value, result, diff);
-            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
+            assert!(result == Some(target), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();
     }

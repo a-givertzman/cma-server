@@ -1,14 +1,13 @@
-use std::cell::RefCell;
 ///
 /// Holds single value
 /// - call add(value) to apply new value
-/// - get current value by calling value()
+/// - pop current value by calling value()
 /// - is_changed() - check if value was changed after las add()
 pub trait Filter: std::fmt::Debug {
     type Item;
     ///
     /// Returns current state
-    fn value(&self) -> Self::Item;
+    fn value(&mut self) -> Option<Self::Item>;
     /// - Updates state with value if value != inner
     fn add(&mut self, value: Self::Item);
     ///
@@ -19,14 +18,13 @@ pub trait Filter: std::fmt::Debug {
 /// Pass input value as is
 #[derive(Debug, Clone)]
 pub struct FilterEmpty<T> {
-    value: RefCell<Option<T>>,
-    is_changed: bool,
+    value: Option<T>,
 }
 //
 // 
 impl<T> FilterEmpty<T> {
-    pub fn new(initial: T) -> Self {
-        Self { value: RefCell::new(Some(initial)), is_changed: true }
+    pub fn new(initial: Option<T>) -> Self {
+        Self { value: initial }
     }
 }
 //
@@ -35,21 +33,21 @@ impl<T: Copy + std::fmt::Debug + std::cmp::PartialEq> Filter for FilterEmpty<T> 
     type Item = T;
     //
     //
-    fn value(&self) -> Self::Item {
-        self.value.borrow_mut().take().unwrap()
+    fn value(&mut self) -> Option<Self::Item> {
+        self.value.take()
     }
     //
     //
-    fn add(&mut self, value: Self::Item) {
-        if Some(value) != *self.value.borrow() {
-            self.is_changed = true;
-            *self.value.borrow_mut() = Some(value);
-        // } else {
+    fn add(&mut self, value: T) {
+        if let Some(self_value) = self.value {
+            if value != self_value {
+                self.value = Some(value);
+            }
         }
     }
     //
     //
     fn is_changed(&self) -> bool {
-        self.is_changed
+        self.value.is_some()
     }
 }

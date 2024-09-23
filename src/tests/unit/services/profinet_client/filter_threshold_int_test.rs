@@ -57,7 +57,7 @@ mod tests {
             (0, 0),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::new(0, threasold, 0.0);
+        let mut filter = FilterThreshold::<i32>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (value, target) in test_data {
             filter.add(value);
@@ -66,12 +66,13 @@ mod tests {
                 prev = value;
             }
             let result = filter.value();
-            println!("{}    in: {}   |   out: {}   |   diff: {}", self_id, value, result, diff);
-            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
+            assert!(result == Some(target), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();
     }
-
+    ///
+    /// Testing FilterThreshold with absolute threshold
     #[test]
     fn test_FilterThresholdAbs_neg() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
@@ -127,7 +128,7 @@ mod tests {
             (-10, -10),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::new(0, threasold, 0.0);
+        let mut filter = FilterThreshold::<i32>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (value, target) in test_data {
             filter.add(value);
@@ -136,8 +137,8 @@ mod tests {
                 prev = value;
             }
             let result = filter.value();
-            println!("{}    in: {}   |   out: {}   |   diff: {}", self_id, value, result, diff);
-            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
+            assert!(result == Some(target), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();
     }
