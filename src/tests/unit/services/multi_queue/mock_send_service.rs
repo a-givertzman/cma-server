@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{info, warn, trace};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use testing::entities::test_value::Value;
@@ -24,7 +24,7 @@ impl MockSendService {
         Self {
             id: name.join(),
             name,
-            send_to: LinkName::new(send_to),
+            send_to: LinkName::from_str(send_to).unwrap(),
             services,
             test_data,
             sent: Arc::new(RwLock::new(vec![])),
@@ -65,10 +65,6 @@ impl Debug for MockSendService {
 }
 //
 //
-unsafe impl Send for MockSendService {}
-unsafe impl Sync for MockSendService {}
-//
-// 
 impl Service for MockSendService {
     //
     //

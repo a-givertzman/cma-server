@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod udp_client_config {
-    use std::{sync::Once, time::Duration};
+    use std::{str::FromStr, sync::Once, time::Duration};
     use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -68,7 +68,7 @@ mod udp_client_config {
                     name: Name::new(self_id, "UdpClient"),
                     description: "UDP-IED-01.01".to_owned(),
                     subscribe: ConfSubscribe::new(serde_yaml::from_str("Multiqueue").unwrap()),
-                    send_to: LinkName::new("MultiQueue.in-queue").validate(),
+                    send_to: LinkName::from_str("MultiQueue.in-queue").unwrap(),
                     cycle: Some(
                         Duration::from_millis(1),
                     ),
@@ -165,7 +165,7 @@ mod udp_client_config {
                     description: "UDP-IED-01.01".to_owned(),
                     subscribe: ConfSubscribe::new(serde_yaml::from_str(r#"Multiqueue: 
                                                                                 Act: []"#).unwrap()),
-                    send_to: LinkName::new("MultiQueue.in-queue").validate(),
+                    send_to: LinkName::from_str("MultiQueue.in-queue").unwrap(),
                     cycle: Some(
                         Duration::from_millis(10),
                     ),

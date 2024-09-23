@@ -2,13 +2,13 @@
 
 mod fn_timer {
     use log::{debug, info};
-    use sal_sync::services::entity::point::point::ToPoint;
+    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, time::{Instant, Duration}, thread,rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig},
+        conf::fn_::fn_config::FnConfig,
         core_::{aprox_eq::aprox_eq::AproxEq,
-        types::fn_in_out_ref::FnInOutRef}, services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_timer::FnTimer}
+        types::fn_in_out_ref::FnInOutRef}, services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_timer::FnTimer},
     };
     ///
     ///

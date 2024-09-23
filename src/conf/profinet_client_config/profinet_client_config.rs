@@ -74,7 +74,7 @@ impl ProfinetClientConfig {
         debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
         debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
+        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
         debug!("{}.new | send-to: {}", self_id, send_to);
         if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
             error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)

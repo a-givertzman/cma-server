@@ -110,10 +110,8 @@ impl Debug for TcpStreamWrite {
     }
 }
 ///
-/// 
-unsafe impl Sync for TcpStreamWrite {}
-///
-/// 
+/// Result of operation with Ok / Err / Timeout  
+/// Used for example for tcp_stream.read, when read timeout is specified for tcp_stream
 #[derive(Debug)]
 pub enum OpResult<T, E> {
     Ok(T),

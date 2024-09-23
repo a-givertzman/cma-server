@@ -1,9 +1,6 @@
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
 use std::str::FromStr;
-use crate::conf::{
-    fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName}, 
-    service_config::ServiceConfig,
-};
+use crate::conf::service_config::ServiceConfig;
 ///
 /// 
 #[derive(Debug, PartialEq, Clone)]

@@ -1,7 +1,7 @@
 use log::{debug, error, trace, warn};
 use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, service::link_name::LinkName};
-use std::fs;
-use crate::conf::service_config::ServiceConfig;
+use std::{fs, str::FromStr};
+use crate::conf::service_config::{ConfParam, ServiceConfig};
 use super::conf_keywd::ConfKind;
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -49,9 +49,9 @@ impl MultiQueueConfig {
         let (rx, rx_max_length) = self_conf.get_in_queue().unwrap();
         debug!("{}.new | 'in queue': {},\tmax-length: {}", self_id, rx, rx_max_length);
         let send_to = match self_conf.get_send_to_many() {
-            crate::conf::service_config::ConfParam::Ok(send_to) => send_to.into_iter().map(LinkName::new).collect(),
-            crate::conf::service_config::ConfParam::None => vec![],
-            crate::conf::service_config::ConfParam::Err(err) => {
+            ConfParam::Ok(send_to) => send_to.into_iter().map(|send_to|LinkName::from_str(&send_to).unwrap()).collect(),
+            ConfParam::None => vec![],
+            ConfParam::Err(err) => {
                 warn!("{}.new | Get 'send-to' many error: {:?} in config: {:#?}", self_id, err, self_conf);
                 vec![]
             }

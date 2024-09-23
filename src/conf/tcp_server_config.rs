@@ -1,6 +1,6 @@
 use log::{debug, error, trace};
 use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, service::link_name::LinkName};
-use std::{fs, time::Duration, net::SocketAddr};
+use std::{fs, net::SocketAddr, str::FromStr, time::Duration};
 use crate::{conf::{conf_keywd::ConfKind, service_config::ServiceConfig}, services::server::jds_auth::TcpServerAuth};
 
 ///
@@ -69,7 +69,7 @@ impl TcpServerConfig {
         debug!("{}.new | auth: {:?}", self_id, auth);
         let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
         debug!("{}.new | 'in queue': {},\tmax-length: {}", self_id, rx, rx_max_len);
-        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
+        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
         debug!("{}.new | send-to: {:?}", self_id, send_to);
         if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
             error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)

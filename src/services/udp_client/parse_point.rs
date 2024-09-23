@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{point::{point::Point, point_config_address::PointConfigAddress, point_config_type::PointConfigType}, status::status::Status};
 ///
 /// Returns updated points parsed from the data slice from the S7 device,
-pub trait ParsePoint: Send + Sync {
+pub trait ParsePoint: Send {
     ///
     /// Returns the type of the configured point
     fn type_(&self) -> PointConfigType;

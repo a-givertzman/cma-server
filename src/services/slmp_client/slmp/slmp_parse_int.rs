@@ -17,7 +17,7 @@ pub struct SlmpParseInt {
     pub type_: PointConfigType,
     pub tx_id: usize,
     pub name: String,
-    pub value: Box<dyn Filter<Item = i64> + Sync + Send>,
+    pub value: Box<dyn Filter<Item = i64> + Send>,
     pub status: Status,
     pub offset: Option<u32>,
     pub history: PointConfigHistory,
@@ -38,7 +38,7 @@ impl SlmpParseInt {
         tx_id: usize,
         name: String,
         config: &PointConfig,
-        filter: Box<dyn Filter<Item = i64> + Sync + Send>,
+        filter: Box<dyn Filter<Item = i64> + Send>,
     ) -> SlmpParseInt {
         SlmpParseInt {
             id: format!("SlmpParseInt({})", name),

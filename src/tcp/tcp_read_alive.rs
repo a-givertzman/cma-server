@@ -2,7 +2,7 @@ use log::{info, warn, LevelFilter};
 use sal_sync::services::{entity::point::point::Point, service::service_cycle::ServiceCycle};
 use std::{
     io::BufReader, net::TcpStream, 
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, 
+    sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex},
     thread::{self, JoinHandle}, time::Duration,
 };
 use crate::{core_::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::OpResult};
@@ -13,7 +13,7 @@ use super::steam_read::TcpStreamRead;
 #[derive(Debug)]
 pub struct TcpReadAlive {
     id: String,
-    stream_read: Arc<RwLock<dyn TcpStreamRead>>,
+    stream_read: Arc<Mutex<Option<Box<dyn TcpStreamRead>>>>,
     send: Sender<Point>,
     cycle: Option<Duration>,
     exit: Arc<AtomicBool>,
@@ -27,7 +27,7 @@ impl TcpReadAlive {
     /// - [exitPair] - notification from / to sibling pair to exit 
     pub fn new(
         parent: impl Into<String>, 
-        stream_read: Arc<RwLock<dyn TcpStreamRead>>,
+        stream_read: Box<dyn TcpStreamRead>,
         dest: Sender<Point>, 
         cycle: Option<Duration>, 
         exit: Option<Arc<AtomicBool>>, 
@@ -36,7 +36,7 @@ impl TcpReadAlive {
         let self_id = format!("{}/TcpReadAlive", parent.into());
         Self {
             id: self_id.clone(),
-            stream_read,
+            stream_read: Arc::new(Mutex::new(Some(stream_read))),
             send: dest,
             cycle,
             exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
@@ -52,12 +52,13 @@ impl TcpReadAlive {
         let exit_pair = self.exit_pair.clone();
         let mut cycle = self.cycle.map(|cycle| ServiceCycle::new(&self_id, cycle));
         let send = self.send.clone();
-        let tcp_stream_read = self.stream_read.clone();
+        let stream_read = self.stream_read.clone();
+        let mut tcp_stream_read = stream_read.lock().unwrap().take().unwrap();
         info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Read", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
             let mut tcp_stream = BufReader::new(tcp_stream);
-            let mut tcp_stream_read = tcp_stream_read.write().unwrap();
+            // let mut tcp_stream_read = tcp_stream_read.write().unwrap();
             info!("{}.run | Main loop started", self_id);
             loop {
                 if let Some(cycle) = &mut cycle {cycle.start()}
@@ -93,6 +94,7 @@ impl TcpReadAlive {
                     break;
                 }
             }
+            stream_read.lock().unwrap().replace(tcp_stream_read);
             info!("{}.run | Exit", self_id);
         }).unwrap();
         info!("{}.run | started", self.id);

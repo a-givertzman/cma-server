@@ -125,17 +125,15 @@ impl Debug for SlmpClient {
 }
 //
 //
-unsafe impl Send for SlmpClient {}
-unsafe impl Sync for SlmpClient {}
-//
-// 
 impl Service for SlmpClient {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
+        let tx_id = self.tx_id;
         let conf = self.conf.clone();
+        let services = self.services.clone();
         let diagnosis = self.diagnosis.clone();
         let status = Arc::new(AtomicU32::new(Status::Ok.into()));
         let exit = Arc::new(ExitNotify::new(&self_id, Some(self.exit.clone()), None));
@@ -148,33 +146,33 @@ impl Service for SlmpClient {
             conf.reconnect_cycle,
             Some(self.exit.clone()),
         );
-        let mut slmp_read = SlmpRead::new(
-            &self_id,
-            self.tx_id,
-            // self.name.clone(),
-            conf.clone(),
-            tx_send.clone(),
-            // diagnosis.clone(),
-            status.clone(),
-            exit.clone(),
-        );
-        let mut slmp_write = SlmpWrite::new(
-            &self_id,
-            self.tx_id,
-            // self.name.clone(),
-            conf.clone(),
-            tx_send.clone(),
-            // diagnosis.clone(),
-            self.services.clone(),
-            status,
-            exit.clone(),
-        );
-        Self::yield_diagnosis(&self.id, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
-        Self::yield_diagnosis(&self.id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
         info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
-            loop {
+            let mut slmp_read = SlmpRead::new(
+                &self_id,
+                tx_id,
+                // self.name.clone(),
+                conf.clone(),
+                tx_send.clone(),
+                // diagnosis.clone(),
+                status.clone(),
+                exit.clone(),
+            );
+            let mut slmp_write = SlmpWrite::new(
+                &self_id,
+                tx_id,
+                // self.name.clone(),
+                conf.clone(),
+                tx_send.clone(),
+                // diagnosis.clone(),
+                services.clone(),
+                status,
+                exit.clone(),
+            );
+            Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
+            Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
+                loop {
                 info!("{}.run | Connecting...", self_id);
                 exit.reset_pair();
                 match tcp_client_connect.connect() {

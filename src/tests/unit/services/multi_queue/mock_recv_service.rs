@@ -1,15 +1,18 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
 use egui::mutex::RwLock;
 use log::{info, trace, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use crate::core_::constants::constants::RECV_TIMEOUT;
+///
+/// Global static counter of FnOut instances
+static COUNT: AtomicUsize = AtomicUsize::new(0);
 ///
 /// 
 pub struct MockRecvService {
     id: String,
     name: Name,
     rx_send: HashMap<String, Sender<Point>>,
-    rx_recv: Vec<Receiver<Point>>,
+    rx_recv: Mutex<Option<Receiver<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
@@ -24,7 +27,7 @@ impl MockRecvService {
             id: name.join(),
             name,
             rx_send: HashMap::from([(rx_queue.to_string(), send)]),
-            rx_recv: vec![recv],
+            rx_recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
@@ -63,10 +66,6 @@ impl Debug for MockRecvService {
 }
 //
 //
-unsafe impl Send for MockRecvService {}
-unsafe impl Sync for MockRecvService {}
-//
-// 
 impl Service for MockRecvService {
     //
     //
@@ -82,7 +81,7 @@ impl Service for MockRecvService {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let in_recv = self.rx_recv.pop().unwrap();
+        let in_recv = self.rx_recv.lock().unwrap().take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
@@ -141,6 +140,3 @@ impl Service for MockRecvService {
         self.exit.store(true, Ordering::SeqCst);
     }
 }
-///
-/// Global static counter of FnOut instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(0);

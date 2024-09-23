@@ -1,6 +1,5 @@
 use std::{
-    collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, 
-    mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
+    collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
 };
 use hashers::fx_hash::FxHasher;
 use log::{debug, error, info, trace, warn};
@@ -63,7 +62,7 @@ pub struct Shared {
     pub subscribe_receiver: String,
     pub jds_state: JdsState,
     pub auth: TcpServerAuth,
-    pub connection_id: String,
+    // pub connection_id: String,
     pub cache: Option<String>,
     pub req_reply_send: Vec<Sender<Point>>,
 }
@@ -109,7 +108,7 @@ impl JdsConnection {
         let conf = self.conf.clone();
         let self_conf_send_to = conf.send_to.clone();
         let receiver_name = Name::new(&self_name, &self.connection_id).join();
-        let subscribe = self_conf_send_to.service().unwrap();
+        let subscribe = self_conf_send_to.service();
         let shared_options: Arc<RwLock<Shared>> = Arc::new(RwLock::new(Shared {
                 subscribe: subscribe.clone(), 
                 subscribe_receiver: receiver_name.clone(), 
@@ -118,7 +117,7 @@ impl JdsConnection {
                     _                   => JdsState::Unknown,
                 }, 
                 auth: conf.auth.clone(),
-                connection_id: self.connection_id.clone(),
+                // connection_id: self.connection_id.clone(),
                 cache: conf.cache.clone(),
                 req_reply_send: vec![],
         }));
@@ -159,7 +158,7 @@ impl JdsConnection {
             let buffered = rx_max_length > 0;
             let mut tcp_read_alive = TcpReadAlive::new(
                 &self_id,
-                Arc::new(RwLock::new(JdsRoutes::new(
+                Box::new(JdsRoutes::new(
                     &self_id,
                     &self_name,
                     services.clone(),
@@ -193,16 +192,16 @@ impl JdsConnection {
                         }
                     },
                     shared_options,
-                ))),
+                )),
                 send,
                 None,
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
             );
-            let tcp_write_alive = TcpWriteAlive::new(
+            let mut tcp_write_alive = TcpWriteAlive::new(
                 &self_id,
                 None,
-                Arc::new(RwLock::new(TcpStreamWrite::new(
+                TcpStreamWrite::new(
                     format!("{}/TcpWriteAlive", self_id),
                     buffered,
                     Some(rx_max_length as usize),
@@ -213,7 +212,7 @@ impl JdsConnection {
                             recv,
                         ),
                     )),
-                ))),
+                ),
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
             );

@@ -1,6 +1,6 @@
 use std::{
     hash::BuildHasherDefault, net::TcpStream,
-    sync::{atomic::{AtomicU32, Ordering}, mpsc::Sender, Arc, RwLock},
+    sync::{atomic::{AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex},
     thread::{self, JoinHandle}, time::Duration,
 };
 use hashers::fx_hash::FxHasher;
@@ -22,7 +22,7 @@ pub struct SlmpRead {
     // name: Name,
     conf: SlmpClientConfig,
     dest: Sender<Point>,
-    dbs: Arc<RwLock<IndexMapFxHasher<String, SlmpDb>>>,
+    dbs: Arc<Mutex<IndexMapFxHasher<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
     status: Arc<AtomicU32>,
     exit: Arc<ExitNotify>,
@@ -48,7 +48,7 @@ impl SlmpRead {
             // name,
             conf,
             dest,
-            dbs: Arc::new(RwLock::new(dbs)),
+            dbs: Arc::new(Mutex::new(dbs)),
             // diagnosis,
             status,
             exit,
@@ -103,7 +103,7 @@ impl SlmpRead {
                         ],
                     );
                     let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
-                    let mut dbs = dbs.write().unwrap();
+                    let mut dbs = dbs.lock().unwrap();
                     let mut error_limit = ErrorLimit::new(3);
                     'main: while !exit.get() {
                         is_connected.add(true, format!("{}.read | Connection established", self_id));
@@ -148,7 +148,7 @@ impl SlmpRead {
                         thread::sleep(Duration::from_millis(64));
                     }
                     if status.load(Ordering::SeqCst) != u32::from(Status::Ok) {
-                        let mut dbs = dbs.write().unwrap();
+                        let mut dbs = dbs.lock().unwrap();
                         Self::yield_status(&self_id, Status::Invalid, &mut dbs, &dest);
                     }
                     info!("{}.read | Exit", self_id);

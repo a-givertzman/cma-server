@@ -1,5 +1,5 @@
 use log::{info, warn, debug, trace};
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread};
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread};
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},
     service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
@@ -27,7 +27,7 @@ impl MockTcpServer {
         Self {
             id: name.join(),
             name,
-            multi_queue: LinkName::new(multi_queue),
+            multi_queue: LinkName::from_str(multi_queue).unwrap(),
             services,
             test_data,
             sent: Arc::new(RwLock::new(vec![])),
@@ -35,11 +35,6 @@ impl MockTcpServer {
             recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
         }
-    }
-    ///
-    /// 
-    pub fn id(&self) -> String {
-        self.id.clone()
     }
     ///
     /// 
@@ -74,10 +69,6 @@ impl Debug for MockTcpServer {
 }
 //
 //
-unsafe impl Send for MockTcpServer {}
-unsafe impl Sync for MockTcpServer {}
-//
-// 
 impl Service for MockTcpServer {
     //
     //
@@ -85,7 +76,7 @@ impl Service for MockTcpServer {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let mq_service_name = self.multi_queue.service().unwrap();
+        let mq_service_name = self.multi_queue.service();
         debug!("{}.run | Lock services...", self_id);
         let (_, rx_recv) = self.services.wlock(&self_id).subscribe(&mq_service_name, &self_id, &vec![]);
         let tx_send = self.services.rlock(&self_id).get_link(&self.multi_queue).unwrap_or_else(|err| {

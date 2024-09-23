@@ -2,11 +2,11 @@
 mod fn_average {
     use log::{debug, info};
     use testing::entities::test_value::Value;
-    use sal_sync::services::entity::point::point::{Point, ToPoint};
+    use sal_sync::services::{entity::point::point::{Point, ToPoint}, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        conf::fn_::fn_config::FnConfig, 
         core_::{
             aprox_eq::aprox_eq::AproxEq, types::fn_in_out_ref::FnInOutRef
         },

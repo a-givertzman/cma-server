@@ -3,14 +3,14 @@ use sal_sync::services::{
     entity::{name::Name, object::Object, point::point::Point},
     service::{service::Service, service_handles::ServiceHandles},
 };
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, RwLock}, thread};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 ///
 /// 
 pub struct MockMultiQueue {
     id: String,
     name: Name,
     send: Sender<Point>,
-    recv: Vec<Receiver<Point>>,
+    recv: Mutex<Option<Receiver<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
@@ -23,7 +23,7 @@ impl MockMultiQueue {
             id: name.join(),
             name,
             send,
-            recv: vec![recv],
+            recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
@@ -55,10 +55,6 @@ impl Debug for MockMultiQueue {
 }
 //
 //
-unsafe impl Send for MockMultiQueue {}
-unsafe impl Sync for MockMultiQueue {}
-//
-// 
 impl Service for MockMultiQueue {
     //
     //
@@ -71,7 +67,7 @@ impl Service for MockMultiQueue {
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let recv = self.recv.pop().unwrap();
+        let recv = self.recv.lock().unwrap().take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::spawn(move || {

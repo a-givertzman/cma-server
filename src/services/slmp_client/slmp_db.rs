@@ -328,7 +328,7 @@ impl SlmpDb {
     }
     ///
     ///
-    fn int_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = i64> + Sync + Send> {
+    fn int_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = i64> + Send> {
         match conf {
             Some(conf) => {
                 Box::new(
@@ -340,7 +340,7 @@ impl SlmpDb {
     }
     ///
     ///
-    fn real_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f32> + Sync + Send> {
+    fn real_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f32> + Send> {
         match conf {
             Some(conf) => {
                 Box::new(

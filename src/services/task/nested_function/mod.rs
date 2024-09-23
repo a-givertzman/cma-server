@@ -61,3 +61,5 @@ pub mod reset_counter;
 ///
 /// Recorder functions
 pub mod fn_rec_op_cycle_metric; 
+
+pub mod va;

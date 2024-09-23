@@ -3,7 +3,7 @@ use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_config::PointConfig, point_tx_id::PointTxId}},
     service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
 };
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use testing::entities::test_value::Value;
 use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
@@ -27,7 +27,7 @@ impl TaskTestProducer {
         Self {
             id: name.join(),
             name,
-            send_to: LinkName::new(send_to),
+            send_to: LinkName::from_str(send_to).unwrap(),
             cycle,
             // rxSend: HashMap::new(),
             services,
@@ -64,10 +64,6 @@ impl Debug for TaskTestProducer {
 }
 //
 //
-unsafe impl Send for TaskTestProducer {}
-unsafe impl Sync for TaskTestProducer {}
-//
-// 
 impl Service for TaskTestProducer {
     //
     // 

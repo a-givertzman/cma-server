@@ -74,7 +74,7 @@ impl UdpClientConfig {
         log::debug!("{}.new | description: {:?}", self_id, description);
         let subscribe = ConfSubscribe::new(self_conf.get_param_value("subscribe").unwrap_or(serde_yaml::Value::Null));
         log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::new(self_conf.get_send_to().unwrap()).validate();
+        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: {}", self_id, send_to);
         let cycle = self_conf.get_duration("cycle");
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);

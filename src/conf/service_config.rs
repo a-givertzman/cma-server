@@ -4,12 +4,15 @@ use indexmap::IndexMap;
 use log::{debug, trace, warn};
 use sal_sync::{
     collections::map::IndexMapFxHasher,
-    services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe},
+    services::{
+        conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe,
+        task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
+    },
 };
 use super::{
     conf_duration::ConfDuration,
     conf_keywd::{ConfKeywd, ConfKind},
-    diag_keywd::DiagKeywd, fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
+    diag_keywd::DiagKeywd,
 };
 ///
 /// Result getting parameter

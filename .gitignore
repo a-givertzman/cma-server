@@ -13,14 +13,17 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-#log files
+# log files
 *.log
 
-#cache files
+# cache files
 assets/cache/
 cache.json
 
-#retain points
+# retain points
 assets/retain/
 assets/testing/
 retain_points.json
+
+# Plot results
+plot*.png

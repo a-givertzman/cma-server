@@ -81,7 +81,7 @@ impl AppConfig {
         debug!("{}.new | description: {:?}", self_id, description);
         let mut nodes = IndexMap::new();
         println!();
-        for key in &self_conf.keys {
+        for key in self_conf.keys.iter().filter(|key| ! ["name", "description", "retain"].contains(&key.to_string().as_str())) {
             let keyword = ConfKeywd::from_str(key).unwrap();
             match keyword.kind() {
                 ConfKind::Service | ConfKind::Task => {

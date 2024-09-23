@@ -279,7 +279,7 @@ impl<T> Object for MockStreamRead<T> {
 }
 //
 //
-impl<T: Sync + std::fmt::Debug> StreamRead<T, RecvError> for MockStreamRead<T> {
+impl<T: Send + std::fmt::Debug> StreamRead<T, RecvError> for MockStreamRead<T> {
     fn read(&mut self) -> Result<T, RecvError> {
         match self.buffer.first() {
             Some(_) => Ok(self.buffer.remove(0)),
