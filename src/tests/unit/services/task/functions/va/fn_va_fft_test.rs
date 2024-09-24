@@ -230,16 +230,16 @@ mod fn_va_fft {
         let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
         test_duration.run().unwrap();
         let test_data = [
-            // sampl_freq   fft_size    ffts    target
-            (     12,            12,    1,      vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
-            (     16,            16,    2,      vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
-            (    128,           128,    2,      vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
-            (    256,           256,    2,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), (  37.0, 20.0), (  112.0, 12.0), (  126.0, 15.0)]),
-            ( 10_000,        10_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
-            ( 30_000,        30_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
-            (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
+            //sampl_freq  fft_size  ffts  threshold  target
+            (     12,         12,    1,   5.0,   vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
+            (     16,         16,    2,   5.0,   vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
+            (    128,        128,    2,   5.0,   vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
+            (    256,        256,    2,   5.0,   vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), (  37.0, 20.0), (  112.0, 12.0), (  126.0, 15.0)]),
+            ( 10_000,     10_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
+            ( 30_000,     30_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
+            (300_000,    300_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
-        for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
+        for (sampl_freq, fft_size, target_ffts, threshold, target_freqs) in test_data {
             let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
                 Some("assets/testing/retain/"),
                 Some(RetainPointConf::new("point/id.json", None))
@@ -268,8 +268,8 @@ mod fn_va_fft {
                     freq: {}                        # Sampling freq
                     len: {}                         # Length of the
                     filter:
-                        threshold: 5.0
-            "#, receiver_name, export_point_name, sampl_freq, fft_size)).unwrap();
+                        threshold: {:?}
+            "#, receiver_name, export_point_name, sampl_freq, fft_size, threshold)).unwrap();
             let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
                 crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
                 _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
@@ -296,7 +296,7 @@ mod fn_va_fft {
                     Some(freq) => strcat!(self_id export_point_name "." freq),
                     None => panic!("{}.out | Freq index {} out of the fft_size {}", self_id, i, fft_size),
                 };
-                (freq_name, filter(Some(PointConfigFilter { threshold: 5.0, factor: None })))
+                (freq_name, filter(Some(PointConfigFilter { threshold: threshold, factor: None })))
             }).collect();
             let mut ffts: Vec< Vec<f64> > = vec![];
             for step in 0..fft_size * target_ffts {

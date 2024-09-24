@@ -151,7 +151,7 @@ impl FnVaFft {
     ///
     /// Returns Threshold config
     fn threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfigFilter> {
-        match conf.param("threshold") {
+        match conf.param("filter") {
             Ok(threshold) => match threshold {
                 FnConfKind::Param(threshold) => match serde_yaml::from_value(threshold.conf.clone()) {
                     Ok(threshold) => {
@@ -232,14 +232,14 @@ impl FnVaFft {
                     for (index, amplitude) in buf.iter().take(self.fft_size / 2).skip(1).enumerate() {
                         match self.filters.get_mut(index) {
                             Some((freq_name, filter)) => {
-                                filter.add(value);
-                                if filter.is_changed() {
-                                    let amplitude = amplitude.abs() * self.amp_factor;
+                                filter.add(amplitude.abs() * self.amp_factor);
+                                if let Some(value) = filter.pop() {
+                                    // let amplitude = amplitude.abs() * self.amp_factor;
                                     log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
                                     let point = Point::Double(PointHlr::new(
                                         self.tx_id,
                                         &freq_name,
-                                        amplitude,
+                                        value,
                                         input.status(),
                                         input.cot(),
                                         input.timestamp(),
