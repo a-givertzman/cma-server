@@ -1,3 +1,5 @@
+use circular_buffer::CircularBuffer;
+
 ///
 /// Holds single value
 /// - call add(value) to apply new value
@@ -7,7 +9,7 @@ pub trait Filter: std::fmt::Debug {
     type Item;
     ///
     /// Returns current state
-    fn value(&mut self) -> Option<Self::Item>;
+    fn pop(&mut self) -> Option<Self::Item>;
     /// - Updates state with value if value != inner
     fn add(&mut self, value: Self::Item);
     ///
@@ -17,37 +19,46 @@ pub trait Filter: std::fmt::Debug {
 ///
 /// Pass input value as is
 #[derive(Debug, Clone)]
-pub struct FilterEmpty<T> {
-    value: Option<T>,
+pub struct FilterEmpty<const N: usize, T> {
+    value: CircularBuffer<N, T>,
 }
 //
 // 
-impl<T> FilterEmpty<T> {
+impl<T, const N: usize> FilterEmpty<N, T> {
     pub fn new(initial: Option<T>) -> Self {
-        Self { value: initial }
+        let mut value = CircularBuffer::<N, T>::new();
+        if let Some(initial) = initial {
+            value.push_back(initial);
+        };
+        Self { value }
     }
 }
 //
 // 
-impl<T: Copy + std::fmt::Debug + std::cmp::PartialEq> Filter for FilterEmpty<T> {
+impl<T: Copy + std::fmt::Debug + std::cmp::PartialEq, const N: usize> Filter for FilterEmpty<N, T> {
     type Item = T;
     //
     //
-    fn value(&mut self) -> Option<Self::Item> {
-        self.value.take()
+    fn pop(&mut self) -> Option<Self::Item> {
+        self.value.pop_front()
     }
     //
     //
-    fn add(&mut self, value: T) {
-        if let Some(self_value) = self.value {
-            if value != self_value {
-                self.value = Some(value);
+    fn add(&mut self, value: Self::Item) {
+        match self.value.iter().last() {
+            Some(last) => {
+                if value != *last {
+                    self.value.push_back(value);
+                }
+            }
+            None => {
+                self.value.push_back(value);
             }
         }
     }
     //
     //
     fn is_changed(&self) -> bool {
-        self.value.is_some()
+        !self.value.is_empty()
     }
 }

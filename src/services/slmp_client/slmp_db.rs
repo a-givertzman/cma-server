@@ -332,10 +332,10 @@ impl SlmpDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<2, i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::new(None)),
+            None => Box::new(FilterEmpty::<2, i64>::new(None)),
         }
     }
     ///
@@ -344,10 +344,10 @@ impl SlmpDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<2, f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<f32>::new(None)),
+            None => Box::new(FilterEmpty::<2, f32>::new(None)),
         }
     }
     // ///

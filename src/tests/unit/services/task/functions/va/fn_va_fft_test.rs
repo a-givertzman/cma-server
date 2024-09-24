@@ -151,7 +151,7 @@ mod fn_va_fft {
                             match fft_filters.get_mut(index) {
                                 Some((_freq_name, filter)) => {
                                     filter.add(val.abs() * fft_amp_factor);
-                                    if let Some(filter_value) = filter.value() {
+                                    if let Some(filter_value) = filter.pop() {
                                         fft_scalar.push(filter_value);
                                     }
                                 }
@@ -324,7 +324,7 @@ mod fn_va_fft {
                             match fft_filters.get_mut(index) {
                                 Some((_freq_name, filter)) => {
                                     filter.add(val.abs() * fft_amp_factor);
-                                    if let Some(filter_value) = filter.value() {
+                                    if let Some(filter_value) = filter.pop() {
                                         fft_scalar.push(filter_value);
                                     }
                                 }
@@ -394,10 +394,10 @@ mod fn_va_fft {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<2, f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<f64>::new(None)),
+            None => Box::new(FilterEmpty::<2, f64>::new(None)),
         }
     }
     ///

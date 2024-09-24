@@ -1,3 +1,4 @@
+mod filter;
 mod aprox_eq_test;
 mod state;
 mod format;

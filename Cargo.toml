@@ -10,14 +10,14 @@ build = "build.rs"
 log = "^0.4"
 env_logger = "^0.11"
 
+# date & time
+chrono = "^0.4"
+
 testing = { git = "https://github.com/a-givertzman/rust-testing.git" }
 # testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.0.6" }
 sal-sync = {git = "https://github.com/a-givertzman/rust-sal-sync.git"}
-
-# num = "^0.4"
-# derive-new = "^0.5"
 
 serde = { version = "^1.0", features = ["derive"] }
 serde_yaml = "^0.9"
@@ -25,20 +25,25 @@ serde_json = "^1.0"
 
 regex = "^1.10"
 
+# Math
 rand = "^0.8"
+rustfft = "^6.2"
 
-chrono = "^0.4"
-
+# Collections
 linked-hash-map = "^0.5"
 indexmap = "^2.5"
 hashers = "^1.0"
+circular-buffer = "^0.1"
 
+# CPP integrations
 # snap7 = "^0.0"
 snap7-sys = "^0.1"
 libc = "^0.2"
 libloading = "^0.8"
+
 once_cell = "^1.19"
 
+# fast string concatinations
 concat-string = "^1.0"
 concat-in-place = "^1.1"
 
@@ -47,8 +52,10 @@ signal-hook = "^0.3"
 strum = "^0.26"
 strum_macros = "^0.26"
 
+# CLI
 clap = { version = "^4.5", features = ["derive"] }
 
+# UI
 egui = "^0.28"
 egui_plot = "^0.28"
 egui_extras = "^0.28"
@@ -57,8 +64,6 @@ winit = "^0.29"
 hsl = "^0.1"
 
 uid = "^0.1"
-
-rustfft = "^6.2"
 
 derivative = "^2.2"
 

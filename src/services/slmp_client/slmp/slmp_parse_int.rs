@@ -44,7 +44,7 @@ impl SlmpParseInt {
             tx_id,
             name,
             value: filter,
-            status: Box::new(FilterEmpty::new(Some(Status::Invalid))),
+            status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
             offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
             history: config.history.clone(),
             alarm: config.alarm,
@@ -78,12 +78,12 @@ impl SlmpParseInt {
     ///
     ///
     fn to_point(&mut self) -> Option<Point> {
-        if let Some(value) = self.value.value() {
+        if let Some(value) = self.value.pop() {
             Some(Point::Int(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 value,
-                self.status.value().unwrap_or(Status::Invalid),
+                self.status.pop().unwrap_or(Status::Invalid),
                 Cot::Inf,
                 self.timestamp,
             )))

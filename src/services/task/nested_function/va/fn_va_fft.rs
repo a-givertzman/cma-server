@@ -125,10 +125,10 @@ impl FnVaFft {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<2, f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<f64>::new(None)),
+            None => Box::new(FilterEmpty::<2, f64>::new(None)),
         }
     }
     ///

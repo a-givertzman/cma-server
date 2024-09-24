@@ -35,7 +35,7 @@ impl S7ParseReal {
         S7ParseReal {
             tx_id,
             value: filter,
-            status: Box::new(FilterEmpty::new(Some(Status::Invalid))),
+            status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
             name,
             offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
             history: config.history.clone(),
@@ -63,12 +63,12 @@ impl S7ParseReal {
     ///
     ///
     fn to_point(&mut self) -> Option<Point> {
-        if let Some(value) = self.value.value() {
+        if let Some(value) = self.value.pop() {
             Some(Point::Real(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 value,
-                self.status.value().unwrap_or(Status::Invalid),
+                self.status.pop().unwrap_or(Status::Invalid),
                 Cot::Inf,
                 self.timestamp,
             )))
