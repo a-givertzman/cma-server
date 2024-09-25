@@ -1,6 +1,6 @@
 use log::warn;
 use sal_sync::services::entity::{
-    cot::Cot, point::{point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_hlr::PointHlr},
+    cot::Cot, point::{point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, point_hlr::PointHlr},
     status::status::Status
 };
 use std::array::TryFromSliceError;
@@ -15,9 +15,9 @@ pub struct S7ParseReal {
     pub value: Box<dyn Filter<Item = f32>>,
     pub status: Box<dyn Filter<Item = Status>>,
     pub offset: Option<u32>,
-    pub history: PointConfigHistory,
-    pub alarm: Option<u8>,
-    pub comment: Option<String>,
+    // pub history: PointConfigHistory,
+    // pub alarm: Option<u8>,
+    // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
 
 }
@@ -38,9 +38,9 @@ impl S7ParseReal {
             status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
             name,
             offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
-            history: config.history.clone(),
-            alarm: config.alarm,
-            comment: config.comment.clone(),
+            // history: config.history.clone(),
+            // alarm: config.alarm,
+            // comment: config.comment.clone(),
             timestamp: Utc::now(),
         }
     }
@@ -88,11 +88,6 @@ impl S7ParseReal {
     }
     //
     //
-    fn add_raw_simple(&mut self, bytes: &[u8]) {
-        self.add_raw(bytes, Utc::now())
-    }
-    //
-    //
     fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) {
         let result = self.convert(bytes, self.offset.unwrap() as usize, 0);
         match result {
@@ -113,12 +108,6 @@ impl S7ParseReal {
 //
 //
 impl ParsePoint for S7ParseReal {
-    //
-    //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
-        self.add_raw_simple(bytes);
-        self.to_point()
-    }
     //
     //
     fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {

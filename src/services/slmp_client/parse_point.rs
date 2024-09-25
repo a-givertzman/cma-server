@@ -7,9 +7,6 @@ pub trait ParsePoint: Send {
     /// Returns the type of the configured point
     fn type_(&self) -> PointConfigType;
     ///
-    /// Returns new point parsed from the data slice [bytes] with current timestamp and Status::Ok
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point>;
-    ///
     /// Returns new point parsed from the data slice [bytes] with the given [timestamp] and Status::Ok
     fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point>;
     ///
