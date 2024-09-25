@@ -63,12 +63,21 @@ impl S7ParseReal {
     ///
     ///
     fn to_point(&mut self) -> Option<Point> {
-        if let Some(value) = self.value.pop() {
+        let value_status = match (self.value.pop(), self.status.pop()) {
+            (None, None) => None,
+            (None, Some(status)) => match self.value.last() {
+                Some(value) => Some((value, Some(status))),
+                None => None,
+            }
+            (Some(value), None) => Some((value, self.status.last())),
+            (Some(value), Some(status)) => Some((value, Some(status))),
+        };
+        if let Some((value, status)) = value_status {
             Some(Point::Real(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 value,
-                self.status.pop().unwrap_or(Status::Invalid),
+                status.unwrap_or(Status::Invalid),
                 Cot::Inf,
                 self.timestamp,
             )))
