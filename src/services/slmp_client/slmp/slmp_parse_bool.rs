@@ -5,7 +5,7 @@ use sal_sync::services::{
         cot::Cot,
         point::{
             point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, 
-            point_config_history::PointConfigHistory, point_config_type::PointConfigType, point_hlr::PointHlr,
+            point_config_type::PointConfigType, point_hlr::PointHlr,
         },
         status::status::Status,
     },
@@ -24,9 +24,9 @@ pub struct SlmpParseBool {
     pub status: Status,
     pub offset: Option<u32>,
     pub bit: Option<u8>,
-    pub history: PointConfigHistory,
-    pub alarm: Option<u8>,
-    pub comment: Option<String>,
+    // pub history: PointConfigHistory,
+    // pub alarm: Option<u8>,
+    // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
     is_changed: bool,
 }
@@ -52,9 +52,9 @@ impl SlmpParseBool {
             is_changed: false,
             offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
             bit: config.clone().address.unwrap_or(PointConfigAddress::empty()).bit,
-            history: config.history.clone(),
-            alarm: config.alarm,
-            comment: config.comment.clone(),
+            // history: config.history.clone(),
+            // alarm: config.alarm,
+            // comment: config.comment.clone(),
             timestamp: Utc::now(),
         }
     }
@@ -97,11 +97,6 @@ impl SlmpParseBool {
         } else {
             None
         }
-    }
-    //
-    //
-    fn add_raw_simple(&mut self, bytes: &[u8]) {
-        self.add_raw(bytes, Utc::now())
     }
     //
     //
@@ -163,12 +158,6 @@ impl ParsePoint for SlmpParseBool {
     //
     fn type_(&self) -> PointConfigType {
         self.type_.clone()
-    }
-    //
-    //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
-        self.add_raw_simple(bytes);
-        self.to_point()
     }
     //
     //

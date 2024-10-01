@@ -21,8 +21,8 @@ use crate::{
 /// Represents PROFINET DB - a collection of the PROFINET addresses
 pub struct ProfinetDb {
     id: String,
-    pub name: Name,
-    pub description: String,
+    // pub name: Name,
+    // pub description: String,
     pub number: u32,
     pub offset: u32,
     pub size: u32,
@@ -40,8 +40,8 @@ impl ProfinetDb {
         let self_id = format!("{}/ProfinetDb({})", parent_id.into(), conf.name);
         Self {
             id: self_id.clone(),
-            name: conf.name.clone(),
-            description: conf.description.clone(),
+            // name: conf.name.clone(),
+            // description: conf.description.clone(),
             number: conf.number as u32,
             offset: conf.offset as u32,
             size: conf.size as u32,
@@ -122,10 +122,9 @@ impl ProfinetDb {
                     match client.read(self.number, self.offset, self.size) {
                         Ok(bytes) => {
                             trace!("{}.read | bytes: {:?}", self.id, bytes);
-                            let timestamp = Utc::now();
                             let mut message = String::new();
                             for (_, parse_point) in &mut self.points {
-                                if let Some(point) = parse_point.next(&bytes, timestamp) {
+                                if let Some(point) = parse_point.next(&bytes, Utc::now()) {
                                     // debug!("{}.read | point: {:?}", self.id, point);
                                     match tx_send.send(point) {
                                         Ok(_) => {}
@@ -270,10 +269,10 @@ impl ProfinetDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0i64, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<2, i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::new(0)),
+            None => Box::new(FilterEmpty::<2, i64>::new(None)),
         }
     }
     ///
@@ -282,10 +281,10 @@ impl ProfinetDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0.0f32, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<2, f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<f32>::new(0.0)),
+            None => Box::new(FilterEmpty::<2, f32>::new(None)),
         }
     }
     // ///

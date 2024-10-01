@@ -1,15 +1,21 @@
+use circular_buffer::CircularBuffer;
+
 ///
 /// Holds single value
 /// - call add(value) to apply new value
-/// - get current value by calling value()
+/// - pop current value by calling value()
 /// - is_changed() - check if value was changed after las add()
 pub trait Filter: std::fmt::Debug {
     type Item;
     ///
-    /// Returns current state
-    fn value(&self) -> Self::Item;
+    /// Removes and returns value from front
+    fn pop(&mut self) -> Option<Self::Item>;
+    ///
     /// - Updates state with value if value != inner
     fn add(&mut self, value: Self::Item);
+    ///
+    /// Returns last added value if exists
+    fn last(&self) -> Option<Self::Item>;
     ///
     /// Returns true if last [add] was successful, internal value was changed
     fn is_changed(&self) -> bool;
@@ -17,39 +23,55 @@ pub trait Filter: std::fmt::Debug {
 ///
 /// Pass input value as is
 #[derive(Debug, Clone)]
-pub struct FilterEmpty<T> {
-    value: T,
-    is_changed: bool,
+pub struct FilterEmpty<const N: usize, T> {
+    buffer: CircularBuffer<N, T>,
+    last: Option<T>,
 }
 //
 // 
-impl<T> FilterEmpty<T> {
-    pub fn new(initial: T) -> Self {
-        Self { value: initial, is_changed: true }
+impl<T: Copy, const N: usize> FilterEmpty<N, T> {
+    pub fn new(initial: Option<T>) -> Self {
+        let mut buffer = CircularBuffer::<N, T>::new();
+        let last = initial.map(|initial| {
+            buffer.push_back(initial);
+            initial
+        });
+        Self { buffer, last }
     }
 }
 //
 // 
-impl<T: Copy + std::fmt::Debug + std::cmp::PartialEq> Filter for FilterEmpty<T> {
+impl<T: Copy + std::fmt::Debug + std::cmp::PartialEq, const N: usize> Filter for FilterEmpty<N, T> {
     type Item = T;
     //
     //
-    fn value(&self) -> Self::Item {
-        self.value
+    fn pop(&mut self) -> Option<Self::Item> {
+        self.buffer.pop_front()
     }
     //
     //
     fn add(&mut self, value: Self::Item) {
-        if value != self.value {
-            self.is_changed = true;
-            self.value = value;
-        } else {
-            self.is_changed = false;
+        match self.buffer.iter().last() {
+            Some(last) => {
+                if value != *last {
+                    self.buffer.push_back(value);
+                    self.last = Some(value);
+                }
+            }
+            None => {
+                self.buffer.push_back(value);
+                self.last = Some(value);
+            }
         }
     }
     //
     //
+    fn last(&self) -> Option<Self::Item> {
+        self.last
+    }
+    //
+    //
     fn is_changed(&self) -> bool {
-        self.is_changed
+        !self.buffer.is_empty()
     }
 }

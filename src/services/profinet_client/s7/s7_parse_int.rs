@@ -1,11 +1,10 @@
-use log::{debug, warn};
 use sal_sync::services::entity::{
-    cot::Cot, point::{point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_hlr::PointHlr},
+    cot::Cot, point::{point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, point_hlr::PointHlr},
     status::status::Status
 };
 use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
-use crate::{core_::filter::filter::Filter, services::profinet_client::parse_point::ParsePoint};
+use crate::{core_::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
 ///
 ///
 #[derive(Debug)]
@@ -13,13 +12,12 @@ pub struct S7ParseInt {
     pub tx_id: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = i64>>,
-    pub status: Status,
+    pub status: Box<dyn Filter<Item = Status>>,
     pub offset: Option<u32>,
-    pub history: PointConfigHistory,
-    pub alarm: Option<u8>,
-    pub comment: Option<String>,
+    // pub history: PointConfigHistory,
+    // pub alarm: Option<u8>,
+    // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
-    is_changed: bool,
 }
 //
 //
@@ -36,12 +34,11 @@ impl S7ParseInt {
             tx_id,
             name,
             value: filter,
-            status: Status::Invalid,
-            is_changed: false,
+            status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
             offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
-            history: config.history.clone(),
-            alarm: config.alarm,
-            comment: config.comment.clone(),
+            // history: config.history.clone(),
+            // alarm: config.alarm,
+            // comment: config.comment.clone(),
             timestamp: Utc::now(),
         }
     }
@@ -59,20 +56,29 @@ impl S7ParseInt {
         match bytes[start..(start + 2)].try_into() {
             Ok(v) => Ok(i16::from_be_bytes(v)),
             Err(e) => {
-                debug!("S7ParseInt.convert | error: {}", e);
+                log::warn!("S7ParseInt.convert | error: {}", e);
                 Err(e)
             }
         }
     }
     ///
     ///
-    fn to_point(&self) -> Option<Point> {
-        if self.is_changed {
+    fn to_point(&mut self) -> Option<Point> {
+        let value_status = match (self.value.pop(), self.status.pop()) {
+            (None, None) => None,
+            (None, Some(status)) => match self.value.last() {
+                Some(value) => Some((value, Some(status))),
+                None => None,
+            }
+            (Some(value), None) => Some((value, self.status.last())),
+            (Some(value), Some(status)) => Some((value, Some(status))),
+        };
+        if let Some((value, status)) = value_status {
             Some(Point::Int(PointHlr::new(
                 self.tx_id,
                 &self.name,
-                self.value.value(),
-                self.status,
+                value,
+                status.unwrap_or(Status::Invalid),
                 Cot::Inf,
                 self.timestamp,
             )))
@@ -83,28 +89,20 @@ impl S7ParseInt {
     }
     //
     //
-    fn add_raw_simple(&mut self, bytes: &[u8]) {
-        self.add_raw(bytes, Utc::now())
-    }
-    //
-    //
     fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) {
         let result = self.convert(bytes, self.offset.unwrap() as usize, 0);
         match result {
             Ok(new_val) => {
-                let status = Status::Ok;
-                let new_val = new_val as i64;
-                if new_val != self.value.value() || self.status != status {
-                    self.value.add(new_val);
-                    self.status = status;
-                    self.timestamp = timestamp;
-                    self.is_changed = true;
-                }
+                self.value.add(new_val as i64);
+                self.status.add(Status::Ok);
             }
             Err(e) => {
-                self.status = Status::Invalid;
-                warn!("S7ParseInt.addRaw | convertion error: {:?}", e);
+                self.status.add(Status::Invalid);
+                log::warn!("S7ParseInt.addRaw | convertion error: {:?}", e);
             }
+        }
+        if self.is_changed() {
+            self.timestamp = timestamp;
         }
     }
 }
@@ -113,36 +111,23 @@ impl S7ParseInt {
 impl ParsePoint for S7ParseInt {
     //
     //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
-        self.add_raw_simple(bytes);
+    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, timestamp);
         self.to_point()
     }
     //
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp);
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
-    }
-    //
-    //
     fn next_status(&mut self, status: Status) -> Option<Point> {
-        if self.status != status {
-            self.status = status;
+        self.status.add(status);
+        if self.is_changed() {
             self.timestamp = Utc::now();
-            self.is_changed = true;
         }
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
+        self.to_point()
     }
     //
     //
     fn is_changed(&self) -> bool {
-        self.is_changed
+        self.value.is_changed() || self.status.is_changed()
     }
     //
     //

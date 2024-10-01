@@ -1,14 +1,13 @@
-use log::{debug, trace, warn};
 use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{
     cot::Cot,
     point::{
         point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, 
-        point_config_history::PointConfigHistory, point_config_type::PointConfigType, point_hlr::PointHlr,
+        point_config_type::PointConfigType, point_hlr::PointHlr,
     },
     status::status::Status,
 };
-use crate::{core_::filter::filter::Filter, services::slmp_client::parse_point::ParsePoint};
+use crate::{core_::filter::filter::{Filter, FilterEmpty}, services::slmp_client::parse_point::ParsePoint};
 ///
 /// Used for parsing configured point from slice of bytes read from device
 #[derive(Debug)]
@@ -18,13 +17,12 @@ pub struct SlmpParseInt {
     pub tx_id: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = i64> + Send>,
-    pub status: Status,
+    pub status: Box<dyn Filter<Item = Status> + Send>,
     pub offset: Option<u32>,
-    pub history: PointConfigHistory,
-    pub alarm: Option<u8>,
-    pub comment: Option<String>,
+    // pub history: PointConfigHistory,
+    // pub alarm: Option<u8>,
+    // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
-    is_changed: bool,
 }
 //
 //
@@ -46,12 +44,11 @@ impl SlmpParseInt {
             tx_id,
             name,
             value: filter,
-            status: Status::Invalid,
-            is_changed: false,
+            status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
             offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
-            history: config.history.clone(),
-            alarm: config.alarm,
-            comment: config.comment.clone(),
+            // history: config.history.clone(),
+            // alarm: config.alarm,
+            // comment: config.comment.clone(),
             timestamp: Utc::now(),
         }
     }
@@ -64,13 +61,13 @@ impl SlmpParseInt {
         _bit: usize,
     ) -> Result<i16, String> {
         if bytes.len() >= start + Self::SIZE {
-            trace!("{}.convert | start: {},  end: {:?}", self.id, start, start + Self::SIZE);
-            trace!("{}.convert | raw: {:02X?}", self.id, &bytes[start..(start + Self::SIZE)]);
-            trace!("{}.convert | converted i16: {:?}", self.id, i16::from_le_bytes(bytes[start..(start + Self::SIZE)].try_into().unwrap()));
+            log::trace!("{}.convert | start: {},  end: {:?}", self.id, start, start + Self::SIZE);
+            log::trace!("{}.convert | raw: {:02X?}", self.id, &bytes[start..(start + Self::SIZE)]);
+            log::trace!("{}.convert | converted i16: {:?}", self.id, i16::from_le_bytes(bytes[start..(start + Self::SIZE)].try_into().unwrap()));
             match bytes[start..(start + Self::SIZE)].try_into() {
                 Ok(v) => Ok(i16::from_le_bytes(v)),
                 Err(e) => {
-                    // warn!("{}.convert | error: {}", self.id, e);
+                    // log::warn!("{}.convert | error: {}", self.id, e);
                     Err(format!("{}.convert | Error: {}", self.id, e))
                 }
             }
@@ -80,25 +77,29 @@ impl SlmpParseInt {
     }
     ///
     ///
-    fn to_point(&self) -> Option<Point> {
-        if self.is_changed {
+    fn to_point(&mut self) -> Option<Point> {
+        let value_status = match (self.value.pop(), self.status.pop()) {
+            (None, None) => None,
+            (None, Some(status)) => match self.value.last() {
+                Some(value) => Some((value, Some(status))),
+                None => None,
+            }
+            (Some(value), None) => Some((value, self.status.last())),
+            (Some(value), Some(status)) => Some((value, Some(status))),
+        };
+        if let Some((value, status)) = value_status {
             Some(Point::Int(PointHlr::new(
                 self.tx_id,
                 &self.name,
-                self.value.value(),
-                self.status,
+                value,
+                status.unwrap_or(Status::Invalid),
                 Cot::Inf,
                 self.timestamp,
             )))
-            // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
+            // log::debug!("{} point Bool: {:?}", self.id, dsPoint.value);
         } else {
             None
         }
-    }
-    //
-    //
-    fn add_raw_simple(&mut self, bytes: &[u8]) {
-        self.add_raw(bytes, Utc::now())
     }
     //
     //
@@ -106,18 +107,15 @@ impl SlmpParseInt {
         let result = self.convert(bytes, self.offset.unwrap() as usize, 0);
         match result {
             Ok(new_val) => {
-                let status = Status::Ok;
-                let new_val = new_val as i64;
-                if new_val != self.value.value() || self.status != status {
-                    self.value.add(new_val);
-                    self.status = status;
+                self.value.add(new_val as i64);
+                self.status.add(Status::Ok);
+                if self.is_changed() {
                     self.timestamp = timestamp;
-                    self.is_changed = true;
                 }
             }
             Err(e) => {
-                self.status = Status::Invalid;
-                warn!("{}.add_raw | convertion error: {:?}", self.id, e);
+                self.status.add(Status::Invalid);
+                log::warn!("{}.add_raw | convertion error: {:?}", self.id, e);
             }
         }
     }
@@ -132,36 +130,23 @@ impl ParsePoint for SlmpParseInt {
     }
     //
     //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
-        self.add_raw_simple(bytes);
+    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, timestamp);
         self.to_point()
     }
     //
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp);
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
-    }
-    //
-    //
     fn next_status(&mut self, status: Status) -> Option<Point> {
-        if self.status != status {
-            self.status = status;
+        self.status.add(status);
+        if self.is_changed() {
             self.timestamp = Utc::now();
-            self.is_changed = true;
         }
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
+        self.to_point()
     }
     //
     //
     fn is_changed(&self) -> bool {
-        self.is_changed
+        self.value.is_changed() || self.status.is_changed()
     }
     //
     //
@@ -178,21 +163,21 @@ impl ParsePoint for SlmpParseInt {
     fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
         match point.try_as_int() {
             Ok(point) => {
-                debug!("{}.write | converting '{}' into i16...", self.id, point.value);
+                log::debug!("{}.write | converting '{}' into i16...", self.id, point.value);
                 match i16::try_from(point.value) {
                     Ok(value) => {
                         Ok(value.to_le_bytes().to_vec())
                     }
                     Err(err) => {
                         let message = format!("{}.write | '{}' to i16 conversion error: {:#?} in the parse point: {:#?}", self.id, point.value, err, self.name);
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                         Err(message)
                     }
                 }
             }
             Err(_) => {
                 let message = format!("{}.write | Point of type 'Int' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

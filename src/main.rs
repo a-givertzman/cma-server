@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 use clap::Parser;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-use log::error;
 use services::app::app::App;
 use crate::core_::cli::cli::Cli;
 
@@ -23,6 +22,6 @@ fn main() {
     );
     let app = App::new(path);
     if let Err(err) = app.run() {
-        error!("main | Error: {:#?}", err);
+        log::error!("main | Error: {:#?}", err);
     };
 }
