@@ -10,7 +10,7 @@ service MultiQueue:
 
 
 service SlmpClient Ied15:
-    cycle: 100 ms
+    cycle: 50 ms
     subscribe: /App/MultiQueue
     send-to: /App/MultiQueue.in-queue
     description: 'SLMP-IED-01.01'
@@ -25,47 +25,48 @@ service SlmpClient Ied15:
             # history: r
     db db_test_data:
         device-code: D
-        offset: 1100
-        size: 20
-        point Lable15.F32:
+        offset: 1500
+        size: 28
+        point Platform.Heave:
             type: Real
             address:
                 offset: 0
-            comment: 'Индикация поворота стрелы направо'
-        point Lable16.F32:
+            comment: 'Heave height, m'
+        point Platform.Roll:
             type: Real
             address:
                 offset: 4
-            comment: 'Индикация поворота стрелы направо'
-        point Lable17.F32:
+            comment: 'Roll angle, degrees'
+        point Platform.Pitch:
             type: Real
             address:
                 offset: 8
-            comment: 'Индикация поворота стрелы направо'
-        point Lable18.i16:
-            type: Int
+            comment: 'Pitch angle, degrees'
+        point Platform.Yaw:
+            type: Real
             address:
                 offset: 12
-            comment: 'Лебедка вверх'
-        point Lable19.i16:
-            type: Int
-            address:
-                offset: 14
-            comment: 'Лебедка вниз'
-        point Lable20.i16:
-            type: Int
+            comment: 'Yaw angle, degrees'
+        point Platform.DeltaAngleX:
+            type: Real
             address:
                 offset: 16
-            comment: 'AHC вкл/выкл'
-        point Lable21.i16:
-            type: Int
+            comment: 'Rotation aroud X delta, degrees/s - 1'
+        point Platform.DeltaAngleY:
+            type: Real
             address:
-                offset: 18
-            comment: 'Серво вкл/выкл'
+                offset: 20
+            comment: 'Rotation aroud Y delta, degrees/s - 1'
+        point Platform.DeltaAngleZ:
+            type: Real
+            address:
+                offset: 24
+            comment: 'Rotation aroud Z delta, degrees/s - 1'
+
 
 service TcpServer:
     reconnect: 1 s      # default 3 s
-    address: 127.0.0.1:16688
+    address: 127.0.0.1:16678
     auth-secret:       # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
         pass: '12345'
     in queue link:
