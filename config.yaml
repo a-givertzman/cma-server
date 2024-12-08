@@ -14,7 +14,7 @@ service SlmpClient Ied15:
     subscribe: /App/MultiQueue
     send-to: /App/MultiQueue.in-queue
     description: 'SLMP-IED-01.01'
-    ip: '192.168.120.200'
+    ip: '192.168.15.161'
     port: 4999
     diagnosis:                          # internal diagnosis
         point Status:                   # Ok(0) / Invalid(10)
