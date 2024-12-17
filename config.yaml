@@ -26,7 +26,7 @@ service SlmpClient Ied15:
     db db_test_data:
         device-code: D
         offset: 1500
-        size: 40
+        size: 44
         point Platform.Heave:
             type: Real
             address:
@@ -67,16 +67,21 @@ service SlmpClient Ied15:
             address:
                 offset: 28
             comment: 'Unknown'
-        point Platform.FluctuationPeriod:
+        point UnknownSignal2:
             type: Real
             address:
                 offset: 32
-            comment: 'Period time of single fluctuation, s'
+            comment: 'Unknown'
         point Platform.VelocityZ:
             type: Real
             address:
                 offset: 36
             comment: 'Velocity of the platform on Z axis, m/s'
+        point Platform.FluctuationPeriod:
+            type: Real
+            address:
+                offset: 40
+            comment: 'Period time of single fluctuation, s'
 
 
 service TcpServer:
