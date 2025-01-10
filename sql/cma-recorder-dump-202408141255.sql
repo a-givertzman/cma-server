@@ -26,7 +26,7 @@ SET row_security = off;
 CREATE DATABASE crane_data_server WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE = 'en_US.UTF-8';
 
 
-ALTER DATABASE crane_data_server OWNER TO postgres;
+ALTER DATABASE crane_data_server OWNER TO crane_data_server;
 
 \connect crane_data_server
 
@@ -49,6 +49,9 @@ SET default_table_access_method = heap;
 -- TOC entry 201 (class 1259 OID 27857)
 -- Name: app_user; Type: TABLE; Schema: public; Owner: crane_data_server
 --
+
+CREATE TYPE public.user_role_enum AS ENUM('admin','operator');
+ALTER TYPE public.user_role_enum OWNER TO crane_data_server;
 
 CREATE TABLE public.app_user (
     id bigint NOT NULL,
@@ -197,6 +200,8 @@ ALTER TABLE public.event_utils_id_seq OWNER TO crane_data_server;
 ALTER SEQUENCE public.event_utils_id_seq OWNED BY public.event_utils.id;
 
 
+CREATE TYPE public.tag_type_enum AS ENUM('Bool','Int','UInt','DInt','Word','LInt','Real','Time','Date_And_Time');
+ALTER TYPE public.tag_type_enum OWNER TO crane_data_server;
 --
 -- TOC entry 203 (class 1259 OID 27891)
 -- Name: tags; Type: TABLE; Schema: public; Owner: crane_data_server
@@ -259,6 +264,9 @@ ALTER TABLE public.operating_cycle_id_seq OWNER TO crane_data_server;
 
 ALTER SEQUENCE public.operating_cycle_id_seq OWNED BY public.rec_operating_cycle.id;
 
+
+CREATE TYPE public.metric_data_type_enum as ENUM('bool','int','real','time','date','timestamp','string');
+ALTER TYPE public.metric_data_type_enum OWNER TO crane_data_server;
 
 --
 -- TOC entry 208 (class 1259 OID 27941)
@@ -427,7 +435,6 @@ ALTER TABLE public.tags_id_seq OWNER TO crane_data_server;
 --
 
 ALTER SEQUENCE public.tags_id_seq OWNED BY public.tags.id;
-
 
 --
 -- TOC entry 2934 (class 2604 OID 27860)
@@ -1523,6 +1530,7 @@ INSERT INTO public.rec_operating_cycle VALUES (2, '2024-06-27 16:20:44.464925', 
 INSERT INTO public.rec_operating_cycle VALUES (3, '2024-06-27 16:23:01.647173', '2024-06-27 16:23:01.971118', '0 ');
 INSERT INTO public.rec_operating_cycle VALUES (8, '2024-07-16 10:06:28.990112', '2024-07-16 10:06:29.322689', '0 ');
 INSERT INTO public.rec_operating_cycle VALUES (9, '2024-07-16 10:09:42.195177', '2024-07-16 10:09:42.529297', '0 ');
+INSERT INTO public.rec_operating_cycle VALUES (275, '2024-07-17 15:50:13.9998', '2024-07-17 16:12:14.254342', '0 ');
 
 
 --
@@ -2596,6 +2604,9 @@ INSERT INTO public.rec_operating_metric VALUES (3, 'average_load    ', 42.287880
 INSERT INTO public.rec_operating_metric VALUES (3, 'max_load        ', 133.00000000);
 INSERT INTO public.rec_operating_metric VALUES (9, 'average_load    ', 43.48437500);
 INSERT INTO public.rec_operating_metric VALUES (9, 'max_load        ', 133.00000000);
+INSERT INTO public.rec_operating_metric VALUES (10, 'average_load    ', 43.48437500);
+INSERT INTO public.rec_operating_metric VALUES (10, 'max_load        ', 133.00000000);
+INSERT INTO public.rec_operating_metric VALUES (10, 'min_load        ', 5.00000000);
 
 
 --
@@ -2859,6 +2870,88 @@ CREATE INDEX idx_event_timestamp ON public.event USING btree ("timestamp");
 
 CREATE INDEX idx_rec_operating_event_timestamp ON public.event USING btree ("timestamp");
 
+CREATE OR REPLACE FUNCTION public.event_purge_records()
+RETURNS void 
+LANGUAGE plpgsql AS $$
+DECLARE
+    deleted INT;
+    to_delete INT;
+    batch_size INT;
+    is_purge_possible BOOLEAN;
+BEGIN
+    SELECT (row_count - row_limit + purge_shift_size), purge_batch_size
+    FROM event_utils INTO to_delete, batch_size;
+    
+    WITH upd_result AS (
+        UPDATE event_utils SET is_purge_running = true WHERE id = 1 AND is_purge_running = false
+        RETURNING *
+    ) SELECT count(*) = 1 FROM upd_result INTO is_purge_possible;
+
+    IF is_purge_possible THEN
+        deleted := 0;
+    
+        WHILE (to_delete - deleted) > batch_size LOOP
+            WITH del_result AS (
+                DELETE FROM event
+                WHERE ctid IN (
+                    SELECT ctid FROM event
+                    ORDER BY timestamp, uid ASC
+                    LIMIT batch_size
+                ) RETURNING *
+            ) SELECT (count(*) + deleted) FROM del_result into deleted;
+        END LOOP;
+
+        DELETE FROM event WHERE ctid IN (
+            SELECT ctid FROM event
+            ORDER BY timestamp, uid ASC
+            LIMIT (to_delete - deleted)
+        );
+
+        UPDATE event_utils SET is_purge_running = false WHERE id = 1;
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.event_check_for_purge()
+RETURNS void 
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    is_purge_needed BOOLEAN;
+BEGIN
+    SELECT row_count > row_limit FROM event_utils WHERE id = 1 INTO is_purge_needed;
+    IF is_purge_needed THEN
+        PERFORM public.event_purge_records();
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.event_counter_inc()
+RETURNS trigger 
+LANGUAGE plpgsql
+AS $$
+DECLARE
+add_count INT;
+BEGIN
+    SELECT count(*) FROM new_tbl INTO add_count;
+    UPDATE event_utils SET row_count = COALESCE(row_count, 0) + add_count WHERE id = 1;
+    PERFORM public.event_check_for_purge();
+    RETURN new;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.event_counter_dec()
+RETURNS trigger 
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    del_count INT;
+BEGIN
+    SELECT count(*) FROM old_tbl INTO del_count;
+    UPDATE event_utils SET row_count = COALESCE(row_count, 0) - del_count WHERE id = 1;
+    RETURN new;
+END;
+$$;
 
 --
 -- TOC entry 2974 (class 2620 OID 56521)
