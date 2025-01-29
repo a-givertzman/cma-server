@@ -103,9 +103,40 @@ class CMA green
 %% class di orange    
 ```
 
-## 1 Task service
+## Installetion
 
-### Overview
+### Linux
+
+...
+
+### Mac OS
+
+...
+
+### Windows
+
+...
+
+## Configuration
+
+- By default reads `config.yaml` from the folder where application started
+- Optionally config files can be bassed via cli, they will be joined (in order as specified) into the single configuration
+
+   ```bash
+   cma-server --config ./config.yaml ./cma-recorder.yaml
+   ```
+   
+   Or
+   
+   ```bash
+   cargo run --release -- --config ./config.yaml ./cma-recorder.yaml
+   ```
+
+## Services
+
+### 1 Task service
+
+#### Overview
 
 Service provides configurable in the yaml computations.  
 Consists of number of computation nodes. Each node consists of number of functions.  
@@ -118,7 +149,7 @@ The computations can be executed:
 - periodically with configured cycle time (min 10ms for now)
 - event-trigger, computation node will be performed if at least one if it's input received new point
 
-### Basic entities and principles of the Tasck service computations
+#### Basic entities and principles of the Tasck service computations
 
 - **Definitions**
   - let VarName - allows to define a variable
@@ -183,17 +214,17 @@ Returns latest received point
 input <type> <'/path/PointName'>
 ```
 
-## 2 History Service
+### 2 History Service
 
 - collect configured data points
 - stores number of configured metrics into the database
 
-## 3 Fault Recorder Service
+### 3 Fault Recorder Service
 
 - collect configured data points
 - stores number of configured metrics into the database
 
-### Storeing following information into the API Server
+#### Storeing following information into the API Server
 
 - operating cycle
   - start timestamp
@@ -210,7 +241,7 @@ input <type> <'/path/PointName'>
   - process values
   - faults values
 
-#### Configuration fo the tasks, metrics, functions
+##### Configuration fo the tasks, metrics, functions
 
 <details>
     <summary>...</summary>
@@ -379,7 +410,7 @@ service Task FaultDetection:
 
 </details>
 
-#### Complit configuration example
+##### Complit configuration example
 
 <details>
     <summary>...</summary>
@@ -576,7 +607,7 @@ service ProfinetClient Ied02:
 
 </details>
 
-#### Point
+##### Point
 
 The Entity of the information. Contains fallowing:
 
@@ -590,7 +621,7 @@ The Entity of the information. Contains fallowing:
 <details>
     <summary>...</summary>
 
-##### Point.name
+###### Point.name
 
 Unique within all the system (similar to the linux system full file path).
 
@@ -606,7 +637,7 @@ Examples:
 '/AppName/SubAppName/Device/Point.Name'
 ```
 
-##### Point.type
+###### Point.type
 
 The type of the containing information stored in the Point.value field. Fallowing types are supported:
 
@@ -616,11 +647,11 @@ The type of the containing information stored in the Point.value field. Fallowin
 - Double - f64 - A 64-bit floating point type (specifically, the "binary64" type defined in IEEE 754-2008).
 - String - string of the variable length
 
-##### Point.value
+###### Point.value
 
 Contains the information of the type corresponding with the Point.type field
 
-##### Point.status
+###### Point.status
 
 The status of the containing information:
 
@@ -629,7 +660,7 @@ The status of the containing information:
 - TimeInvalid = 3 - The time of the server / Device is not synchronized with precision time source;
 - Invalid = 10 - Information was read from the device but currently connection with that device is lost;
 
-##### Point.cot
+###### Point.cot
 
 Cause and direction of the transmission:
 
@@ -641,7 +672,7 @@ Cause and direction of the transmission:
 - ReqCon - Request | Confirmation reply - the confirmation of the successfully performed request
 - ReqErr - Request | Error reply - the information about falied request
 
-##### Point.timestamp
+###### Point.timestamp
 
 Contains a timestamp in the format corresponding with RFC 3339 and ISO 8601 date and time string:
 
@@ -653,7 +684,7 @@ Such as:
 
 </details>
 
-#### PointConfig
+##### PointConfig
 
 ```yaml
     Point.Name:
@@ -672,7 +703,7 @@ Such as:
 <details>
     <summary>...</summary>
 
-##### PointConfig.type
+###### PointConfig.type
 
 The type of the containing information stored in the Point.value field.
 Corresponding with Point.Value.
@@ -685,7 +716,7 @@ Fallowing types are supported:
 - String - string of the variable length
 - Json - coming soon
 
-##### PointConfig.alarm
+###### PointConfig.alarm
 
 The alarm class of the point, determains how it will be shown in the Alarm List of the Client application:
 
@@ -706,7 +737,7 @@ The alarm class of the point, determains how it will be shown in the Alarm List 
 - 14 - Not in use
 - 15 - Not in use
 
-##### PointConfig.history
+###### PointConfig.history
 
 Point config history option, determines for which direction will be enabled history option:
 
@@ -715,7 +746,7 @@ Point config history option, determines for which direction will be enabled hist
 - w / write / Write - history parameter active for points (commands) coming from clients to the devices
 - rw / readwrite / ReadWrite - history parameter active for points & points (commands) both directions
 
-##### PointConfig.address
+###### PointConfig.address
 
 General implementation of the PointConfig.address
 For specific protocols can have custom implementations
@@ -726,7 +757,7 @@ For specific protocols can have custom implementations
         bit: 0                  # 0..255 (Optional) - can be used for boolean bits stored in some address / offset
 ```
 
-##### PointConfig.filters
+###### PointConfig.filters
 
 Sequence of the prefilters - executed during parsing data points from the protocol line
 Allows to avoid unnecessary transmissions of the same value
@@ -747,12 +778,12 @@ Allows to avoid unnecessary transmissions of the same value
 
 </details>
 
-#### JDS Protocol
+##### JDS Protocol
 
 <details>
     <summary>...</summary>
 
-##### Request "Points"
+###### Request "Points"
 
 - Req
 
@@ -800,7 +831,7 @@ Allows to avoid unnecessary transmissions of the same value
 }
 ```
 
-##### Request "Subscribe"
+###### Request "Subscribe"
 
 - Req
 
@@ -843,7 +874,7 @@ ReqErr
 
 </details>
 
-#### ProfinetClient
+##### ProfinetClient
 
 Service provides connectivity with S7 Siemens deviceы via Profinet protocol over ethernet
 
