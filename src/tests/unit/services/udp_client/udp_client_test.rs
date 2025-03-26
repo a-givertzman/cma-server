@@ -37,7 +37,7 @@ mod udp_client {
         log::debug!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(100));
         test_duration.run().unwrap();
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let rng = &mut rng;
         ////////////////////////////////////////////////////////
         //     Configure here                                 //
@@ -51,7 +51,7 @@ mod udp_client {
         ////////////////////////////////////////////////////////
         // Messages sent per second
         let messages_per_sec = freq / (message_length as f64);
-        let test_data: Vec<i16> = (0..count).map(|_| rng.gen_range(-2048..2048) as i16).collect();
+        let test_data: Vec<i16> = (0..count).map(|_| rng.random_range(-2048..2048) as i16).collect();
         // let test_data: Vec<i16> = (0..count).collect();
         log::info!("{}.random_i16 | test data len: {}", self_id, test_data.len());
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(

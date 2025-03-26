@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, sync::mpsc::Receiver};
+use std::{cell::RefCell, rc::Rc, sync::{mpsc::Receiver, Arc}};
 use eframe::CreationContext;
 use egui_plot::{Line, Plot, Points};
 use hsl::HSL;
@@ -7,7 +7,7 @@ use log::{error, info, warn};
 use egui::{
     accesskit::Point, vec2, Align2, Color32, FontFamily, FontId, TextStyle 
 };
-use crate::core_::state::change_notify::ChangeNotify;
+use sal_sync::kernel::state::change_notify::ChangeNotify;
 ///
 /// Plot the point values
 pub struct UiPlot {
@@ -72,9 +72,9 @@ impl UiPlot {
         // .ttf and .otf files supported.
         fonts.font_data.insert(
             "Icons".to_owned(),
-            egui::FontData::from_static(include_bytes!(
+            Arc::new(egui::FontData::from_static(include_bytes!(
                 "./../../../../../assets/fonts/icons.ttf"
-            )),
+            ))),
         );
 
         // Put my font first (highest priority) for proportional text:

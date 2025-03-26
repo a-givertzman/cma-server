@@ -5,7 +5,7 @@ mod tests {
     use log::info;
     use std::sync::Once;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::core_::state::{switch_state::{SwitchState, Switch, SwitchCondition}, switch_state_changed::SwitchStateChanged};
+    use sal_sync::kernel::state::{switch_state::{SwitchState, Switch, SwitchCondition}, switch_state_changed::SwitchStateChanged};
     ///
     ///
     static INIT: Once = Once::new();

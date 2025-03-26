@@ -1,18 +1,15 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
 use sal_sync::{
-    collections::map::IndexMapFxHasher,
-    services::{
+    collections::map::FxIndexMap, kernel::state::exit_notify::ExitNotify, services::{
         entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status},
         service::{service::Service, service_handles::ServiceHandles},
-    },
+    }
 };
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{diag_keywd::DiagKeywd, slmp_client_config::slmp_client_config::SlmpClientConfig},
-    core_::{
-        constants::constants::RECV_TIMEOUT, state::exit_notify::ExitNotify,
-    },
+    core_::constants::constants::RECV_TIMEOUT,
     services::{
         diagnosis::diag_point::DiagPoint, safe_lock::rwlock::SafeLock,
         services::Services, slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
@@ -30,7 +27,7 @@ pub struct SlmpClient {
     name: Name,
     conf: SlmpClientConfig,
     services: Arc<RwLock<Services>>,
-    diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+    diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -58,7 +55,7 @@ impl SlmpClient {
     /// Sends diagnosis point
     fn yield_diagnosis(
         self_id: &str,
-        diagnosis: &Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+        diagnosis: &Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         kewd: &DiagKeywd,
         value: Status,
         dest: &Sender<Point>,

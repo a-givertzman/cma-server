@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use log::{debug, error, trace};
-use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
+use sal_sync::{collections::map::FxIndexMap, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::{
     conf_keywd::ConfKind, diag_keywd::DiagKeywd,
@@ -52,7 +52,7 @@ pub struct ProfinetClientConfig {
     pub(crate) ip: String,
     pub(crate) rack: u64,
     pub(crate) slot: u64,
-    pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
+    pub(crate) diagnosis: FxIndexMap<DiagKeywd, PointConfig>,
     pub(crate) dbs: IndexMap<String, ProfinetDbConfig>,
 }
 //

@@ -6,10 +6,14 @@ use std::{
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
-use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{point::point::Point, status::status::Status}, service::service_cycle::ServiceCycle}};
+use sal_sync::{
+    collections::map::FxIndexMap,
+    kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
+    services::{entity::{point::point::Point, status::status::Status}, service::service_cycle::ServiceCycle},
+};
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::{failure::errors_limit::ErrorLimit, state::{change_notify::ChangeNotify, exit_notify::ExitNotify}},
+    core_::failure::errors_limit::ErrorLimit,
     services::slmp_client::slmp_db::SlmpDb
 };
 ///
@@ -22,8 +26,8 @@ pub struct SlmpRead {
     // name: Name,
     conf: SlmpClientConfig,
     dest: Sender<Point>,
-    dbs: Arc<Mutex<IndexMapFxHasher<String, SlmpDb>>>,
-    // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+    dbs: Arc<Mutex<FxIndexMap<String, SlmpDb>>>,
+    // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     status: Arc<AtomicU32>,
     exit: Arc<ExitNotify>,
 }
@@ -36,7 +40,7 @@ impl SlmpRead {
         // name: Name,
         conf: SlmpClientConfig,
         dest: Sender<Point>,
-        // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+        // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         status: Arc<AtomicU32>,
         exit: Arc<ExitNotify>,
     ) -> Self {
@@ -56,7 +60,7 @@ impl SlmpRead {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    fn yield_status(self_id: &str, status: Status, dbs: &mut IndexMapFxHasher<String, SlmpDb>, dest: &Sender<Point>) {
+    fn yield_status(self_id: &str, status: Status, dbs: &mut FxIndexMap<String, SlmpDb>, dest: &Sender<Point>) {
         for (db_name, db) in dbs {
             debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(status, dest) {
@@ -69,7 +73,7 @@ impl SlmpRead {
     }
     ///
     ///
-    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &SlmpClientConfig) -> IndexMapFxHasher<String, SlmpDb> {
+    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &SlmpClientConfig) -> FxIndexMap<String, SlmpDb> {
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for (db_name, db_conf) in &conf.dbs {
             info!("{}.build_dbs | Configuring SlmpDb: {:?}...", self_id, db_name);

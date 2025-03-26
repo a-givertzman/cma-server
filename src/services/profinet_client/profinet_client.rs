@@ -7,7 +7,7 @@ use std::{
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
-use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, subscription::subscription_criteria::SubscriptionCriteria}};
+use sal_sync::{collections::map::FxIndexMap, kernel::state::change_notify::ChangeNotify, services::{entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, subscription::subscription_criteria::SubscriptionCriteria}};
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
@@ -15,7 +15,7 @@ use crate::{
         profinet_client_config::profinet_client_config::ProfinetClientConfig,
     },
     core_::{
-        constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit, state::change_notify::ChangeNotify,
+        constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit,
     },
     services::{
         diagnosis::diag_point::DiagPoint,
@@ -33,7 +33,7 @@ pub struct ProfinetClient {
     name: Name,
     conf: ProfinetClientConfig,
     services: Arc<RwLock<Services>>,
-    diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+    diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -60,7 +60,7 @@ impl ProfinetClient {
     /// Sends diagnosis point
     fn yield_diagnosis(
         self_id: &str,
-        diagnosis: &Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+        diagnosis: &Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         kewd: &DiagKeywd,
         value: Status,
         tx_send: &Sender<Point>,
@@ -84,7 +84,7 @@ impl ProfinetClient {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    fn yield_status(self_id: &str, dbs: &mut IndexMapFxHasher<String, ProfinetDb>, tx_send: &Sender<Point>) {
+    fn yield_status(self_id: &str, dbs: &mut FxIndexMap<String, ProfinetDb>, tx_send: &Sender<Point>) {
         for (db_name, db) in dbs {
             debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(Status::Invalid, tx_send) {

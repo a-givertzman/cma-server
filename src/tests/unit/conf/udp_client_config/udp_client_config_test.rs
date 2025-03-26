@@ -2,7 +2,7 @@
 
 mod udp_client_config {
     use std::{str::FromStr, sync::Once, time::Duration};
-    use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
+    use sal_sync::{collections::map::FxIndexMap, services::{entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 
@@ -33,7 +33,7 @@ mod udp_client_config {
         log::debug!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(1));
         test_duration.run().unwrap();
-        // fn indexMapFxHasher() {
+        // fn FxIndexMap() {
         //     IndexMap::with_hasher(BuildHasherDefault::)
         // }
         let test_data = [
@@ -77,7 +77,7 @@ mod udp_client_config {
                     local_addr: "192.168.100.100:15180".to_owned(),
                     remote_addr: "192.168.100.241:15180".to_owned(),
                     mtu: 1500,
-                    diagnosis: IndexMapFxHasher::from_iter([
+                    diagnosis: FxIndexMap::from_iter([
                         (DiagKeywd::Status, PointConfig {
                             id: 0,
                             name: Name::new(self_id, "UdpClient/Status").join(),
@@ -99,7 +99,7 @@ mod udp_client_config {
                             comment: None,
                         }),
                     ]),
-                    dbs: IndexMapFxHasher::from_iter([
+                    dbs: FxIndexMap::from_iter([
                         ("data".to_owned(), UdpClientDbConfig {
                             name: Name::new(self_id, "UdpClient/data"),
                             description: "Data block of the device".to_owned(),
@@ -174,8 +174,8 @@ mod udp_client_config {
                     local_addr: "192.168.100.100:15180".to_owned(),
                     remote_addr: "192.168.100.241:15180".to_owned(),
                     mtu: 4096,
-                    diagnosis: IndexMapFxHasher::from_iter([]),
-                    dbs: IndexMapFxHasher::from_iter([
+                    diagnosis: FxIndexMap::from_iter([]),
+                    dbs: FxIndexMap::from_iter([
                         ("data".to_owned(), UdpClientDbConfig {
                             name: Name::new(self_id, "UdpIed01/data"),
                             description: "Data block of the device".to_owned(),

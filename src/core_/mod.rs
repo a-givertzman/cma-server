@@ -2,8 +2,6 @@ pub mod aprox_eq;
 
 pub mod failure;
 
-pub mod state;
-
 pub mod types;
 
 pub mod format;

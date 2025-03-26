@@ -7,10 +7,14 @@
 //!     parameter: value    # meaning
 //! ```
 use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, thread, time::Duration};
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
+use sal_sync::{
+    kernel::state::change_notify::ChangeNotify,
+    services::{entity::{name::Name, object::Object, point::point::Point},
+    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}}
+};
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
-    core_::{failure::errors_limit::ErrorLimit, state::change_notify::ChangeNotify}, services::{services::Services, udp_client::udp_client::UdpClient} 
+    core_::failure::errors_limit::ErrorLimit, services::{services::Services, udp_client::udp_client::UdpClient} 
 };
 ///
 /// 
@@ -88,7 +92,7 @@ enum State {
 impl Service for MockUdpServer {
     //
     // 
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
+    fn get_link(&mut self, _name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),

@@ -1,6 +1,6 @@
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
+use sal_sync::{collections::map::FxIndexMap, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
 use std::{fs, hash::BuildHasherDefault, str::FromStr, time::Duration};
 use crate::conf::{
     diag_keywd::DiagKeywd,
@@ -53,8 +53,8 @@ pub struct UdpClientConfig {
     pub remote_addr: String,
     /// Maximum Transmission Unit, default 1500, [Resolve IPv4 Fragmentation, MTU...](https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/25885-pmtud-ipfrag.html)
     pub mtu: usize,
-    pub diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
-    pub dbs: IndexMapFxHasher<String, UdpClientDbConfig>,
+    pub diagnosis: FxIndexMap<DiagKeywd, PointConfig>,
+    pub dbs: FxIndexMap<String, UdpClientDbConfig>,
 }
 //
 // 

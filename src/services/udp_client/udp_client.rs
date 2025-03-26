@@ -32,12 +32,13 @@ use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic:
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_sync::{
-    collections::map::IndexMapFxHasher,
+    kernel::state::{change_notify::ChangeNotify, switch_state::{Switch, SwitchCondition, SwitchState}},
+    collections::map::FxIndexMap,
     services::{entity::{name::Name, object::Object, point::point_tx_id::PointTxId}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}},
 };
 use crate::{
     conf::udp_client_config::udp_client_config::UdpClientConfig,
-    core_::{failure::errors_limit::ErrorLimit, state::{change_notify::ChangeNotify, switch_state::{Switch, SwitchCondition, SwitchState}}},
+    core_::failure::errors_limit::ErrorLimit,
     services::{safe_lock::rwlock::SafeLock, services::Services},
 };
 use super::udp_client_db::UdpClientDb;
@@ -82,7 +83,7 @@ impl UdpClient {
     }
     ///
     /// Returns UdpClint's DB blokcs
-    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &UdpClientConfig) -> IndexMapFxHasher<Dbs, UdpClientDb> {
+    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &UdpClientConfig) -> FxIndexMap<Dbs, UdpClientDb> {
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for (db_name, db_conf) in &conf.dbs {
             log::info!("{}.build_dbs | Configuring UdpClientDb: {:?}...", self_id, db_name);

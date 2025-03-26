@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use log::{debug, trace};
-use sal_sync::{collections::map::IndexMapFxHasher, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
+use sal_sync::{collections::map::FxIndexMap, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::{
     diag_keywd::DiagKeywd, service_config::ServiceConfig, slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig}
@@ -42,7 +42,7 @@ pub struct SlmpClientConfig {
     pub(crate) description: String,
     pub(crate) ip: String,
     pub(crate) port: u64,
-    pub(crate) diagnosis: IndexMapFxHasher<DiagKeywd, PointConfig>,
+    pub(crate) diagnosis: FxIndexMap<DiagKeywd, PointConfig>,
     pub(crate) dbs: IndexMap<String, SlmpDbConfig>,
 }
 //

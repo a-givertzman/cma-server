@@ -3,7 +3,7 @@ use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, trace, warn};
 use sal_sync::{
-    collections::map::IndexMapFxHasher,
+    collections::map::FxIndexMap,
     services::{
         conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe,
         task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
@@ -230,7 +230,7 @@ impl ServiceConfig {
     }
     ///
     /// Returns diagnosis point configs
-    pub fn get_diagnosis(&mut self, parent: &Name) -> IndexMapFxHasher<DiagKeywd, PointConfig> {
+    pub fn get_diagnosis(&mut self, parent: &Name) -> FxIndexMap<DiagKeywd, PointConfig> {
         let mut points = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         match self.get_param_conf("diagnosis") {
             Ok(conf) => {

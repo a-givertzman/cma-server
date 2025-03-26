@@ -3,13 +3,17 @@ use std::{
     thread::{self, JoinHandle}, time::Duration,
 };
 use log::{debug, error, info, warn};
-use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, service::service_cycle::ServiceCycle, subscription::subscription_criteria::SubscriptionCriteria}};
+use sal_sync::{
+    collections::map::FxIndexMap,
+    kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
+    services::{
+        entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status},
+        service::service_cycle::ServiceCycle, subscription::subscription_criteria::SubscriptionCriteria,
+    },
+};
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::{
-        failure::errors_limit::ErrorLimit,
-        state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
-    },
+    core_::failure::errors_limit::ErrorLimit,
     services::{safe_lock::rwlock::SafeLock, services::Services, slmp_client::slmp_db::SlmpDb},
 };
 
@@ -24,8 +28,8 @@ pub struct SlmpWrite {
     // name: Name,
     conf: SlmpClientConfig,
     dest: Sender<Point>,
-    dbs: Arc<Mutex<IndexMapFxHasher<String, SlmpDb>>>,
-    // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+    dbs: Arc<Mutex<FxIndexMap<String, SlmpDb>>>,
+    // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     services: Arc<RwLock<Services>>,
     status: Arc<AtomicU32>,
     exit: Arc<ExitNotify>,
@@ -39,7 +43,7 @@ impl SlmpWrite {
         // name: Name,
         conf: SlmpClientConfig,
         dest: Sender<Point>,
-        // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
+        // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         services: Arc<RwLock<Services>>,
         status: Arc<AtomicU32>,
         exit: Arc<ExitNotify>,

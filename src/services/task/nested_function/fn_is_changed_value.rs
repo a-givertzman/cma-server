@@ -1,4 +1,8 @@
-use sal_sync::{collections::map::HashMapFxHasher, services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool}};
+use sal_sync::{
+    collections::map::FxHashMap,
+    services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
+    types::bool::Bool,
+}};
 use std::{collections::HashMap, hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use chrono::Utc;
 use hashers::fx_hash::FxHasher;
@@ -22,7 +26,7 @@ pub struct FnIsChangedValue {
     id: String,
     kind: FnKind,
     inputs: Vec<FnInOutRef>,
-    state: HashMapFxHasher<String, Point>,
+    state: FxHashMap<String, Point>,
 }
 //
 // 
@@ -65,7 +69,7 @@ impl FnOut for FnIsChangedValue {
     fn out(&mut self) -> FnResult<Point, String> {
         let tx_id = PointTxId::from_str(&self.id);
         let mut value = false;
-        let state: HashMap<&String, testing::entities::test_value::Value> = self.state.iter().map(|(name, p)| (name, p.value())).collect();
+        let state = FxHashMap::from_iter(self.state.iter().map(|(name, p)| (name, p.value())));
         trace!("{}.out | state: {:#?}", self.id, state);
         for input in &self.inputs {
             let input = input.borrow_mut().out();

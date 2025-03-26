@@ -2,14 +2,15 @@ use std::{fs, io::Write, net::UdpSocket, sync::mpsc::Sender};
 use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use sal_sync::services::entity::{
-    name::Name, point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType},
-    status::status::Status
+use sal_sync::{
+    kernel::state::change_notify::ChangeNotify,
+    services::entity::{
+        name::Name, 
+        point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType},
+        status::status::Status,
+    }
 };
-use crate::{
-    conf::udp_client_config::udp_client_db_config::UdpClientDbConfig,
-    core_::state::change_notify::ChangeNotify,
-};
+use crate::conf::udp_client_config::udp_client_db_config::UdpClientDbConfig;
 use super::{parse_point::ParsePoint, udp_client::UdpClient, udpc_parse_i16::UdpcParseI16};
 ///
 /// 
@@ -82,7 +83,7 @@ impl UdpClientDb {
         // log::debug!("{}.parse | message: {:?}", self.id, buf);
         match buf {
             // Data message received
-            &[UdpClient::SYN, addr, type_, c1,c2,c3, c4, ..] => {
+            &[UdpClient::SYN, _addr, _type_, c1,c2,c3, c4, ..] => {
                 count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
                 // log::debug!("{}.parse | addr: {} type: {} count: {}  |  {:?}", self.id, addr, type_, count, &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)]);
                 match &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)].try_into() {

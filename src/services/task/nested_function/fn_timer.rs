@@ -1,10 +1,10 @@
 use log::trace;
-use sal_sync::services::entity::{cot::Cot, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}};
-use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
-use crate::core_::{
-    state::switch_state::{Switch, SwitchCondition, SwitchState},
-    types::fn_in_out_ref::FnInOutRef,
+use sal_sync::{
+    kernel::state::switch_state::{Switch, SwitchCondition, SwitchState},
+    services::entity::{cot::Cot, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}}
 };
+use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
+use crate::core_::types::fn_in_out_ref::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 //
 //
