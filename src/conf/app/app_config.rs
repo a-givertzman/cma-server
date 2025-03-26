@@ -1,6 +1,5 @@
 use indexmap::IndexMap;
-use log::{debug, info, trace};
-use sal_sync::services::{conf::conf_tree::ConfTree, retain::retain_conf::RetainConf};
+use sal_sync::services::conf::{conf_tree::ConfTree, services_conf::ServicesConf};
 use std::{fs, path::Path, str::FromStr};
 use crate::conf::{
     conf_keywd::{ConfKeywd, ConfKind}, service_config::ServiceConfig
@@ -13,12 +12,13 @@ use crate::conf::{
 /// ```yaml
 /// name: ApplicationName
 /// description: Short explanation / purpose etc.
-/// retain:
-///     api:
-///         table:      public.tags
-///         address:    0.0.0.0:8080
-///         auth_token: 123!@#
-///         database:   cma_data_server
+/// services:
+///     retain:
+///         api:
+///             table:      public.tags
+///             address:    0.0.0.0:8080
+///             auth_token: 123!@#
+///             database:   cma_data_server
 /// 
 /// service ProfinetClient Ied01:          # device will be executed in the independent thread, must have unique name
 ///    in queue in-queue:
@@ -62,7 +62,7 @@ pub struct AppConfig {
     pub(crate) description: String,
     // pub(crate) cycle: Option<Duration>,
     pub(crate) nodes: IndexMap<ConfKeywd, ConfTree>,
-    pub(crate) retain: RetainConf,
+    pub(crate) services: ServicesConf,
 }
 //
 // 
@@ -71,14 +71,14 @@ impl AppConfig {
     /// Creates new instance of the [AppConfig]:
     pub fn new(conf_tree: &mut ConfTree) -> Self {
         println!();
-        trace!("AppConfig.new | confTree: {:?}", conf_tree);
+        log::trace!("AppConfig.new | confTree: {:?}", conf_tree);
         let self_id = format!("AppConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.to_owned());
-        trace!("{}.new | selfConf: {:?}", self_id, self_conf);
+        log::trace!("{}.new | selfConf: {:?}", self_id, self_conf);
         let self_name = self_conf.get_param_value("name").unwrap().as_str().unwrap().to_owned();
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_owned();
-        debug!("{}.new | description: {:?}", self_id, description);
+        log::debug!("{}.new | description: {:?}", self_id, description);
         let mut nodes = IndexMap::new();
         println!();
         for key in self_conf.keys.iter().filter(|key| ! ["name", "description", "retain"].contains(&key.to_string().as_str())) {
@@ -92,9 +92,9 @@ impl AppConfig {
                             true => "".to_owned(),
                             false => format!(": '{}'", keyword.sufix()),
                         };
-                        debug!("{}.new | service '{}'{}", self_id, node_name, sufix);
+                        log::debug!("{}.new | service '{}'{}", self_id, node_name, sufix);
                     } else if log::max_level() == log::LevelFilter::Trace {
-                        trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, node_name, node_conf);
+                        log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, node_name, node_conf);
                     }
                     nodes.insert(
                         keyword,
@@ -106,15 +106,16 @@ impl AppConfig {
                 }
             }
         }
-        let retain = self_conf.get_param_value("retain").unwrap();
-        debug!("{}.new | retain: {:#?}", self_id, retain);
-        let retain = RetainConf::default();
+        let services = self_conf.get_param_value("services").unwrap();
+        let services: ServicesConf = services.try_into().unwrap();
+        log::debug!("{}.new | services: {:#?}", self_id, services);
+        // let services = RetainConf::default();
         Self {
             name: self_name,
             description,
             // cycle,
             nodes,
-            retain,
+            services,
         }
     }
     ///
@@ -127,7 +128,7 @@ impl AppConfig {
     #[allow(dead_code)]
     pub fn read<P>(path: Vec<P>) -> AppConfig where P: AsRef<Path> {
         let self_id = "AppConfig";
-        info!("{}.read | Reading configuration files...", self_id);
+        log::info!("{}.read | Reading configuration files...", self_id);
         let mut files = vec![];
         for p in path {
             match fs::read_to_string(&p) {
@@ -142,7 +143,7 @@ impl AppConfig {
         let yaml_string = files.join("\n");
         match serde_yaml::from_str(&yaml_string) {
             Ok(config) => {
-                info!("{}.read | Reading configuration files - ok", self_id);
+                log::info!("{}.read | Reading configuration files - ok", self_id);
                 AppConfig::from_yaml_value(&config)
             }
             Err(err) => {

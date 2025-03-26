@@ -5,7 +5,7 @@ use log::{debug, trace, warn};
 use sal_sync::{
     collections::map::FxIndexMap,
     services::{
-        conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe,
+        conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe,
         task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName},
     },
 };

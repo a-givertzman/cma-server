@@ -1,7 +1,6 @@
 use log::{trace, debug};
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name};
+use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::name::Name};
 use std::{fs, time::Duration, net::SocketAddr};
-use crate::conf::service_config::ServiceConfig;
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -39,27 +38,26 @@ impl ApiClientConfig {
     ///         max-length: 10000
     ///     debug: false                # API debug mode, optional, default false
     ///                     ...
-    pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
-        println!();
-        let self_id = format!("ApiClientConfig({})", conf_tree.key);
-        trace!("ApiClientConfig.new | confTree: {:?}", conf_tree);
-        let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | selfConf: {:?}", self_id, self_conf);
-        let self_name = Name::new(parent, self_conf.name());
+    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
+        let self_id = format!("ApiClientConfig({})", conf.key);
+        trace!("ApiClientConfig.new | confTree: {:?}", conf);
+        trace!("{}.new | selfConf: {:?}", self_id, conf);
+        let self_name = Name::new(parent, conf.name().unwrap());
         debug!("{}.new | name: {:?}", self_id, self_name);
-        let address: SocketAddr = self_conf.get_param_value("address").unwrap().as_str().unwrap().parse().unwrap();
+        let address: String = conf.get("address").unwrap();
+        let address: SocketAddr = address.parse().unwrap();
         debug!("{}.new | address: {:?}", self_id, address);
-        let database = self_conf.get_param_value("database").unwrap().as_str().unwrap().to_string();
+        let database = conf.get("database").unwrap();
         debug!("{}.new | database: {:?}", self_id, database);
-        let auth_token = self_conf.get_param_value("auth_token").unwrap_or_default().as_str().unwrap_or("").to_string();
+        let auth_token = conf.get("auth_token").unwrap();
         debug!("{}.new | auth_token: {:?}", self_id, auth_token);
-        let cycle = self_conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let reconnect_cycle = self_conf.get_duration("reconnect");
+        let reconnect_cycle = conf.get_duration("reconnect").ok();
         debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
-        let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
+        let (rx, rx_max_len) = conf.get_in_queue().unwrap();
         debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_len);
-        let debug: bool = self_conf.get_param_value("debug").unwrap_or_default().as_bool().unwrap_or(false);
+        let debug: bool = conf.get("debug").unwrap_or(false);
         debug!("{}.new | debug: {:?}", self_id, debug);
         Self {
             name: self_name,
@@ -78,7 +76,7 @@ impl ApiClientConfig {
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> Self {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
-                Self::new(parent, &mut ConfTree::new(key.as_str().unwrap(), value.clone()))
+                Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
             }
             None => {
                 panic!("ApiClientConfig.from_yaml | Format error or empty conf: {:#?}", value)

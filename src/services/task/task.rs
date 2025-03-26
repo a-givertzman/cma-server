@@ -1,7 +1,5 @@
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}},
-    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
-    subscription::subscription_criteria::SubscriptionCriteria,
+    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria
 };
 use std::{
     collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::Duration,
@@ -11,9 +9,7 @@ use concat_string::concat_string;
 use crate::{
     core_::constants::constants::RECV_TIMEOUT,
     conf::task_config::TaskConfig, 
-    services::{
-        safe_lock::rwlock::SafeLock, services::Services, task::task_nodes::TaskNodes,
-    },
+    services::task::task_nodes::TaskNodes,
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations

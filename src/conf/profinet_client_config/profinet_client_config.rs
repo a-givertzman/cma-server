@@ -1,11 +1,10 @@
 use indexmap::IndexMap;
 use log::{debug, error, trace};
-use sal_sync::{collections::map::FxIndexMap, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
+use sal_sync::{collections::map::FxIndexMap, services::{conf::{conf_kind::ConfKind, conf_tree::{ConfTree, ConfTreeGet}}, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::{
-    conf_keywd::ConfKind, diag_keywd::DiagKeywd,
+    diag_keywd::DiagKeywd,
     profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig},
-    service_config::ServiceConfig
 };
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -60,43 +59,41 @@ pub struct ProfinetClientConfig {
 impl ProfinetClientConfig {
     ///
     /// Creates new instance of the [ProfinetClientConfig]:
-    pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
-        println!();
-        trace!("ProfinetClientConfig.new | conf_tree: {:#?}", conf_tree);
-        let self_id = format!("ProfinetClientConfig({})", conf_tree.key);
-        let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | self_conf: {:?}", self_id, self_conf);
-        let self_name = Name::new(parent, self_conf.sufix());
+    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
+        trace!("ProfinetClientConfig.new | conf_tree: {:#?}", conf);
+        let self_id = format!("ProfinetClientConfig({})", conf.key);
+        trace!("{}.new | conf: {:?}", self_id, conf);
+        let self_name = Name::new(parent, conf.sufix().unwrap());
         debug!("{}.new | name: {:?}", self_id, self_name);
-        let cycle = self_conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let reconnect_cycle = self_conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
+        let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
         debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
-        let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
+        let subscribe = conf.get("subscribe").unwrap();
         debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
+        let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         debug!("{}.new | send-to: {}", self_id, send_to);
-        if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
-            error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)
+        if let Ok((_, _)) = conf.get_by_keyword("out", ConfKind::Queue) {
+            error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, conf)
         }
-        let protocol = self_conf.get_param_value("protocol").unwrap().as_str().unwrap().to_string();
+        let protocol = conf.get("protocol").unwrap();
         debug!("{}.new | protocol: {:?}", self_id, protocol);
-        let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
+        let description = conf.get("description").unwrap();
         debug!("{}.new | description: {:?}", self_id, description);
-        let ip = self_conf.get_param_value("ip").unwrap().as_str().unwrap().to_string();
+        let ip = conf.get("ip").unwrap();
         debug!("{}.new | ip: {:?}", self_id, ip);
-        let rack = self_conf.get_param_value("rack").unwrap().as_u64().unwrap();
+        let rack = conf.get("rack").unwrap();
         debug!("{}.new | rack: {:?}", self_id, rack);
-        let slot = self_conf.get_param_value("slot").unwrap().as_u64().unwrap();
+        let slot = conf.get("slot").unwrap();
         debug!("{}.new | slot: {:?}", self_id, slot);
-        let diagnosis = self_conf.get_diagnosis(&self_name);
+        let diagnosis = conf.get_diagnosis(&self_name);
         debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::new();
-        for key in &self_conf.keys {
-            let keyword = Keywd::from_str(key).unwrap();
+        for key in conf.keys() {
+            let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();
-                let mut device_conf = self_conf.get(key).unwrap();
+                let mut device_conf = conf.get(key).unwrap();
                 debug!("{}.new | DB '{}'", self_id, db_name);
                 trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
                 let node_conf = ProfinetDbConfig::new(&self_name, &db_name, &mut device_conf);
@@ -130,7 +127,7 @@ impl ProfinetClientConfig {
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> ProfinetClientConfig {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
-                Self::new(parent, &mut ConfTree::new(key.as_str().unwrap(), value.clone()))
+                Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
             }
             None => {
                 panic!("ProfinetClientConfig.from_yaml | Format error or empty conf: {:#?}", value)

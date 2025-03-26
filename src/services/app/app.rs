@@ -1,6 +1,8 @@
 use linked_hash_map::LinkedHashMap;
 use log::{error, info, trace};
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, object::Object}, service::{service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{
+    conf::conf_tree::ConfTree, entity::{name::Name, object::Object}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
+};
 use std::{path::Path, process::exit, sync::{Arc, RwLock}, thread, time::Duration};
 use libc::{
     SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
@@ -11,15 +13,15 @@ use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
         api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig,
-        multi_queue_config::MultiQueueConfig, profinet_client_config::profinet_client_config::ProfinetClientConfig,
+        profinet_client_config::profinet_client_config::ProfinetClientConfig,
         slmp_client_config::slmp_client_config::SlmpClientConfig, task_config::TaskConfig,
         tcp_client_config::TcpClientConfig, tcp_server_config::TcpServerConfig
     }, services::{
         api_cient::api_client::ApiClient, cache::cache_service::CacheService,
         history::{producer_service::ProducerService, producer_service_config::ProducerServiceConfig},
-        multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient,
-        safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer,
-        services::Services, slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient,
+        profinet_client::profinet_client::ProfinetClient,
+        server::tcp_server::TcpServer,
+        slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient,
     }
 };
 
@@ -54,15 +56,15 @@ impl App {
         let conf = self.conf.clone();
         let self_name = Name::new("", conf.name);
         let app = Arc::new(RwLock::new(self));
-        let services = Arc::new(RwLock::new(Services::new(&self_id, conf.retain.clone())));
+        let services = Arc::new(RwLock::new(Services::new(&self_id, conf.services.clone())));
         info!("{}.run |     Configuring services...", self_id);
-        for (node_keywd, mut node_conf) in conf.nodes {
+        for (node_keywd, node_conf) in conf.nodes {
             let node_name = node_keywd.name();
             let node_sufix = node_keywd.sufix();
             info!("{}.run |         Configuring service: {}({})...", self_id, node_name, node_sufix);
             trace!("{}.run |         Config: {:#?}", self_id, node_conf);
             services.wlock(&self_id).insert(
-                Self::build_service(&self_id, &self_name, &node_name, &node_sufix, &mut node_conf, services.clone()),
+                Self::build_service(&self_id, &self_name, &node_name, &node_sufix, node_conf, services.clone()),
             );
             info!("{}.run |         Configuring service: {}({}) - ok\n", self_id, node_name, node_sufix);
         }
@@ -110,13 +112,13 @@ impl App {
     }    
     ///
     /// Returns service by it's name
-    fn build_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: &mut ConfTree, services: Arc<RwLock<Services>>) -> Arc<RwLock<dyn Service>> {
+    fn build_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<RwLock<Services>>) -> Arc<RwLock<dyn Service>> {
         match node_name {
             Services::API_CLIENT => Arc::new(RwLock::new(
                 ApiClient::new(ApiClientConfig::new(parent, node_conf))
             )),
             Services::MULTI_QUEUE => Arc::new(RwLock::new(
-                MultiQueue::new(MultiQueueConfig::new(parent, node_conf), services)
+                MultiQueue::new(MultiQueueConf::new(parent, node_conf), services)
             )),
             Services::PROFINET_CLIENT => Arc::new(RwLock::new(
                 ProfinetClient::new(ProfinetClientConfig::new(parent, node_conf), services)

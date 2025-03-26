@@ -1,14 +1,11 @@
 use indexmap::IndexMap;
 use log::{trace, debug};
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe};
+use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe};
 use std::{fs, time::Duration};
-use crate::conf::{
-    fn_::{
+use crate::conf::fn_::{
         fn_config::FnConfig,
         fn_conf_kind::FnConfKind,
-    },
-    service_config::ServiceConfig,
-};
+    };
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -55,25 +52,26 @@ impl TaskConfig {
     ///             input2:
     ///                 fn SqlMetric:
     ///                     ...
-    pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> TaskConfig {
+    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TaskConfig {
         println!();
-        trace!("TaskConfig.new | confTree: {:?}", conf_tree);
+        trace!("TaskConfig.new | confTree: {:?}", conf);
         let mut vars = vec![];
-        let self_id = format!("TaskConfig({})", conf_tree.key);
-        let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | selfConf: {:?}", self_id, self_conf);
-        let self_name = Name::new(parent, self_conf.sufix());
+        let self_id = format!("TaskConfig({})", conf.key);
+        // let mut conf = ServiceConfig::new(&self_id, conf_tree.clone());
+        trace!("{}.new | selfConf: {:?}", self_id, conf);
+        let self_name = Name::new(parent, conf.sufix().unwrap());
         debug!("{}.new | name: {:?}", self_id, self_name);
-        let cycle = self_conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let (rx, rx_max_length) = self_conf.get_in_queue().unwrap();
+        let (rx, rx_max_length) = conf.get_in_queue().unwrap();
         debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_length);
-        let subscribe = ConfSubscribe::new(self_conf.get_param_value("subscribe").unwrap_or(serde_yaml::Value::Null));
+        let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
+        let subscribe = ConfSubscribe::new(subscribe);
         debug!("{}.new | sudscribe: {:#?}", self_id, subscribe);
         let mut node_index = 0;
         let mut nodes = IndexMap::new();
-        for key in &self_conf.keys {
-            let node_conf = self_conf.get(key).unwrap();
+        for key in conf.keys() {
+            let node_conf = conf.get(key).unwrap();
             trace!("{}.new | nodeConf: {:?}", self_id, node_conf);
             node_index += 1;
             let node_conf = FnConfig::new(&self_name.join(), &self_name, &node_conf, &mut vars);
@@ -97,7 +95,7 @@ impl TaskConfig {
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> TaskConfig {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
-                Self::new(parent, &mut ConfTree::new(key.as_str().unwrap(), value.clone()))
+                Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
             }
             None => {
                 panic!("TaskConfig.from_yaml | Format error or empty conf: {:#?}", value)

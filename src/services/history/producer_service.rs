@@ -12,13 +12,10 @@ use sal_sync::services::{
             point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId,
         },
         status::status::Status,
-    },
-    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
-    types::bool::Bool,
+    }, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, types::bool::Bool
 };
 use serde_json::json;
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 use super::producer_service_config::ProducerServiceConfig;
 ///
 /// Service for debuging / testing purposes
@@ -341,8 +338,8 @@ pub trait ParsePoint<T> {
 
 
 fn get_random_index(len: usize) -> usize {
-    let mut rnd = rand::thread_rng();
-    rnd.gen_range(0..len)
+    let mut rnd = rand::rng();
+    rnd.random_range(0..len)
 }
 
 
