@@ -39,8 +39,7 @@ impl ApiClientConfig {
     ///                     ...
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
         let self_id = format!("ApiClientConfig({})", conf.key);
-        log::trace!("ApiClientConfig.new | confTree: {:?}", conf);
-        log::trace!("{}.new | selfConf: {:?}", self_id, conf);
+        log::trace!("ApiClientConfig.new | conf: {:?}", conf);
         let self_name = Name::new(parent, conf.name().unwrap());
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let address: String = conf.get("address").unwrap();

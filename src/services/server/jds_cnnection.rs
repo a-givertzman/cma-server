@@ -2,7 +2,7 @@ use std::{
     collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
 };
 use hashers::fx_hash::FxHasher;
-use sal_sync::services::{entity::{cot::Cot, name::Name, point::point::Point}, service::service_handles::ServiceHandles, subscription::subscription_criteria::SubscriptionCriteria};
+use sal_sync::services::{entity::{cot::Cot, name::Name, point::point::Point}, safe_lock::rwlock::SafeLock, service::service_handles::ServiceHandles, services::Services, subscription::subscription_criteria::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -14,16 +14,12 @@ use crate::{
             jds_serialize::JdsSerialize,
         },
     }, 
-    services::{
-        safe_lock::rwlock::SafeLock, 
-        server::{
+    services::server::{
             connections::Action, 
             jds_request::JdsRequest, 
             jds_routes::{JdsRoutes, RouterReply}, 
             jds_auth::TcpServerAuth,
         }, 
-        services::Services,
-    }, 
     tcp::{tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive},
 };
 
@@ -73,7 +69,7 @@ pub struct JdsConnection {
     name: Name,
     connection_id: String,
     action_recv: Vec<Receiver<Action>>, 
-    services: Arc<RwLock<Services>>, 
+    services: Arc<RwLock<Services>>,
     conf: TcpServerConfig, 
     exit: Arc<AtomicBool>,
 }

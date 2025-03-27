@@ -52,11 +52,9 @@ impl TaskConfig {
     ///                 fn SqlMetric:
     ///                     ...
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TaskConfig {
-        log::trace!("TaskConfig.new | confTree: {:?}", conf);
+        log::trace!("TaskConfig.new | conf: {:?}", conf);
         let mut vars = vec![];
         let self_id = format!("TaskConfig({})", conf.key);
-        // let mut conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        log::trace!("{}.new | selfConf: {:?}", self_id, conf);
         let self_name = Name::new(parent, conf.sufix().unwrap());
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = conf.get_duration("cycle").ok();

@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::FnConfKeywd};
+use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::FnConfKeywd};
 use std::{fs, str::FromStr};
 use crate::conf::fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig};
 ///
@@ -58,7 +58,7 @@ impl MetricConfig {
                     }
                 };
                 let mut inputs = IndexMap::new();
-                match conf_tree.get("inputs") {
+                match ConfTreeGet::<ConfTree>::get(conf_tree, "inputs") {
                     Some(inputs_node) => {
                         for input_conf in inputs_node.sub_nodes().unwrap() {
                             log::trace!("MetricConfig.new | input conf: {:?}\t|\t{:?}", input_conf.key, input_conf.conf);

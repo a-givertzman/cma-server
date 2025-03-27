@@ -114,7 +114,9 @@ impl TcpServerConnections {
             match keys.first() {
                 Some(key) => {
                     let connection = self.connections.remove(key).unwrap();
-                    connection.send(Action::Exit).unwrap_or_else(|_| {info!("{}.run | Connection '{}' - already finished", self.id, key)});
+                    connection.send(Action::Exit).unwrap_or_else(|_| {
+                        log::info!("{}.run | Connection '{}' - already finished", self.id, key)
+                    });
                     connection.wait().unwrap();
                 }
                 None => {

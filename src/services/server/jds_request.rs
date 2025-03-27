@@ -1,16 +1,12 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}, thread, time::Duration};
 use concat_string::concat_string;
-use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr}, status::status::Status}, subscription::subscription_criteria::SubscriptionCriteria};
+use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr}, status::status::Status}, safe_lock::rwlock::SafeLock, services::Services, subscription::subscription_criteria::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     core_::{
         auth::ssh::auth_ssh::AuthSsh,
         net::protocols::jds::request_kind::RequestKind,
-    }, services::{
-        safe_lock::rwlock::SafeLock,
-        server::{jds_routes::RouterReply, jds_cnnection::JdsState},
-        services::Services,
-    }
+    }, services::server::{jds_routes::RouterReply, jds_cnnection::JdsState}
 };
 use super::jds_cnnection::Shared;
 

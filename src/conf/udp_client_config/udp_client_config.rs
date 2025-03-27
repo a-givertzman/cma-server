@@ -1,12 +1,8 @@
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::{collections::map::FxIndexMap, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
+use sal_sync::{collections::map::FxIndexMap, services::{conf::{conf_tree::{ConfTree, ConfTreeGet}, diag_keywd::DiagKeywd}, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
 use std::{fs, hash::BuildHasherDefault, str::FromStr, time::Duration};
-use crate::conf::{
-    diag_keywd::DiagKeywd,
-    service_config::ServiceConfig, udp_client_config::keywd::{self, Keywd},
-};
-
+use crate::conf::udp_client_config::keywd::{self, Keywd};
 use super::udp_client_db_config::UdpClientDbConfig;
 ///
 /// Creates config from serde_yaml::Value
@@ -61,43 +57,41 @@ pub struct UdpClientConfig {
 impl UdpClientConfig {
     ///
     /// Creates new instance of the [UdpClientConfig]:
-    pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
-        log::trace!("UdpClientConfig.new | conf_tree: {:#?}", conf_tree);
-        let self_id = format!("UdpClientConfig({})", conf_tree.key);
-        let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
-        let sufix = self_conf.sufix();
-        let self_name = Name::new(parent, if sufix.is_empty() {self_conf.name()} else {sufix});
+    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
+        log::trace!("UdpClientConfig.new | conf: {:#?}", conf);
+        let self_id = format!("UdpClientConfig({})", conf.key);
+        let sufix = conf.sufix().unwrap();
+        let self_name = Name::new(parent, if sufix.is_empty() {conf.name().unwrap()} else {sufix});
         log::debug!("{}.new | name: {:?}", self_id, self_name);
-        let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
+        let description = conf.get("description").unwrap_or_default();
         log::debug!("{}.new | description: {:?}", self_id, description);
-        let subscribe = ConfSubscribe::new(self_conf.get_param_value("subscribe").unwrap_or(serde_yaml::Value::Null));
+        let subscribe = ConfSubscribe::new(conf.get("subscribe").unwrap_or(serde_yaml::Value::Null));
         log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
+        let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: {}", self_id, send_to);
-        let cycle = self_conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let reconnect = self_conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
+        let reconnect = conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
         log::debug!("{}.new | reconnect: {:?}", self_id, reconnect);
-        let protocol = self_conf.get_param_value("protocol").unwrap().as_str().unwrap().to_string();
+        let protocol = conf.get("protocol").unwrap();
         log::debug!("{}.new | protocol: {:?}", self_id, protocol);
-        let local_address = self_conf.get_param_value("local-address").unwrap().as_str().unwrap().to_string();
+        let local_address = conf.get("local-address").unwrap();
         log::debug!("{}.new | local-address: {:?}", self_id, local_address);
-        let remote_address = self_conf.get_param_value("remote-address").unwrap().as_str().unwrap().to_string();
+        let remote_address = conf.get("remote-address").unwrap();
         log::debug!("{}.new | remote-address: {:?}", self_id, remote_address);
-        let mtu = self_conf.get_param_value("mtu");
+        let mtu = conf.get("mtu");
         log::debug!("{}.new | mtu: {:?}", self_id, mtu);
-        let diagnosis = self_conf.get_diagnosis(&self_name);
+        let diagnosis = conf.get_diagnosis(&self_name);
         log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
-        for key in &self_conf.keys {
-            let keyword = Keywd::from_str(key).unwrap();
+        for key in conf.keys() {
+            let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == keywd::Kind::Db {
                 let db_name = keyword.name();
-                let mut device_conf = self_conf.get(key).unwrap();
+                let device_conf = conf.get(key).unwrap();
                 log::debug!("{}.new | DB '{}'", self_id, db_name);
                 log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
-                let node_conf = UdpClientDbConfig::new(&self_name, &db_name, &mut device_conf);
+                let node_conf = UdpClientDbConfig::new(&self_name, &db_name, device_conf);
                 dbs.insert(
                     db_name,
                     node_conf,
@@ -126,7 +120,7 @@ impl UdpClientConfig {
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> UdpClientConfig {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
-                Self::new(parent, &mut ConfTree::new(key.as_str().unwrap(), value.clone()))
+                Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
             }
             None => {
                 panic!("UdpClientConfig.from_yaml | Format error or empty conf: {:#?}", value)

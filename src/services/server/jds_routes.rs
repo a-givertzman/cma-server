@@ -1,8 +1,8 @@
 use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, RwLock}};
-use sal_sync::services::entity::{name::Name, object::Object, point::point::Point};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, services::Services};
 use crate::{
     core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
-    services::{server::jds_cnnection::Shared, services::Services},
+    services::server::jds_cnnection::Shared,
     tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult},
 };
 use concat_string::concat_string;
@@ -106,7 +106,7 @@ impl<F> TcpStreamRead for JdsRoutes<F> where
                         }
                     }
                     OpResult::Err(err) => {
-                        if log::max_level() == LevelFilter::Trace {
+                        if log::max_level() == log::LevelFilter::Trace {
                             log::warn!("{}.read | error: {:?}", self.id, err);
                         }
                         ConnectionStatus::Active(OpResult::Err(err))

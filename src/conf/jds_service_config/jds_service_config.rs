@@ -28,18 +28,17 @@ impl JdsServiceConfig {
             log::error!("JdsServiceConfig.new | JdsServiceConfig conf must have single item, additional items was ignored: {:?}", conf_tree)
         };
         match conf_tree.next() {
-            Some(self_conf) => {
-                let self_id = format!("JdsServiceConfig({})", self_conf.key);
-                let mut self_conf = ServiceConfig::new(&self_id, self_conf);
-                log::trace!("{}.new | selfConf: {:?}", self_id, self_conf);
-                let self_name = self_conf.name();
+            Some(mut conf) => {
+                let self_id = format!("JdsServiceConfig({})", conf.key);
+                log::trace!("{}.new | conf: {:?}", self_id, conf);
+                let self_name = conf.name().unwrap();
                 // let self_addr = self_conf.sufix();
                 log::debug!("{}.new | name: {:?}", self_id, self_name);
-                let cycle = self_conf.get_duration("cycle");
+                let cycle = conf.get_duration("cycle").ok();
                 log::debug!("{}.new | cycle: {:?}", self_id, cycle);
-                let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
+                let (rx, rx_max_len) = conf.get_in_queue().unwrap();
                 log::debug!("{}.new | RX: {},\tmax-length: {}", self_id, rx, rx_max_len);
-                let tx = self_conf.get_out_queue().unwrap();
+                let tx = conf.get_out_queue().unwrap();
                 log::debug!("{}.new | TX: {}", self_id, tx);
                 JdsServiceConfig {
                     name: self_name,

@@ -1,9 +1,6 @@
 use indexmap::IndexMap;
-use sal_sync::services::conf::{conf_tree::ConfTree, services_conf::ServicesConf};
+use sal_sync::services::conf::{conf_keywd::ConfKeywd, conf_kind::ConfKind, conf_tree::{ConfTree, ConfTreeGet}, services_conf::ServicesConf};
 use std::{fs, path::Path, str::FromStr};
-use crate::conf::{
-    conf_keywd::{ConfKeywd, ConfKind}, service_config::ServiceConfig
-};
 ///
 /// Creates application config from serde_yaml::Value of following format:
 /// 
@@ -69,22 +66,20 @@ pub struct AppConfig {
 impl AppConfig {
     ///
     /// Creates new instance of the [AppConfig]:
-    pub fn new(conf_tree: &mut ConfTree) -> Self {
-        log::trace!("AppConfig.new | confTree: {:?}", conf_tree);
-        let self_id = format!("AppConfig({})", conf_tree.key);
-        let mut self_conf = ServiceConfig::new(&self_id, conf_tree.to_owned());
-        log::trace!("{}.new | selfConf: {:?}", self_id, self_conf);
-        let self_name = self_conf.get_param_value("name").unwrap().as_str().unwrap().to_owned();
+    pub fn new(conf: ConfTree) -> Self {
+        log::trace!("AppConfig.new | conf: {:?}", conf);
+        let self_id = format!("AppConfig({})", conf.key);
+        let self_name = conf.get("name").unwrap();
         log::debug!("{}.new | name: {:?}", self_id, self_name);
-        let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_owned();
+        let description = conf.get("description").unwrap();
         log::debug!("{}.new | description: {:?}", self_id, description);
         let mut nodes = IndexMap::new();
-        for key in self_conf.keys.iter().filter(|key| ! ["name", "description", "retain"].contains(&key.to_string().as_str())) {
-            let keyword = ConfKeywd::from_str(key).unwrap();
+        for key in conf.keys().into_iter().filter(|key| ! ["name", "description", "retain"].contains(&key.to_string().as_str())) {
+            let keyword = ConfKeywd::from_str(&key).unwrap();
             match keyword.kind() {
-                ConfKind::Service | ConfKind::Task => {
+                k if k == ConfKind::Service.to_string() || k == ConfKind::Task.to_string() => {
                     let node_name = keyword.name();
-                    let node_conf = self_conf.get(key).unwrap();
+                    let node_conf = conf.get(key).unwrap();
                     if log::max_level() == log::LevelFilter::Debug {
                         let sufix = match keyword.sufix().is_empty() {
                             true => "".to_owned(),
@@ -104,8 +99,8 @@ impl AppConfig {
                 }
             }
         }
-        let services = self_conf.get_param_value("services").unwrap();
-        let services: ServicesConf = services.try_into().unwrap();
+        let services = conf.get("services").unwrap();
+        let services = ServicesConf::new(&self_id, services);
         log::debug!("{}.new | services: {:#?}", self_id, services);
         // let services = RetainConf::default();
         Self {
@@ -119,7 +114,7 @@ impl AppConfig {
     ///
     /// creates config from serde_yaml::Value of following format:
     pub(crate) fn from_yaml_value(value: &serde_yaml::Value) -> AppConfig {
-        Self::new(&mut ConfTree::new_root(value.clone()))
+        Self::new(ConfTree::new_root(value.clone()))
     }
     ///
     /// reads config from path

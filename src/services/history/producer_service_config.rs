@@ -48,9 +48,8 @@ impl ProducerServiceConfig {
     ///             type: Real
     /// ```
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> ProducerServiceConfig {
-        log::trace!("ProducerServiceConfig.new | confTree: {:?}", conf);
+        log::trace!("ProducerServiceConfig.new | conf: {:?}", conf);
         let self_id = format!("ProducerServiceConfig({})", conf.key);
-        log::trace!("{}.new | self_conf: {:?}", self_id, conf);
         let self_name = Name::new(parent, conf.sufix().unwrap());
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = conf.get_duration("cycle").ok();

@@ -73,10 +73,10 @@ impl SlmpClientConfig {
             let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();
-                let mut device_conf = conf.get(key).unwrap();
+                let device_conf = conf.get(key).unwrap();
                 log::debug!("{}.new | DB '{}'", self_id, db_name);
                 log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
-                let node_conf = SlmpDbConfig::new(&self_name, &db_name, &mut device_conf);
+                let node_conf = SlmpDbConfig::new(&self_name, &db_name, device_conf);
                 dbs.insert(
                     db_name,
                     node_conf,

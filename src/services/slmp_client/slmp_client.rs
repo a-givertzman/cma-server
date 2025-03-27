@@ -1,17 +1,16 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
 use sal_sync::{
     collections::map::FxIndexMap, kernel::state::exit_notify::ExitNotify, services::{
-        entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status},
-        service::{service::Service, service_handles::ServiceHandles},
+        conf::diag_keywd::DiagKeywd, entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
     }
 };
 use testing::stuff::wait::WaitTread;
 use crate::{
-    conf::{diag_keywd::DiagKeywd, slmp_client_config::slmp_client_config::SlmpClientConfig},
+    conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
     core_::constants::constants::RECV_TIMEOUT,
     services::{
-        diagnosis::diag_point::DiagPoint, safe_lock::rwlock::SafeLock,
-        services::Services, slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
+        diagnosis::diag_point::DiagPoint,
+        slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
     },
     tcp::tcp_client_connect::TcpClientConnect,
      

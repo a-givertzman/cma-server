@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
 use std::{str::FromStr, time::Duration};
 use crate::services::slmp_client::slmp::device_code::DeviceCode;
 ///
@@ -18,31 +18,29 @@ pub struct SlmpDbConfig {
 impl SlmpDbConfig {
     ///
     /// Creates new instance of the SlmpDbConfig
-    pub fn new(parent: impl Into<String>, name: &str, conf_tree: &mut ConfTree) -> Self {
-        log::trace!("SlmpDbConfig.new | confTree: {:?}", conf_tree);
-        let self_conf = conf_tree.clone();
+    pub fn new(parent: impl Into<String>, name: &str, mut conf: ConfTree) -> Self {
+        log::trace!("SlmpDbConfig.new | conf: {:?}", conf);
+        let self_conf = conf.clone();
         let self_id = format!("SlmpDbConfig({})", self_conf.key);
-        let mut self_conf = ServiceConfig::new(&self_id, self_conf);
-        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
         let self_name = Name::new(parent, name);
         log::debug!("{}.new | name: {:?}", self_id, self_name);
-        let cycle = self_conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let description = self_conf.get_param_value("description").unwrap_or(serde_yaml::Value::String(String::new())).as_str().unwrap().to_string();
+        let description = conf.get("description").unwrap_or(String::new());
         log::debug!("{}.new | description: {:?}", self_id, description);
-        let device_code = self_conf.get_param_value("device-code").unwrap();
-        let device_code = DeviceCode::from(device_code.as_str().unwrap());
+        let device_code: String = conf.get("device-code").unwrap();
+        let device_code = DeviceCode::from(device_code.as_str());
         log::debug!("{}.new | device-code: {:?}", self_id, device_code);
-        let offset = self_conf.get_param_value("offset").unwrap().as_u64().unwrap();
+        let offset: u64 = conf.get("offset").unwrap();
         log::debug!("{}.new | offset: {:?}", self_id, offset);
-        let size = self_conf.get_param_value("size").unwrap().as_u64().unwrap();
+        let size: u64 = conf.get("size").unwrap();
         log::debug!("{}.new | size: {:?}", self_id, size);
         let mut points = vec![];
-        for key in &self_conf.keys {
-            let keyword = FnConfKeywd::from_str(key).unwrap();
+        for key in conf.keys() {
+            let keyword = FnConfKeywd::from_str(&key).unwrap();
             if keyword.kind() == FnConfKindName::Point {
                 let point_name = format!("{}/{}", self_name, keyword.data());
-                let point_conf = self_conf.get(key).unwrap();
+                let point_conf = conf.get(key).unwrap();
                 log::trace!("{}.new | Point '{}'", self_id, point_name);
                 log::trace!("{}.new | Point '{}'   |   conf: {:?}", self_id, point_name, point_conf);
                 let node_conf = PointConfig::new(&self_name, &point_conf);

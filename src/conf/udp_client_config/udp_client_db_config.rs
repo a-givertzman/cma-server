@@ -1,6 +1,5 @@
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
 use std::str::FromStr;
-use crate::conf::service_config::ServiceConfig;
 ///
 /// 
 #[derive(Debug, PartialEq, Clone)]
@@ -16,24 +15,22 @@ pub struct UdpClientDbConfig {
 impl UdpClientDbConfig {
     ///
     /// Creates new instance of the UdpClientDbConfig
-    pub fn new(parent: impl Into<String>, name: &str, conf_tree: &mut ConfTree) -> Self {
-        log::trace!("UdpClientDbConfig.new | confTree: {:?}", conf_tree);
-        let self_conf = conf_tree.clone();
+    pub fn new(parent: impl Into<String>, name: &str, conf: ConfTree) -> Self {
+        log::trace!("UdpClientDbConfig.new | conf: {:?}", conf);
+        let self_conf = conf.clone();
         let self_id = format!("UdpClientDbConfig({})", self_conf.key);
-        let mut self_conf = ServiceConfig::new(&self_id, self_conf);
-        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
         let self_name = Name::new(parent, name);
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         // let cycle = self_conf.get_duration("cycle");
         // log::debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let description = self_conf.get_param_value("description").unwrap_or(serde_yaml::Value::String(String::new())).as_str().unwrap().to_string();
+        let description = conf.get("description").unwrap_or_default();
         log::debug!("{}.new | description: {:?}", self_id, description);
         let mut points = vec![];
-        for key in &self_conf.keys {
-            let keyword = FnConfKeywd::from_str(key).unwrap();
+        for key in conf.keys() {
+            let keyword = FnConfKeywd::from_str(&key).unwrap();
             if keyword.kind() == FnConfKindName::Point {
                 let point_name = format!("{}/{}", self_name, keyword.data());
-                let point_conf = self_conf.get(key).unwrap();
+                let point_conf = conf.get(key).unwrap();
                 log::trace!("{}.new | Point '{}'", self_id, point_name);
                 log::trace!("{}.new | Point '{}'   |   conf: {:?}", self_id, point_name, point_conf);
                 let node_conf = PointConfig::new(&self_name, &point_conf);
