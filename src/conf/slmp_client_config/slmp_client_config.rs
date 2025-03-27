@@ -47,7 +47,7 @@ pub struct SlmpClientConfig {
 impl SlmpClientConfig {
     ///
     /// Creates new instance of the [SlmpClientConfig]:
-    pub fn new(parent: impl Into<String>, conf: &mut ConfTree) -> Self {
+    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
         log::trace!("SlmpClientConfig.new | conf: {:#?}", conf);
         let self_id = format!("SlmpClientConfig({})", conf.key);
         let self_name = Name::new(parent, conf.sufix().unwrap());
@@ -103,7 +103,7 @@ impl SlmpClientConfig {
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> SlmpClientConfig {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
-                Self::new(parent, &mut ConfTree::new(key.as_str().unwrap(), value.clone()))
+                Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
             }
             None => {
                 panic!("SlmpClientConfig.from_yaml | Format error or empty conf: {:#?}", value)
