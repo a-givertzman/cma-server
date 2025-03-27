@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::{collections::map::FxIndexMap, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
+use sal_sync::{collections::map::FxIndexMap, services::{conf::{conf_tree::{ConfTree, ConfTreeGet}, diag_keywd::DiagKeywd}, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig};
 ///
@@ -47,35 +47,33 @@ pub struct SlmpClientConfig {
 impl SlmpClientConfig {
     ///
     /// Creates new instance of the [SlmpClientConfig]:
-    pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
-        log::trace!("SlmpClientConfig.new | conf_tree: {:#?}", conf_tree);
-        let self_id = format!("SlmpClientConfig({})", conf_tree.key);
-        let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
-        let self_name = Name::new(parent, self_conf.sufix());
+    pub fn new(parent: impl Into<String>, conf: &mut ConfTree) -> Self {
+        log::trace!("SlmpClientConfig.new | conf: {:#?}", conf);
+        let self_id = format!("SlmpClientConfig({})", conf.key);
+        let self_name = Name::new(parent, conf.sufix().unwrap());
         log::debug!("{}.new | name: {:?}", self_id, self_name);
-        let cycle = self_conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let reconnect_cycle = self_conf.get_duration("reconnect").map_or(Duration::from_secs(1), |reconnect| reconnect);
+        let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(1), |reconnect| reconnect);
         log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
-        let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
+        let subscribe = conf.get("subscribe").unwrap();
         log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
+        let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: '{}'", self_id, send_to);
-        let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
+        let description = conf.get("description").unwrap();
         log::debug!("{}.new | description: {:?}", self_id, description);
-        let ip = self_conf.get_param_value("ip").unwrap().as_str().unwrap().to_string();
+        let ip = conf.get("ip").unwrap();
         log::debug!("{}.new | ip: {:?}", self_id, ip);
-        let port = self_conf.get_param_value("port").unwrap().as_u64().unwrap();
+        let port = conf.get("port").unwrap();
         log::debug!("{}.new | port: {:?}", self_id, ip);
-        let diagnosis = self_conf.get_diagnosis(&self_name);
+        let diagnosis = conf.get_diagnosis(&self_name);
         log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::new();
-        for key in &self_conf.keys {
-            let keyword = Keywd::from_str(key).unwrap();
+        for key in conf.keys() {
+            let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();
-                let mut device_conf = self_conf.get(key).unwrap();
+                let mut device_conf = conf.get(key).unwrap();
                 log::debug!("{}.new | DB '{}'", self_id, db_name);
                 log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
                 let node_conf = SlmpDbConfig::new(&self_name, &db_name, &mut device_conf);
