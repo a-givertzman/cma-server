@@ -2,20 +2,23 @@
 
 mod jds_routes {
     use sal_sync::services::{
-        entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
-        retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::{link_name::LinkName, service::Service},
+        conf::{conf_tree::ConfTree, services_conf::ServicesConf},
+        entity::{
+            cot::Cot, name::Name, object::Object,
+            point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId},
+            status::status::Status,
+        },
+        multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf},
+        safe_lock::rwlock::SafeLock, service::{link_name::LinkName, service::Service}, services::Services,
     };
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once, RwLock}, thread, time::Duration};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, tcp_server_config::TcpServerConfig},
+        conf::tcp_server_config::TcpServerConfig,
         core_::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
-        services::{
-            multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer,
-            services::Services,
-        },
-        tests::unit::services::{multi_queue::mock_recv_service::MockRecvService, service::mock_service_points::MockServicePoints},
+        services::server::tcp_server::TcpServer,
+        tests::unit::services::{mock::mock_recv_service::MockRecvService, service::mock_service_points::MockServicePoints},
     };
     ///
     static INIT: Once = Once::new();
@@ -142,9 +145,14 @@ mod jds_routes {
         let test_items_count = test_data.len();        
         //
         // Configuring Services
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
         ))));
         //
         // Configuring Receiver
@@ -160,7 +168,7 @@ mod jds_routes {
                 send-to:
                     - {}.in-queue
         "#, receiver.read().unwrap().name().join())).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
+        let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //
@@ -238,9 +246,14 @@ mod jds_routes {
         test_duration.run().unwrap();
         //
         // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
         ))));
         //
         // Configuring Receiver
@@ -254,7 +267,7 @@ mod jds_routes {
                 send-to:
                     - {}.in-queue
         "#, receiver.read().unwrap().name().join())).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
+        let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //
@@ -389,9 +402,14 @@ mod jds_routes {
         let test_items_count = test_data.len();
         //
         // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
         ))));
         //
         // Configuring Receiver
@@ -405,7 +423,7 @@ mod jds_routes {
                 send-to:
                     - {}.in-queue
         "#, receiver.read().unwrap().name().join())).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
+        let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //
@@ -523,9 +541,14 @@ mod jds_routes {
         test_duration.run().unwrap();
         //
         // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
         ))));
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
@@ -534,7 +557,7 @@ mod jds_routes {
                 send-to:
                     - {}/MockRecvService0.in-queue
         "#, self_id)).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
+        let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         //

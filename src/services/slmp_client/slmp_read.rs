@@ -101,8 +101,8 @@ impl SlmpRead {
                         &self_id,
                         false,
                         vec![
-                            (true,  Box::new(|message| info!("{}", message))),
-                            (false, Box::new(|message| warn!("{}", message))),
+                            (true,  Box::new(|message| log::info!("{}", message))),
+                            (false, Box::new(|message| log::warn!("{}", message))),
                         ],
                     );
                     let mut cycle = ServiceCycle::new(&self_id, cycle_interval);

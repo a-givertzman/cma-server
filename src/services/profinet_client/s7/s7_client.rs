@@ -52,7 +52,7 @@ impl S7Client {
         } else {
             // self.isConnected = false;
             let err = S7Error::from(err_code);
-            if log::max_level() == LevelFilter::Trace {
+            if log::max_level() == log::LevelFilter::Trace {
                 log::warn!("{}.connect | connection error: {:?}", self.id, err);
             }
             Err(err)

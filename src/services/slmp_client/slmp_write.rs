@@ -7,13 +7,14 @@ use sal_sync::{
     kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
     services::{
         entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status},
-        service::service_cycle::ServiceCycle, subscription::subscription_criteria::SubscriptionCriteria,
+        safe_lock::rwlock::SafeLock, service::service_cycle::ServiceCycle, services::Services,
+        subscription::subscription_criteria::SubscriptionCriteria,
     },
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
     core_::failure::errors_limit::ErrorLimit,
-    services::{safe_lock::rwlock::SafeLock, services::Services, slmp_client::slmp_db::SlmpDb},
+    services::slmp_client::slmp_db::SlmpDb,
 };
 
 use super::slmp_read::SlmpRead;
@@ -84,8 +85,8 @@ impl SlmpWrite {
                         &self_id,
                         false,
                         vec![
-                            (true,  Box::new(|message| info!("{}", message))),
-                            (false, Box::new(|message| warn!("{}", message))),
+                            (true,  Box::new(|message| log::info!("{}", message))),
+                            (false, Box::new(|message| log::warn!("{}", message))),
                         ],
                     );
                     let mut cycle = ServiceCycle::new(&self_id, cycle_interval);

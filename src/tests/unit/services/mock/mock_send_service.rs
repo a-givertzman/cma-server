@@ -1,8 +1,6 @@
-#![allow(non_snake_case)]
 use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}, services::Services};
 use testing::entities::test_value::Value;
-use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
 ///
 pub struct MockSendService {
@@ -80,7 +78,7 @@ impl Service for MockSendService {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let txSend = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
+        let tx_send = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
         let test_data = self.test_data.clone();
@@ -90,7 +88,7 @@ impl Service for MockSendService {
             log::info!("{}.run | Preparing thread - ok", self_id);
             for value in test_data {
                 let point = value.to_point(0,&format!("{}/test", self_id));
-                match txSend.send(point.clone()) {
+                match tx_send.send(point.clone()) {
                     Ok(_) => {
                         log::trace!("{}.run | send: {:?}", self_id, point);
                         sent.write().unwrap().push(point);

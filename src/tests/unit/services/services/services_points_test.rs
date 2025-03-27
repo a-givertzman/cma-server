@@ -1,13 +1,13 @@
 #[cfg(test)]
 
 mod services_points {
-        use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, safe_lock::rwlock::SafeLock, services::Services};
     use std::{env, sync::{Arc, Once, RwLock}, time::Duration};
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
-        services::{safe_lock::rwlock::SafeLock, services::Services, task::task::Task},
+        services::task::task::Task,
     };
     ///
     ///
@@ -40,13 +40,15 @@ mod services_points {
         let config = TaskConfig::read(&self_name, path);
         log::trace!("config: {:?}", &config);
         println!(" points: {:?}", config.points());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new(
-                "point/id.json",
-                None,
-            ))),
-        )));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
+        ))));
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
         services.wlock(self_id).insert(task.clone());
         let services_handle = services.wlock(self_id).run().unwrap();

@@ -6,13 +6,10 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::{collections::map::FxIndexMap, kernel::state::change_notify::ChangeNotify, services::{entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria}};
+use sal_sync::{collections::map::FxIndexMap, kernel::state::change_notify::ChangeNotify, services::{conf::diag_keywd::DiagKeywd, entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria}};
 use testing::stuff::wait::WaitTread;
 use crate::{
-    conf::{
-        diag_keywd::DiagKeywd,
-        profinet_client_config::profinet_client_config::ProfinetClientConfig,
-    },
+    conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
     core_::{
         constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit,
     },
@@ -110,8 +107,8 @@ impl ProfinetClient {
                             &self_id,
                             false,
                             vec![
-                                (true,  Box::new(|message| info!("{}", message))),
-                                (false, Box::new(|message| warn!("{}", message))),
+                                (true,  Box::new(|message| log::info!("{}", message))),
+                                (false, Box::new(|message| log::warn!("{}", message))),
                             ],
                         );
                         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
@@ -200,8 +197,8 @@ impl ProfinetClient {
                 &self_id,
                 false,
                 vec![
-                    (true,  Box::new(|message| info!("{}", message))),
-                    (false, Box::new(|message| warn!("{}", message))),
+                    (true,  Box::new(|message| log::info!("{}", message))),
+                    (false, Box::new(|message| log::warn!("{}", message))),
                 ]
             );
             let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());

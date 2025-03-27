@@ -3,14 +3,22 @@ use concat_in_place::strcat;
 use derivative::Derivative;
 use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::services::{
-    entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::link_name::LinkName, types::bool::Bool
+    entity::{
+        cot::Cot, name::Name,
+        point::{
+            point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter,
+            point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId,
+        },
+        status::status::Status,
+    }, safe_lock::rwlock::SafeLock, service::link_name::LinkName, services::Services, types::bool::Bool
 };
 use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Arc, RwLock}};
 use crate::{
-    conf::fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig}, core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::fn_in_out_ref::FnInOutRef}, services::{safe_lock::rwlock::SafeLock, services::Services, task::nested_function::{
-        fn_::{FnIn, FnInOut, FnOut},
-        fn_kind::FnKind, fn_result::FnResult,
-    }}
+    conf::fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig},
+    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::fn_in_out_ref::FnInOutRef},
+    services::task::nested_function::{
+        fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
+    }
 };
 
 use super::fft_buff::FftBuf;

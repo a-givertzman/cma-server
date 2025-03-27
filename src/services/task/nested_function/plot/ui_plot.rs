@@ -41,8 +41,8 @@ impl UiPlot {
             &self_id,
             UiStatus::Ok,
             vec![
-                (UiStatus::Ok,  Box::new(|message| info!("{}", message))),
-                (UiStatus::Err, Box::new(|message| warn!("{}", message))),
+                (UiStatus::Ok,  Box::new(|message| log::info!("{}", message))),
+                (UiStatus::Err, Box::new(|message| log::warn!("{}", message))),
             ],
         )));
         Self {

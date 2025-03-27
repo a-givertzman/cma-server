@@ -170,7 +170,7 @@ impl Service for Task {
                         }
                         Err(err) => {
                             match err {
-                                RecvTimeoutError::Timeout => trace!("{}.run | Receive error: {:?}", self_id, err),
+                                RecvTimeoutError::Timeout => log::trace!("{}.run | Receive error: {:?}", self_id, err),
                                 RecvTimeoutError::Disconnected => {
                                     log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
                                     break 'main;

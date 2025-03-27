@@ -5,8 +5,8 @@ mod profinet_client {
         use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, retain::retain_conf::RetainConf, service::service::Service};
-    use crate::{conf::{multi_queue_config::MultiQueueConfig, profinet_client_config::profinet_client_config::ProfinetClientConfig}, core_::aprox_eq::aprox_eq::AproxEq, services::{multi_queue::multi_queue::MultiQueue, profinet_client::profinet_client::ProfinetClient, safe_lock::rwlock::SafeLock, services::Services}};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
+    use crate::{conf::profinet_client_config::profinet_client_config::ProfinetClientConfig, core_::aprox_eq::aprox_eq::AproxEq, services::profinet_client::profinet_client::ProfinetClient};
     ///
     ///
     static INIT: Once = Once::new();
@@ -34,7 +34,10 @@ mod profinet_client {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#""#).unwrap()),
+        ))));
         let conf = r#"
             service MultiQueue:
                 in queue in-queue:
@@ -42,7 +45,7 @@ mod profinet_client {
                 send-to: queue
         "#.to_string();
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(&self_name, &conf);
+        let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let path = "./src/tests/unit/services/profinet_client/profinet_client.yaml";
