@@ -70,7 +70,7 @@ impl ProfinetClientConfig {
         log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
         let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: {}", self_id, send_to);
-        if let Ok((_, _)) = conf.get_by_keyword("out", ConfKind::Queue) {
+        if let Ok((_, _)) = conf.get_by_keywd("out", ConfKind::Queue) {
             log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, conf)
         }
         let protocol = conf.get("protocol").unwrap();

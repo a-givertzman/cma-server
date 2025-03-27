@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, service::link_name::LinkName};
+use sal_sync::services::{conf::{conf_kind::ConfKind, conf_tree::{ConfTree, ConfTreeGet}}, entity::name::Name, service::link_name::LinkName};
 use std::{fs, net::SocketAddr, str::FromStr, time::Duration};
 use crate::services::server::jds_auth::TcpServerAuth;
 
@@ -44,36 +44,36 @@ impl TcpServerConfig {
     ///         max-length: 10000
     ///     send-to: MultiQueue.queue
     ///                     ...
-    pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> TcpServerConfig {
+    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TcpServerConfig {
         println!();
-        log::trace!("TcpServerConfig.new | confTree: {:?}", conf_tree);
-        let self_id = format!("TcpServerConfig({})", conf_tree.key);
-        let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        log::trace!("{}.new | selfConf: {:?}", self_id, self_conf);
-        let self_name = Name::new(parent, self_conf.name());
+        log::trace!("TcpServerConfig.new | confTree: {:?}", conf);
+        let self_id = format!("TcpServerConfig({})", conf.key);
+        log::trace!("{}.new | selfConf: {:?}", self_id, conf);
+        let self_name = Name::new(parent, conf.name().unwrap());
         log::debug!("{}.new | name: {:?}", self_id, self_name);
-        let self_address: SocketAddr = self_conf.get_param_value("address").unwrap().as_str().unwrap().parse().unwrap();
+        let self_address: SocketAddr = ConfTreeGet::<String>::get(&conf, "address").unwrap().parse().unwrap();
         log::debug!("{}.new | address: {:?}", self_id, self_address);
-        let cycle = self_conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
-        let reconnect_cycle = self_conf.get_duration("reconnect");
+        let reconnect_cycle = conf.get_duration("reconnect").ok();
         log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
-        let keep_timeout = self_conf.get_duration("keep-timeout").unwrap_or(Duration::from_secs(10));
-        log::debug!("{}.new | keepTimeout: {:?}", self_id, reconnect_cycle);
-        let auth = self_conf.get_param_conf("auth");
-        let auth = auth.or(self_conf.get_param_conf("auth-secret"));
-        let auth = auth.or(self_conf.get_param_conf("auth-ssh"));
+        let keep_timeout = conf.get_duration("keep-timeout").unwrap_or(Duration::from_secs(10));
+        log::debug!("{}.new | keepTimeout: {:?}", self_id, keep_timeout);
+        let auth = conf.get("auth");
+        let auth = auth.or(conf.get("auth-secret"));
+        let auth = auth.or(conf.get("auth-ssh"));
         let auth = auth.expect("{}.new | 'auth' or 'auth-secret' or 'auth-ssh' - not found");
         let auth = TcpServerAuth::new(auth);
         log::debug!("{}.new | auth: {:?}", self_id, auth);
-        let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
+        let (rx, rx_max_len) = conf.get_in_queue().unwrap();
         log::debug!("{}.new | 'in queue': {},\tmax-length: {}", self_id, rx, rx_max_len);
-        let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
+        let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: {:?}", self_id, send_to);
-        if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
-            log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)
+        if let Ok((_, _)) = conf.get_by_keywd("out", ConfKind::Queue) {
+            log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, conf)
         }
-        let cache = self_conf.get_param_value("cache").map_or_else(|_| None, |v| v.as_str().map(|v| v.to_owned()));
+        let cache = conf.get("cache");
+        // .map_or_else(|| None, |v| v.as_str().map(|v| v.to_owned()));
         log::debug!("{}.new | cache: {:?}", self_id, cache);
         TcpServerConfig {
             name: self_name,
@@ -93,7 +93,7 @@ impl TcpServerConfig {
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> TcpServerConfig {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
-                Self::new(parent, &mut ConfTree::new(key.as_str().unwrap(), value.clone()))
+                Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
             }
             None => {
                 panic!("TcpServerConfig.from_yaml | Format error or empty conf: {:#?}", value)

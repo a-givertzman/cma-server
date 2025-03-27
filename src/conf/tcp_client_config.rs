@@ -56,7 +56,7 @@ impl TcpClientConfig {
         log::debug!("{}.new | RX: {},\tmax-length: {}", self_id, rx, rx_max_len);
         let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: {}", self_id, send_to);
-        if let Ok((_, _)) = conf.get_by_keyword("out", ConfKind::Queue) {
+        if let Ok((_, _)) = conf.get_by_keywd("out", ConfKind::Queue) {
             log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, conf)
         }
         TcpClientConfig {
