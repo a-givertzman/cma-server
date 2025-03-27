@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod multi_queue {
-    use log::debug;
-    use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
+        use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
     use std::{sync::{Arc, Once, RwLock}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -33,7 +32,6 @@ mod multi_queue {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "multi_queue_read_write_test";
         println!("\n{}", self_id);
         let iterations = 10;

@@ -1,4 +1,4 @@
-use log::{info, warn, LevelFilter};
+use log::LevelFilter;
 use sal_sync::services::{entity::point::point::Point, service::service_cycle::ServiceCycle};
 use std::{
     io::BufReader, net::TcpStream, 

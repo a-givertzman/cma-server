@@ -2,8 +2,7 @@
 
 mod jds_decode_message {
     use chrono::{DateTime, Utc};
-    use log::{info, debug, trace, error, warn};
-    use rand::Rng;
+        use rand::Rng;
     use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;
@@ -38,7 +37,6 @@ mod jds_decode_message {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test_jds_decode_message");
         let name = "/server/line1/ied1/test1";
         let ts = ts();

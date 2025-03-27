@@ -1,4 +1,3 @@
-use log::{info, warn, debug};
 use sal_sync::{
     kernel::state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged},
     services::{

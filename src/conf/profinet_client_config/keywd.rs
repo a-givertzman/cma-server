@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use log::trace;
 use regex::RegexBuilder;
 use serde::Deserialize;
 

@@ -1,7 +1,6 @@
 use sal_sync::services::entity::{name::Name, point::{point::{Point, ToPoint}, point_hlr::PointHlr, point_tx_id::PointTxId}};
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc, RwLock}};
 use indexmap::IndexMap;
-use log::trace;
 use crate::{
     conf::fn_::fn_config::FnConfig,
     core_::{

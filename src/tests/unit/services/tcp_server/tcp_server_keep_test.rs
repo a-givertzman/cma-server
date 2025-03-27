@@ -38,7 +38,6 @@ mod tcp_server {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "tcp_server_keep_send";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -130,7 +129,6 @@ mod tcp_server {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "tcp_server_keep_receive";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

@@ -2,8 +2,7 @@
 
 mod fn_retain {
     use chrono::Utc;
-    use log::{debug, error, info, trace, warn};
-    use sal_sync::services::{
+        use sal_sync::services::{
         entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, status::status::Status}, retain::{retain_conf::RetainConf, retain_point_api::RetainPointConfApi, retain_point_conf::RetainPointConf}, service::service::Service, types::bool::Bool
     };
     use std::{env, fs, io::Read, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
@@ -102,7 +101,6 @@ mod fn_retain {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "AppTest";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -242,7 +240,6 @@ mod fn_retain {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "AppTest";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -397,7 +394,6 @@ mod fn_retain {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         #[derive(Copy, Clone, Eq, PartialEq)]
         struct T(());
         // let uid = uid::Id::<T>::new();
@@ -559,7 +555,6 @@ mod fn_retain {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "AppTest";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

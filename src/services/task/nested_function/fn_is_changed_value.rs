@@ -6,7 +6,6 @@ use sal_sync::{
 use std::{collections::HashMap, hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use chrono::Utc;
 use hashers::fx_hash::FxHasher;
-use log::trace;
 use crate::core_::types::fn_in_out_ref::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///

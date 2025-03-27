@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod task_nodes {
-    use log::{info, debug, trace, warn};
-    use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::{service::Service, service_handles::ServiceHandles}};
+        use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::{service::Service, service_handles::ServiceHandles}};
     use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -37,7 +36,6 @@ mod task_nodes {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test");
         let path = "./src/tests/unit/services/task/task_nodes/task_nodes.yaml";
         let self_id = "test";

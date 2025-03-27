@@ -1,4 +1,3 @@
-use log::debug;
 use concat_string::concat_string;
 use sal_sync::services::entity::point::point::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};

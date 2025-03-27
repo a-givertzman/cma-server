@@ -5,7 +5,6 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use log::{debug, error, info, trace, warn};
 use sal_sync::{
     collections::map::FxIndexMap,
     kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},

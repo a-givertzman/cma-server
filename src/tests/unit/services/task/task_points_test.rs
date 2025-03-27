@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod task {
-    use log::trace;
-    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
+        use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
     use std::{env, sync::{Arc, Once, RwLock}, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -31,7 +30,6 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test Task.points";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -48,7 +46,6 @@ mod task {
         let target  = 3;
         let points = task.read().unwrap().points();
         let points_count = points.len();
-        println!();
         println!(" points count: {:?}", points_count);
         for point in points {
             println!("\t {:?}", point);

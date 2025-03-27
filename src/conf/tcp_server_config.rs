@@ -45,7 +45,6 @@ impl TcpServerConfig {
     ///     send-to: MultiQueue.queue
     ///                     ...
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TcpServerConfig {
-        println!();
         log::trace!("TcpServerConfig.new | confTree: {:?}", conf);
         let self_id = format!("TcpServerConfig({})", conf.key);
         log::trace!("{}.new | selfConf: {:?}", self_id, conf);

@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod thread_test {
-    use log::info;
-    use testing::stuff::wait::WaitTread;
+        use testing::stuff::wait::WaitTread;
     use std::{sync::Once, thread, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     ///

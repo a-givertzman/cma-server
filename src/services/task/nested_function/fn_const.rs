@@ -1,5 +1,4 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
-use log::trace;
 use sal_sync::services::entity::point::point::Point;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///

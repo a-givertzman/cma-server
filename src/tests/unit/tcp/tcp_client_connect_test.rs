@@ -3,8 +3,7 @@
 mod tcp_client_connect {
     use crate::tcp::tcp_client_connect::TcpClientConnect;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use log::{debug, info, warn};
-    use std::{
+        use std::{
         net::TcpListener,
         sync::{
             atomic::{AtomicBool, Ordering}, Arc, Mutex, Once
@@ -34,7 +33,6 @@ mod tcp_client_connect {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test success connection");
         let test_duration = TestDuration::new("tcp_client_connect/success_connection", Duration::from_secs(10));
         test_duration.run().unwrap();
@@ -115,7 +113,6 @@ mod tcp_client_connect {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test failure connection");
         let test_duration = TestDuration::new("tcp_client_connect/failure_connection", Duration::from_secs(10));
         test_duration.run().unwrap();

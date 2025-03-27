@@ -2,8 +2,7 @@
 #[cfg(test)]
 
 mod tests {
-    use log::info;
-    use std::sync::Once;
+        use std::sync::Once;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use sal_sync::kernel::state::{switch_state::{SwitchState, Switch, SwitchCondition}, switch_state_changed::SwitchStateChanged};
     ///
@@ -55,7 +54,6 @@ mod tests {
     fn test_state() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         println!("test SwitchState");
         let steps: Vec<f64> = vec![0.25, 0.50, 0.75];
         let mut switchState = SwitchStateChanged::new(

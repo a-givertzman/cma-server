@@ -2,8 +2,7 @@
 #[cfg(test)]
 
 mod tests {
-    use log::info;
-    use std::sync::Once;
+        use std::sync::Once;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::tcp_server_config::TcpServerConfig;
     ///
@@ -27,7 +26,6 @@ mod tests {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test TcpServerConfig";
         println!("\n{}", self_id);
         let test_data = [

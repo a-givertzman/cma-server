@@ -1,5 +1,4 @@
 #[cfg(test)]
-use log::{debug, info};
 use std::{sync::Once, rc::Rc, cell::RefCell};
 
 use crate::{

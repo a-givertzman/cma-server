@@ -1,7 +1,5 @@
-use log::{trace, debug};
 use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, subscription::conf_subscribe::ConfSubscribe};
 use std::{fs, time::Duration};
-use crate::conf::service_config::ServiceConfig;
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -31,7 +29,6 @@ impl CacheServiceConfig {
     ///         /App/MultiQueue: []
     /// ````
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
-        println!();
         log::trace!("CacheServiceConfig.new | conf_tree: {:?}", conf_tree);
         let self_id = format!("CacheServiceConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());

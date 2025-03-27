@@ -1,5 +1,4 @@
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use log::trace;
 use sal_sync::services::entity::{name::Name, object::Object, point::point::Point};
 use crate::{
     core_::{constants::constants::RECV_TIMEOUT, failure::recv_error::RecvError}, tcp::steam_read::StreamRead

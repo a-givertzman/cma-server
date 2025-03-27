@@ -1,6 +1,5 @@
 use chrono::Utc;
 use concat_string::concat_string;
-use log::{error, trace};
 use sal_sync::services::{
     entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
     types::bool::Bool,

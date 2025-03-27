@@ -1,4 +1,3 @@
-use log::{debug, info, warn};
 use sal_sync::services::{entity::{name::Name, object::Object}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
 use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, RwLock}, thread, time::Duration

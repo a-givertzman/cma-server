@@ -3,7 +3,6 @@ use eframe::CreationContext;
 use egui_plot::{Line, Plot, Points};
 use hsl::HSL;
 use indexmap::IndexMap;
-use log::{error, info, warn};
 use egui::{
     accesskit::Point, vec2, Align2, Color32, FontFamily, FontId, TextStyle 
 };

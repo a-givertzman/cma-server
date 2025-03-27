@@ -33,7 +33,6 @@ mod multi_queue {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test MultiQueue Performance";
         println!("\n{}", self_id);
         let iterations = ITERATIONS;
@@ -141,7 +140,6 @@ mod multi_queue {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test MultiQueue Performance with matching by producer ID";
         println!("\n{}", self_id);
         let self_id = "MultiQueuePerformance";

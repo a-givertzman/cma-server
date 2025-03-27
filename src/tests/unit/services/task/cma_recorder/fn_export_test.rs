@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod fn_export {
-    use log::{debug, info, trace};
-    use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
+        use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
     use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -32,7 +31,6 @@ mod fn_export {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "App";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -179,7 +177,6 @@ mod fn_export {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "App";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -312,7 +309,6 @@ mod fn_export {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "App";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

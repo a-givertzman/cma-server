@@ -1,4 +1,3 @@
-use log::{warn, info};
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::point::Point},
     service::{service::Service, service_handles::ServiceHandles},

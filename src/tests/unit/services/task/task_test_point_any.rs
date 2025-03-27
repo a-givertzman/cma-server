@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod task {
-    use log::{trace, info};
-    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
+        use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
     use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -31,7 +30,6 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "task_test_point_any";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

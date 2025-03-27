@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
 use egui::mutex::RwLock;
-use log::{info, trace, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use crate::core_::constants::constants::RECV_TIMEOUT;
 ///

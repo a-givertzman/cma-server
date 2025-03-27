@@ -1,7 +1,5 @@
 use std::fs;
-use log::{debug, error, trace};
 use sal_sync::services::{conf::conf_tree::ConfTree, entity::point::point_config::PointConfig};
-use crate::conf::service_config::ServiceConfig;
 ///
 /// Creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -23,7 +21,6 @@ impl JdsServiceConfig {
     ///
     /// Creates new instance of the [JdsServiceConfig]:
     pub fn new(conf_tree: &mut ConfTree) -> Self {
-        println!();
         log::trace!("JdsServiceConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item

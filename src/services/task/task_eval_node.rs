@@ -1,4 +1,3 @@
-use log::trace;
 use sal_sync::services::entity::point::point::Point;
 use crate::core_::types::fn_in_out_ref::FnInOutRef;
 ///

@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod task {
-    use log::{trace, info};
-    use sal_sync::services::{
+        use sal_sync::services::{
         entity::name::Name, retain::retain_conf::RetainConf, service::service::Service
     };
     use std::{env, sync::{Arc, Once, RwLock}, time::{Duration, Instant}};
@@ -33,7 +32,6 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "task_test";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

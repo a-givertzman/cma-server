@@ -1,5 +1,5 @@
 use std::{net::TcpStream, io::{Write, BufReader, Read}, sync::atomic::AtomicBool};
-use log::{warn, LevelFilter};
+use log::LevelFilter
 use crate::core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_define::JDS_END_OF_TRANSMISSION};
 ///
 /// Wraper for the TcpStream

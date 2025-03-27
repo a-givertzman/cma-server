@@ -2,8 +2,7 @@
 
 mod map_update_or_insert {
     use indexmap::IndexMap;
-    use log::debug;
-    use std::{collections::HashMap, sync::Once, time::Duration};
+        use std::{collections::HashMap, sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::tests::unit::services::retain_point_id::map_update_or_insert_test::{PointConf, RetainedPointConfig};
@@ -28,7 +27,6 @@ mod map_update_or_insert {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));

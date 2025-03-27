@@ -1,6 +1,5 @@
 use std::sync::{Arc, RwLock};
 use indexmap::IndexMap;
-use log::{trace, warn};
 use sal_sync::services::entity::{name::Name, point::{point::Point, point_tx_id::PointTxId}};
 use crate::{
     conf::{fn_::fn_conf_kind::FnConfKind, task_config::TaskConfig}, 

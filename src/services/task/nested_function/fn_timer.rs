@@ -1,4 +1,3 @@
-use log::trace;
 use sal_sync::{
     kernel::state::switch_state::{Switch, SwitchCondition, SwitchState},
     services::entity::{cot::Cot, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}}

@@ -1,6 +1,5 @@
 use sal_sync::services::entity::point::point::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use log::trace;
 use crate::{
     core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{

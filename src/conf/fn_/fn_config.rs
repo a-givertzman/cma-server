@@ -1,5 +1,4 @@
 use indexmap::IndexMap;
-use log::trace;
 use sal_sync::services::{
     conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig},
     task::functions::conf::{fn_conf_keywd::{FnConfKeywd, FnConfKindName, FnConfPointType}, fn_conf_options::FnConfOptions},

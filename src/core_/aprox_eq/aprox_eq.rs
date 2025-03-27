@@ -1,4 +1,3 @@
-use log::warn;
 use sal_sync::services::types::type_of::TypeOf;
 ///
 /// Provide approximately equality for f36, f64

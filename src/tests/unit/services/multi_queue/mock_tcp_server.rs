@@ -1,4 +1,3 @@
-use log::{info, warn, debug, trace};
 use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread};
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},

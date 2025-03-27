@@ -1,8 +1,7 @@
 #![allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
-    use log::info;
-    use std::sync::{Once, mpsc};
+        use std::sync::{Once, mpsc};
     use debugging ::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::core_::constants::constants::RECV_TIMEOUT; 
     ///    
@@ -26,7 +25,6 @@ mod tests {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test mpsc::Receiver");
         let (send, recv) = mpsc::channel();
         let iterations = 10000;

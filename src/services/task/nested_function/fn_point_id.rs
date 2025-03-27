@@ -1,6 +1,5 @@
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use log::{debug, trace};
 use sal_sync::services::entity::point::{point::Point, point_config::PointConfig, point_hlr::PointHlr};
 use std::{hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use concat_string::concat_string;

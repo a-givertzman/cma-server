@@ -1,4 +1,3 @@
-use log::{trace, debug};
 use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::name::Name};
 use std::{fs, time::Duration, net::SocketAddr};
 ///

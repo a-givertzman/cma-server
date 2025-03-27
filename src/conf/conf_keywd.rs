@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
 use std::str::FromStr;
-use log::{trace, warn};
 use regex::RegexBuilder;
 use serde::Deserialize;
 

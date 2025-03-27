@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use log::trace;
 use regex::RegexBuilder;
 use sal_sync::services::entity::point::point::Point;
 ///

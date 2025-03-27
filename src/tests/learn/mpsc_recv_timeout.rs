@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use log::{info, error};
-    use testing::stuff::wait::WaitTread;
+        use testing::stuff::wait::WaitTread;
     use std::{sync::{Once, mpsc::{self, RecvTimeoutError}}, time::Duration, thread::{self}};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::core_::constants::constants::RECV_TIMEOUT;
@@ -33,7 +32,6 @@ mod tests {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test mpsc::Receiver");
         let self_id = "test";
         let (send, recv) = mpsc::channel();

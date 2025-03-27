@@ -2,7 +2,6 @@ use chrono::Utc;
 use eframe::EventLoopBuilderHook;
 use egui::ViewportBuilder;
 use indexmap::IndexMap;
-use log::{error, trace};
 use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
 use winit::platform::x11::EventLoopBuilderExtX11;
 use std::{mem::MaybeUninit, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Once}, thread};

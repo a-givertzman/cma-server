@@ -1,5 +1,4 @@
 use indexmap::IndexMap;
-use log::{trace, debug};
 use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe};
 use std::{fs, time::Duration};
 use crate::conf::fn_::{
@@ -53,7 +52,6 @@ impl TaskConfig {
     ///                 fn SqlMetric:
     ///                     ...
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TaskConfig {
-        println!();
         log::trace!("TaskConfig.new | confTree: {:?}", conf);
         let mut vars = vec![];
         let self_id = format!("TaskConfig({})", conf.key);

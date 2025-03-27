@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod fn_sub {
-    use log::{debug, info};
-    use sal_sync::services::{entity::point::point::{Point, ToPoint}, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::point::point::{Point, ToPoint}, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -70,7 +69,6 @@ mod fn_sub {
             value2_stored = point2.clone();
             target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state, target);
-            println!();
         }
     }
     ///
@@ -119,7 +117,6 @@ mod fn_sub {
             value2_stored = point2.clone();
             target = Point::Int(value1_stored.as_int() - value2_stored.as_int());
             assert_eq!(state, target);
-            println!();
         }
     }
     ///
@@ -178,7 +175,6 @@ mod fn_sub {
             target = value1_stored.as_real().value - value2_stored.as_real().value;
             let result = state.as_real().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
     ///
@@ -237,7 +233,6 @@ mod fn_sub {
             target = value1_stored.as_double().value - value2_stored.as_double().value;
             let result = state.as_double().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
 }

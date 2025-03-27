@@ -11,8 +11,7 @@ mod tcp_stream_write {
         tests::unit::tcp::tcp_stream_write_test::MockStreamRead,
     };
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use log::{debug, info, warn};
-    use rand::Rng;
+        use rand::Rng;
     use std::{
         io::Read,
         net::{TcpListener, TcpStream},
@@ -59,7 +58,6 @@ mod tcp_stream_write {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test TcpStreamWrite";
         println!("\n{}", self_id);
         let count = 1000;

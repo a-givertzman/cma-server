@@ -1,5 +1,4 @@
 use std::{any::Any, collections::HashMap, net::TcpStream, sync::mpsc::{SendError, Sender}, thread::JoinHandle};
-use log::{error, info};
 use testing::stuff::wait::WaitTread;
 ///
 /// 

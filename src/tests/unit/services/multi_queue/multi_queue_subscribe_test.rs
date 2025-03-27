@@ -1,12 +1,10 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
-use log::{info, trace, warn};
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 #[cfg(test)]
 
 mod multi_queue {
-    use log::debug;
-    use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
+        use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
     use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::{
@@ -43,7 +41,6 @@ mod multi_queue {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "multi_queue_subscribe_test";
         println!("\n{}", self_id);
         let sender_count = 10;         // count of MockSendService's

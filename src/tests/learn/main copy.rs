@@ -3,7 +3,6 @@
 mod tests;
 mod core_;
 
-use log::{info, debug, trace, warn};
 use core_::nested_function::fn_config_type::FnConfigType;
 use serde::{Deserialize, Deserializer, de::{self}};
 use std::{env, collections::HashMap, str::FromStr, fmt::{Debug, self}};

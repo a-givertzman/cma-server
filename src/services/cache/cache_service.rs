@@ -20,7 +20,6 @@ use chrono::Utc;
 use concat_string::concat_string;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use log::{debug, error, info, trace, warn};
 use sal_sync::{collections::map::FxIndexMap, services::{entity::{
     cot::Cot, name::Name, object::Object,
     point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId},

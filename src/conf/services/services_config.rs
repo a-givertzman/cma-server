@@ -1,5 +1,4 @@
 use indexmap::IndexMap;
-use log::{debug, trace};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::{
     conf_keywd::{ConfKeywd, ConfKind}, conf_tree::ConfTree, service_config::ServiceConfig
@@ -59,7 +58,6 @@ impl ServicesConfig {
     ///
     /// Creates new instance of the [ServicesConfig]:
     pub fn new(conf_tree: &mut ConfTree) -> Self {
-        println!();
         log::trace!("ServicesConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item
@@ -75,7 +73,6 @@ impl ServicesConfig {
         let cycle = self_conf.get_duration("cycle");
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let mut nodes = IndexMap::new();
-        println!();
         for key in &self_conf.keys {
             let keyword = ConfKeywd::from_str(key).unwrap();
             match keyword.kind() {

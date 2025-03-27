@@ -3,8 +3,7 @@
 #[cfg(test)]
 mod tests {
     use hashers::fx_hash::FxHasher;
-    use log::error;
-    use std::{collections::HashMap, hash::BuildHasherDefault, sync::{mpsc, Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+        use std::{collections::HashMap, hash::BuildHasherDefault, sync::{mpsc, Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 
@@ -31,7 +30,6 @@ mod tests {
     fn map_in_rv_lock() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         let self_id = "test access to map behaind RvLock";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
@@ -111,7 +109,6 @@ mod tests {
     fn just_map() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         let self_id = "test direct access to map";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
@@ -189,7 +186,6 @@ mod tests {
     fn map_in_mutex() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         let self_id = "test access to map behaind Mutex";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
@@ -269,7 +265,6 @@ mod tests {
     fn matching() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        println!();
         let self_id = "test access values using match";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));

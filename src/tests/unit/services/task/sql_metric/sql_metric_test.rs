@@ -1,10 +1,7 @@
 #[cfg(test)]
 
 mod sql_metric {
-    use log::trace;
-    use log::debug;
-    use log::warn;
-    use regex::RegexBuilder;
+                use regex::RegexBuilder;
     use sal_sync::services::entity::{name::Name, point::point::{Point, ToPoint}};
     use sal_sync::services::retain::retain_conf::RetainConf;
     use std::sync::RwLock;
@@ -14,7 +11,7 @@ mod sql_metric {
     use crate::{
         conf::task_config::TaskConfig,
         services::{
-            task::task_nodes::TaskNodes, services::Services,
+            task::task_nodes::TaskNodes,
             // queues::queues::Queues,
         },
     };

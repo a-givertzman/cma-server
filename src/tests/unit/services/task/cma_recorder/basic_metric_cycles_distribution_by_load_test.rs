@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod cma_recorder {
-    use log::{info, trace};
-    use regex::Regex;
+        use regex::Regex;
     use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
     use std::{env, fs, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
@@ -36,7 +35,6 @@ mod cma_recorder {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "AppTest";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

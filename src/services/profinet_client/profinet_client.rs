@@ -6,7 +6,6 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use log::{debug, error, info, trace, warn};
 use sal_sync::{collections::map::FxIndexMap, kernel::state::change_notify::ChangeNotify, services::{entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria}};
 use testing::stuff::wait::WaitTread;
 use crate::{

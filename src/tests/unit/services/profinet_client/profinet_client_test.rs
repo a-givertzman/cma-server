@@ -2,8 +2,7 @@
 
 mod profinet_client {
     use chrono::Utc;
-    use log::{debug, warn};
-    use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
+        use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, retain::retain_conf::RetainConf, service::service::Service};
@@ -30,7 +29,6 @@ mod profinet_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "profinet_client_test";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

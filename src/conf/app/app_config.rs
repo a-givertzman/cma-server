@@ -70,7 +70,6 @@ impl AppConfig {
     ///
     /// Creates new instance of the [AppConfig]:
     pub fn new(conf_tree: &mut ConfTree) -> Self {
-        println!();
         log::trace!("AppConfig.new | confTree: {:?}", conf_tree);
         let self_id = format!("AppConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.to_owned());
@@ -80,7 +79,6 @@ impl AppConfig {
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_owned();
         log::debug!("{}.new | description: {:?}", self_id, description);
         let mut nodes = IndexMap::new();
-        println!();
         for key in self_conf.keys.iter().filter(|key| ! ["name", "description", "retain"].contains(&key.to_string().as_str())) {
             let keyword = ConfKeywd::from_str(key).unwrap();
             match keyword.kind() {

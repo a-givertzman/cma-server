@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod socket_read_performance {
     use chrono::{DateTime, Utc};
-    use log::{info, debug, error, trace};
-    use sal_sync::services::{
+        use sal_sync::services::{
         entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr},status::status::Status},
         types::bool::Bool,
     };
@@ -47,7 +46,6 @@ mod socket_read_performance {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test read bytes from socket performance");
         let name = "/server/line1/ied1/test1";
         let ts = ts();

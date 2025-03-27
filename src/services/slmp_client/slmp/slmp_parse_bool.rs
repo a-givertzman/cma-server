@@ -1,4 +1,3 @@
-use log::{debug, warn};
 use chrono::{DateTime, Utc};
 use sal_sync::services::{
     entity::{

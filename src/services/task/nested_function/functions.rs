@@ -1,7 +1,6 @@
 //!
 //! Here must be defined all functions to be awalible in the Task -> NestedFn
 use std::str::FromStr;
-use log::trace;
 ///
 /// Entair list of public functions
 /// supported by NestedFn builder

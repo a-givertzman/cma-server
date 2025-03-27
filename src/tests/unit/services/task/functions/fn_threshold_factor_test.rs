@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod fn_threshold_factor {
-    use log::{debug, info};
-    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use testing::entities::test_value::Value;
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};

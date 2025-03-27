@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod fn_pow {
-    use log::{debug, info};
-    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -75,7 +74,6 @@ mod fn_pow {
             target = value1_stored.as_int().value.pow(value2_stored.as_int().value as u32);
             let result = state.as_int().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
     ///
@@ -131,7 +129,6 @@ mod fn_pow {
             target = value1_stored.as_real().value.powf(value2_stored.as_real().value);
             let result = state.as_real().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
     ///
@@ -187,7 +184,6 @@ mod fn_pow {
             target = value1_stored.as_double().value.powf(value2_stored.as_double().value);
             let result = state.as_double().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
 }

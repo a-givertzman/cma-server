@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tcp_client {
-    use log::{info, debug, warn};
-    use sal_sync::services::{entity::{object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf};
+        use sal_sync::services::{entity::{object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf};
     use std::{io::BufReader, net::TcpListener, sync::{Arc, Once, RwLock}, thread::{self, JoinHandle}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -32,7 +31,6 @@ mod tcp_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "TcpClient-WRITE";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));

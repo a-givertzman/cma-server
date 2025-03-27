@@ -82,7 +82,6 @@ mod jds_routes {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "jds_request_test";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
@@ -232,7 +231,6 @@ mod jds_routes {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "jds_request_test";
         let self_name = Name::new(self_id, "");
         println!("\n{}", self_id);
@@ -338,7 +336,6 @@ mod jds_routes {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "jds_request_test";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
@@ -519,7 +516,6 @@ mod jds_routes {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "jds_request_test";
         let self_name = Name::new(self_id, "");
         println!("\n{}", self_id);

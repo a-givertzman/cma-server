@@ -1,5 +1,4 @@
 use std::{time::{Duration, Instant}, thread::{JoinHandle, self}, sync::{Arc, atomic::{AtomicBool, Ordering}}};
-use log::error;
 ///
 /// If maximum test turation will be exceeded - the panics throwed
 pub struct LockTimer {

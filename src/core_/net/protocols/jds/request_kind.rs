@@ -5,7 +5,6 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use log::warn;
 use regex::RegexBuilder;
 
 ///
@@ -116,7 +115,6 @@ mod tests {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test RequestKind";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new("RequestKind test", Duration::from_secs(10));

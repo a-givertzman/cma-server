@@ -1,5 +1,4 @@
 use indexmap::IndexMap;
-use log::{trace, debug};
 use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::FnConfKeywd};
 use std::{fs, str::FromStr};
 use crate::conf::fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig};
@@ -44,7 +43,6 @@ impl MetricConfig {
     ///             fn SqlMetric:
     ///                 ...
     pub fn new(parent_id: &str, parent_name: &Name, conf_tree: &ConfTree, vars: &mut Vec<String>) -> MetricConfig {
-        println!();
         log::trace!("MetricConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item

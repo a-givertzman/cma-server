@@ -62,7 +62,6 @@ impl UdpClientConfig {
     ///
     /// Creates new instance of the [UdpClientConfig]:
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
-        println!();
         log::trace!("UdpClientConfig.new | conf_tree: {:#?}", conf_tree);
         let self_id = format!("UdpClientConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());

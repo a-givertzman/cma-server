@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 #[cfg(test)]
-use log::{debug, info};
 use sal_sync::services::task::functions::conf::fn_conf_keywd::FnConfKeywd;
 use std::{sync::Once, str::FromStr};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

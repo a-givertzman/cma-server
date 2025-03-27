@@ -1,6 +1,5 @@
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
-use log::{info, warn};
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::tcp_client_config::TcpClientConfig,

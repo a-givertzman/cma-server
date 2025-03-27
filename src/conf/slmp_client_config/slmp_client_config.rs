@@ -1,10 +1,7 @@
 use indexmap::IndexMap;
-use log::{debug, trace};
 use sal_sync::{collections::map::FxIndexMap, services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
 use std::{fs, str::FromStr, time::Duration};
-use crate::conf::{
-    diag_keywd::DiagKeywd, service_config::ServiceConfig, slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig}
-};
+use crate::conf::slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig};
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml
@@ -51,7 +48,6 @@ impl SlmpClientConfig {
     ///
     /// Creates new instance of the [SlmpClientConfig]:
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
-        println!();
         log::trace!("SlmpClientConfig.new | conf_tree: {:#?}", conf_tree);
         let self_id = format!("SlmpClientConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());

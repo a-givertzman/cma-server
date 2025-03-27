@@ -3,7 +3,6 @@
 mod tests;
 mod core_;
 
-use log::{info, debug, trace, warn};
 use serde::Deserialize;
 use std::{env, fmt::Debug, time::Duration, thread::{self, JoinHandle}, cell::RefCell};
 

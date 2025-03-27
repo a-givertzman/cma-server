@@ -2,7 +2,6 @@ use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc,
 use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use log::{info, trace, warn};
 use rand::Rng;
 use sal_sync::services::{
     entity::{

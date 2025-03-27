@@ -1,5 +1,4 @@
 use std::io::Read;
-use log::trace;
 use crate::{
     core_::net::{connection_status::{ConnectionStatus, SocketState}, protocols::jds::jds_define::JDS_END_OF_TRANSMISSION},
     tcp::tcp_stream_write::OpResult,

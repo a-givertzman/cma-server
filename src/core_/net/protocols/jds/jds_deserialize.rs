@@ -1,7 +1,7 @@
 use std::io::{BufReader, Read};
 use chrono::{DateTime, Utc};
 use concat_string::concat_string;
-use log::{warn, trace, LevelFilter};
+use log::LevelFilter;
 use sal_sync::services::{
     entity::{
         cot::Cot, name::Name, object::Object, 

@@ -37,7 +37,6 @@ mod jds_encode_message {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         println!("test");
         let name = "/server/line1/ied1/test";
         let ts = ts();

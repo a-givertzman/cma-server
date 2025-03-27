@@ -2,9 +2,7 @@
 #[cfg(test)]
 
 mod tests {
-    use log::trace;
-    use log::{debug, info};
-    use sal_sync::services::entity::point::point::ToPoint;
+            use sal_sync::services::entity::point::point::ToPoint;
     use std::sync::Once;
     use regex::RegexBuilder;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};

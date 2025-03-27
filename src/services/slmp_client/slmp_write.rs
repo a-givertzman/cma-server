@@ -2,7 +2,6 @@ use std::{
     net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, mpsc::{self, Sender}, Arc, Mutex, RwLock},
     thread::{self, JoinHandle}, time::Duration,
 };
-use log::{debug, error, info, warn};
 use sal_sync::{
     collections::map::FxIndexMap,
     kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},

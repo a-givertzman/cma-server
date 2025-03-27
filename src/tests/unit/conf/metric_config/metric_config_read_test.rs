@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod tests{
-    use log::trace;
-    use sal_sync::services::{entity::name::Name, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::name::Name, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, env};
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -28,7 +27,6 @@ mod tests{
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test MetricConfig | read valid";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);

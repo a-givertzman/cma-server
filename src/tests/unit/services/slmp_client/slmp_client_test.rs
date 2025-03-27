@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod slmp_client {
-    use log::{warn, debug};
-    use std::{io::{self, Read, Write}, net::TcpStream, sync::Once, thread, time::Duration};
+        use std::{io::{self, Read, Write}, net::TcpStream, sync::Once, thread, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::services::slmp_client::slmp::{c_slmp_const::FrameType, device_code::DeviceCode, slmp_packet::SlmpPacket};
@@ -28,7 +27,6 @@ mod slmp_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(1000));
@@ -127,7 +125,6 @@ mod slmp_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(1000));

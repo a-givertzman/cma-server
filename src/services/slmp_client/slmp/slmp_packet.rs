@@ -1,4 +1,3 @@
-use log::trace;
 use crate::services::slmp_client::slmp::c_slmp_const::{ProcessorNumber, SlmpCommand, SlmpSubCommand, TimerValue};
 use super::{c_slmp_const::FrameType, c_slmp_info::CSlmpInfo, device_code::DeviceCode};
 //

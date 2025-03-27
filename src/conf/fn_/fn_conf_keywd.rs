@@ -1,5 +1,4 @@
 use std::{ops::BitOr, str::FromStr};
-use log::{trace, warn};
 use regex::RegexBuilder;
 use serde::Deserialize;
 use crate::conf::fn_::fn_conf_options::FnConfOptions;

@@ -2,8 +2,7 @@
 
 mod jds_deserialize {
     use chrono::{DateTime, Utc};
-    use log::{info, debug, trace, error};
-    use rand::Rng;
+        use rand::Rng;
     use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;
@@ -38,7 +37,6 @@ mod jds_deserialize {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test JdsDeserialize";
         println!("{}", self_id);
         let name = "/server/line1/ied1/test1";

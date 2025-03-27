@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod tcp_client {
-    use log::{info, debug, warn, error, trace};
-    use sal_sync::services::{
+        use sal_sync::services::{
         entity::{object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::service::Service
     };
     use std::{io::Write, net::TcpListener, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
@@ -35,7 +34,6 @@ mod tcp_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "TcpClient-READ";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));

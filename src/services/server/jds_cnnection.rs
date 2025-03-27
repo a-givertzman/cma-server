@@ -2,7 +2,6 @@ use std::{
     collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
 };
 use hashers::fx_hash::FxHasher;
-use log::{debug, error, info, trace, warn};
 use sal_sync::services::{entity::{cot::Cot, name::Name, point::point::Point}, service::service_handles::ServiceHandles, subscription::subscription_criteria::SubscriptionCriteria};
 use serde_json::json;
 use crate::{

@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod tcp_stream {
-    use log::{info, warn, debug};
-    use sal_sync::services::service::service_handles::ServiceHandles;
+        use sal_sync::services::service::service_handles::ServiceHandles;
     use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
     use testing::{session::test_session::TestSession, stuff::{wait::WaitTread, max_test_duration::TestDuration}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -29,7 +28,6 @@ mod tcp_stream {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test TcpStream read on close";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
@@ -69,7 +67,6 @@ mod tcp_stream {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test TcpStream read on close";
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));

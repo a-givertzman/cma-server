@@ -1,8 +1,7 @@
 #[cfg(test)]
 
 mod services_points {
-    use log::{error, trace};
-    use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}};
+        use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}};
     use std::{env, sync::{Arc, Once, RwLock}, time::Duration};
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -31,7 +30,6 @@ mod services_points {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        println!();
         let self_id = "test Services.points";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -58,7 +56,6 @@ mod services_points {
             vec![]
         });
         let points_count = points.len();
-        println!();
         println!(" points count: {:?}", points_count);
         for point in points {
             println!("\t {:?}", point);

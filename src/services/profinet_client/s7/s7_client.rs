@@ -1,4 +1,3 @@
-use log::{debug, warn, LevelFilter};
 use snap7_sys::S7Object;
 use std::ffi::CString;
 use std::ffi::{c_void, c_int};

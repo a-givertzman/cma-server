@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod fn_mul {
-    use log::{debug, info};
-    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -71,7 +70,6 @@ mod fn_mul {
             target = value1_stored.as_bool().value.0 && value2_stored.as_bool().value.0;
             let result = state.as_bool().value.0;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
     ///
@@ -122,7 +120,6 @@ mod fn_mul {
             target = value1_stored.as_int().value * value2_stored.as_int().value;
             let result = state.as_int().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
     ///
@@ -181,7 +178,6 @@ mod fn_mul {
             target = value1_stored.as_real().value * value2_stored.as_real().value;
             let result = state.as_real().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
     ///
@@ -240,7 +236,6 @@ mod fn_mul {
             target = value1_stored.as_double().value * value2_stored.as_double().value;
             let result = state.as_double().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
-            println!();
         }
     }
 }

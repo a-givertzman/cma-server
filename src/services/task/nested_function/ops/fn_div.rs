@@ -1,4 +1,3 @@
-use log::trace;
 use sal_sync::services::entity::point::point::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{

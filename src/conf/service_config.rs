@@ -1,7 +1,6 @@
 use std::{hash::BuildHasherDefault, str::FromStr, time::Duration};
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use log::{debug, trace, warn};
 use sal_sync::{
     collections::map::FxIndexMap,
     services::{
