@@ -83,7 +83,7 @@ impl FnOut for FnBitXor {
                     let input = input.borrow_mut().out();
                     match input {
                         FnResult::Ok(input) => {
-                            debug!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
+                            log::debug!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
                             value = match &value {
                                 Point::Bool(val) => {
                                     let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));

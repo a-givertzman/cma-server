@@ -40,7 +40,7 @@ mod cma_recorder {
         test_duration.run().unwrap();
         //
         // can be changed
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
             Some(RetainPointConf::new("point/id.json", None))
@@ -122,10 +122,10 @@ mod cma_recorder {
 
             ").unwrap(),
         );
-        trace!("config: {:?}", config);
-        debug!("Task config points: {:#?}", config.points());
+        log::trace!("config: {:?}", config);
+        log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-        debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.read().unwrap().points());
         services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
@@ -252,12 +252,12 @@ mod cma_recorder {
         let services_handle = services.wlock(self_id).run().unwrap();
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         let task_handle = task.write().unwrap().run().unwrap();
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         producer.read().unwrap().exit();

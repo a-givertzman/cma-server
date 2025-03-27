@@ -51,17 +51,17 @@ mod tcp_client_connect {
         let ok_ref = ok.clone();
         // let connectExit = connect.exit();
         thread::spawn(move || {
-            info!("Preparing test TCP server...");
+            log::info!("Preparing test TCP server...");
             thread::sleep(Duration::from_millis(300));
             match TcpListener::bind(addr) {
                 Ok(listener) => {
-                    info!("Preparing test TCP server - ok");
+                    log::info!("Preparing test TCP server - ok");
                     match listener.accept() {
                         Ok((_socket, addr)) => {
-                            info!("incoming connection - ok\n\t{:?}", addr);
+                            log::info!("incoming connection - ok\n\t{:?}", addr);
                         }
                         Err(err) => {
-                            info!("incoming connection - error: {:?}", err);
+                            log::info!("incoming connection - error: {:?}", err);
                         }
                     }
                 }
@@ -76,26 +76,26 @@ mod tcp_client_connect {
         let ok_ref = ok.clone();
         let exit_ref = exit.clone();
         thread::spawn(move || {
-            info!("Waiting for connection...");
+            log::info!("Waiting for connection...");
             thread::sleep(timeout);
             if !ok_ref.load(Ordering::SeqCst) {
                 ok_ref.store(false, Ordering::SeqCst);
-                warn!("Tcp socket was not connected in {:?}", timeout);
-                debug!("stopping...");
+                log::warn!("Tcp socket was not connected in {:?}", timeout);
+                log::debug!("stopping...");
                 exit_ref.store(true, Ordering::SeqCst);
             }
         });
-        info!("Connecting...");
+        log::info!("Connecting...");
         for _ in 0..10 {
             match connect.lock().unwrap().connect() {
                 Some(tcp_stream) => {
                     ok.store(true, Ordering::SeqCst);
-                    info!("connected: {:?}", tcp_stream);
+                    log::info!("connected: {:?}", tcp_stream);
                     exit.store(true, Ordering::SeqCst);
                     break;
                 }
                 None => {
-                    warn!("not connected");
+                    log::warn!("not connected");
                 }
             };
             thread::sleep(Duration::from_millis(100));
@@ -126,22 +126,22 @@ mod tcp_client_connect {
         let ok = Arc::new(AtomicBool::new(false));
         let ok_ref = ok.clone();
         thread::spawn(move || {
-            info!("Waiting for connection...");
+            log::info!("Waiting for connection...");
             thread::sleep(timeout);
             ok_ref.store(false, Ordering::SeqCst);
-            warn!("Tcp socket was not connected in {:?}", timeout);
-            debug!("Thread | stopping...");
+            log::warn!("Tcp socket was not connected in {:?}", timeout);
+            log::debug!("Thread | stopping...");
             exit.store(true, Ordering::SeqCst);
-            debug!("Thread | stopping - ok");
+            log::debug!("Thread | stopping - ok");
         });
-        info!("Connecting...");
+        log::info!("Connecting...");
         match connect.connect() {
             Some(tcp_stream) => {
                 ok.store(true, Ordering::SeqCst);
-                info!("connected: {:?}", tcp_stream);
+                log::info!("connected: {:?}", tcp_stream);
             }
             None => {
-                warn!("not connected");
+                log::warn!("not connected");
             }
         };
         assert!(

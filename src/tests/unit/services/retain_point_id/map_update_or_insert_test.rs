@@ -84,7 +84,7 @@ mod map_update_or_insert {
                     .push(point.clone());
             }
         }
-        debug!("cache: {:#?}", cache);
+        log::debug!("cache: {:#?}", cache);
         // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         test_duration.exit();
     }

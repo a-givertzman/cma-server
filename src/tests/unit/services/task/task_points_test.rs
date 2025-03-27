@@ -37,10 +37,10 @@ mod task {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/services/task/task_test_points.yaml";
         let config = TaskConfig::read(&self_name, path);
-        trace!("config: {:?}", &config);
+        log::trace!("config: {:?}", &config);
         println!(" config points: {:?}", config.points());
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));

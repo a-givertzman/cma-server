@@ -164,7 +164,7 @@ impl FnOut for FnTimer {
                             let value = input.to_bool().as_bool().value.0;
                             self.state.add(value);
                             let state = self.state.state();
-                            trace!("{}.out | input: {:?}   |   state: {:?}", self.id, value, state);
+                            log::trace!("{}.out | input: {:?}   |   state: {:?}", self.id, value, state);
                             match state {
                                 FnTimerState::Off => {}
                                 FnTimerState::Start => {
@@ -202,7 +202,7 @@ impl FnOut for FnTimer {
                         FnResult::Err(err) => return FnResult::Err(err),
                     }                    
                 };
-                trace!("{}.out | out: {:?}", self.id, out);
+                log::trace!("{}.out | out: {:?}", self.id, out);
                 let value = Point::Double(
                     PointHlr::new(
                         input.tx_id(),

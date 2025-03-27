@@ -37,10 +37,10 @@ mod services_points {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/services/services/services_points_test.yaml";
         let config = TaskConfig::read(&self_name, path);
-        trace!("config: {:?}", &config);
+        log::trace!("config: {:?}", &config);
         println!(" points: {:?}", config.points());
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
@@ -54,7 +54,7 @@ mod services_points {
         let services_handle = services.wlock(self_id).run().unwrap();
         let target  = 3;
         let points = services.rlock(self_id).points(self_id).then(|points| points, |err| {
-            error!("{}.handle.Subscribe | Requesting points error: {:?}", self_id, err);
+            log::error!("{}.handle.Subscribe | Requesting points error: {:?}", self_id, err);
             vec![]
         });
         let points_count = points.len();

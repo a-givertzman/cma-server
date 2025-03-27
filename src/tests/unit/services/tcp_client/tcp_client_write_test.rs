@@ -96,13 +96,13 @@ mod tcp_client {
         let handle = mock_tcp_server(addr.to_string(), iterations, received.clone());
         thread::sleep(Duration::from_micros(100));
         let tcp_client = services.rlock(self_id).get(&tcp_client_service_id).unwrap();
-        debug!("Running service {}...", tcp_client_service_id);
+        log::debug!("Running service {}...", tcp_client_service_id);
         tcp_client.wlock(self_id).run().unwrap();
-        debug!("Running service {} - ok", tcp_client_service_id);
+        log::debug!("Running service {} - ok", tcp_client_service_id);
         let timer = Instant::now();
         let send = tcp_client.wlock(self_id).get_link("link");
-        debug!("Test - setup - ok");
-        debug!("Sending points...");
+        log::debug!("Test - setup - ok");
+        log::debug!("Sending points...");
         for value in test_data {
             let point = value.to_point(0, "teset");
             send.send(point.clone()).unwrap();
@@ -133,17 +133,17 @@ mod tcp_client {
     fn mock_tcp_server(addr: String, count: usize, received: Arc<RwLock<Vec<Point>>>) -> JoinHandle<()> {
         let sent = 0;
         thread::spawn(move || {
-            info!("TCP server | Preparing test server...");
+            log::info!("TCP server | Preparing test server...");
             match TcpListener::bind(addr) {
                 Ok(listener) => {
-                    info!("TCP server | Preparing test server - ok");
+                    log::info!("TCP server | Preparing test server - ok");
                     let mut accept_count = 2;
                     while accept_count > 0 {
                         accept_count -= 1;
                         match listener.accept() {
                             Ok((mut _socket, addr)) => {
                                 let mut tcp_stream = BufReader::new(_socket);
-                                info!("TCP server | accept connection - ok\n\t{:?}", addr);
+                                log::info!("TCP server | accept connection - ok\n\t{:?}", addr);
                                 let mut jds = JdsDeserialize::new(
                                     "test",
                                     JdsDecodeMessage::new("test"),
@@ -162,24 +162,24 @@ mod tcp_client {
                                                     }
                                                 }
                                                 OpResult::Err(err) => {
-                                                    warn!("{:?}", err);
+                                                    log::warn!("{:?}", err);
                                                 }
                                                 OpResult::Timeout() => {}
                                             }
                                         }
                                         ConnectionStatus::Closed(_err) => {
-                                            warn!("TCP server | connection - closed");
+                                            log::warn!("TCP server | connection - closed");
                                         }
                                     }
 
                                 }
-                                info!("TCP server | all received: {:?}", sent);
+                                log::info!("TCP server | all received: {:?}", sent);
                                 // while received.lock().unwrap().len() < count {
                                 //     thread::sleep(Duration::from_micros(100));
                                 // }
                             }
                             Err(err) => {
-                                warn!("incoming connection - error: {:?}", err);
+                                log::warn!("incoming connection - error: {:?}", err);
                             }
                         }
                     }

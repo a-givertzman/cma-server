@@ -67,7 +67,7 @@ mod tests {
         for conf in test_data {
             let conf = serde_yaml::from_str(&conf).unwrap();
             let conf = TcpServerConfig::from_yaml(self_id, &conf);
-            info!("conf: \n{:?}", conf);
+            log::info!("conf: \n{:?}", conf);
             // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }

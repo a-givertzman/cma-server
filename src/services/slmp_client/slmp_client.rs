@@ -64,17 +64,17 @@ impl SlmpClient {
             Ok(mut diagnosis) => {
                 match diagnosis.get_mut(kewd) {
                     Some(point) => {
-                        debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", self_id, kewd);
+                        log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", self_id, kewd);
                         if let Some(point) = point.next(value) {
                             if let Err(err) = dest.send(point) {
-                                warn!("{}.yield_status | Send error: {}", self_id, err);
+                                log::warn!("{}.yield_status | Send error: {}", self_id, err);
                             }
                         }
                     }
-                    None => debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", self_id, kewd),
+                    None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", self_id, kewd),
                 }
             }
-            Err(err) => error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", self_id, err),
+            Err(err) => log::error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", self_id, err),
         }
     }
     ///
@@ -82,19 +82,19 @@ impl SlmpClient {
     fn set_stream_timout(self_id: &str, stream: &TcpStream, read_timeout: Duration, write_timeout: Option<Duration>) {
         match stream.set_read_timeout(Some(read_timeout)) {
             Ok(_) => {
-                info!("{}.set_stream_timout | Socket set read timeout {:?} - ok", self_id, read_timeout);
+                log::info!("{}.set_stream_timout | Socket set read timeout {:?} - ok", self_id, read_timeout);
             }
             Err(err) => {
-                warn!("{}.set_stream_timout | Socket set read timeout error {:?}", self_id, err);
+                log::warn!("{}.set_stream_timout | Socket set read timeout error {:?}", self_id, err);
             }
         }
         if let Some(timeout) = write_timeout {
             match stream.set_write_timeout(Some(timeout)) {
                 Ok(_) => {
-                    info!("{}.set_stream_timout | Socket set write timeout {:?} - ok", self_id, timeout);
+                    log::info!("{}.set_stream_timout | Socket set write timeout {:?} - ok", self_id, timeout);
                 }
                 Err(err) => {
-                    warn!("{}.set_stream_timout | Socket set write timeout error {:?}", self_id, err);
+                    log::warn!("{}.set_stream_timout | Socket set write timeout error {:?}", self_id, err);
                 }
             }
         }
@@ -126,7 +126,7 @@ impl Service for SlmpClient {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
         let conf = self.conf.clone();
@@ -143,9 +143,9 @@ impl Service for SlmpClient {
             conf.reconnect_cycle,
             Some(self.exit.clone()),
         );
-        info!("{}.run | Preparing thread...", self_id);
+        log::info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             let mut slmp_read = SlmpRead::new(
                 &self_id,
                 tx_id,
@@ -170,7 +170,7 @@ impl Service for SlmpClient {
             Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
             Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
                 loop {
-                info!("{}.run | Connecting...", self_id);
+                log::info!("{}.run | Connecting...", self_id);
                 exit.reset_pair();
                 match tcp_client_connect.connect() {
                     Some(tcp_stream) =>  {
@@ -204,7 +204,7 @@ impl Service for SlmpClient {
                                 exit.exit_pair();
                             }
                         }
-                        info!("{}.run | All thrad exited...", self_id);
+                        log::info!("{}.run | All thrad exited...", self_id);
                     }
                     None => {
                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
@@ -213,20 +213,20 @@ impl Service for SlmpClient {
                 if exit.get_parent() {
                     break;
                 }
-                info!("{}.run | Sleeping {:?}...", self_id, conf.reconnect_cycle);
+                log::info!("{}.run | Sleeping {:?}...", self_id, conf.reconnect_cycle);
                 thread::sleep(conf.reconnect_cycle);
-                warn!("{}.run | TcpClient connection failed - trying to reconnect...", self_id);
+                log::warn!("{}.run | TcpClient connection failed - trying to reconnect...", self_id);
             }
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

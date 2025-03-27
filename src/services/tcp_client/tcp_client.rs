@@ -78,7 +78,7 @@ impl Service for TcpClient {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();
         let exit = self.exit.clone();
@@ -132,9 +132,9 @@ impl Service for TcpClient {
             Some(exit.clone()),
             Some(exit_pair.clone()),
         );
-        info!("{}.run | Preparing thread...", self_id);
+        log::info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             loop {
                 exit_pair.store(false, Ordering::SeqCst);
                 if let Some(tcp_stream) = tcp_client_connect.connect() {
@@ -147,16 +147,16 @@ impl Service for TcpClient {
                     break;
                 }
             }
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

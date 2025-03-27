@@ -54,13 +54,13 @@ impl FnRecOpCycleMetric {
         match &self.send_to {
             Some(tx_send) => match tx_send.send(point.clone()) {
                 Ok(_) => {
-                    debug!("{}.out | Point sent: {:#?}", self.id, point);
+                    log::debug!("{}.out | Point sent: {:#?}", self.id, point);
                 }
                 Err(err) => {
-                    error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
+                    log::error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
                 }
             }
-            None => warn!("{}.out | Point can't be sent - send-to is not specified", self.id),
+            None => log::warn!("{}.out | Point can't be sent - send-to is not specified", self.id),
         }
     }
 }
@@ -109,36 +109,36 @@ impl FnOut for FnRecOpCycleMetric {
             }
         };
         if op_cycle && (! self.prev) {
-            debug!("{}.out | Operating Cycle - STARTED", self.id);
+            log::debug!("{}.out | Operating Cycle - STARTED", self.id);
             self.rising = true;
             self.falling = false
         };
         if (! op_cycle) && self.prev {
-            debug!("{}.out | Operating Cycle - FINISHED", self.id);
+            log::debug!("{}.out | Operating Cycle - FINISHED", self.id);
             self.falling = true;
             self.rising = false;
         };
         self.prev = op_cycle;
         if self.falling {
             self.falling = false;
-            debug!("{}.out | Operating Cycle - SENDING...", self.id);
+            log::debug!("{}.out | Operating Cycle - SENDING...", self.id);
             let log_values: Vec<String> = self.values.iter().map(|point| {
                 format!("{}: {}", point.name(), point.value().to_string())
             }).collect();
-            debug!("{}.out | Operating Cycle - values ({}): {:#?}", self.id, self.values.len(), log_values);
+            log::debug!("{}.out | Operating Cycle - values ({}): {:#?}", self.id, self.values.len(), log_values);
             for value in &self.values {
                 self.send(value);
             }
             self.values.clear();
         }
         if self.rising && enable {
-            trace!("{}.out | Operating Cycle - values", self.id);
+            log::trace!("{}.out | Operating Cycle - values", self.id);
             self.values.clear();
             for (input_name, input) in &self.inputs {
                 let input = input.borrow_mut().out();
                 match input {
                     FnResult::Ok(input) => {
-                        trace!("{}.out | Input '{}': {:?}", self.id, input_name, input.value());
+                        log::trace!("{}.out | Input '{}': {:?}", self.id, input_name, input.value());
                         let value = match input {
                             Point::Bool(mut p) => {
                                 p.name = input_name.to_owned();

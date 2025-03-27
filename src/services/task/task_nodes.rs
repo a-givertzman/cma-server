@@ -61,7 +61,7 @@ impl TaskNodes {
     ///
     /// Returns variable by it's name
     pub fn get_var(&self, name: &str) -> Option<&FnInOutRef> {
-        trace!("{}.getVar | trying to find variable {:?} in {:?}", self.id, &name, self.vars);
+        log::trace!("{}.getVar | trying to find variable {:?} in {:?}", self.id, &name, self.vars);
         self.vars.get(name)
     }
     ///
@@ -73,13 +73,13 @@ impl TaskNodes {
                 match self.nodes.get_mut(&name) {
                     // Same name - adding to the existing node, if input has different 'options hash'
                     Some(node) => {
-                        trace!("{}.add_input | input {:?}:{} - adding to the existing node if has different 'options hash'", self.id, name, input.borrow().hash());
+                        log::trace!("{}.add_input | input {:?}:{} - adding to the existing node if has different 'options hash'", self.id, name, input.borrow().hash());
                         node.add_input(input)
                     }
                     // New name - adding new TaskEvalNode
                     None => {
-                        trace!("{}.add_input | adding input {:?}:{}", self.id, name, input.borrow().hash());
-                        trace!("{}.add_input | adding input {:?}:{}: {:?}", self.id, name, input.borrow().hash(), input);
+                        log::trace!("{}.add_input | adding input {:?}:{}", self.id, name, input.borrow().hash());
+                        log::trace!("{}.add_input | adding input {:?}:{}: {:?}", self.id, name, input.borrow().hash(), input);
                         self.nodes.insert(
                             name.clone(), 
                             TaskEvalNode::new(&self.id, name, vec![input.clone()]),
@@ -103,8 +103,8 @@ impl TaskNodes {
                 if self.vars.contains_key(&name.clone().into()) {
                     panic!("{}.addVar | Dublicated variable name: {:?}", self.id, &name.clone().into());
                 } else {
-                    trace!("{}.addVar | adding variable {:?}", self.id, &name.clone().into());
-                    trace!("{}.addVar | adding variable {:?}: {:?}", &name.clone().into(), self.id, &var);
+                    log::trace!("{}.addVar | adding variable {:?}", self.id, &name.clone().into());
+                    log::trace!("{}.addVar | adding variable {:?}: {:?}", &name.clone().into(), self.id, &var);
                     self.vars.insert(
                         name.clone().into(),
                         var,
@@ -143,23 +143,23 @@ impl TaskNodes {
                     };
                 };
                 let inputs = out.borrow().inputs();
-                trace!("{}.finishNewNode | out {:#?} \n\tdipending on inputs:: {:#?}\n", self.id, &out, inputs);
+                log::trace!("{}.finishNewNode | out {:#?} \n\tdipending on inputs:: {:#?}\n", self.id, &out, inputs);
                 for input_name in inputs {
                     match self.nodes.get_mut(&input_name) {
                         Some(eval_node) => {
-                            trace!("{}.finishNewNode | updating input: {:?}", self.id, input_name);
+                            log::trace!("{}.finishNewNode | updating input: {:?}", self.id, input_name);
                             let len = vars.len();
                             eval_node.add_vars(&vars.clone());
                             if out.borrow().kind() != &FnKind::Var {
                                 eval_node.add_out(out.clone());
                             }
-                            trace!("{}.finishNewNode | evalNode '{}' appended: {:?}", self.id, eval_node.name(), len);
+                            log::trace!("{}.finishNewNode | evalNode '{}' appended: {:?}", self.id, eval_node.name(), len);
                         }
                         None => panic!("{}.finishNewNode | Input {:?} - not found", self.id, input_name),
                     };
                 };
                 self.new_node_vars = None;
-                trace!("\n{}.finishNewNode | self.inputs: {:?}\n", self.id, self.nodes);
+                log::trace!("\n{}.finishNewNode | self.inputs: {:?}\n", self.id, self.nodes);
             }
             None => panic!("{}.finishNewNode | Call beginNewNode first, then you can add inputs & vars, then finish node", self.id),
         }
@@ -171,7 +171,7 @@ impl TaskNodes {
         let tx_id = PointTxId::from_str(&parent.join());
         for (idx, (_node_name, mut node_conf)) in conf.nodes.into_iter().enumerate() {
             let node_name = node_conf.name();
-            trace!("{}.build_nodes | node[{}]: {:?}", self.id, idx, node_name);
+            log::trace!("{}.build_nodes | node[{}]: {:?}", self.id, idx, node_name);
             self.new_node_vars = Some(TaskNodeVars::new());
             let out = match node_conf {
                 FnConfKind::Fn(_) => {
@@ -213,22 +213,22 @@ impl TaskNodes {
         let self_id = self.id.clone();
         let point_name = point.name();
         if let Some(eval_node) = self.get_eval_node("every") {
-            trace!("{}.eval | evalNode '{}' - adding point...", self_id, &eval_node.name());
+            log::trace!("{}.eval | evalNode '{}' - adding point...", self_id, &eval_node.name());
             eval_node.add(&point);
         };
         match self.get_eval_node(&point_name) {
             Some(eval_node) => {
-                trace!("{}.eval | evalNode '{}' - adding point...", self_id, &eval_node.name());
+                log::trace!("{}.eval | evalNode '{}' - adding point...", self_id, &eval_node.name());
                 eval_node.add(&point);
-                trace!("{}.eval | evalNode '{}' - evaluating...", self_id, &eval_node.name());
+                log::trace!("{}.eval | evalNode '{}' - evaluating...", self_id, &eval_node.name());
                 eval_node.eval();
             }
             None => {
                 if let Some(eval_node) = self.get_eval_node("every") {
-                    trace!("{}.eval | evalNode '{}' - evaluating...", self_id, &eval_node.name());
+                    log::trace!("{}.eval | evalNode '{}' - evaluating...", self_id, &eval_node.name());
                     eval_node.eval()
                 } else {
-                    warn!("{}.eval | evalNode '{}' - not fount, input point ignored", self.id, &point_name);
+                    log::warn!("{}.eval | evalNode '{}' - not fount, input point ignored", self.id, &point_name);
                 }
             }
         };

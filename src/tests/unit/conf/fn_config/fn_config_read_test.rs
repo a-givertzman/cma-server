@@ -70,10 +70,10 @@ mod tests {
         } );
 
         // let (initial, switches) = init_each();
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let path= "./src/tests/unit/conf/fn_config/fn_config_test.yaml";
         let fn_config = FnConfig::read(self_id, &self_name, path);
-        trace!("fnConfig: {:?}", fn_config);
+        log::trace!("fnConfig: {:?}", fn_config);
         assert_eq!(fn_config, target);
     }
 }

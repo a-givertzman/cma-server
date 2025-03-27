@@ -69,7 +69,7 @@ impl FnOut for FnMax {
             // trace!("{}.out | input: {:?}", self.id, input);
             match input {
                 FnResult::Ok(input) => {
-                    trace!("{}.out | max: {:?}", self.id, self.max);
+                    log::trace!("{}.out | max: {:?}", self.id, self.max);
                     let max = self.max.get_or_insert(input.clone());
                     match &input {
                         Point::Bool(input_val) => {

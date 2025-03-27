@@ -46,7 +46,7 @@ impl TcpReadAlive {
     ///
     /// Main loop of the [TcpReadAlive]
     pub fn run(&mut self, tcp_stream: TcpStream) -> JoinHandle<()> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let exit_pair = self.exit_pair.clone();
@@ -54,12 +54,12 @@ impl TcpReadAlive {
         let send = self.send.clone();
         let stream_read = self.stream_read.clone();
         let mut tcp_stream_read = stream_read.lock().unwrap().take().unwrap();
-        info!("{}.run | Preparing thread...", self.id);
+        log::info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Read", self_id.clone())).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             let mut tcp_stream = BufReader::new(tcp_stream);
             // let mut tcp_stream_read = tcp_stream_read.write().unwrap();
-            info!("{}.run | Main loop started", self_id);
+            log::info!("{}.run | Main loop started", self_id);
             loop {
                 if let Some(cycle) = &mut cycle {cycle.start()}
                 match tcp_stream_read.read(&mut tcp_stream) {
@@ -70,14 +70,14 @@ impl TcpReadAlive {
                                 match send.send(point) {
                                     Ok(_) => {}
                                     Err(err) => {
-                                        warn!("{}.run | write to queue error: {:?}", self_id, err);
+                                        log::warn!("{}.run | write to queue error: {:?}", self_id, err);
                                     }
                                 };
                                 if let Some(cycle) = &mut cycle {cycle.wait()}
                             }
                             OpResult::Err(err) => {
                                 if log::max_level() == LevelFilter::Trace {
-                                    warn!("{}.run | error: {:?}", self_id, err);
+                                    log::warn!("{}.run | error: {:?}", self_id, err);
                                 }
                                 if let Some(cycle) = &mut cycle {cycle.wait()}
                             }
@@ -85,7 +85,7 @@ impl TcpReadAlive {
                         }
                     }
                     ConnectionStatus::Closed(err) => {
-                        warn!("{}.run | error: {:?}", self_id, err);
+                        log::warn!("{}.run | error: {:?}", self_id, err);
                         exit_pair.store(true, Ordering::SeqCst);
                         break;
                     }
@@ -95,9 +95,9 @@ impl TcpReadAlive {
                 }
             }
             stream_read.lock().unwrap().replace(tcp_stream_read);
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         }).unwrap();
-        info!("{}.run | started", self.id);
+        log::info!("{}.run | started", self.id);
         handle
     }
     ///

@@ -86,7 +86,7 @@ impl FnOut for FnAdd {
             let input = input.borrow_mut().out();
             match input {
                 FnResult::Ok(input) => {
-                    trace!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
+                    log::trace!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
                     value = match &value {
                         Point::Bool(val) => {
                             let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));

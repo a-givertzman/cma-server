@@ -137,12 +137,12 @@ mod jds_decode_message {
                                             received.fetch_add(1, Ordering::SeqCst);
                                             let msg = String::from_utf8(bytes).unwrap();
                                             let recv_index = (received.load(Ordering::SeqCst) - 1) % test_data_len;
-                                            trace!("socket read - received[{}]: {:?}", recv_index, msg);
+                                            log::trace!("socket read - received[{}]: {:?}", recv_index, msg);
                                             assert!(msg == test_data[recv_index].0);
                                             // debug!("socket read - received: {:?}", received.load(Ordering::SeqCst));
                                         }
                                         OpResult::Err(err) => {
-                                            warn!("socket read - received error: {:?}", err);
+                                            log::warn!("socket read - received error: {:?}", err);
                                         }
                                         OpResult::Timeout() => {}
                                     }
@@ -164,7 +164,7 @@ mod jds_decode_message {
                         if let Err(_) = errors_limit.add() {
                             panic!("Socket connection errors {}; last error: {:#?}", errors_limit.limit(), err)
                         } else {
-                            warn!("Socket connection error: {:#?}", err)
+                            log::warn!("Socket connection error: {:#?}", err)
                         }
                     }
                 };
@@ -177,18 +177,18 @@ mod jds_decode_message {
         let mut sent = 0;
         let test_data = test_data.to_owned().clone();
         thread::spawn(move || {
-            info!("TCP server | Preparing test server...");
+            log::info!("TCP server | Preparing test server...");
             let mut rng = rand::thread_rng();
             match TcpListener::bind(addr) {
                 Ok(listener) => {
-                    info!("TCP server | Preparing test server - ok");
+                    log::info!("TCP server | Preparing test server - ok");
                     let mut accept_count = 2;
                     let mut max_read_errors = 3;
                     while accept_count > 0 {
                         accept_count -= 1;
                         match listener.accept() {
                             Ok((mut _socket, addr)) => {
-                                info!("TCP server | accept connection - ok\n\t{:?}", addr);
+                                log::info!("TCP server | accept connection - ok\n\t{:?}", addr);
                                 let eot = [4];
                                 for _ in 0..count {
                                     for (msg, _) in &test_data {
@@ -199,13 +199,13 @@ mod jds_decode_message {
                                         match _socket.write(bytes1) {
                                             Ok(_bytes) => {
                                                 sent += 1;
-                                                trace!("socket sent: {:?}", msg);
+                                                log::trace!("socket sent: {:?}", msg);
                                             }
                                             Err(err) => {
-                                                debug!("socket read - error: {:?}", err);
+                                                log::debug!("socket read - error: {:?}", err);
                                                 max_read_errors -= 1;
                                                 if max_read_errors <= 0 {
-                                                    error!("TCP server | socket read error: {:?}", err);
+                                                    log::error!("TCP server | socket read error: {:?}", err);
                                                     break;
                                                 }
                                             }
@@ -214,27 +214,27 @@ mod jds_decode_message {
                                         match _socket.write(&[bytes2, &eot].concat()) {
                                             Ok(_bytes) => {
                                                 sent += 1;
-                                                trace!("socket sent: {:?}", msg);
+                                                log::trace!("socket sent: {:?}", msg);
                                             }
                                             Err(err) => {
-                                                debug!("socket read - error: {:?}", err);
+                                                log::debug!("socket read - error: {:?}", err);
                                                 max_read_errors -= 1;
                                                 if max_read_errors <= 0 {
-                                                    error!("TCP server | socket read error: {:?}", err);
+                                                    log::error!("TCP server | socket read error: {:?}", err);
                                                     break;
                                                 }
                                             }
                                         };
                                     }
                                 }
-                                info!("TCP server | all sent: {:?}", sent);
+                                log::info!("TCP server | all sent: {:?}", sent);
                                 while received.load(Ordering::SeqCst) < count {
                                     thread::sleep(Duration::from_micros(10));
                                 }
                                 // while received.len() < count {}
                             }
                             Err(err) => {
-                                info!("incoming connection - error: {:?}", err);
+                                log::info!("incoming connection - error: {:?}", err);
                             }
                         }
                     }

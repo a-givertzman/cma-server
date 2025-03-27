@@ -54,7 +54,7 @@ impl FnOut for FnVar {
     /// - Result stores into inner
     /// - calculated result returns in .out() method
     fn eval(&mut self) {
-        trace!("{}.eval | evaluating...", self.id);
+        log::trace!("{}.eval | evaluating...", self.id);
         self.value = Some(self.input.borrow_mut().out());
     }
     ///
@@ -63,11 +63,11 @@ impl FnOut for FnVar {
     fn out(&mut self) -> FnResult<Point, String> {
         let value = match &self.value {
             Some(value) => {
-                trace!("{}.out | value: {:?}", self.id, &self.value);
+                log::trace!("{}.out | value: {:?}", self.id, &self.value);
                 value.clone()
             }
             None => {
-                trace!("{}.eval | evaluating...", self.id);
+                log::trace!("{}.eval | evaluating...", self.id);
                 let value = self.input.borrow_mut().out();
                 self.value = Some(value.clone());
                 value

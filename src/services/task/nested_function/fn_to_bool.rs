@@ -58,7 +58,7 @@ impl FnOut for FnToBool {
         let input = self.input.borrow_mut().out();
         match input {
             FnResult::Ok(input) => {
-                trace!("{}.out | input: {:?}", self.id, input);
+                log::trace!("{}.out | input: {:?}", self.id, input);
                 let out = match &input {
                     Point::Bool(value) => {
                         value.value.0
@@ -74,7 +74,7 @@ impl FnOut for FnToBool {
                     }
                     _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
                 };
-                trace!("{}.out | out: {:?}", self.id, &out);
+                log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::Bool(
                     PointHlr::new(
                         input.tx_id(),

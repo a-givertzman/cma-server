@@ -35,7 +35,7 @@ mod fn_ge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: bool;
         let input1 = init_each("false", FnConfPointType::Bool);
         let input2 = init_each("false", FnConfPointType::Bool);
@@ -56,7 +56,7 @@ mod fn_ge {
             input1.borrow_mut().add(&point1);
             input2.borrow_mut().add(&point2);
             let result = fn_ge.out().unwrap().as_bool().value.0;
-            debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
+            log::debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 >= value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -68,7 +68,7 @@ mod fn_ge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: bool;
         let input1 = init_each("0", FnConfPointType::Int);
         let input2 = init_each("0", FnConfPointType::Int);
@@ -96,7 +96,7 @@ mod fn_ge {
             input1.borrow_mut().add(&point1);
             input2.borrow_mut().add(&point2);
             let result = fn_ge.out().unwrap().as_bool().value.0;
-            debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
+            log::debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 >= value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -108,7 +108,7 @@ mod fn_ge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: bool;
         let input1 = init_each("0.0", FnConfPointType::Real);
         let input2 = init_each("0.0", FnConfPointType::Real);
@@ -145,7 +145,7 @@ mod fn_ge {
             input1.borrow_mut().add(&point1);
             input2.borrow_mut().add(&point2);
             let result = fn_ge.out().unwrap().as_bool().value.0;
-            debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
+            log::debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 >= value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -157,7 +157,7 @@ mod fn_ge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_double";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: bool;
         let input1 = init_each("0.0", FnConfPointType::Double);
         let input2 = init_each("0.0", FnConfPointType::Double);
@@ -194,7 +194,7 @@ mod fn_ge {
             input1.borrow_mut().add(&point1);
             input2.borrow_mut().add(&point2);
             let result = fn_ge.out().unwrap().as_bool().value.0;
-            debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
+            log::debug!("step {}  |  value1: {:?} >= value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 >= value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }

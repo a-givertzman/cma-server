@@ -37,7 +37,7 @@ fn init_each(initial: PointType) -> FnInOutRef {
 fn test_single() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
-    info!("test_single");
+    log::info!("test_single");
     let input = init_each(false.toPoint("bool"));
     let mut fnCount = FnCount::new(
         "test",
@@ -66,7 +66,7 @@ fn test_single() {
         // debug!("input: {:?}", &input);
         let state = fnCount.out();
         // debug!("input: {:?}", &mut input);
-        debug!("value: {:?}   |   state: {:?}", value, state);
+        log::debug!("value: {:?}   |   state: {:?}", value, state);
         assert_eq!(state.asInt().value, targetState);
     }
 }
@@ -76,7 +76,7 @@ fn test_single() {
 fn test_multiple() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
-    info!("test_multiple");
+    log::info!("test_multiple");
     let input = init_each(false.toPoint("bool"));
     let mut fnCount = FnCount::new(
         "test",
@@ -105,7 +105,7 @@ fn test_multiple() {
         // debug!("input: {:?}", &input);
         let state = fnCount.out();
         // debug!("input: {:?}", &mut input);
-        debug!("value: {:?}   |   state: {:?}", value, state);
+        log::debug!("value: {:?}   |   state: {:?}", value, state);
         assert_eq!(state.asInt().value, targetState);
     }
 }
@@ -114,7 +114,7 @@ fn test_multiple() {
 fn test_multiple_reset() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
-    info!("test_multiple_reset");
+    log::info!("test_multiple_reset");
     let input = init_each(false.toPoint("bool"));
     let mut fnCount = FnCount::new(
         "test",
@@ -146,7 +146,7 @@ fn test_multiple_reset() {
         // debug!("input: {:?}", &input);
         let state = fnCount.out();
         // debug!("input: {:?}", &mut input);
-        debug!("value: {:?}   |   state: {:?}", value, state);
+        log::debug!("value: {:?}   |   state: {:?}", value, state);
         assert_eq!(state.asInt().value, targetState);
     }
 }

@@ -23,7 +23,7 @@ impl TaskNodeVars {
     pub fn addVar(&mut self, name: impl Into<String> + Clone) {
         // assert!(!self.vars.contains(name.clone().into().as_str()), "Dublicated variable name: {:?}", name.clone().into());
         assert!(!name.clone().into().is_empty(), "Variable name can't be emty");
-        trace!("TaskNodeStuff.addVar | adding variable {:?}", name.clone().into());
+        log::trace!("TaskNodeStuff.addVar | adding variable {:?}", name.clone().into());
         self.vars.push(name.into());
     }
     // ///

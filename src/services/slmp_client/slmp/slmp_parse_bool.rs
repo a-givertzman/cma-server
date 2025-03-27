@@ -119,7 +119,7 @@ impl SlmpParseBool {
             }
             Err(e) => {
                 self.status = Status::Invalid;
-                warn!("{}.add_raw | convertion error: {:?}", self.id, e);
+                log::warn!("{}.add_raw | convertion error: {:?}", self.id, e);
             }
         }
     }
@@ -141,14 +141,14 @@ impl SlmpParseBool {
     /// Sets single bit to '1' in the integer  [value]
     fn set_bit(&self, value: i64, bit: usize) -> i64 {
         let result = value | (1 << bit);
-        debug!("{}.set_bit | Set bit operation: \n\t{} => \n\t{}", self.id, value, result);
+        log::debug!("{}.set_bit | Set bit operation: \n\t{} => \n\t{}", self.id, value, result);
         result
     }
     ///
     /// Resets single bit to '0' in the integer [value]
     fn reset_bit(&self, value: i64, bit: usize) -> i64 {
         let result = value & !(1 << bit);
-        debug!("{}.set_bit | Reset bit operation: \n\t{} => \n\t{}", self.id, value, result);
+        log::debug!("{}.set_bit | Reset bit operation: \n\t{} => \n\t{}", self.id, value, result);
         result
     }
 }
@@ -202,21 +202,21 @@ impl ParsePoint for SlmpParseBool {
         match point.try_as_bool() {
             Ok(point) => {
                 let value = self.change_bit(self.value, point.value.0, self.bit.unwrap() as usize);
-                debug!("{}.write | converting '{}' into i16...", self.id, point.value);
+                log::debug!("{}.write | converting '{}' into i16...", self.id, point.value);
                 match i16::try_from(value) {
                     Ok(value) => {
                         Ok(value.to_le_bytes().to_vec())
                     }
                     Err(err) => {
                         let message = format!("{}.write | '{}' to i16 conversion error: {:#?} in the parse point: {:#?}", self.id, point.value, err, self.name);
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                         Err(message)
                     }
                 }
             }
             Err(_) => {
                 let message = format!("{}.write | Point of type 'Bool' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

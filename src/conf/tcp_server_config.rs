@@ -1,7 +1,6 @@
-use log::{debug, error, trace};
 use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, service::link_name::LinkName};
 use std::{fs, net::SocketAddr, str::FromStr, time::Duration};
-use crate::{conf::{conf_keywd::ConfKind, service_config::ServiceConfig}, services::server::jds_auth::TcpServerAuth};
+use crate::services::server::jds_auth::TcpServerAuth;
 
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -47,35 +46,35 @@ impl TcpServerConfig {
     ///                     ...
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> TcpServerConfig {
         println!();
-        trace!("TcpServerConfig.new | confTree: {:?}", conf_tree);
+        log::trace!("TcpServerConfig.new | confTree: {:?}", conf_tree);
         let self_id = format!("TcpServerConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | selfConf: {:?}", self_id, self_conf);
+        log::trace!("{}.new | selfConf: {:?}", self_id, self_conf);
         let self_name = Name::new(parent, self_conf.name());
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let self_address: SocketAddr = self_conf.get_param_value("address").unwrap().as_str().unwrap().parse().unwrap();
-        debug!("{}.new | address: {:?}", self_id, self_address);
+        log::debug!("{}.new | address: {:?}", self_id, self_address);
         let cycle = self_conf.get_duration("cycle");
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let reconnect_cycle = self_conf.get_duration("reconnect");
-        debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
+        log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let keep_timeout = self_conf.get_duration("keep-timeout").unwrap_or(Duration::from_secs(10));
-        debug!("{}.new | keepTimeout: {:?}", self_id, reconnect_cycle);
+        log::debug!("{}.new | keepTimeout: {:?}", self_id, reconnect_cycle);
         let auth = self_conf.get_param_conf("auth");
         let auth = auth.or(self_conf.get_param_conf("auth-secret"));
         let auth = auth.or(self_conf.get_param_conf("auth-ssh"));
         let auth = auth.expect("{}.new | 'auth' or 'auth-secret' or 'auth-ssh' - not found");
         let auth = TcpServerAuth::new(auth);
-        debug!("{}.new | auth: {:?}", self_id, auth);
+        log::debug!("{}.new | auth: {:?}", self_id, auth);
         let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
-        debug!("{}.new | 'in queue': {},\tmax-length: {}", self_id, rx, rx_max_len);
+        log::debug!("{}.new | 'in queue': {},\tmax-length: {}", self_id, rx, rx_max_len);
         let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
-        debug!("{}.new | send-to: {:?}", self_id, send_to);
+        log::debug!("{}.new | send-to: {:?}", self_id, send_to);
         if let Ok((_, _)) = self_conf.get_param_by_keyword("out", ConfKind::Queue) {
-            error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)
+            log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, self_conf)
         }
         let cache = self_conf.get_param_value("cache").map_or_else(|_| None, |v| v.as_str().map(|v| v.to_owned()));
-        debug!("{}.new | cache: {:?}", self_id, cache);
+        log::debug!("{}.new | cache: {:?}", self_id, cache);
         TcpServerConfig {
             name: self_name,
             cycle,

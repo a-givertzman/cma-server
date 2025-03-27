@@ -30,11 +30,11 @@ mod thread_test {
         let self_id = "thread_test";
         println!("{}", self_id);
         let handler = thread::spawn(move|| {
-            info!("thread | Started");
+            log::info!("thread | Started");
             for i in 0..10 {
-                info!("thread | iteration: {}", i);
+                log::info!("thread | iteration: {}", i);
             }
-            info!("thread | Finished");
+            log::info!("thread | Finished");
         });
         thread::sleep(Duration::from_millis(3000));
         handler.wait().unwrap();

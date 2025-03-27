@@ -51,7 +51,7 @@ impl JdsDeserialize {
                             }
                             Err(err) => {
                                 if log::max_level() == LevelFilter::Debug {
-                                    warn!("{}", err);
+                                    log::warn!("{}", err);
                                 }
                                 ConnectionStatus::Active(OpResult::Err(err))
                             }
@@ -69,14 +69,14 @@ impl JdsDeserialize {
     ///
     /// Returns Cot parsed from the json::Map by it's key "cot" 
     fn parse_cot(self_id: &str, name: &str, obj: &serde_json::Map<String, serde_json::Value>) -> Cot {
-        trace!("{}.parse_cot | obj: {:#?}", self_id, obj);
+        log::trace!("{}.parse_cot | obj: {:#?}", self_id, obj);
         match obj.get("cot") {
             Some(value) => {
                 match serde_json::from_value(value.clone()) {
                     Ok(direction) => direction,
                     Err(err) => {
                         let message = concat_string!(self_id, ".parse_cot | Deserialize Point.cot error: \n\t", err.to_string(), "\n\t in the: ", name, ": ", value.to_string());
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                         Cot::default()
                     }
                 }
@@ -177,28 +177,28 @@ impl JdsDeserialize {
                                     }
                                     _ => {
                                         let message = format!("{}.parse | Unknown point type: {}", self_id, type_);
-                                        trace!("{}", message);
+                                        log::trace!("{}", message);
                                         Err(message)
                                     }
                                 }
                             }
                             None => {
                                 let message = format!("{}.parse | JSON convertion error: mapping not found in the JSON: {}", self_id, value);
-                                trace!("{}", message);
+                                log::trace!("{}", message);
                                 Err(message)        
                             }
                         }
                     }
                     None => {
                         let message = format!("{}.parse | JSON convertion error: mapping not found in the JSON: {}", self_id, value);
-                        trace!("{}", message);
+                        log::trace!("{}", message);
                         Err(message)
                     }
                 }
             }
             Err(err) => {
                 let message = format!("JdsDeserialize.parse | JSON convertion error: {:?}", err);
-                trace!("{}", message);
+                log::trace!("{}", message);
                 Err(message)        
             }
         }

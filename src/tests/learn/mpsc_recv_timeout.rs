@@ -50,15 +50,15 @@ mod tests {
         while !exit {
             match recv.recv_timeout(RECV_TIMEOUT) {
                 Ok(value) => {
-                    info!("value: {}", value);
+                    log::info!("value: {}", value);
                 }
                 Err(err) => {
                     match err {
                         RecvTimeoutError::Timeout => {
-                            error!("debug: {}", err);
+                            log::error!("debug: {}", err);
                         }
                         RecvTimeoutError::Disconnected => {
-                            error!("error: {}", err);
+                            log::error!("error: {}", err);
                             thread::sleep(Duration::from_millis(1000));
                             exit = true;
                         }

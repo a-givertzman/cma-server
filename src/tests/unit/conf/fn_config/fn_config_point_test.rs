@@ -99,14 +99,14 @@ mod tests {
             ),
         ];
         for (points_target, value, target) in test_data {
-            debug!("test value: {:?}", value);
+            log::debug!("test value: {:?}", value);
             let conf: serde_yaml::Value = serde_yaml::from_str(value).unwrap();
-            debug!("value: {:?}   |   conf: {:?}   |   target: {:?}", "_", conf, target);
+            log::debug!("value: {:?}   |   conf: {:?}   |   target: {:?}", "_", conf, target);
             let mut vars = vec![];
             let fn_config = FnConfig::from_yaml(self_id, &self_name, &conf, &mut vars);
             let points = fn_config.points();
-            debug!("\tfnConfig: {:?}", fn_config);
-            debug!("\tpoints: {:?}", points);
+            log::debug!("\tfnConfig: {:?}", fn_config);
+            log::debug!("\tpoints: {:?}", points);
             assert_eq!(fn_config, target);
             assert_eq!(points, points_target);
         }

@@ -44,14 +44,14 @@ impl NestedFn {
         let self_id = format!("{}/NestedFn", parent);
         match conf {
             FnConfKind::Fn(conf) => {
-                trace!("{}.function | Fn {:?}: {:?}...", self_id, input_name, conf.name.clone());
+                log::trace!("{}.function | Fn {:?}: {:?}...", self_id, input_name, conf.name.clone());
                 let c = conf.name.clone();
                 let fn_name= c.clone();
                 let fn_name = fn_name.as_str();
                 drop(c);
                 let fn_name = Functions::from_str(fn_name).unwrap();
-                trace!("{}.function | Fn '{}' detected", self_id, fn_name.name());
-                trace!("{}.function | fn_conf: {:?}: {:#?}", self_id, conf.name, conf);
+                log::trace!("{}.function | Fn '{}' detected", self_id, fn_name.name());
+                log::trace!("{}.function | fn_conf: {:?}: {:#?}", self_id, conf.name, conf);
                 match fn_name {
                     //
                     Functions::Count => {
@@ -204,10 +204,10 @@ impl NestedFn {
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
                         // debug!("{}.functions | Functions::PointId | input: {:?}", self_id, input);
-                        debug!("{}.functions | Functions::PointId | requesting points...", self_id);
+                        log::debug!("{}.functions | Functions::PointId | requesting points...", self_id);
                         let points = services.rlock(&format!("{}.PointId", self_id)).points(&parent.join())
                             .then(|points| points, |err| {
-                                error!("{}.functions | Functions::PointId | Requesting points error: {:?}", self_id, err);
+                                log::error!("{}.functions | Functions::PointId | Requesting points error: {:?}", self_id, err);
                                 vec![]
                             });
                         // debug!("{}.functions | Functions::PointId | points: {:?}", self_id, points);
@@ -322,7 +322,7 @@ impl NestedFn {
                                 }
                             }
                             Err(_) => {
-                                warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
+                                log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
                                 None
                             },
                         };
@@ -391,7 +391,7 @@ impl NestedFn {
                             match param.as_param().conf.as_bool() {
                                 Some(param) => param,
                                 None => {
-                                    warn!("{}.function | Illegal 'every_cycle' parameter value in '{:#?}'", self_id, conf);
+                                    log::warn!("{}.function | Illegal 'every_cycle' parameter value in '{:#?}'", self_id, conf);
                                     false
                                 },
                             }
@@ -582,7 +582,7 @@ impl NestedFn {
                                 }
                             }
                             Err(_) => {
-                                warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
+                                log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
                                 None
                             },
                         };
@@ -623,7 +623,7 @@ impl NestedFn {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
-                        trace!("{}.function | PiecewiseLineApprox conf: {:#?}", self_id, conf);
+                        log::trace!("{}.function | PiecewiseLineApprox conf: {:#?}", self_id, conf);
                         let pieces: IndexMap<serde_yaml::Value, serde_yaml::Value> = match conf.param("piecewise") {
                             Ok(piecewise) => {
                                 match piecewise {
@@ -675,7 +675,7 @@ impl NestedFn {
             }
             FnConfKind::Var(conf) => {
                 let var_name = conf.name.clone();
-                trace!("{}.function | Var: {:?}...", self_id, var_name);
+                log::trace!("{}.function | Var: {:?}...", self_id, var_name);
                 match conf.inputs.iter_mut().next() {
                     //
                     // New var declaration
@@ -684,7 +684,7 @@ impl NestedFn {
                             var_name,
                             Self::function(parent, tx_id, input_conf_name, input_conf, task_nodes, services),
                         );
-                        trace!("{}.function | Var: {:?}: {:?}", self_id, &conf.name, var.clone());
+                        log::trace!("{}.function | Var: {:?}: {:?}", self_id, &conf.name, var.clone());
                         task_nodes.add_var(conf.name.clone(), var.clone());
                         // debug!("{}.function | Var: {:?}", input);
                         var
@@ -704,7 +704,7 @@ impl NestedFn {
             FnConfKind::Const(conf) => {
                 let value = conf.name.trim().to_lowercase();
                 let name = format!("const {:?} '{}'", conf.type_, value);
-                trace!("{}.function | Const: {:?}...", self_id, &name);
+                log::trace!("{}.function | Const: {:?}...", self_id, &name);
                 let value = match conf.type_.clone() {
                     FnConfPointType::Bool => value.parse::<bool>().unwrap().to_point(tx_id, &name),
                     FnConfPointType::Int => value.parse::<i64>().unwrap().to_point(tx_id, &name),
@@ -716,11 +716,11 @@ impl NestedFn {
                 };
                 let fn_const = Self::fn_const(&name, value);
                 // taskNodes.addInput(inputName, input.clone());
-                trace!("{}.function | Const: {:?} - done", self_id, fn_const);
+                log::trace!("{}.function | Const: {:?} - done", self_id, fn_const);
                 fn_const
             }
             FnConfKind::Point(conf) => {
-                trace!("{}.function | Input (Point<{:?}>): {:?} ({:?})...", self_id, conf.type_, input_name, conf.name);
+                log::trace!("{}.function | Input (Point<{:?}>): {:?} ({:?})...", self_id, conf.type_, input_name, conf.name);
                 let point_name = conf.name.clone();
                 let input = task_nodes.add_input(
                     &point_name,
@@ -728,7 +728,7 @@ impl NestedFn {
                         FnInput::new(&point_name, tx_id, conf)
                     ))),
                 );
-                trace!("{}.function | input (Point): {:?}", self_id, input);
+                log::trace!("{}.function | input (Point): {:?}", self_id, input);
                 input
             }
             FnConfKind::PointConf(conf) => {

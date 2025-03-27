@@ -66,9 +66,9 @@ impl CacheService {
         if conf.subscribe.is_empty() {
             panic!("{}.subscribe | Error. Subscription can`t be empty: {:#?}", self.id, conf.subscribe);
         } else {
-            debug!("{}.subscribe | conf.subscribe: {:#?}", self.id, conf.subscribe);
+            log::debug!("{}.subscribe | conf.subscribe: {:#?}", self.id, conf.subscribe);
             let subscriptions = conf.subscribe.with(points);
-            trace!("{}.subscribe | subscriptions: {:#?}", self.id, subscriptions);
+            log::trace!("{}.subscribe | subscriptions: {:#?}", self.id, subscriptions);
             if subscriptions.len() > 1 {
                 panic!("{}.run | Error. Task does not supports multiple subscriptions for now: {:#?}.\n\tTry to use single subscription.", self.id, subscriptions);
             } else {
@@ -95,7 +95,7 @@ impl CacheService {
                     Ok(_) => Ok(path),
                     Err(err) => {
                         let message = format!("{}.create_dir | Error create path: '{:?}'\n\terror: {:?}", self_id, path, err);
-                        error!("{}", message);
+                        log::error!("{}", message);
                         Err(message)
                     }
                 }
@@ -116,20 +116,20 @@ impl CacheService {
                                 for point in v {
                                     cache.insert(point.dest(), point);
                                 }
-                                info!("{}.load | Retained cache loaded from: '{:?}'", self_id, path);
+                                log::info!("{}.load | Retained cache loaded from: '{:?}'", self_id, path);
                             }
                             Err(err) => {
-                                error!("{}.load | Deserialize error: '{:?}'\n\tin file: {:?}", self_id, err, path);
+                                log::error!("{}.load | Deserialize error: '{:?}'\n\tin file: {:?}", self_id, err, path);
                             }
                         };
                     }
                     Err(err) => {
-                        error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
+                        log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
                     }
                 }
             }
             Err(err) => {
-                error!("{}.load | Error write access cache: {:?}", self_id, err);
+                log::error!("{}.load | Error write access cache: {:?}", self_id, err);
             }
         };
     }
@@ -159,24 +159,24 @@ impl CacheService {
                     Ok(mut f) => {
                         match f.write_all(cache.as_bytes()) {
                             Ok(_) => {
-                                debug!("{}.write | Cache stored in: {:?}", self_id, path);
+                                log::debug!("{}.write | Cache stored in: {:?}", self_id, path);
                             }
                             Err(err) => {
                                 message = format!("{}.write | Error writing to file: '{:?}'\n\terror: {:?}", self_id, path, err);
-                                error!("{}", message);
+                                log::error!("{}", message);
                             }
                         };
                         if message.is_empty() {Ok(())} else {Err(message)}
                     }
                     Err(err) => {
                         let message = format!("{}.write | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
-                        error!("{}", message);
+                        log::error!("{}", message);
                         Err(message)
                     }
                 }
             }
             Err(err) => {
-                error!("{:#?}", err);
+                log::error!("{:#?}", err);
                 Err(err)
             }
         }
@@ -277,7 +277,7 @@ impl CacheService {
                 }
             }
             Err(err) => {
-                error!("{}.initial | Error write access cache: {:?}", self_id, err);
+                log::error!("{}.initial | Error write access cache: {:?}", self_id, err);
             }
         }
     }
@@ -309,7 +309,7 @@ impl Service for CacheService {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
         let tx_id = PointTxId::from_str(&self_name.join());
@@ -321,20 +321,20 @@ impl Service for CacheService {
             .then(
                 |points| points,
             |err| {
-                error!("{}.run | Requesting Points error: {:?}", self_id, err);
+                log::error!("{}.run | Requesting Points error: {:?}", self_id, err);
                 vec![]
             }
         );
         let (service_name, points) = self.subscriptions(&conf, &point_configs);
-        debug!("{}.run | points: {:#?}", self_id, points.len());
-        trace!("{}.run | points: {:#?}", self_id, points);
+        log::debug!("{}.run | points: {:#?}", self_id, points.len());
+        log::trace!("{}.run | points: {:#?}", self_id, points);
         let (_, rx_recv) = services.wlock(&self_id).subscribe(
             &service_name,
             &self.name.join(),
             &points,
         );
         let mut dely_store = DelyStore::new(conf.retain_delay);
-        info!("{}.run | Preparing thread...", self_id);
+        log::info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
             let initial_status = Status::Invalid;
             let retain_status = Status::Invalid;
@@ -351,17 +351,17 @@ impl Service for CacheService {
                                 }
                             }
                             Err(err) => {
-                                error!("{}.run | Error write access cache: {:?}", self_id, err);
+                                log::error!("{}.run | Error write access cache: {:?}", self_id, err);
                             }
                         }
                     }
                     Err(err) => {
                         match err {
                             RecvTimeoutError::Timeout => {
-                                trace!("{}.run | Receive error: {:?}", self_id, err);
+                                log::trace!("{}.run | Receive error: {:?}", self_id, err);
                             }
                             RecvTimeoutError::Disconnected => {
-                                error!("{}.run | Error receiving from queue: {:?}", self_id, err);
+                                log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
                                 break 'main;
                             }
                         }
@@ -375,18 +375,18 @@ impl Service for CacheService {
                 }
             }
             if let Err(err) = services.wlock(&self_id).unsubscribe(&service_name, &self_name.join(), &points) {
-                error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
+                log::error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
             }
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }
@@ -395,7 +395,7 @@ impl Service for CacheService {
     //
     fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Receiver<Point> {
         let self_id = self.id.clone();
-        info!("{}.gi | Gi requested from: {}", self_id, receiver_name);
+        log::info!("{}.gi | Gi requested from: {}", self_id, receiver_name);
         let (send, recv) = mpsc::channel();
         let self_cache = self.cache.clone();
         let points = points.to_owned();
@@ -407,13 +407,13 @@ impl Service for CacheService {
                             match send.send(point.clone()) {
                                 Ok(_) => {}
                                 Err(err) => {
-                                    error!("{}.gi | Send error: {:#?}", self_id, err);
+                                    log::error!("{}.gi | Send error: {:#?}", self_id, err);
                                 }
                             }
                         }
                     }
                     Err(err) => {
-                        error!("{}.gi | Error read access cache: {:#?}", self_id, err);
+                        log::error!("{}.gi | Error read access cache: {:#?}", self_id, err);
                     }
                 }
             } else {
@@ -425,19 +425,19 @@ impl Service for CacheService {
                                     match send.send(point.clone()) {
                                         Ok(_) => {}
                                         Err(err) => {
-                                            error!("{}.gi | Send error: {:#?}", self_id, err);
+                                            log::error!("{}.gi | Send error: {:#?}", self_id, err);
                                         }
                                     }
                                 }
                                 None => {
-                                    error!("{}.gi | Error, requested point '{}' - not found", self_id, point.destination());
+                                    log::error!("{}.gi | Error, requested point '{}' - not found", self_id, point.destination());
                                 }
                             }
                         }
 
                     }
                     Err(err) => {
-                        error!("{}.gi | Error read access cache: {:#?}", self_id, err);
+                        log::error!("{}.gi | Error read access cache: {:#?}", self_id, err);
                     }
                 }
             }

@@ -37,7 +37,7 @@ impl Service for ServiceTask {
         let cycle = Duration::from_millis(self.cycle);
         let thread_join_handle = thread::spawn(move || {
             loop {
-                debug!("ServiceTask | loop with cycle time: {:?}", cycle);
+                log::debug!("ServiceTask | loop with cycle time: {:?}", cycle);
                 thread::sleep(cycle);
             }
         });
@@ -63,7 +63,7 @@ impl Service for ServiceCmaClient {
         let cycle = Duration::from_millis(self.cycle);
         let thread_join_handle = thread::spawn(move || {
             loop {
-                debug!("ServiceCmaClient | loop with cycle time: {:?}", cycle);
+                log::debug!("ServiceCmaClient | loop with cycle time: {:?}", cycle);
                 thread::sleep(cycle);
             }
         });
@@ -88,7 +88,7 @@ impl Service for ServiceApiClient {
         let cycle = Duration::from_millis(self.cycle);
         let thread_join_handle = thread::spawn(move || {
             loop {
-                debug!("ServiceApiClient | loop with cycle time: {:?}", cycle);
+                log::debug!("ServiceApiClient | loop with cycle time: {:?}", cycle);
                 thread::sleep(cycle);
             }
         });
@@ -108,7 +108,7 @@ fn main() {
     env::set_var("RUST_BACKTRACE", "full");
     env_logger::init();
 
-    info!("test_create_valid_fn");
+    log::info!("test_create_valid_fn");
     // let (initial, switches) = init_each();
     let test_data = [
         // serde_yaml::from_str(r#"
@@ -180,9 +180,9 @@ fn main() {
     let mut services = vec![];
     let config: Vec<serde_yaml::Value> = serde_yaml::from_str(&test_data[0]).unwrap();
     for conf in config {
-        debug!("main | key: {:?}\t|\tconf: {:?}", "_", conf);
+        log::debug!("main | key: {:?}\t|\tconf: {:?}", "_", conf);
         let conf = format!("!{}", serde_yaml::to_string(&conf).unwrap());
-        debug!("main | key: {:?}\t|\tconf: {:?}", "_", conf);
+        log::debug!("main | key: {:?}\t|\tconf: {:?}", "_", conf);
         let service: RefCell<Box<dyn Service>> = match serde_yaml::from_str(&conf).unwrap() {
             ServiceType::ApiClient(service) => {
                 RefCell::new(Box::new(service))

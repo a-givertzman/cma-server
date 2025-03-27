@@ -42,7 +42,7 @@ impl ApiClient {
     fn read_queue(self_id: &str, recv: &Receiver<Point>, buffer: &mut RetainBuffer<Point>) {
         let max_read_at_once = 1000;
         for (index, point) in recv.try_iter().enumerate() {   
-            debug!("{}.read_queue | point: {:?}", self_id, &point);
+            log::debug!("{}.read_queue | point: {:?}", self_id, &point);
             buffer.push(point);
             if index > max_read_at_once {
                 break;
@@ -60,7 +60,7 @@ impl ApiClient {
             Ok(reply) => {
                 if log::max_level() > log::LevelFilter::Info {
                     let reply_str = std::str::from_utf8(&reply).unwrap();
-                    trace!("{}.send | reply str: {:?}", self_id, reply_str);
+                    log::trace!("{}.send | reply str: {:?}", self_id, reply_str);
                 }
                 match serde_json::from_slice(&reply) {
                     Ok(reply) => Ok(reply),
@@ -70,14 +70,14 @@ impl ApiClient {
                             Err(err) => concat_string!(self_id, ".send | Error parsing reply to utf8 string: ", err.to_string()),
                         };
                         let message = concat_string!(self_id, ".send | Error parsing API reply: {:?} \n\t reply was: {:?}", err.to_string(), reply);
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                         Err(message)
                     }
                 }
             }
             Err(err) => {
                 let message = concat_string!(self_id, ".send | Error sending API request: {:?}", err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }
@@ -117,7 +117,7 @@ impl Service for ApiClient {
     //
     // 
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
@@ -147,30 +147,30 @@ impl Service for ApiClient {
             );
             'send: loop {
                 cycle.start();
-                trace!("{}.run | Step...", self_id);
+                log::trace!("{}.run | Step...", self_id);
                 Self::read_queue(&self_id, &recv, &mut buffer);
-                trace!("{}.run | Beffer.len: {}", self_id, buffer.len());
+                log::trace!("{}.run | Beffer.len: {}", self_id, buffer.len());
                 let mut count = buffer.len();
                 while count > 0 {
                     match buffer.first() {
                         Some(point) => {
                             match point {
-                                Point::Bool(_) => warn!("{}.run | Invalid point type 'Bool' in: {:?}", self_id, point),
-                                Point::Int(_) => warn!("{}.run | Invalid point type 'Int' in: {:?}", self_id, point),
-                                Point::Real(_) => warn!("{}.run | Invalid point type 'Real' in: {:?}", self_id, point),
-                                Point::Double(_) => warn!("{}.run | Invalid point type 'Double' in: {:?}", self_id, point),
+                                Point::Bool(_) => log::warn!("{}.run | Invalid point type 'Bool' in: {:?}", self_id, point),
+                                Point::Int(_) => log::warn!("{}.run | Invalid point type 'Int' in: {:?}", self_id, point),
+                                Point::Real(_) => log::warn!("{}.run | Invalid point type 'Real' in: {:?}", self_id, point),
+                                Point::Double(_) => log::warn!("{}.run | Invalid point type 'Double' in: {:?}", self_id, point),
                                 Point::String(point) => {
                                     let sql = point.value.clone();
                                     match Self::send(&self_id, &mut request, &conf.database, sql, api_keep_alive) {
                                         Ok(reply) => {
                                             if reply.has_error() {
-                                                warn!("{}.run | API reply has error: {:?}", self_id, reply.error);
+                                                log::warn!("{}.run | API reply has error: {:?}", self_id, reply.error);
                                             } else {
                                                 buffer.pop_first();
                                             }
                                         }
                                         Err(err) => {
-                                            warn!("{}.run | Error: {:?}", self_id, err);
+                                            log::warn!("{}.run | Error: {:?}", self_id, err);
                                         }
                                     }
                                 }
@@ -183,21 +183,21 @@ impl Service for ApiClient {
                 if exit.load(Ordering::SeqCst) {
                     break 'send;
                 }
-                trace!("{}.run | Step - done ({:?})", self_id, cycle.elapsed());
+                log::trace!("{}.run | Step - done ({:?})", self_id, cycle.elapsed());
                 if cyclic {
                     cycle.wait();
                 }
             };            
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

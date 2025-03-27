@@ -53,16 +53,16 @@ impl Service for MockServicePoints {
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let message = format!("{}.run | Not implemented", self.id);
-        debug!("{}", message);
+        log::debug!("{}", message);
         Err(message)
     }
     ///
     /// 
     fn exit(&self) {
-        debug!("{}.run | Not implemented", self.id);
+        log::debug!("{}.run | Not implemented", self.id);
     }    
     fn points(&self) -> Vec<PointConfig> {
-        debug!("{}.points | Returning: {:#?}", self.id, self.points);
+        log::debug!("{}.points | Returning: {:#?}", self.id, self.points);
         self.points.clone()
     }
 }

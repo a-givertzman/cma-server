@@ -97,7 +97,7 @@ mod fn_point_id {
             // debug!("input: {:?}", &input);
             let state = fn_point_id.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target_id);
         }
     }

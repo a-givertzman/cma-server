@@ -50,8 +50,8 @@ mod profinet_client_config {
             PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/ChargeIn.On").join(), type_: PointConfigType::Bool, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
             PointConfig { id: 0, name: Name::new(&self_name, "/Ied01/db999/ChargeOut.On").join(), type_: PointConfigType::Bool, history: PointConfigHistory::None, alarm: None, address: None, filters: None, comment: None },
         ];
-        debug!("result config: {:?}", &config);
-        debug!("result points:");
+        log::debug!("result config: {:?}", &config);
+        log::debug!("result points:");
         let config_points = config.points();
         for point in &config_points {
             println!("\t {:?}", point);

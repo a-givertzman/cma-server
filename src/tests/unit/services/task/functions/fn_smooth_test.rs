@@ -57,7 +57,7 @@ mod fn_smooth {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_smooth_real";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let factor = init_each(&self_id, Value::Double(0.125));
         let input = init_each(&self_id, Value::Real(0.0));
         let mut fn_smooth = FnSmooth::new(
@@ -138,7 +138,7 @@ mod fn_smooth {
             // debug!("input: {:?}", &input);
             let result = fn_smooth.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_real().value.aprox_eq(target, 4), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
             println!("------------")
         }
@@ -150,7 +150,7 @@ mod fn_smooth {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_smooth_double";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let factor = init_each(&self_id, Value::Double(0.125));
         let input = init_each(&self_id, Value::Double(0.0));
         let mut fn_smooth = FnSmooth::new(
@@ -231,7 +231,7 @@ mod fn_smooth {
             // debug!("input: {:?}", &input);
             let result = fn_smooth.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_double().value.aprox_eq(target, 6), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
             println!("------------")
         }

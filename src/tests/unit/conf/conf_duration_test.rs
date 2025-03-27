@@ -45,7 +45,7 @@ fn test_create_valid() {
     ];
     for (value, target) in test_data {
         let confDuration = ConfDuration::from_str(value).unwrap();
-        debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, confDuration, target);
+        log::debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, confDuration, target);
         assert_eq!(confDuration, target);
     }
 }
@@ -55,7 +55,7 @@ fn test_create_invalid() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
-    info!("test_create_invalid");
+    log::info!("test_create_invalid");
     // let (initial, switches) = init_each();
     let test_data: Vec<(&str, Result<&str, ()>)> = vec![
         ("1nsec", Err(())),
@@ -73,7 +73,7 @@ fn test_create_invalid() {
     ];
     for (value, target) in test_data {
         let confDuration = FnConfKeywd::from_str(value);
-        debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, confDuration, target);
+        log::debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, confDuration, target);
         assert_eq!(confDuration.is_err(), true);
     }
 }

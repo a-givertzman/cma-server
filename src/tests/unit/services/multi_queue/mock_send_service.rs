@@ -78,7 +78,7 @@ impl Service for MockSendService {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let txSend = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
@@ -88,16 +88,16 @@ impl Service for MockSendService {
         let sent = self.sent.clone();
         let delay = self.delay.clone();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             for value in test_data {
                 let point = value.to_point(0,&format!("{}/test", self_id));
                 match txSend.send(point.clone()) {
                     Ok(_) => {
-                        trace!("{}.run | send: {:?}", self_id, point);
+                        log::trace!("{}.run | send: {:?}", self_id, point);
                         sent.write().unwrap().push(point);
                     }
                     Err(err) => {
-                        warn!("{}.run | send error: {:?}", self_id, err);
+                        log::warn!("{}.run | send error: {:?}", self_id, err);
                     }
                 }
                 if exit.load(Ordering::SeqCst) {
@@ -113,12 +113,12 @@ impl Service for MockSendService {
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

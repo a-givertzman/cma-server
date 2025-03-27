@@ -45,12 +45,12 @@ impl MetricConfig {
     ///                 ...
     pub fn new(parent_id: &str, parent_name: &Name, conf_tree: &ConfTree, vars: &mut Vec<String>) -> MetricConfig {
         println!();
-        trace!("MetricConfig.new | confTree: {:?}", conf_tree);
+        log::trace!("MetricConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item
         if conf_tree.is_mapping() {
-                debug!("MetricConfig.new | MAPPING VALUE");
-                trace!("MetricConfig.new | confTree: {:?}", conf_tree);
+                log::debug!("MetricConfig.new | MAPPING VALUE");
+                log::trace!("MetricConfig.new | confTree: {:?}", conf_tree);
                 let self_name = match FnConfKeywd::from_str(&conf_tree.key) {
                     Ok(self_keyword) => {
                         self_keyword.data()
@@ -63,7 +63,7 @@ impl MetricConfig {
                 match conf_tree.get("inputs") {
                     Some(inputs_node) => {
                         for input_conf in inputs_node.sub_nodes().unwrap() {
-                            trace!("MetricConfig.new | input conf: {:?}\t|\t{:?}", input_conf.key, input_conf.conf);
+                            log::trace!("MetricConfig.new | input conf: {:?}\t|\t{:?}", input_conf.key, input_conf.conf);
                             if input_conf.is_mapping() {
                                 inputs.insert(
                                     (input_conf).key.to_string(), 

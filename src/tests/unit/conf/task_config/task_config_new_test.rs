@@ -32,7 +32,7 @@ mod task_config_new {
         init_each();
         let self_id = "task_config_new_test";
         let self_name = Name::new("", self_id);
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         // let (initial, switches) = init_each();
         let test_data = [
             // (
@@ -223,14 +223,14 @@ mod task_config_new {
             ),
         ];
         for (value, target) in test_data {
-            debug!("test value: {:?}", value);
+            log::debug!("test value: {:?}", value);
             let conf: serde_yaml::Value = serde_yaml::from_str(value).unwrap();
-            debug!("value: {:?}   |   conf: {:?}   |   target: {:?}", "_", conf, target);
+            log::debug!("value: {:?}   |   conf: {:?}   |   target: {:?}", "_", conf, target);
             // let fnKeyword = FnConfigKeyword::from_str(conf.as_str().unwrap()).unwrap();
             // debug!("\tfnKeyword: {:?}", fnKeyword);
             // let mut vars = vec![];
             let fn_config = TaskConfig::from_yaml(&self_name, &conf);
-            debug!("\tfnConfig: {:?}", fn_config);
+            log::debug!("\tfnConfig: {:?}", fn_config);
             assert_eq!(fn_config, target, "\n result: {:#?}\n target: {:#?}", fn_config, target);
         }
     }

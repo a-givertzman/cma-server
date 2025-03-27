@@ -73,7 +73,7 @@ impl Keywd {
 impl FromStr for Keywd {
     type Err = String;
     fn from_str(input: &str) -> Result<Keywd, String> {
-        trace!("Keywd.from_str | input: {}", input);
+        log::trace!("Keywd.from_str | input: {}", input);
         // let re = r#"(?:(?:(\w+)|))(?:(?:\s|)(device|db){1}(?:$|(?:[ \t]['"]*(\S+)['"]*)))"#;
         let re = r#"(?:(?:(\w+)|))(?:(?:\s|)(db){1}(?:$|(?:[ \t]['"]*(\S+)['"]*)))"#;
         let re = RegexBuilder::new(re).multi_line(false).build().unwrap();

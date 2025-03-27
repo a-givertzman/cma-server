@@ -84,7 +84,7 @@ impl Service for MockMultiQueue {
                                 }
                             }
                             Err(err) => {
-                                warn!("{}.run | recv error: {:?}", self_id, err);
+                                log::warn!("{}.run | recv error: {:?}", self_id, err);
                             }
                         }
                         if exit.load(Ordering::SeqCst) {
@@ -99,7 +99,7 @@ impl Service for MockMultiQueue {
                                 received.write().unwrap().push(point);
                             }
                             Err(err) => {
-                                warn!("{}.run | recv error: {:?}", self_id, err);
+                                log::warn!("{}.run | recv error: {:?}", self_id, err);
                             }
                         }
                         if exit.load(Ordering::SeqCst) {
@@ -109,7 +109,7 @@ impl Service for MockMultiQueue {
                 }
             }
         });
-        info!("{}.run | Starting - ok", self.id);
+        log::info!("{}.run | Starting - ok", self.id);
         Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
     }
     //

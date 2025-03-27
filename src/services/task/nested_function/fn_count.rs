@@ -87,7 +87,7 @@ impl FnOut for FnCount {
                     self.count = Some(count);
                 }
                 self.prev = input_val;
-                trace!("{}.out | value: {:?}", self.id, count);
+                log::trace!("{}.out | value: {:?}", self.id, count);
                 FnResult::Ok(Point::Int(
                     PointHlr::new(
                         input.tx_id(),

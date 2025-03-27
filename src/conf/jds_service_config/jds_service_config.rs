@@ -24,26 +24,26 @@ impl JdsServiceConfig {
     /// Creates new instance of the [JdsServiceConfig]:
     pub fn new(conf_tree: &mut ConfTree) -> Self {
         println!();
-        trace!("JdsServiceConfig.new | confTree: {:?}", conf_tree);
+        log::trace!("JdsServiceConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item
         if conf_tree.count() > 1 {
-            error!("JdsServiceConfig.new | JdsServiceConfig conf must have single item, additional items was ignored: {:?}", conf_tree)
+            log::error!("JdsServiceConfig.new | JdsServiceConfig conf must have single item, additional items was ignored: {:?}", conf_tree)
         };
         match conf_tree.next() {
             Some(self_conf) => {
                 let self_id = format!("JdsServiceConfig({})", self_conf.key);
                 let mut self_conf = ServiceConfig::new(&self_id, self_conf);
-                trace!("{}.new | selfConf: {:?}", self_id, self_conf);
+                log::trace!("{}.new | selfConf: {:?}", self_id, self_conf);
                 let self_name = self_conf.name();
                 // let self_addr = self_conf.sufix();
-                debug!("{}.new | name: {:?}", self_id, self_name);
+                log::debug!("{}.new | name: {:?}", self_id, self_name);
                 let cycle = self_conf.get_duration("cycle");
-                debug!("{}.new | cycle: {:?}", self_id, cycle);
+                log::debug!("{}.new | cycle: {:?}", self_id, cycle);
                 let (rx, rx_max_len) = self_conf.get_in_queue().unwrap();
-                debug!("{}.new | RX: {},\tmax-length: {}", self_id, rx, rx_max_len);
+                log::debug!("{}.new | RX: {},\tmax-length: {}", self_id, rx, rx_max_len);
                 let tx = self_conf.get_out_queue().unwrap();
-                debug!("{}.new | TX: {}", self_id, tx);
+                log::debug!("{}.new | TX: {}", self_id, tx);
                 JdsServiceConfig {
                     name: self_name,
                     rx,

@@ -49,25 +49,25 @@ impl Task {
         if conf.subscribe.is_empty() {
             None
         } else {
-            debug!("{}.subscriptions | requesting points...", self.id);
+            log::debug!("{}.subscriptions | requesting points...", self.id);
             let mut self_points = self.conf.points();
             let mut points = services.rlock(&self.id).points(&self.id).then(
                 |points| points,
                 |err| {
-                    error!("{}.subscriptions | Requesting Points error: {:?}", self.id, err);
+                    log::error!("{}.subscriptions | Requesting Points error: {:?}", self.id, err);
                     vec![]
                 },
             );
             points.append(&mut self_points);
-            debug!("{}.subscriptions | rceived points: {:#?}", self.id, points.len());
-            debug!(
+            log::debug!("{}.subscriptions | rceived points: {:#?}", self.id, points.len());
+            log::debug!(
                 "{}.subscriptions | rceived points: {:#?}",
                 self.id,
                 points.iter().map(|p| concat_string!(p.id.to_string(), " | ", p.type_.to_string(), " | ", p.name)).collect::<Vec<String>>(),
             );
-            debug!("{}.subscriptions | conf.subscribe: {:#?}", self.id, conf.subscribe);
+            log::debug!("{}.subscriptions | conf.subscribe: {:#?}", self.id, conf.subscribe);
             let subscriptions = conf.subscribe.with(&points);
-            trace!("{}.subscriptions | subscriptions: {:#?}", self.id, subscriptions);
+            log::trace!("{}.subscriptions | subscriptions: {:#?}", self.id, subscriptions);
             if subscriptions.len() > 1 {
                 panic!("{}.subscriptions | Error. Task does not supports multiple subscriptions for now: {:#?}.\n\tTry to use single subscription.", self.id, subscriptions);
             } else {
@@ -77,7 +77,7 @@ impl Task {
                         Some((service_name, points))
                     }
                     Some((_, None)) => {
-                        warn!("{}.subscriptions | Error. Task subscription configuration error / empty in: {:#?}", self.id, subscriptions);
+                        log::warn!("{}.subscriptions | Error. Task subscription configuration error / empty in: {:#?}", self.id, subscriptions);
                         None
                     }
                     None => panic!("{}.subscriptions | Error. Task subscription configuration error in: {:#?}", self.id, subscriptions),
@@ -140,8 +140,8 @@ impl Service for Task {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
-        trace!("{}.run | Self tx_id: {}", self.id, PointTxId::from_str(&self.id));
+        log::info!("{}.run | Starting...", self.id);
+        log::trace!("{}.run | Self tx_id: {}", self.id, PointTxId::from_str(&self.id));
         let self_id = self.id.clone();
         let self_name = self.name.clone();
         let exit = self.exit.clone();
@@ -157,23 +157,23 @@ impl Service for Task {
             let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
             let mut task_nodes = TaskNodes::new(&self_id);
             task_nodes.build_nodes(&self_name, conf, services.clone());
-            trace!("{}.run | taskNodes: {:#?}", self_id, task_nodes);
+            log::trace!("{}.run | taskNodes: {:#?}", self_id, task_nodes);
             'main: loop {
-                trace!("{}.run | calculation step...", self_id);
+                log::trace!("{}.run | calculation step...", self_id);
                 if cyclic {
                     cycle.start();
                     match rx_recv.recv_timeout(recv_timeout) {
                         Ok(point) => {
-                            debug!("{}.run | point: {:?}", self_id, &point);
+                            log::debug!("{}.run | point: {:?}", self_id, &point);
                             task_nodes.eval(point);
-                            debug!("{}.run | calculation step - done ({:?})", self_id, cycle.elapsed());
+                            log::debug!("{}.run | calculation step - done ({:?})", self_id, cycle.elapsed());
                             cycle.wait();
                         }
                         Err(err) => {
                             match err {
                                 RecvTimeoutError::Timeout => trace!("{}.run | Receive error: {:?}", self_id, err),
                                 RecvTimeoutError::Disconnected => {
-                                    error!("{}.run | Error receiving from queue: {:?}", self_id, err);
+                                    log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
                                     break 'main;
                                 }
                             }
@@ -182,12 +182,12 @@ impl Service for Task {
                 } else {
                     match rx_recv.recv() {
                         Ok(point) => {
-                            debug!("{}.run | point: {:?}", self_id, &point);
+                            log::debug!("{}.run | point: {:?}", self_id, &point);
                             task_nodes.eval(point);
-                            debug!("{}.run | calculation step - done ({:?})", self_id, cycle.elapsed());
+                            log::debug!("{}.run | calculation step - done ({:?})", self_id, cycle.elapsed());
                         }
                         Err(err) => {
-                            error!("{}.run | Error receiving from queue: {:?}", self_id, err);
+                            log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
                             break 'main;
                         }
                     };
@@ -198,19 +198,19 @@ impl Service for Task {
             };
             if let Some((service_name, points)) = subscriptions {
                 if let Err(err) = services.wlock(&self_id).unsubscribe(&service_name,&self_name.join(), &points) {
-                    error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
+                    log::error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
                 }
             }
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }
@@ -224,6 +224,6 @@ impl Service for Task {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
-        debug!("{}.run | Exit: {}", self.id, self.exit.load(Ordering::SeqCst));
+        log::debug!("{}.run | Exit: {}", self.id, self.exit.load(Ordering::SeqCst));
     }
 }

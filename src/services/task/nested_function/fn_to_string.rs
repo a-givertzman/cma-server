@@ -53,7 +53,7 @@ impl FnOut for FnToString {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, input);
+        log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let out = match &input {
@@ -63,7 +63,7 @@ impl FnOut for FnToString {
                     Point::Double(value) => &value.value.to_string(),
                     Point::String(value) => &value.value,
                 };
-                trace!("{}.out | out: {:?}", self.id, &out);
+                log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::String(
                     PointHlr::new(
                         input.tx_id(),

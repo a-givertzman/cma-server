@@ -65,7 +65,7 @@ impl SlmpDb {
             }
             Err(err) => {
                 if log::max_level() >= log::LevelFilter::Trace {
-                    warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
+                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
                 }
             }
         }
@@ -80,7 +80,7 @@ impl SlmpDb {
                     Ok(_) => {}
                     Err(err) => {
                         message = format!("{}.yield_status | send error: {}", self.id, err);
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                     }
                 }
             }
@@ -123,13 +123,13 @@ impl SlmpDb {
             let mut buf = vec![0u8; chank_len];
             match stream.read(&mut buf) {
                 Ok(0) => {
-                    trace!("{}.read_all | socket closed by peer", self_id);
+                    log::trace!("{}.read_all | socket closed by peer", self_id);
                     return ConnectionStatus::Closed(format!("{}.read_all | TcpStream closed by peer", self_id))
                 }
                 Ok(len) => {
-                    trace!("{}.read_all | bytes read: {}", self_id, len);
-                    trace!("{}.read_all | bytes read: \n\t{:02X?}", self_id, buf);
-                    trace!("{}.read_all | appending bytes: \n\t{:02X?}", self_id, &buf[..len]);
+                    log::trace!("{}.read_all | bytes read: {}", self_id, len);
+                    log::trace!("{}.read_all | bytes read: \n\t{:02X?}", self_id, buf);
+                    log::trace!("{}.read_all | appending bytes: \n\t{:02X?}", self_id, &buf[..len]);
                     bytes.extend_from_slice(&buf[..len]);
                     if len < chank_len {
                         return ConnectionStatus::Active(OpResult::Ok(()))
@@ -159,41 +159,41 @@ impl SlmpDb {
     ///     - parses raw data into the configured points
     ///     - sends to the [dest] only points with updated value or status
     pub fn read(&mut self, tcp_stream: &mut TcpStream, dest: &Sender<Point>) -> Result<(), String> {
-        trace!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset, self.size);
+        log::trace!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset, self.size);
         let read_tcp_stream = BufReader::new(tcp_stream.try_clone().unwrap());
         match self.slmp_packet.read_packet(FrameType::BinReqSt) {
             Ok(packet) => {
-                trace!("{}.read | Sending SLMP request: \n\t{:02X?} ...", self.id, packet);
+                log::trace!("{}.read | Sending SLMP request: \n\t{:02X?} ...", self.id, packet);
                 match tcp_stream.write_all(&packet) {
                     Ok(_) => {
-                        trace!("{}.read | Sending SLMP request - ok", self.id);
+                        log::trace!("{}.read | Sending SLMP request - ok", self.id);
                         // debug!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset, self.size);
                         let mut bytes = vec![];
-                        trace!("{}.read | Reading SLMP reply...", self.id);
+                        log::trace!("{}.read | Reading SLMP reply...", self.id);
                         match Self::read_all(&self.id, &mut bytes, read_tcp_stream) {
                             ConnectionStatus::Active(_) => {
-                                trace!("{}.read | bytes: {:?}", self.id, bytes);
+                                log::trace!("{}.read | bytes: {:?}", self.id, bytes);
                                 let timestamp = Utc::now();
                                 let mut message = String::new();
                                 if bytes.len() >= 11 {
                                     let data_bytes = &bytes[11..];
                                     for (_key, parse_point) in &mut self.points {
                                         if let Some(point) = parse_point.next(data_bytes, timestamp) {
-                                            trace!("{}.read | point: {:?}", self.id, point);
+                                            log::trace!("{}.read | point: {:?}", self.id, point);
                                             match dest.send(point.clone()) {
                                                 Ok(_) => {
                                                     Self::log(&self.id, &self.name, &point);
                                                 }
                                                 Err(err) => {
                                                     message = format!("{}.read | send error: {}", self.id, err);
-                                                    warn!("{}", message);
+                                                    log::warn!("{}", message);
                                                 }
                                             }
                                         }
                                     }
                                 } else {
                                     message = format!("{}.read | Empty message received", self.id);
-                                    warn!("{}", message);
+                                    log::warn!("{}", message);
                                 }
                                 match message.is_empty() {
                                     true => Ok(()),
@@ -202,21 +202,21 @@ impl SlmpDb {
                             }
                             ConnectionStatus::Closed(err) => {
                                 let message = format!("{}.read | Read socket error: {}", self.id, err);
-                                warn!("{}", message);
+                                log::warn!("{}", message);
                                 Err(message)
                             }
                         }
                     }
                     Err(err) => {
                         let message = format!("{}.read | Write socket error: {}", self.id, err);
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                         Err(message)
                     }
                 }
             }
             Err(err) => {
                 let message = format!("{}.read | Build read packet error: {}", self.id, err);
-                error!("{}", message);
+                log::error!("{}", message);
                 Err(message)
             }
         }
@@ -225,15 +225,15 @@ impl SlmpDb {
     /// Writes point to the current DB
     /// - Returns Ok() if succeed, Err(message) on fail
     pub fn write(&mut self, tcp_stream: &mut TcpStream, point: Point) -> Result<(), String> {
-        debug!("{}.write | Writing point: {:?}", self.id, point);
+        log::debug!("{}.write | Writing point: {:?}", self.id, point);
         match self.points.get(&point.name()) {
             Some(parse_point) => {
                 match parse_point.to_bytes(&point) {
                     Ok(bytes) => {
                         match parse_point.address().offset {
                             Some(offset) => {
-                                debug!("{}.write | Preparing write_packet with self.offset: '{:?}', offset: '{}'", self.id, self.offset, offset / 2);
-                                debug!("{}.write | Preparing write_packet with device code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset + offset / 2, parse_point.size());
+                                log::debug!("{}.write | Preparing write_packet with self.offset: '{:?}', offset: '{}'", self.id, self.offset, offset / 2);
+                                log::debug!("{}.write | Preparing write_packet with device code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset + offset / 2, parse_point.size());
                                 let slmp_packet = SlmpPacket::new(
                                     &self.id,
                                     self.device_code,
@@ -242,7 +242,7 @@ impl SlmpDb {
                                 );
                                 match slmp_packet.write_packet(FrameType::BinReqSt, &bytes) {
                                     Ok(write_packet) => {
-                                        debug!("{}.write | write_packet: {:02X?}", self.id, write_packet);
+                                        log::debug!("{}.write | write_packet: {:02X?}", self.id, write_packet);
                                         match tcp_stream.write_all(&write_packet) {
                                             Ok(_) => {
                                                 match tcp_stream.flush() {
@@ -251,12 +251,12 @@ impl SlmpDb {
                                                         let mut write_reply = vec![];
                                                         match Self::read_all(&self.id, &mut write_reply, tcp_stream) {
                                                             ConnectionStatus::Active(_) => {
-                                                                debug!("{}.write | write reply: {:02X?}", self.id, write_reply);
+                                                                log::debug!("{}.write | write reply: {:02X?}", self.id, write_reply);
                                                                 let end_code = i16::from_le_bytes(write_reply[9..11].try_into().unwrap());
                                                                 match end_code {
-                                                                    0 => debug!("{}.write | Write - Ok", self.id),
-                                                                    4 => debug!("{}.write | Write - Error (4)", self.id),
-                                                                    _ => debug!("{}.write | Write - Unknown Error ({})", self.id, end_code),
+                                                                    0 => log::debug!("{}.write | Write - Ok", self.id),
+                                                                    4 => log::debug!("{}.write | Write - Error (4)", self.id),
+                                                                    _ => log::debug!("{}.write | Write - Unknown Error ({})", self.id, end_code),
                                                                 }
                                                             }
                                                             ConnectionStatus::Closed(_) => todo!(),
@@ -265,28 +265,28 @@ impl SlmpDb {
                                                     }
                                                     Err(err) => {
                                                         let message = format!("{}.write | Tcp write (flush) error: {:#?}", self.id, err);
-                                                        warn!("{}", message);
+                                                        log::warn!("{}", message);
                                                         Err(message)
                                                     }
                                                 }
                                             }
                                             Err(err) => {
                                                 let message = format!("{}.write | Tcp write error: {:#?}", self.id, err);
-                                                warn!("{}", message);
+                                                log::warn!("{}", message);
                                                 Err(message)
                                             }
                                         }
                                     }
                                     Err(err) => {
                                         let message = format!("{}.write | Build write packet error: {:#?} \n\tin the point: {:?}", self.id, err, point.name());
-                                        warn!("{}", message);
+                                        log::warn!("{}", message);
                                         Err(message)
                                     }
                                 }
                             }
                             None => {
                                 let message = format!("{}.write | Address offset not specified for Point '{}'", self.id, point.name());
-                                warn!("{}", message);
+                                log::warn!("{}", message);
                                 Err(message)
                             }
                         }
@@ -296,7 +296,7 @@ impl SlmpDb {
             }
             None => {
                 let message = format!("{}.write | Point '{}' - not found", self.id, point.name());
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

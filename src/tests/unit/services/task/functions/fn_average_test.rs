@@ -57,7 +57,7 @@ mod fn_average {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let enable = init_each(&self_id, Value::Bool(false));
         let input = init_each(&self_id, Value::Bool(false));
         let mut fn_average = FnAverage::new(
@@ -94,7 +94,7 @@ mod fn_average {
                 FnResult::Ok(_) => {}
                 FnResult::None => {}
                 FnResult::Err(err) => {
-                    debug!("step {} \t value: {:?}   |   Error: {:?}", step, value, err);
+                    log::debug!("step {} \t value: {:?}   |   Error: {:?}", step, value, err);
                     results += 1;
                 }
             }
@@ -108,7 +108,7 @@ mod fn_average {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let enable = init_each(&self_id, Value::Bool(false));
         let input = init_each(&self_id, Value::Int(0));
         let mut fn_average = FnAverage::new(
@@ -141,7 +141,7 @@ mod fn_average {
             // debug!("input: {:?}", &input);
             let result = fn_average.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_int().value == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }
@@ -152,7 +152,7 @@ mod fn_average {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let enable = init_each(&self_id, Value::Bool(false));
         let input = init_each(&self_id, Value::Real(0.0));
         let mut fn_average = FnAverage::new(
@@ -185,7 +185,7 @@ mod fn_average {
             // debug!("input: {:?}", &input);
             let result = fn_average.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_real().value.aprox_eq(target, 3), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }
@@ -196,7 +196,7 @@ mod fn_average {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real_enable";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let enable = init_each(&self_id, Value::Bool(false));
         let input = init_each(&self_id, Value::Real(0.0));
         let mut fn_average = FnAverage::new(
@@ -237,16 +237,16 @@ mod fn_average {
             let point = value.to_point(0, "input");
             enable.borrow_mut().add(&en);
             input.borrow_mut().add(&point);
-            debug!("step {} \t input: {:?}", step, input);
+            log::debug!("step {} \t input: {:?}", step, input);
             let result = fn_average.out();
             match &result {
                 FnResult::Ok(result) => {
-                    debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+                    log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
                     assert!(result.as_real().value.aprox_eq(target.unwrap(), 3), "\nresult: {:?}\ntarget: {:?}", result.as_real().value, target);
                     results += 1;
                 }
                 FnResult::None => {
-                    debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, en_val, value, result);
+                    log::debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, en_val, value, result);
                     assert!(target.is_none(), "\nresult: {:?}\ntarget: {:?}", result, target);
                     results += 1;
                 }
@@ -262,7 +262,7 @@ mod fn_average {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_double_enable";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let enable = init_each(&self_id, Value::Bool(false));
         let input = init_each(&self_id, Value::Double(0.0));
         let mut fn_average = FnAverage::new(
@@ -307,12 +307,12 @@ mod fn_average {
             let result = fn_average.out();
             match &result {
                 FnResult::Ok(result) => {
-                    debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+                    log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
                     assert!(result.as_double().value.aprox_eq(target.unwrap(), 3), "\nresult: {:?}\ntarget: {:?}", result.as_real().value, target);
                     results += 1;
                 }
                 FnResult::None => {
-                    debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, en_val, value, result);
+                    log::debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, en_val, value, result);
                     assert!(target.is_none(), "\nresult: {:?}\ntarget: {:?}", result, target);
                     results += 1;
                 }

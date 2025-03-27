@@ -34,7 +34,7 @@ mod fn_pow {
     fn int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("fn_pow_int");
+        log::info!("fn_pow_int");
         let mut value1_stored;
         let mut value2_stored = 1.to_point(0, "int");
         let mut target: i64;
@@ -63,14 +63,14 @@ mod fn_pow {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(&point1);
             let state = fn_pow.out().unwrap();
-            debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
+            log::debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_int().value.pow(value2_stored.as_int().value as u32);
             let result = state.as_int().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
             input2.borrow_mut().add(&point2);
             let state = fn_pow.out().unwrap();
-            debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
+            log::debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_int().value.pow(value2_stored.as_int().value as u32);
             let result = state.as_int().value;
@@ -84,7 +84,7 @@ mod fn_pow {
     fn real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("fn_pow_real");
+        log::info!("fn_pow_real");
         let mut value1_stored;
         let mut value2_stored = 1.0f32.to_point(0, "real");
         let mut target: f32;
@@ -119,14 +119,14 @@ mod fn_pow {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(&point1);
             let state = fn_pow.out().unwrap();
-            debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
+            log::debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_real().value.powf(value2_stored.as_real().value);
             let result = state.as_real().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
             input2.borrow_mut().add(&point2);
             let state = fn_pow.out().unwrap();
-            debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
+            log::debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_real().value.powf(value2_stored.as_real().value);
             let result = state.as_real().value;
@@ -140,7 +140,7 @@ mod fn_pow {
     fn double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("fn_pow_double");
+        log::info!("fn_pow_double");
         let mut value1_stored;
         let mut value2_stored = 1.0f64.to_point(0, "double");
         let mut target: f64;
@@ -175,14 +175,14 @@ mod fn_pow {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(&point1);
             let state = fn_pow.out().unwrap();
-            debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
+            log::debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_double().value.powf(value2_stored.as_double().value);
             let result = state.as_double().value;
             assert_eq!(result, target, "step {} \n result: {} \n target: {}", step, result, target);
             input2.borrow_mut().add(&point2);
             let state = fn_pow.out().unwrap();
-            debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
+            log::debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_double().value.powf(value2_stored.as_double().value);
             let result = state.as_double().value;

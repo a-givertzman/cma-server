@@ -68,10 +68,10 @@ mod tests{
         };
 
         // let (initial, switches) = init_each();
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/conf/metric_config/metric_config_test.yaml";
         let metric_config = MetricConfig::read(self_id, &self_name, path);
-        trace!("fnConfig: {:?}", metric_config);
+        log::trace!("fnConfig: {:?}", metric_config);
         assert_eq!(metric_config, target);
     }
 }

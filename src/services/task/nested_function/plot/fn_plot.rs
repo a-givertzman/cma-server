@@ -101,19 +101,19 @@ impl FnOut for FnPlot {
             match input {
                 FnResult::Ok(input) => {
                     value = input.clone();
-                    trace!("{}.out | value: {:#?}", self.id, value);
+                    log::trace!("{}.out | value: {:#?}", self.id, value);
                     let d = value.timestamp();
                     let secs = d.timestamp() as f64 ;
                     let nanos = (d.timestamp_subsec_nanos() as f64) / 1_000_000_000.0;
                     let x = secs + nanos;
                     let send = (name.to_owned(), egui::accesskit::Point::new(x, value.to_double().as_double().value));
                     if let Err(err) = self.plot_send.send(send) {
-                        error!("{}.out | Send error: {:#?}", self.id, err);
+                        log::error!("{}.out | Send error: {:#?}", self.id, err);
                     }
                 }
                 FnResult::None => {}
                 FnResult::Err(err) => {
-                    error!("{}.out | Error on input '{}': {:#?}", self.id, name, err);
+                    log::error!("{}.out | Error on input '{}': {:#?}", self.id, name, err);
                 }
             }
         }        

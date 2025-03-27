@@ -15,21 +15,21 @@ use crate::{core_::{conf::task_config::TaskConfig, debug::debug_session::LogLeve
 
 fn main() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
-    info!("test_task");
+    log::info!("test_task");
     
     // let (initial, switches) = init_each();
-    trace!("dir: {:?}", env::current_dir());
+    log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/task/task_config_test.yaml";
     let config = TaskConfig::read(path);
-    trace!("config: {:?}", &config);
+    log::trace!("config: {:?}", &config);
     let mut task = Task::new(config);
-    trace!("task tuning...");
+    log::trace!("task tuning...");
     task.run();
-    trace!("task tuning - ok");
+    log::trace!("task tuning - ok");
     thread::sleep(Duration::from_secs_f32(0.5));
-    trace!("task stopping...");
+    log::trace!("task stopping...");
     task.exit();
-    trace!("task stopping - ok");
+    log::trace!("task stopping - ok");
 }
 
 fn main1() {
@@ -46,8 +46,8 @@ fn main1() {
     ];
     let mut conf: serde_yaml::Value = serde_yaml::from_str(test_data[0]).unwrap();
     let map = conf.as_mapping_mut().unwrap();
-    debug!("map: {:?}", &map);
+    log::debug!("map: {:?}", &map);
     let removed = map.remove_entry("input2");
-    debug!("removed: {:?}", &removed);
-    debug!("map: {:?}", &map);
+    log::debug!("removed: {:?}", &removed);
+    log::debug!("map: {:?}", &map);
 }

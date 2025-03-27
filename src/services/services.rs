@@ -81,7 +81,7 @@ impl Services {
     fn prepare_point_ids(self_id: &str, notify: &mut ChangeNotify<NotifyState, String>, retain_point_id: &Option<Arc<RwLock<RetainPointId>>>, services: &Arc<RwLock<HashMap<String, Arc<RwLock<dyn Service>>>>>) {
         match retain_point_id {
             Some(retain_point_id) => {
-                info!("{}.prepare_point_ids | Preparing Points id's...", self_id);
+                log::info!("{}.prepare_point_ids | Preparing Points id's...", self_id);
                 match services.read() {
                     Ok(services) => {
                         for (service_id, service) in services.iter() {
@@ -90,10 +90,10 @@ impl Services {
                                 Ok(mut retain_point_id) => {
                                     retain_point_id.insert(&service_id, service_points);
                                 }
-                                Err(err) => error!("{}.prepare_point_ids | Points id's write access error: {:#?}", self_id, err),
+                                Err(err) => log::error!("{}.prepare_point_ids | Points id's write access error: {:#?}", self_id, err),
                             }
                         };
-                        info!("{}.prepare_point_ids | Points is chashed: {}", self_id, retain_point_id.read().unwrap().is_cached());
+                        log::info!("{}.prepare_point_ids | Points is chashed: {}", self_id, retain_point_id.read().unwrap().is_cached());
                         let points = retain_point_id.write().unwrap()
                             .points()
                             .iter()
@@ -102,10 +102,10 @@ impl Services {
                                     concat_string!(owner, " | ", p.id.to_string(), " | ", p.type_.to_string(), " | ", p.name, "\n")
                                 }).collect()
                             }).collect::<Vec<String>>();
-                        info!("{}.prepare_point_ids | Points: {:#?}", self_id, points);
-                        info!("{}.prepare_point_ids | Preparing Points id's - ok", self_id);
+                        log::info!("{}.prepare_point_ids | Points: {:#?}", self_id, points);
+                        log::info!("{}.prepare_point_ids | Preparing Points id's - ok", self_id);
                     }
-                    Err(err) => error!("{}.prepare_point_ids | Services read access error: {:#?}", self_id, err),
+                    Err(err) => log::error!("{}.prepare_point_ids | Services read access error: {:#?}", self_id, err),
                 }
             }
             None => notify.add(NotifyState::RetainPointNotConfiguredWarn, format!("{}.run | Retain->Point - not configured", self_id)),
@@ -114,16 +114,16 @@ impl Services {
     ///
     /// Main loop of the Services
     pub fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let points_requested = self.points_requested.clone();
         let points_request = self.points_request.clone();
         let retain_point_id = self.retain_point_id.clone();
         let services = self.map.clone();
         let exit = self.exit.clone();
-        info!("{}.run | Preparing thread...", self_id);
+        log::info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             let mut notify = ChangeNotify::new(
                 &self_id,
                 NotifyState::Start,
@@ -146,7 +146,7 @@ impl Services {
                         Ok(mut requests) => {
                             match requests.pop() {
                                 Some((requester_name, sink)) => {
-                                    debug!("{}.run | Points requested from: '{}'", self_id, requester_name);
+                                    log::debug!("{}.run | Points requested from: '{}'", self_id, requester_name);
                                     points_requested.fetch_sub(1, Ordering::SeqCst);
                                     match &retain_point_id {
                                         Some(retain_point_id) => match retain_point_id.write() {
@@ -160,10 +160,10 @@ impl Services {
                                                     }
                                                 }).flatten().collect();
                                                 sink.add(points);
-                                                debug!("{}.run | Points requested from: '{}' - Ok", self_id, requester_name);
+                                                log::debug!("{}.run | Points requested from: '{}' - Ok", self_id, requester_name);
                                             }
                                             Err(err) => {
-                                                error!("{}.run | Points id's write access error, requester: '{}', error: {:#?}", self_id, requester_name, err);
+                                                log::error!("{}.run | Points id's write access error, requester: '{}', error: {:#?}", self_id, requester_name, err);
                                                 sink.add(vec![]);
                                             }
                                         },
@@ -189,17 +189,17 @@ impl Services {
                     break;
                 }
             }
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         thread::sleep(Duration::from_millis(50));
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }
@@ -211,7 +211,7 @@ impl Services {
         let mut map = HashMap::new();
         match self.map.read() {
             Ok(services) => services.clone_into(&mut map),
-            Err(err) => error!("{}.all | Services read access error: {:#?}", self.id, err),
+            Err(err) => log::error!("{}.all | Services read access error: {:#?}", self.id, err),
         }
         map
     }
@@ -226,7 +226,7 @@ impl Services {
                 }
                 services.insert(name, service);
             }
-            Err(err) => error!("{}.insert | Services write access error: {:#?}", self.id, err),
+            Err(err) => log::error!("{}.insert | Services write access error: {:#?}", self.id, err),
         }
     }
     ///
@@ -237,13 +237,13 @@ impl Services {
                 match services.get(name) {
                     Some(srvc) => Some(srvc.clone()),
                     None => {
-                        warn!("{}.get | service '{:?}' - not found", self.id, name);
+                        log::warn!("{}.get | service '{:?}' - not found", self.id, name);
                         None
                     },
                 }
             }
             Err(err) => {
-                error!("{}.get | Services read access error: {:#?}", self.id, err);
+                log::error!("{}.get | Services read access error: {:#?}", self.id, err);
                 None
             }
         }
@@ -304,7 +304,7 @@ impl Services {
                 points_request.push((requester_name.into(), sink));
                 self.points_requested.fetch_add(1, Ordering::SeqCst);
             }
-            Err(err) => error!("{}.get | Services read access error: {:#?}", self.id, err),
+            Err(err) => log::error!("{}.get | Services read access error: {:#?}", self.id, err),
         }
         future
         // let points = if !self.point_ids.read().unwrap().is_cached() {

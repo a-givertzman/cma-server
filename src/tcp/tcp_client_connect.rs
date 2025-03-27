@@ -38,10 +38,10 @@ impl TcpClientConnect {
     /// Opens a TCP connection to a remote host until succeed.
     pub fn connect(&mut self) -> Option<TcpStream> {
         let self_id = self.id.clone();
-        info!("{}.connect | connecting...", self_id);
+        log::info!("{}.connect | connecting...", self_id);
         let id = self.id.clone();
         let addr = self.addr;
-        info!("{}.connect | connecting to: {:?}...", id, addr);
+        log::info!("{}.connect | connecting to: {:?}...", id, addr);
         let cycle = self.reconnect;
         let self_stream = self.stream.clone();
         let exit = self.exit.clone();
@@ -52,22 +52,22 @@ impl TcpClientConnect {
                 match TcpStream::connect_timeout(&addr, Duration::from_millis(1000)) {
                     Ok(stream) => {
                         self_stream.wlock(&self_id).push(stream);
-                        info!("{}.connect | connected to: \n\t{:?}", id, self_stream.rlock(&self_id).first().unwrap());
+                        log::info!("{}.connect | connected to: \n\t{:?}", id, self_stream.rlock(&self_id).first().unwrap());
                         break;
                     }
                     Err(err) => {
                         if log::max_level() == LevelFilter::Debug {
-                            warn!("{}.connect | connection error: \n\t{:?}", id, err);
+                            log::warn!("{}.connect | connection error: \n\t{:?}", id, err);
                         }
                     }
                 };
                 if exit.load(Ordering::SeqCst) {
-                    debug!("{}.connect | Exit: 'true'", id);
+                    log::debug!("{}.connect | Exit: 'true'", id);
                     break;
                 }
                 cycle.wait();
             }
-            debug!("{}.connect | Exit", id);
+            log::debug!("{}.connect | Exit", id);
         });
         handle.join().unwrap();
         let mut tcp_stream = self.stream.wlock(&self.id);

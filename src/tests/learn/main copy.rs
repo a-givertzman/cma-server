@@ -35,7 +35,7 @@ impl<'de> Deserialize<'de> for Config {
                     E: de::Error, {
                 match FnConfKeywd::from_str(&v) {
                     Ok(keyword) => {
-                        trace!("Config.deserialize | keyword parsed: {:?}", keyword);
+                        log::trace!("Config.deserialize | keyword parsed: {:?}", keyword);
                         // nodes.insert(key, Config::new(&conf, &Some(keyword.type_())));
                         Ok(Self::Value {
                             nodeType: FnConfigType::Unknown,
@@ -45,7 +45,7 @@ impl<'de> Deserialize<'de> for Config {
                     Err(err) => {
                         // warn!("Config.deserialize | Unknown keyword: '{:?}' in the conf: {:?}", key, conf);
                         let msg = format!("Config.deserialize | possible input name: '{:?}'", v);
-                        warn!("{}", msg);
+                        log::warn!("{}", msg);
                         // nodes.insert(key, Config::new(&conf, &None));
                         Err(de::Error::custom(msg))
                     }
@@ -60,7 +60,7 @@ impl<'de> Deserialize<'de> for Config {
                     let value: HashMap<String, > = map.next_value()?;
                     match FnConfKeywd::from_str(key) {
                         Ok(keyword) => {
-                            trace!("Config.deserialize | keyword parsed: {:?}", keyword);
+                            log::trace!("Config.deserialize | keyword parsed: {:?}", keyword);
                             // nodes.insert(key, Config::new(&conf, &Some(keyword.type_())));
                             Ok(Self::Value {
                                 nodeType: FnConfigType::Unknown,
@@ -70,7 +70,7 @@ impl<'de> Deserialize<'de> for Config {
                         Err(err) => {
                             // warn!("Config.deserialize | Unknown keyword: '{:?}' in the conf: {:?}", key, conf);
                             let msg = format!("Config.deserialize | possible input name: '{:?}'", key);
-                            warn!("{}", msg);
+                            log::warn!("{}", msg);
                             // nodes.insert(key, Config::new(&conf, &None));
                             Err(de::Error::custom(msg))
                         }
@@ -140,21 +140,21 @@ impl Config {
     pub fn new_(conf: &serde_yaml::Value, nodeType: &Option<FnConfigType>) -> () {
         // let nodes: HashMap<String, Config> = if conf.is_mapping() {
         if conf.is_mapping() {
-            trace!("FnConfig.new | IS MAP");
+            log::trace!("FnConfig.new | IS MAP");
             match serde_yaml::from_value(conf.clone()) {
                 Ok(map) => {
                     let map: HashMap<String, serde_yaml::Value> = map;
-                    trace!("FnConfig.new | confMap: {:?}", map);
+                    log::trace!("FnConfig.new | confMap: {:?}", map);
                     let mut nodes = HashMap::new();
                     for (key, conf) in map {
                         match FnConfKeywd::from_str(key.as_str()) {
                             Ok(keyword) => {
-                                trace!("FnConfig.new | keyword parsed: {:?}", keyword);
+                                log::trace!("FnConfig.new | keyword parsed: {:?}", keyword);
                                 nodes.insert(key, Config::new(&conf, &Some(keyword.type_())));
                             }
                             Err(err) => {
-                                warn!("FnConfig.new | Unknown keyword: '{:?}' in the conf: {:?}", key, conf);
-                                warn!("FnConfig.new | possible input name: '{:?}'", key);
+                                log::warn!("FnConfig.new | Unknown keyword: '{:?}' in the conf: {:?}", key, conf);
+                                log::warn!("FnConfig.new | possible input name: '{:?}'", key);
                                 nodes.insert(key, Config::new(&conf, &None));
                             }
                         }
@@ -166,20 +166,20 @@ impl Config {
                 }
             }
         } else if conf.is_string() {
-            trace!("FnConfig.new | IS STRING");
+            log::trace!("FnConfig.new | IS STRING");
             match serde_yaml::from_value(conf.clone()) {
                 Ok(confStr) => {
                     let confStr: String = confStr;
-                    trace!("FnConfig.new | confStr: {:?}", confStr);
+                    log::trace!("FnConfig.new | confStr: {:?}", confStr);
                     match FnConfKeywd::from_str(confStr.as_str()) {
                         Ok(keyword) => {
-                            trace!("FnConfig.new | keyword parsed: {:?}", keyword);
+                            log::trace!("FnConfig.new | keyword parsed: {:?}", keyword);
                             // return Config { nodeType: keyword.type_(), services: HashMap::new() }
                             return ()
                         }
                         Err(err) => {
-                            warn!("FnConfig.new | Unknown keyword in the conf: {:?}", conf);
-                            warn!("FnConfig.new | possible VAR detected: '{:?}'", conf);
+                            log::warn!("FnConfig.new | Unknown keyword in the conf: {:?}", conf);
+                            log::warn!("FnConfig.new | possible VAR detected: '{:?}'", conf);
                             // return Config { nodeType: FnConfigType::Var, services: HashMap::new() }
                             return ()
                             // panic!("FnConfig.new | Unknown keyword: {:?}", confStr);
@@ -210,7 +210,7 @@ fn main() {
     env::set_var("RUST_BACKTRACE", "full");
     env_logger::init();
 
-    info!("test_create_valid_fn");
+    log::info!("test_create_valid_fn");
     // let (initial, switches) = init_each();
     let test_data = [
         // serde_yaml::from_str(r#"

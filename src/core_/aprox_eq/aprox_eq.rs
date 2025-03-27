@@ -55,7 +55,7 @@ impl AproxEq<&testing::entities::test_value::Value> for testing::entities::test_
                 match other {
                     testing::entities::test_value::Value::Bool(other_value) => self_value == other_value,
                     _ => {
-                        warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Bool> and other {}", other.type_of());
+                        log::warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Bool> and other {}", other.type_of());
                         false
                     }
                 }
@@ -64,7 +64,7 @@ impl AproxEq<&testing::entities::test_value::Value> for testing::entities::test_
                 match other {
                     testing::entities::test_value::Value::Int(other_value) => self_value == other_value,
                     _ => {
-                        warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Int> and other {}", other.type_of());
+                        log::warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Int> and other {}", other.type_of());
                         false
                     }
                 }
@@ -73,7 +73,7 @@ impl AproxEq<&testing::entities::test_value::Value> for testing::entities::test_
                 match other {
                     testing::entities::test_value::Value::Real(other_value) => self_value.aprox_eq(*other_value, decimals),
                     _ => {
-                        warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Real> and other {}", other.type_of());
+                        log::warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Real> and other {}", other.type_of());
                         false
                     }
                 }
@@ -82,7 +82,7 @@ impl AproxEq<&testing::entities::test_value::Value> for testing::entities::test_
                 match other {
                     testing::entities::test_value::Value::Double(other_value) => self_value.aprox_eq(*other_value, decimals),
                     _ => {
-                        warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Double> and other {}", other.type_of());
+                        log::warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<Double> and other {}", other.type_of());
                         false
                     }
                 }
@@ -91,7 +91,7 @@ impl AproxEq<&testing::entities::test_value::Value> for testing::entities::test_
                 match other {
                     testing::entities::test_value::Value::String(other_value) => self_value == other_value,
                     _ => {
-                        warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<String> and other {}", other.type_of());
+                        log::warn!("AproxEq<Value>.aprox_eq | Incompitable types self Value<String> and other {}", other.type_of());
                         false
                     }
                 }

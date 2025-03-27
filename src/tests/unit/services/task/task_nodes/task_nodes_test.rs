@@ -44,7 +44,7 @@ mod task_nodes {
         let self_name = Name::new("", self_id);
         let mut task_nodes = TaskNodes::new(self_id);
         let conf = TaskConfig::read(&self_name, path);
-        debug!("conf: {:?}", conf);
+        log::debug!("conf: {:?}", conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mock_service = Arc::new(RwLock::new(MockService::new(self_id, "queue")));
         services.wlock(self_id).insert(mock_service.clone());
@@ -105,27 +105,27 @@ mod task_nodes {
         for (name, value, target_value) in test_data {
             let point = value.to_point(0, name);
             // let inputName = &point.name();
-            debug!("input point name: {:?}  value: {:?}", name, value);
+            log::debug!("input point name: {:?}  value: {:?}", name, value);
             match task_nodes.get_eval_node(&name) {
                 Some(eval_node) => {
                     eval_node.add(&point);
-                    debug!("evalNode: {:?}", eval_node.name());
-                    debug!("evalNode outs: {:?}", eval_node.get_outs());
+                    log::debug!("evalNode: {:?}", eval_node.name());
+                    log::debug!("evalNode outs: {:?}", eval_node.get_outs());
                     for eval_node_var in eval_node.get_vars() {
-                        trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
+                        log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
                         eval_node_var.borrow_mut().eval();
-                        debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
+                        log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
                     };
                     for eval_node_out in eval_node.get_outs() {
-                        trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
+                        log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
                         let out = eval_node_out.borrow_mut().out();
                         match out {
                             FnResult::Ok(out) => {
                                 let out_value = out.value().to_string();
-                                debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                                log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
                                 if eval_node_out.borrow().kind() != &FnKind::Var {
                                     let out_name = out.name();
-                                    debug!("TaskEvalNode.eval | out.name: '{}'", out_name);
+                                    log::debug!("TaskEvalNode.eval | out.name: '{}'", out_name);
                                     let target = match target_value.get(out_name.as_str()) {
                                         Some(target) => target.to_string(),
                                         None => panic!("TaskEvalNode.eval | out.name '{}' - not foind in {:?}", out_name, target_value),
@@ -133,8 +133,8 @@ mod task_nodes {
                                     assert!(out_value == target, "\n   outValue: {} \ntargetValue: {}", out_value, target);
                                 }
                             }
-                            FnResult::None => warn!("TaskEvalNode.eval | evalNode '{}' out is None", eval_node.name()),
-                            FnResult::Err(err) => warn!("TaskEvalNode.eval | evalNode '{}' out is Error: {:#?}", eval_node.name(), err),
+                            FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out is None", eval_node.name()),
+                            FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out is Error: {:#?}", eval_node.name(), err),
                         };
                     };
                 }
@@ -203,7 +203,7 @@ mod task_nodes {
         //
         //
         fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-            info!("{}.run | Starting...", self.id);
+            log::info!("{}.run | Starting...", self.id);
             let self_id = self.id.clone();
             let exit = self.exit.clone();
             let rx_recv = self.rx_recv.lock().unwrap().take().unwrap();
@@ -211,10 +211,10 @@ mod task_nodes {
                 loop {
                     match rx_recv.recv() {
                         Ok(point) => {
-                            debug!("{}.run | received: {:?}", self_id, point);
+                            log::debug!("{}.run | received: {:?}", self_id, point);
                         }
                         Err(err) => {
-                            warn!("{}.run | error: {:?}", self_id, err);
+                            log::warn!("{}.run | error: {:?}", self_id, err);
                         }
                     }
                     if exit.load(Ordering::SeqCst) {
@@ -224,12 +224,12 @@ mod task_nodes {
             });
             match handle {
                 Ok(handle) => {
-                    info!("{}.run | Starting - ok", self.id);
+                    log::info!("{}.run | Starting - ok", self.id);
                     Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
                 }
                 Err(err) => {
                     let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                    warn!("{}", message);
+                    log::warn!("{}", message);
                     Err(message)
                 }
             }

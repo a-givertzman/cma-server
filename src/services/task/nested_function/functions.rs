@@ -218,7 +218,7 @@ impl Functions {
 impl FromStr for Functions {
     type Err = String;
     fn from_str(input: &str) -> Result<Functions, String> {
-        trace!("Functions.from_str | input: {}", input);
+        log::trace!("Functions.from_str | input: {}", input);
         Self::match_name(input)
     }
 }

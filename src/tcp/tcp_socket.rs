@@ -43,7 +43,7 @@ impl TcpSocket {
             Err(err) => {
                 let message = format!("{}.write | error: {:?}", self.id, err);
                 if log::max_level() == LevelFilter::Trace {
-                    warn!("{}", message);
+                    log::warn!("{}", message);
                 }
                 Err(message)
             }
@@ -70,8 +70,8 @@ impl TcpSocket {
                     };
                 }
                 Err(err) => {
-                    warn!("{}.readAll | error reading from socket: {:?}", self_id, err);
-                    warn!("{}.readAll | error kind: {:?}", self_id, err.kind());
+                    log::warn!("{}.readAll | error reading from socket: {:?}", self_id, err);
+                    log::warn!("{}.readAll | error kind: {:?}", self_id, err.kind());
                     // Self::matchErrorKind(err.kind());
                     return ConnectionStatus::Closed(format!("{}.readAll | tcp socket error : {:?}", self_id, err))
                 }

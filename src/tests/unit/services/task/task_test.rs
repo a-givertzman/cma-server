@@ -42,10 +42,10 @@ mod task {
         //
         // can be changed
         let iterations = 10;
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/services/task/task_test_struct.yaml";
         let config = TaskConfig::read(&self_name, path);
-        trace!("config: {:?}", &config);
+        log::trace!("config: {:?}", &config);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             self_id,
@@ -86,12 +86,12 @@ mod task {
         services.wlock(self_id).insert(task.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         let task_handle = task.write().unwrap().run().unwrap();
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         // thread::sleep(Duration::from_millis(100));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         producer.read().unwrap().exit();
@@ -117,17 +117,17 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        info!("test");
+        log::info!("test");
         let self_id = "test";
         let self_name = Name::new("", self_id);
         //
         // Can be changed
         let iterations = 10;
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/services/task/task_test_struct.yaml";
         // let path = "./src/tests/unit/task/task_test.yaml";
         let config = TaskConfig::read(&self_name, path);
-        trace!("config: {:?}", &config);
+        log::trace!("config: {:?}", &config);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             self_id,
@@ -168,10 +168,10 @@ mod task {
         let services_handle = services.wlock(self_id).run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
         let producer_handle = producer.write().unwrap().run().unwrap();
-        trace!("task runing...");
+        log::trace!("task runing...");
         let time = Instant::now();
         task.write().unwrap().run().unwrap();
-        trace!("task runing - ok");
+        log::trace!("task runing - ok");
         producer_handle.wait().unwrap();
         receiver_handle.wait().unwrap();
         services.rlock(self_id).exit();

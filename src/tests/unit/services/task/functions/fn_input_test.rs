@@ -35,7 +35,7 @@ mod fn_input {
     fn int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_int");
+        log::info!("test_int");
         let input = init_each("0", FnConfPointType::Int);
         let test_data = vec![
             0,
@@ -59,7 +59,7 @@ mod fn_input {
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, value);
         }
     }
@@ -69,7 +69,7 @@ mod fn_input {
     fn bool() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_bool");
+        log::info!("test_bool");
         let input = init_each("false", FnConfPointType::Bool);
         let test_data = vec![
             false,
@@ -95,7 +95,7 @@ mod fn_input {
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_bool().value.0, value);
         }
     }
@@ -105,7 +105,7 @@ mod fn_input {
     fn real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_real");
+        log::info!("test_real");
         let input = init_each("0.0", FnConfPointType::Real);
         let test_data = vec![
             0.0f32,
@@ -131,7 +131,7 @@ mod fn_input {
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_real().value, value);
         }
     }
@@ -141,7 +141,7 @@ mod fn_input {
     fn double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_real");
+        log::info!("test_real");
         let input = init_each("0.0", FnConfPointType::Double);
         let test_data = vec![
             0.0f64,
@@ -167,7 +167,7 @@ mod fn_input {
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_double().value, value);
         }
     }
@@ -177,7 +177,7 @@ mod fn_input {
     fn test_string() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_string");
+        log::info!("test_string");
         let input = init_each("0", FnConfPointType::String);
         let test_data = vec![
             "0",
@@ -201,7 +201,7 @@ mod fn_input {
             // debug!("input: {:?}", &input);
             let state = input.borrow_mut().out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_string().value, value);
         }
     }

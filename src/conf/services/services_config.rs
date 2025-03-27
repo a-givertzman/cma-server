@@ -60,20 +60,20 @@ impl ServicesConfig {
     /// Creates new instance of the [ServicesConfig]:
     pub fn new(conf_tree: &mut ConfTree) -> Self {
         println!();
-        trace!("ServicesConfig.new | confTree: {:?}", conf_tree);
+        log::trace!("ServicesConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item
         let self_id = format!("ServicesConfig({})", conf_tree.key);
-        trace!("{}.new | MAPPING VALUE", self_id);
+        log::trace!("{}.new | MAPPING VALUE", self_id);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.to_owned());
-        trace!("{}.new | selfConf: {:?}", self_id, self_conf);
+        log::trace!("{}.new | selfConf: {:?}", self_id, self_conf);
         let self_name = self_conf.get_param_value("name").unwrap().as_str().unwrap().to_owned();
         // let service_name = self_conf.sufix();
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_owned();
-        debug!("{}.new | description: {:?}", self_id, description);
+        log::debug!("{}.new | description: {:?}", self_id, description);
         let cycle = self_conf.get_duration("cycle");
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let mut nodes = IndexMap::new();
         println!();
         for key in &self_conf.keys {
@@ -87,9 +87,9 @@ impl ServicesConfig {
                             true => "".to_owned(),
                             false => format!(": '{}'", keyword.sufix()),
                         };
-                        debug!("{}.new | service '{}'{}", self_id, node_name, sufix);
+                        log::debug!("{}.new | service '{}'{}", self_id, node_name, sufix);
                     } else if log::max_level() == log::LevelFilter::Trace {
-                        trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, node_name, node_conf);
+                        log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, node_name, node_conf);
                     }
                     nodes.insert(
                         keyword,

@@ -59,7 +59,7 @@ impl ProfinetDb {
             }
             Err(err) => {
                 if log::max_level() >= log::LevelFilter::Trace {
-                    warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
+                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
                 }
             }
         }
@@ -118,10 +118,10 @@ impl ProfinetDb {
         match client.is_connected() {
             Ok(is_connected) => {
                 if is_connected {
-                    trace!("{}.read | reading DB: {:?}, offset: {:?}, size: {:?}", self.id, self.number, self.offset, self.size);
+                    log::trace!("{}.read | reading DB: {:?}, offset: {:?}, size: {:?}", self.id, self.number, self.offset, self.size);
                     match client.read(self.number, self.offset, self.size) {
                         Ok(bytes) => {
-                            trace!("{}.read | bytes: {:?}", self.id, bytes);
+                            log::trace!("{}.read | bytes: {:?}", self.id, bytes);
                             let mut message = String::new();
                             for (_, parse_point) in &mut self.points {
                                 if let Some(point) = parse_point.next(&bytes, Utc::now()) {
@@ -130,7 +130,7 @@ impl ProfinetDb {
                                         Ok(_) => {}
                                         Err(err) => {
                                             message = format!("{}.read | send error: {}", self.id, err);
-                                            warn!("{}", message);
+                                            log::warn!("{}", message);
                                         }
                                     }
                                 }
@@ -142,19 +142,19 @@ impl ProfinetDb {
                         }
                         Err(err) => {
                             let message = format!("{}.read | read error: {}", self.id, err);
-                            warn!("{}", message);
+                            log::warn!("{}", message);
                             Err(message)
                         }
                     }
                 } else {
                     let message = format!("{}.read | read error: Is not connected", self.id);
-                    warn!("{}", message);
+                    log::warn!("{}", message);
                     Err(message)
                 }
             }
             Err(err) => {
                 let message = format!("{}.read | read error: {}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }
@@ -169,7 +169,7 @@ impl ProfinetDb {
                     Ok(_) => {}
                     Err(err) => {
                         message = format!("{}.yield_status | send error: {}", self.id, err);
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                     }
                 }
             }

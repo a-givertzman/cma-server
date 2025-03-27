@@ -66,12 +66,12 @@ impl FnOut for FnPointId {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, input);
+        log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 match self.points.get(&input.name()) {
                     Some(id) => {
-                        debug!("{}.out | ID: {:?}", self.id, id);
+                        log::debug!("{}.out | ID: {:?}", self.id, id);
                         FnResult::Ok(Point::Int(
                             PointHlr::new(
                                 input.tx_id(),

@@ -48,13 +48,13 @@ impl S7Client {
         };
         if err_code == 0 {
             // self.isConnected = true;
-            debug!("{}.connect | successfully connected", self.id);
+            log::debug!("{}.connect | successfully connected", self.id);
             Ok(())
         } else {
             // self.isConnected = false;
             let err = S7Error::from(err_code);
             if log::max_level() == LevelFilter::Trace {
-                warn!("{}.connect | connection error: {:?}", self.id, err);
+                log::warn!("{}.connect | connection error: {:?}", self.id, err);
             }
             Err(err)
         }

@@ -54,25 +54,25 @@ impl TaskConfig {
     ///                     ...
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TaskConfig {
         println!();
-        trace!("TaskConfig.new | confTree: {:?}", conf);
+        log::trace!("TaskConfig.new | confTree: {:?}", conf);
         let mut vars = vec![];
         let self_id = format!("TaskConfig({})", conf.key);
         // let mut conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | selfConf: {:?}", self_id, conf);
+        log::trace!("{}.new | selfConf: {:?}", self_id, conf);
         let self_name = Name::new(parent, conf.sufix().unwrap());
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = conf.get_duration("cycle").ok();
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let (rx, rx_max_length) = conf.get_in_queue().unwrap();
-        debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_length);
+        log::debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_length);
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
         let subscribe = ConfSubscribe::new(subscribe);
-        debug!("{}.new | sudscribe: {:#?}", self_id, subscribe);
+        log::debug!("{}.new | sudscribe: {:#?}", self_id, subscribe);
         let mut node_index = 0;
         let mut nodes = IndexMap::new();
         for key in conf.keys() {
             let node_conf = conf.get(key).unwrap();
-            trace!("{}.new | nodeConf: {:?}", self_id, node_conf);
+            log::trace!("{}.new | nodeConf: {:?}", self_id, node_conf);
             node_index += 1;
             let node_conf = FnConfig::new(&self_name.join(), &self_name, &node_conf, &mut vars);
             nodes.insert(

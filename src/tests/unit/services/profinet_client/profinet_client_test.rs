@@ -49,8 +49,8 @@ mod profinet_client {
         services.wlock(self_id).insert(mq_service.clone());
         let path = "./src/tests/unit/services/profinet_client/profinet_client.yaml";
         let conf = ProfinetClientConfig::read(self_name, path);
-        debug!("config: {:?}", &conf);
-        debug!("config points:");
+        log::debug!("config: {:?}", &conf);
+        log::debug!("config points:");
         let client = Arc::new(RwLock::new(ProfinetClient::new(conf, services.clone())));
         services.wlock(self_id).insert(client.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
@@ -88,7 +88,7 @@ mod profinet_client {
                 Value::String(value) => panic!("{} | String does not supported: {:?}", self_id, value),
             };
             if let Err(err) = send.send(point.clone()) {
-                warn!("{} | Send error: {:#?}", self_id, err);
+                log::warn!("{} | Send error: {:#?}", self_id, err);
             }
             match recv.recv_timeout(Duration::from_secs(3)) {
                 Ok(received_point) => {
@@ -119,7 +119,7 @@ mod profinet_client {
                     }
                 }
                 Err(err) => {
-                    warn!("{} | Receive changed value error: {:#?}", self_id, err);
+                    log::warn!("{} | Receive changed value error: {:#?}", self_id, err);
                 }
             }
         }

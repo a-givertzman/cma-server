@@ -96,16 +96,16 @@ mod tcp_client {
         let services_handle = services.wlock(self_id).run().unwrap();
         let sent = Arc::new(RwLock::new(vec![]));
         let tcp_client = services.rlock(self_id).get(&tcp_client_service_id).unwrap();
-        debug!("Running service {}...", multi_queue_service_id);
+        log::debug!("Running service {}...", multi_queue_service_id);
         let handle = multi_queue.write().unwrap().run().unwrap();
-        debug!("Running service {} - ok", multi_queue_service_id);
-        debug!("Running service {}...", tcp_client_service_id);
+        log::debug!("Running service {} - ok", multi_queue_service_id);
+        log::debug!("Running service {}...", tcp_client_service_id);
         tcp_client.wlock(self_id).run().unwrap();
-        debug!("Running service {} - ok", tcp_client_service_id);
+        log::debug!("Running service {} - ok", tcp_client_service_id);
         mock_tcp_server(addr.to_string(), iterations, test_data.clone(), sent.clone(), multi_queue.clone());
         thread::sleep(Duration::from_micros(100));
         let timer = Instant::now();
-        debug!("Test - setup - ok");
+        log::debug!("Test - setup - ok");
         services.rlock(self_id).exit();
         handle.wait().unwrap();
         services_handle.wait().unwrap();
@@ -122,7 +122,7 @@ mod tcp_client {
         while &sent.len() > &0 {
             let target = sent.pop().unwrap();
             let result = received.pop().unwrap();
-            debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
+            log::debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
             assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result, target);
             assert!(result.status() == target.status(), "\nresult: {:?}\ntarget: {:?}", result, target);
             assert!(result.timestamp() == target.timestamp(), "\nresult: {:?}\ntarget: {:?}", result, target);
@@ -134,7 +134,7 @@ mod tcp_client {
     /// TcpServer setup
     fn mock_tcp_server(addr: String, count: usize, test_data: Vec<Value>, sent: Arc<RwLock<Vec<Point>>>, multiqueue: Arc<RwLock<MockMultiQueue>>) {
         thread::spawn(move || {
-            info!("TCP server | Preparing test server...");
+            log::info!("TCP server | Preparing test server...");
             let (send, recv) = std::sync::mpsc::channel();
             let mut jds = JdsEncodeMessage::new(
                 "test",
@@ -145,38 +145,38 @@ mod tcp_client {
             );
             match TcpListener::bind(addr) {
                 Ok(listener) => {
-                    info!("TCP server | Preparing test server - ok");
+                    log::info!("TCP server | Preparing test server - ok");
                     match listener.accept() {
                         Ok((mut socket, addr)) => {
-                            info!("TCP server | accept connection - ok\n\t{:?}", addr);
+                            log::info!("TCP server | accept connection - ok\n\t{:?}", addr);
                             for value in &test_data {
                                 let point = value.to_point(0, "test");
                                 send.send(point.clone()).unwrap();
                                 match jds.read() {
                                     Ok(bytes) => {
-                                        trace!("TCP server | send bytes: {:?}", bytes);
+                                        log::trace!("TCP server | send bytes: {:?}", bytes);
                                         match socket.write(&bytes) {
                                             Ok(_) => {
                                                 sent.write().unwrap().push(point);
                                             }
                                             Err(err) => {
-                                                warn!("TCP server | socket.wrtite error: {:?}", err);
+                                                log::warn!("TCP server | socket.wrtite error: {:?}", err);
                                             }
                                         }
                                     }
                                     Err(err) => {
-                                        error!("TCP server | error: {:?}", err);
+                                        log::error!("TCP server | error: {:?}", err);
                                     }
                                 }
                             }
-                            info!("TCP server | all sent: {:?}", sent.read().unwrap().len());
+                            log::info!("TCP server | all sent: {:?}", sent.read().unwrap().len());
                             let received = multiqueue.read().unwrap().received();
                             while received.read().unwrap().len() < count {
                                 thread::sleep(Duration::from_millis(100));
                             }
                         }
                         Err(err) => {
-                            warn!("incoming connection - error: {:?}", err);
+                            log::warn!("incoming connection - error: {:?}", err);
                         }
                     }
                 }
@@ -185,6 +185,6 @@ mod tcp_client {
                 }
             };
         });
-        info!("TCP server | Started");
+        log::info!("TCP server | Started");
     }
 }

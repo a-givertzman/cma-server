@@ -35,7 +35,7 @@ mod fn_sub {
     fn test_bool() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_bool");
+        log::info!("test_bool");
         let mut value1_stored;
         let mut value2_stored = false.to_point(0, "bool");
         let mut target: Point;
@@ -60,13 +60,13 @@ mod fn_sub {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(&point1);
             let state = fn_sub.out().unwrap();
-            debug!("value1: {:?}   |   state: {:?}", value1, state);
+            log::debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
             target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state, target);
             input2.borrow_mut().add(&point2);
             let state = fn_sub.out().unwrap();
-            debug!("value2: {:?}   |   state: {:?}", value2, state);
+            log::debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
             target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
             assert_eq!(state, target);
@@ -79,7 +79,7 @@ mod fn_sub {
     fn test_int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_int");
+        log::info!("test_int");
         let mut value1_stored;
         let mut value2_stored = 0.to_point(0, "int");
         let mut target: Point;
@@ -109,13 +109,13 @@ mod fn_sub {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(&point1);
             let state = fn_sub.out().unwrap();
-            debug!("value1: {:?}   |   state: {:?}", value1, state);
+            log::debug!("value1: {:?}   |   state: {:?}", value1, state);
             value1_stored = point1.clone();
             target = Point::Int(value1_stored.as_int() - value2_stored.as_int());
             assert_eq!(state, target);
             input2.borrow_mut().add(&point2);
             let state = fn_sub.out().unwrap();
-            debug!("value2: {:?}   |   state: {:?}", value2, state);
+            log::debug!("value2: {:?}   |   state: {:?}", value2, state);
             value2_stored = point2.clone();
             target = Point::Int(value1_stored.as_int() - value2_stored.as_int());
             assert_eq!(state, target);
@@ -128,7 +128,7 @@ mod fn_sub {
     fn real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("fn_sub_real");
+        log::info!("fn_sub_real");
         let mut value1_stored;
         let mut value2_stored = 0.0f32.to_point(0, "real");
         let mut target: f32;
@@ -166,14 +166,14 @@ mod fn_sub {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(&point1);
             let state = fn_sub.out().unwrap();
-            debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
+            log::debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_real().value - value2_stored.as_real().value;
             let result = state.as_real().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
             input2.borrow_mut().add(&point2);
             let state = fn_sub.out().unwrap();
-            debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
+            log::debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_real().value - value2_stored.as_real().value;
             let result = state.as_real().value;
@@ -187,7 +187,7 @@ mod fn_sub {
     fn double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("fn_sub_double");
+        log::info!("fn_sub_double");
         let mut value1_stored;
         let mut value2_stored = 0.0f64.to_point(0, "double");
         let mut target: f64;
@@ -225,14 +225,14 @@ mod fn_sub {
             let point2 = value2.to_point(0, "test");
             input1.borrow_mut().add(&point1);
             let state = fn_sub.out().unwrap();
-            debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
+            log::debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
             value1_stored = point1.clone();
             target = value1_stored.as_double().value - value2_stored.as_double().value;
             let result = state.as_double().value;
             assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
             input2.borrow_mut().add(&point2);
             let state = fn_sub.out().unwrap();
-            debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
+            log::debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
             value2_stored = point2.clone();
             target = value1_stored.as_double().value - value2_stored.as_double().value;
             let result = state.as_double().value;

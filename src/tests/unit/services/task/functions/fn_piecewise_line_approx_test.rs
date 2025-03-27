@@ -34,7 +34,7 @@ mod fn_piecewise_line_approx {
     fn line_approx_int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("line_approx_int");
+        log::info!("line_approx_int");
         let input = init_each("0", FnConfPointType::Int);
         let mut fn_line_approx = FnPiecewiseLineApprox::new(
             "test",
@@ -45,7 +45,7 @@ mod fn_piecewise_line_approx {
                 10: 3
             ").unwrap(),
         );
-        info!("fn: {:#?}", fn_line_approx);
+        log::info!("fn: {:#?}", fn_line_approx);
         let test_data = vec![
             (00, -1, 0),
             (01, 0, 0),
@@ -69,7 +69,7 @@ mod fn_piecewise_line_approx {
             // debug!("input: {:?}", &input);
             let state = fn_line_approx.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target, "step: {}\n result: {:?} \ntarget: {}", step, state.as_int().value, target);
         }
     }
@@ -79,7 +79,7 @@ mod fn_piecewise_line_approx {
     fn line_approx_real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("line_approx_real");
+        log::info!("line_approx_real");
         let input = init_each("0.0", FnConfPointType::Real);
         let mut fn_line_approx = FnPiecewiseLineApprox::new(
             "test",
@@ -91,7 +91,7 @@ mod fn_piecewise_line_approx {
                 20: 1
             ").unwrap(),
         );
-        info!("fn: {:#?}", fn_line_approx);
+        log::info!("fn: {:#?}", fn_line_approx);
         let test_data = vec![
             (00, -1.0, 0.0),
             (01, 0.0, 0.0),
@@ -115,7 +115,7 @@ mod fn_piecewise_line_approx {
             // debug!("input: {:?}", &input);
             let state = fn_line_approx.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_real().value, target, "step: {}\n result: {:?} \ntarget: {}", step, state.as_real().value, target);
         }
     }
@@ -125,7 +125,7 @@ mod fn_piecewise_line_approx {
     fn line_approx_double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("line_approx_double");
+        log::info!("line_approx_double");
         let input = init_each("0.0", FnConfPointType::Double);
         let mut fn_line_approx = FnPiecewiseLineApprox::new(
             "test",
@@ -137,7 +137,7 @@ mod fn_piecewise_line_approx {
                 20: 1
             ").unwrap(),
         );
-        info!("fn: {:#?}", fn_line_approx);
+        log::info!("fn: {:#?}", fn_line_approx);
         let test_data = vec![
             (00, -1.0, 0.0),
             (01, 0.0, 0.0),
@@ -161,7 +161,7 @@ mod fn_piecewise_line_approx {
             // debug!("input: {:?}", &input);
             let state = fn_line_approx.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert!(state.as_double().value.aprox_eq(target, 4), "step: {}\n result: {:?} \ntarget: {}", step, state.as_double().value, target);
         }
     }

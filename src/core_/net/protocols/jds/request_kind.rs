@@ -62,13 +62,13 @@ impl From<&str> for RequestKind {
                         RequestKind::Subscribe
                     }
                     _ => {
-                        warn!("RequestKind.from<&str> | Unknown request: '{}'", value);
+                        log::warn!("RequestKind.from<&str> | Unknown request: '{}'", value);
                         RequestKind::Unknown
                     }
                 }
             }
             None => {
-                warn!("RequestKind.from<&str> | Unknown request: '{}'", value);
+                log::warn!("RequestKind.from<&str> | Unknown request: '{}'", value);
                 RequestKind::Unknown
             }
         }

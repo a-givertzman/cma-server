@@ -35,7 +35,7 @@ mod fn_acc {
     fn acc_bool() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("acc_bool");
+        log::info!("acc_bool");
         let initial = Some(init_each("0", FnConfPointType::Int));
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_count = FnAcc::new(
@@ -65,7 +65,7 @@ mod fn_acc {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target, "\n result: {:?} \ntarget: {}", state, target);
         }
     }
@@ -75,7 +75,7 @@ mod fn_acc {
     fn acc_int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("acc_int");
+        log::info!("acc_int");
         let initial = Some(init_each("0", FnConfPointType::Int));
         let input = init_each("0", FnConfPointType::Int);
         let mut fn_count = FnAcc::new(
@@ -105,7 +105,7 @@ mod fn_acc {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target, "\n   result: {:?} \ntarget: {}", state, target);
         }
     }
@@ -115,7 +115,7 @@ mod fn_acc {
     fn acc_int_reset() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("acc_int_reset");
+        log::info!("acc_int_reset");
         let initial = Some(init_each("0", FnConfPointType::Int));
         let input = init_each("0", FnConfPointType::Int);
         let mut fn_count = FnAcc::new(
@@ -148,7 +148,7 @@ mod fn_acc {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target, "\n   result: {:?} \ntarget: {}", state, target);
         }
     }
@@ -158,7 +158,7 @@ mod fn_acc {
     fn acc_real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("acc_real");
+        log::info!("acc_real");
         let initial = Some(init_each("0.0", FnConfPointType::Real));
         let input = init_each("0.0", FnConfPointType::Real);
         let mut fn_count = FnAcc::new(
@@ -188,7 +188,7 @@ mod fn_acc {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_real().value, target, "\n   result: {:?} \ntarget: {}", state, target);
         }
     }
@@ -198,7 +198,7 @@ mod fn_acc {
     fn acc_double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("acc_double");
+        log::info!("acc_double");
         let initial = Some(init_each("0.0", FnConfPointType::Double));
         let input = init_each("0.0", FnConfPointType::Double);
         let mut fn_count = FnAcc::new(
@@ -228,7 +228,7 @@ mod fn_acc {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_double().value, target, "\n   result: {:?} \ntarget: {}", state, target);
         }
     }

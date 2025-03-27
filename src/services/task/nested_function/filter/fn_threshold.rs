@@ -95,7 +95,7 @@ impl FnOut for FnThreshold {
         };
         if enable {
             let threshold = self.threshold.borrow_mut().out();
-            trace!("{}.out | threshold: {:?}", self.id, threshold);
+            log::trace!("{}.out | threshold: {:?}", self.id, threshold);
             let threshold = match threshold {
                 FnResult::Ok(threshold) => threshold.to_double().as_double(),
                 FnResult::None => return FnResult::None,
@@ -104,7 +104,7 @@ impl FnOut for FnThreshold {
             let factor = match &self.factor {
                 Some(factor) => {
                     let factor = factor.borrow_mut().out();
-                    trace!("{}.out | factor: {:?}", self.id, factor);
+                    log::trace!("{}.out | factor: {:?}", self.id, factor);
                     match factor {
                         FnResult::Ok(factor) => Some(factor.to_double().as_double()),
                         FnResult::None => return FnResult::None,
@@ -114,7 +114,7 @@ impl FnOut for FnThreshold {
                 None => None,
             };
             let input = self.input.borrow_mut().out();
-            trace!("{}.out | input: {:?}", self.id, input);
+            log::trace!("{}.out | input: {:?}", self.id, input);
             match input {
                 FnResult::Ok(input) => {
                     let input_type = input.type_();
@@ -122,14 +122,14 @@ impl FnOut for FnThreshold {
                     match &mut self.value {
                         Some(value) => {
                             let delta = (input.clone() - value.to_double().as_double()).abs();
-                            trace!("{}.out | Absolute delta: {}", self.id, delta.value);
+                            log::trace!("{}.out | Absolute delta: {}", self.id, delta.value);
                             if delta >= threshold {
                                 *value = Point::Double(input);
                                 self.delta = PointHlr::new_double(0, "", 0.0);
                             } else {
                                 if let Some(factor) = factor {
                                     self.delta = self.delta.clone() + (delta * factor);
-                                    debug!("{}.out | Integral delta: {}", self.id, self.delta.value);
+                                    log::debug!("{}.out | Integral delta: {}", self.id, self.delta.value);
                                     if self.delta >= threshold {
                                         self.value = Some(Point::Double(input));
                                         self.delta = PointHlr::new_double(0, "", 0.0);
@@ -150,7 +150,7 @@ impl FnOut for FnThreshold {
                         }
                         None => panic!("{}.out | Internal error - self.value is not initialised", self.id),
                     };
-                    trace!("{}.out | value: {:?}", self.id, value);
+                    log::trace!("{}.out | value: {:?}", self.id, value);
                     FnResult::Ok(value)
                 }
                 FnResult::None => FnResult::None,

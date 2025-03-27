@@ -68,7 +68,7 @@ impl FnOut for FnAverage {
             }
             None => true,
         };
-        trace!("{}.out | enable: {:?}", self.id, enable);
+        log::trace!("{}.out | enable: {:?}", self.id, enable);
         if enable {
             let input = self.input.borrow_mut().out();
             // trace!("{}.out | input: {:?}", self.id, input);
@@ -82,9 +82,9 @@ impl FnOut for FnAverage {
                     } else {
                         0.0
                     };
-                    trace!("{}.out | sum: {:?}", self.id, self.sum);
-                    trace!("{}.out | count: {:?}", self.id, self.count);
-                    trace!("{}.out | average: {:?}", self.id, average);
+                    log::trace!("{}.out | sum: {:?}", self.id, self.sum);
+                    log::trace!("{}.out | count: {:?}", self.id, self.count);
+                    log::trace!("{}.out | average: {:?}", self.id, average);
                     match input.type_() {
                         PointConfigType::Int => {
                             FnResult::Ok(Point::Int(

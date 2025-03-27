@@ -37,7 +37,7 @@ impl Default for FnConfOptions {
 impl FromStr for FnConfOptions {
     type Err = String;
     fn from_str(input: &str) -> Result<FnConfOptions, String> {
-        trace!("FnConfOptions.from_str | input: {}", input);
+        log::trace!("FnConfOptions.from_str | input: {}", input);
         let re_default = r#"[ \t]?default[ \t](\S+)"#;
         let re_default = RegexBuilder::new(re_default).multi_line(false).build().unwrap();
         let re_status = r#"[ \t]?status[ \t](\S+)"#;
@@ -50,7 +50,7 @@ impl FromStr for FnConfOptions {
                 match Status::from_str(value.as_str()) {
                     Ok(status) => Some(status),
                     Err(err) => {
-                        warn!("FnConfOptions.from_str | Status parsing error: {}", err);
+                        log::warn!("FnConfOptions.from_str | Status parsing error: {}", err);
                         None
                     }
                 }

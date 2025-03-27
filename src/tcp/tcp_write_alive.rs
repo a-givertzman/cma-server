@@ -34,18 +34,18 @@ impl TcpWriteAlive {
     ///
     /// 
     pub fn run(&mut self, tcp_stream: TcpStream) -> JoinHandle<()> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let exit_pair = self.exit_pair.clone();
         let mut cycle = self.cycle.map(|cycle| ServiceCycle::new(&self_id, cycle));
         let stream_write = self.stream_write.clone();
         let mut stream = stream_write.lock().unwrap().take().unwrap();
-        info!("{}.run | Preparing thread...", self.id);
+        log::info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Write", self_id.clone())).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             // let mut stream_write = stream_write.lock().unwrap();//(&self_id);
-            info!("{}.run | Main loop started", self_id);
+            log::info!("{}.run | Main loop started", self_id);
             'main: loop {
                 if let Some(cycle) = &mut cycle {cycle.start()}
                 match stream.write(&tcp_stream) {
@@ -55,14 +55,14 @@ impl TcpWriteAlive {
                                 if let Some(cycle) = &mut cycle {cycle.wait()}
                             }
                             OpResult::Err(err) => {
-                                warn!("{}.run | error: {:?}", self_id, err);
+                                log::warn!("{}.run | error: {:?}", self_id, err);
                                 if let Some(cycle) = &mut cycle {cycle.wait()}
                             }
                             OpResult::Timeout() => {}
                         }
                     }
                     ConnectionStatus::Closed(err) => {
-                        warn!("{}.run | error: {:?}", self_id, err);
+                        log::warn!("{}.run | error: {:?}", self_id, err);
                         exit_pair.store(true, Ordering::SeqCst);
                         break 'main;
                     }
@@ -72,9 +72,9 @@ impl TcpWriteAlive {
                 }
             }
             stream_write.lock().unwrap().replace(stream);
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         }).unwrap();
-        info!("{}.run | started", self.id);
+        log::info!("{}.run | started", self.id);
         handle
     }
     ///

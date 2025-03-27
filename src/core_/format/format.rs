@@ -39,7 +39,7 @@ impl Format {
             let sufix = parts.next();
             (full_name, (name, sufix))
         }).collect();        
-        trace!("Format.new | names {:?}", &names);
+        log::trace!("Format.new | names {:?}", &names);
         Self {
             input: input.into(),
             names,
@@ -56,7 +56,7 @@ impl Format {
     pub fn out(&self) -> String {
         let mut input = self.input.clone();
         for (full_name, (name, sufix)) in &self.names {
-            trace!("Format.out | fullName {:?}", full_name);
+            log::trace!("Format.out | fullName {:?}", full_name);
             if let Some(point) = self.values.get(full_name) {
                 let value = match sufix {
                     Some(sufix) => {
@@ -69,14 +69,14 @@ impl Format {
                         }
                     }
                     None => {
-                        trace!("Format.out | name: {:?}, sufix: None, taking point.value by default", &name);
+                        log::trace!("Format.out | name: {:?}, sufix: None, taking point.value by default", &name);
                         point.value().to_string()
                     }
                 };
                 let pattern = format!("{{{}}}", full_name);
-                trace!("Format.out | replacing pattern {:?} with value: {:?}", pattern, value);
+                log::trace!("Format.out | replacing pattern {:?} with value: {:?}", pattern, value);
                 input = input.replace(&pattern, &value);
-                trace!("Format.out | result: {:?}", input);
+                log::trace!("Format.out | result: {:?}", input);
             };
         };
         input
@@ -112,7 +112,7 @@ impl Format {
             self.names.remove(name);
             self.values.remove(name);
         };
-        trace!("Format.prepare | self.input {:?}", self.input);
+        log::trace!("Format.prepare | self.input {:?}", self.input);
     }
 }
 //

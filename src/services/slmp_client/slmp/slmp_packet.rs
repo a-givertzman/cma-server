@@ -89,7 +89,7 @@ impl SlmpPacket {
         let us_node_number = 0xFF;
         let us_data_length = Self::data_length(frame_type, &puc_data);
         let us_end_code = 0x0000;
-        trace!("{}.build | puc_data: {:?}", self.id, puc_data);
+        log::trace!("{}.build | puc_data: {:?}", self.id, puc_data);
         let slmp_info = CSlmpInfo::new(
             frame_type,
             us_serial_number,
@@ -109,7 +109,7 @@ impl SlmpPacket {
             &slmp_info, 
             packet.as_mut_ptr(),
         ) };
-        trace!("{}.build | slmp_make_packet_result: {}", self.id, slmp_make_packet_result);
+        log::trace!("{}.build | slmp_make_packet_result: {}", self.id, slmp_make_packet_result);
         if slmp_make_packet_result == 0 {
             Ok(self.trim_packet(frame_type, us_data_length, packet))
         } else {

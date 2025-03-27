@@ -38,7 +38,7 @@ impl TcpStreamWrite {
         match self.stream.read() {
             Ok(bytes) => {
                 while let Some(bytes) = self.buffer.first() {
-                    trace!("{}.write | bytes: {:?}", self.id, bytes);
+                    log::trace!("{}.write | bytes: {:?}", self.id, bytes);
                     match tcp_stream.write_all(bytes) {
                         Ok(_) => {
                             self.buffer.pop_first();
@@ -46,13 +46,13 @@ impl TcpStreamWrite {
                         Err(err) => {
                             let message = format!("{}.write | error: {:?}", self.id, err);
                             if log::max_level() == LevelFilter::Debug {
-                                warn!("{}", message);
+                                log::warn!("{}", message);
                             }
                             return ConnectionStatus::Closed(message);
                         }
                     };
                 }
-                trace!("{}.write | bytes: {:?}", self.id, bytes);
+                log::trace!("{}.write | bytes: {:?}", self.id, bytes);
                 match tcp_stream.write_all(&bytes) {
                     Ok(_) => {
                         match tcp_stream.flush() {
@@ -63,7 +63,7 @@ impl TcpStreamWrite {
                                 self.buffer.push(bytes);
                                 let message = format!("{}.write | error: {:?}", self.id, err);
                                 if log::max_level() == LevelFilter::Debug {
-                                    warn!("{}", message);
+                                    log::warn!("{}", message);
                                 }
                                 ConnectionStatus::Closed(message)
                             }
@@ -73,7 +73,7 @@ impl TcpStreamWrite {
                         self.buffer.push(bytes);
                         let message = format!("{}.write | error: {:?}", self.id, err);
                         if log::max_level() == LevelFilter::Debug {
-                            warn!("{}", message);
+                            log::warn!("{}", message);
                         }
                         ConnectionStatus::Closed(message)
                     }
@@ -84,13 +84,13 @@ impl TcpStreamWrite {
                     RecvError::Error(err) => {
                         let message = format!("{}.write | error: {:?}", self.id, err);
                         if log::max_level() == LevelFilter::Trace {
-                            warn!("{}", message);
+                            log::warn!("{}", message);
                         }
                         ConnectionStatus::Active(OpResult::Err(message))
                     }
                     RecvError::Disconnected => {
                         let message = format!("{}.write | channel disconnected, error: {:?}", self.id, err);
-                        warn!("{}", message);
+                        log::warn!("{}", message);
                         ConnectionStatus::Active(OpResult::Err(message))
                     }
                     RecvError::Timeout => ConnectionStatus::Active(OpResult::Timeout()),

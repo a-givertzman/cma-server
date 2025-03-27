@@ -49,20 +49,20 @@ impl FnConfig {
     ///             input fn functionName:
     ///                 input: point '/path/Point.Name/'```
     pub fn new(parent_id: &str, parent_name: &Name, conf_tree: &ConfTree, vars: &mut Vec<String>) -> FnConfKind {
-        trace!("FnConfig.new | confTree: {:?}", conf_tree);
+        log::trace!("FnConfig.new | confTree: {:?}", conf_tree);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item
         // if confTree.count() > 1 {
         //     error!("FnConfig.new | FnConf must have single item, additional items was ignored: {:?}", confTree)
         // };
         let cfg = if conf_tree.is_mapping() {
-            trace!("FnConfig.new | MAPPING VALUE: \t{:#?}", conf_tree);
+            log::trace!("FnConfig.new | MAPPING VALUE: \t{:#?}", conf_tree);
             match FnConfKeywd::from_str(conf_tree.key.as_str()) {
                 Ok(self_keyword) => {
-                    trace!("FnConfig.new | selfKeyword parsed: {:?}", self_keyword);
+                    log::trace!("FnConfig.new | selfKeyword parsed: {:?}", self_keyword);
                     // parse sub nodes
                     // let mut inputs = IndexMap::new();
-                    trace!("FnConfig.new | build inputs...");
+                    log::trace!("FnConfig.new | build inputs...");
                     match self_keyword {
                         FnConfKeywd::Const(value) => {
                             let fn_name = if value.data.is_empty() {
@@ -101,9 +101,9 @@ impl FnConfig {
                             )
                         }
                         FnConfKeywd::Point(value) => {
-                            trace!("FnConfig.new | Point: {:?}", value);
+                            log::trace!("FnConfig.new | Point: {:?}", value);
                             let result = Self::get_param_by_keyword(conf_tree, "enable", FnConfKindName::Const | FnConfKindName::Fn | FnConfKindName::Var | FnConfKindName::Point);
-                            trace!("FnConfig.new | Point 'enable': {:?}", result);
+                            log::trace!("FnConfig.new | Point 'enable': {:?}", result);
                             let enable = match result {
                                 Ok(conf) => {
                                     // debug!("FnConfig.new | Point 'enable' keyword: {:?}", keyword);
@@ -112,7 +112,7 @@ impl FnConfig {
                                 Err(_) => None,
                             };
                             let result = Self::get_param_by_keyword(conf_tree, "input", FnConfKindName::Const | FnConfKindName::Fn | FnConfKindName::Var | FnConfKindName::Point);
-                            trace!("FnConfig.new | Point 'input': {:?}", result);
+                            log::trace!("FnConfig.new | Point 'input': {:?}", result);
                             let input = match result {
                                 Ok(conf) => {
                                     // debug!("FnConfig.new | Point 'input' keyword: {:?}", keyword);
@@ -121,7 +121,7 @@ impl FnConfig {
                                 Err(_) => None,
                             };
                             let result = Self::get_param_by_keyword(conf_tree, "changes-only", FnConfKindName::Const | FnConfKindName::Fn | FnConfKindName::Var | FnConfKindName::Point);
-                            trace!("FnConfig.new | Point 'changes-only': {:?}", result);
+                            log::trace!("FnConfig.new | Point 'changes-only': {:?}", result);
                             let changes_only = match result {
                                 Ok(conf) => {
                                     // debug!("FnConfig.new | Point 'changes-only' keyword: {:?}", keyword);
@@ -146,12 +146,12 @@ impl FnConfig {
                 //      - take input Value / Fn from first sub node,
                 //          if additional sub nodes prtesent, hit warning: "input must have single Value/Fn"
                 Err(_) => {
-                    trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
+                    log::trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
                     FnConfKind::Param(conf_tree.to_owned())
                 }
             }
         } else {
-            trace!("FnConfig.new | SINGLE VALUE: \t{:#?}", &conf_tree.conf);
+            log::trace!("FnConfig.new | SINGLE VALUE: \t{:#?}", &conf_tree.conf);
             if conf_tree.conf.is_string() {
                 match FnConfKeywd::from_str(conf_tree.conf.as_str().unwrap()) {
                     // keyword parsed successefully
@@ -188,9 +188,9 @@ impl FnConfig {
                     //  - or custom parameter
                     Err(_) => {
                         let var_name = conf_tree.conf.as_str().unwrap().to_string();
-                        trace!("FnConfig.new | trying to find Variable: {:?} in vars: \n\t{:?}", &var_name, &vars);
+                        log::trace!("FnConfig.new | trying to find Variable: {:?} in vars: \n\t{:?}", &var_name, &vars);
                         if vars.contains(&var_name) {
-                            trace!("FnConfig.new | Variable declared - ok: {:?}", conf_tree.conf);
+                            log::trace!("FnConfig.new | Variable declared - ok: {:?}", conf_tree.conf);
                             FnConfKind::Var(
                                 FnConfig { 
                                     name: var_name, 
@@ -200,25 +200,25 @@ impl FnConfig {
                                 }
                             )
                         } else {
-                            trace!("FnConfig.new | Custom parameter '{}' declared: {:#?}", conf_tree.key, conf_tree.conf);
+                            log::trace!("FnConfig.new | Custom parameter '{}' declared: {:#?}", conf_tree.key, conf_tree.conf);
                             FnConfKind::Param(conf_tree.to_owned())
                         }
                     }
                 }
             } else if conf_tree.conf.is_bool() {
-                trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
+                log::trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
                 FnConfKind::Param(conf_tree.to_owned())
             } else if conf_tree.conf.is_i64() {
-                trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
+                log::trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
                 FnConfKind::Param(conf_tree.to_owned())
             } else if conf_tree.conf.is_f64() {
-                trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
+                log::trace!("FnConfig.new | Custom parameter '{}' declared: {:?}", conf_tree.key, conf_tree.conf);
                 FnConfKind::Param(conf_tree.to_owned())
             } else {
                 panic!("FnConfig.new | Custom parameter '{}/{}' of unknown type declared, but : {:?}", parent_id, conf_tree.key, conf_tree.conf);
             }
         };
-        trace!("FnConfig.new | Config created: {:#?}", cfg);
+        log::trace!("FnConfig.new | Config created: {:#?}", cfg);
         cfg
     }
     ///
@@ -228,12 +228,12 @@ impl FnConfig {
         match conf_tree.sub_nodes() {
             // has inputs in mapping
             Some(sub_nodes) => {
-                trace!("FnConfig.buildInputs | sub nodes - found");
+                log::trace!("FnConfig.buildInputs | sub nodes - found");
                 for sub_node in sub_nodes {
-                    trace!("FnConfig.buildInputs | sub node: {:?}", sub_node);
+                    log::trace!("FnConfig.buildInputs | sub node: {:?}", sub_node);
                     match FnConfKeywd::from_str(sub_node.key.as_str()) {
                         Ok(keyword) => {
-                            trace!("FnConfig.buildInputs | sub node KEYWORD parsed: {:?}", keyword);
+                            log::trace!("FnConfig.buildInputs | sub node KEYWORD parsed: {:?}", keyword);
                             if !keyword.input().is_empty() {
                                 inputs.insert(
                                     keyword.input(),
@@ -242,7 +242,7 @@ impl FnConfig {
                             }
                         }
                         Err(_) => {
-                            trace!("FnConfig.buildInputs | sub node NO KEYWORD");
+                            log::trace!("FnConfig.buildInputs | sub node NO KEYWORD");
                             inputs.insert(
                                 (sub_node).key.clone(), 
                                 FnConfig::new(parent_id, parent_name, &sub_node, vars),
@@ -252,7 +252,7 @@ impl FnConfig {
                 }
             }
             None => {
-                trace!("FnConfig.buildInputs | sub node not found, possible Const or Var");
+                log::trace!("FnConfig.buildInputs | sub node not found, possible Const or Var");
                 inputs.insert(
                     (conf_tree).key.clone(), 
                     FnConfig::new(parent_id, parent_name, conf_tree, vars),
@@ -315,13 +315,13 @@ impl FnConfig {
     ///
     /// Returns ConfTree by keyword or Err
     fn get_param_by_keyword(conf: &ConfTree, input: &str, kind: u8) -> Result<ConfTree, String> {
-        trace!("FnConfig.getParamByKeyword | conf: {:?}", conf);
+        log::trace!("FnConfig.getParamByKeyword | conf: {:?}", conf);
         for node in conf.sub_nodes().unwrap() {
-            trace!("FnConfig.getParamByKeyword | node: {:?}", node);
+            log::trace!("FnConfig.getParamByKeyword | node: {:?}", node);
             match FnConfKeywd::from_str(&node.key) {
                 Ok(keyword) => {
-                    trace!("FnConfig.getParamByKeyword | keyword: {:?}, kind: {:?}", keyword, keyword.kind());
-                    trace!("FnConfig.getParamByKeyword | keyword.kind({}) & kind({}): {:?}", (keyword.kind() as u8), kind, (keyword.kind() as u8) & kind);
+                    log::trace!("FnConfig.getParamByKeyword | keyword: {:?}, kind: {:?}", keyword, keyword.kind());
+                    log::trace!("FnConfig.getParamByKeyword | keyword.kind({}) & kind({}): {:?}", (keyword.kind() as u8), kind, (keyword.kind() as u8) & kind);
                     if ((keyword.kind() as u8) & kind) > 0 && keyword.input() == input {
                         return Ok(node)
                     }
@@ -340,10 +340,10 @@ impl FnConfig {
     /// Returns list of configurations of the defined points
     pub fn points(&self) -> Vec<PointConfig> {
         let mut points = vec![];
-        trace!("FnConfig.points | requesting points...");
+        log::trace!("FnConfig.points | requesting points...");
         for (input_name, input_kind) in &self.inputs {
-            trace!("FnConfig({}).points | requesting points from {}: {:#?}...", self.name, input_name, input_kind.name());
-            trace!("FnConfig({}).points | requesting points from {}: {:#?}...", self.name, input_name, input_kind);
+            log::trace!("FnConfig({}).points | requesting points from {}: {:#?}...", self.name, input_name, input_kind.name());
+            log::trace!("FnConfig({}).points | requesting points from {}: {:#?}...", self.name, input_name, input_kind);
             let mut input_points = match input_kind {
                 FnConfKind::Fn(config) => {
                     config.points()

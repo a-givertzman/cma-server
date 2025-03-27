@@ -54,7 +54,7 @@ mod task {
                         input1: point any every
         "#, self_name)).unwrap();
         let config = TaskConfig::from_yaml(&self_name, &conf);
-        trace!("config: {:?}", &config);
+        log::trace!("config: {:?}", &config);
         let services = Arc::new(RwLock::new(Services::new(&self_name, RetainConf::new(None::<&str>, None))));
         let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             &self_name.join(),
@@ -95,12 +95,12 @@ mod task {
         services.wlock(self_id).insert(task.clone());
         let services_handle = services.wlock(self_id).run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         let task_handle = task.write().unwrap().run().unwrap();
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         producer.read().unwrap().exit();

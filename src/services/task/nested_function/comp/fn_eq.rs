@@ -56,12 +56,12 @@ impl FnOut for FnEq {
     fn out(&mut self) -> FnResult<Point, String> {
         let input1 = self.input1.borrow_mut().out();
         let input2 = self.input2.borrow_mut().out();
-        trace!("{}.out | input1: {:?}", self.id, &input1);
-        trace!("{}.out | input2: {:?}", self.id, &input2);
+        log::trace!("{}.out | input1: {:?}", self.id, &input1);
+        log::trace!("{}.out | input2: {:?}", self.id, &input2);
         match (input1, input2) {
             (FnResult::Ok(input1), FnResult::Ok(input2)) => {
                 let value = input1.value() == input2.value();
-                trace!("{}.out | value: {:?}", self.id, &value);
+                log::trace!("{}.out | value: {:?}", self.id, &value);
                 let status = match input1.status().cmp(&input2.status()) {
                     std::cmp::Ordering::Less => input2.status(),
                     std::cmp::Ordering::Equal => input1.status(),

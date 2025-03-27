@@ -51,18 +51,18 @@ impl ProducerServiceConfig {
     /// ```
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> ProducerServiceConfig {
         println!();
-        trace!("ProducerServiceConfig.new | confTree: {:?}", conf_tree);
+        log::trace!("ProducerServiceConfig.new | confTree: {:?}", conf_tree);
         let self_id = format!("ProducerServiceConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | self_conf: {:?}", self_id, self_conf);
+        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
         let self_name = Name::new(parent, self_conf.sufix());
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = self_conf.get_duration("cycle");
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
-        debug!("{}.new | send_to: '{}'", self_id, send_to);
+        log::debug!("{}.new | send_to: '{}'", self_id, send_to);
         let debug = self_conf.get_param_value("debug").unwrap_or(serde_yaml::Value::Bool(false)).as_bool().unwrap();
-        debug!("{}.new | debug: '{}'", self_id, debug);
+        log::debug!("{}.new | debug: '{}'", self_id, debug);
         let mut nodes = IndexMap::new();
         for node_name in self_conf.keys.clone() {
             let node_conf = self_conf.get(&node_name).unwrap();
@@ -72,15 +72,15 @@ impl ProducerServiceConfig {
                 if keyword.kind() == FnConfKindName::Point {
                     let point_name = format!("{}/{}", self_name, keyword.data());
                     let point_conf = node_conf.get(key).unwrap();
-                    trace!("{}.new | Point '{}'", self_id, point_name);
-                    trace!("{}.new | Point '{}'   |   conf: {:?}", self_id, point_name, point_conf);
+                    log::trace!("{}.new | Point '{}'", self_id, point_name);
+                    log::trace!("{}.new | Point '{}'   |   conf: {:?}", self_id, point_name, point_conf);
                     let node_conf = PointConfig::new(&Name::new(&self_name, &node_name), &point_conf);
                     nodes.insert(
                         node_conf.name.clone(),
                         node_conf,
                     );
                 } else {
-                    debug!("{}.new | device expected, but found {:?}", self_id, keyword);
+                    log::debug!("{}.new | device expected, but found {:?}", self_id, keyword);
                 }
             }
         }

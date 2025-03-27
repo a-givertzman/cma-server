@@ -86,7 +86,7 @@ impl JdsDecodeMessage {
                 }
             };
         };
-        trace!("{}.read_all | read bytes: {:?}", self_id, bytes);
+        log::trace!("{}.read_all | read bytes: {:?}", self_id, bytes);
         ConnectionStatus::Closed(format!("{}.read_all | tcp stream is closed", self_id))
     }
 }

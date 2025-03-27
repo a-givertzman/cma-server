@@ -76,34 +76,34 @@ impl Service for TaskTestProducer {
         let sent = self.sent.clone();
         let test_data = self.test_data.clone();
         let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
-            debug!("{}.run | calculating step...", self_id);
+            log::debug!("{}.run | calculating step...", self_id);
             for (name, value) in test_data {
                 let point = value.to_point(tx_id, &name);
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
                         sent.write().unwrap().push(point.clone());
-                        trace!("{}.run | sent points: {:?}", self_id, sent.read().unwrap().len());
+                        log::trace!("{}.run | sent points: {:?}", self_id, sent.read().unwrap().len());
                     }
                     Err(err) => {
-                        warn!("{}.run | Error write to queue: {:?}", self_id, err);
+                        log::warn!("{}.run | Error write to queue: {:?}", self_id, err);
                     }
                 }
                 if delayed {
                     thread::sleep(cycle);
                 }
             }
-            info!("{}.run | All sent: {}", self_id, sent.read().unwrap().len());
+            log::info!("{}.run | All sent: {}", self_id, sent.read().unwrap().len());
             // thread::sleep(Duration::from_secs_f32(0.1));
             // debug!("TaskTestProducer({}).run | calculating step - done ({:?})", name, cycle.elapsed());
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Started", self.id);
+                log::info!("{}.run | Started", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

@@ -39,7 +39,7 @@ mod fn_retain {
                                 "true" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
                                 "false" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                 _ => {
-                                    error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self_id, input, path);
+                                    log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self_id, input, path);
                                     None
                                 }
                             }
@@ -48,7 +48,7 @@ mod fn_retain {
                                     Some(Point::Int(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
                                     None
                                 }
                             }
@@ -57,7 +57,7 @@ mod fn_retain {
                                     Some(Point::Real(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
                                     None
                                 }
                             }
@@ -66,7 +66,7 @@ mod fn_retain {
                                     Some(Point::Double(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
                                     None
                                 }
                             }
@@ -80,13 +80,13 @@ mod fn_retain {
 
                     }
                     Err(err) => {
-                        warn!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", self_id, path, err);
+                        log::warn!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", self_id, path, err);
                         None
                     }
                 }
             }
             Err(err) => {
-                warn!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
+                log::warn!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
                 None
             }
         }
@@ -110,7 +110,7 @@ mod fn_retain {
         test_duration.run().unwrap();
         //
         // can be changed
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", self_id), PointConfigType::Bool)
             .map_or(false, |init| init.as_bool().value.0);
         let services = Arc::new(RwLock::new(Services::new(
@@ -145,10 +145,10 @@ mod fn_retain {
                             input: point bool '/AppTest/BoolFlag'
             ").unwrap(),
         );
-        trace!("config: {:?}", config);
-        debug!("Task config points: {:#?}", config.points());
+        log::trace!("config: {:?}", config);
+        log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-        debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.read().unwrap().points());
         services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
@@ -195,12 +195,12 @@ mod fn_retain {
         let services_handle = services.wlock(self_id).run().unwrap();
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         let task_handle = task.write().unwrap().run().unwrap();
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         thread::sleep(Duration::from_millis(100));
@@ -250,7 +250,7 @@ mod fn_retain {
         test_duration.run().unwrap();
         //
         // can be changed
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
             RetainConf::new(
@@ -286,11 +286,11 @@ mod fn_retain {
                                         input2: const real 0.1
             ").unwrap(),
         );
-        trace!("config: {:?}", config);
-        debug!("Task config points: {:#?}", config.points());
+        log::trace!("config: {:?}", config);
+        log::debug!("Task config points: {:#?}", config.points());
 
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-        debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.read().unwrap().points());
 
         services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
@@ -350,12 +350,12 @@ mod fn_retain {
         let services_handle = services.wlock(self_id).run().unwrap();
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         let task_handle = task.write().unwrap().run().unwrap();
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         thread::sleep(Duration::from_millis(100));
@@ -408,7 +408,7 @@ mod fn_retain {
         test_duration.run().unwrap();
         //
         // can be changed
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(
             self_id,
             RetainConf::new(
@@ -445,11 +445,11 @@ mod fn_retain {
                                     input2: point real '/{}/Load'
             ", self_id, self_id, self_id)).unwrap(),
         );
-        trace!("config: {:?}", config);
-        debug!("Task config points: {:#?}", config.points());
+        log::trace!("config: {:?}", config);
+        log::debug!("Task config points: {:#?}", config.points());
 
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-        debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.read().unwrap().points());
 
         services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
@@ -511,12 +511,12 @@ mod fn_retain {
         let services_handle = services.wlock(self_id).run().unwrap();
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         let task_handle = task.write().unwrap().run().unwrap();
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         thread::sleep(Duration::from_millis(100));
@@ -567,7 +567,7 @@ mod fn_retain {
         test_duration.run().unwrap();
         //
         // can be changed
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", self_id), PointConfigType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let services = Arc::new(RwLock::new(Services::new(
@@ -606,10 +606,10 @@ mod fn_retain {
                                     input2: point real '/AppTest/Load'
             ").unwrap(),
         );
-        trace!("config: {:?}", config);
-        debug!("Task config points: {:#?}", config.points());
+        log::trace!("config: {:?}", config);
+        log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-        debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.read().unwrap().points());
         services.wlock(self_id).insert(task.clone());
         let conf = MultiQueueConfig::from_yaml(
             self_id,
@@ -670,12 +670,12 @@ mod fn_retain {
         let services_handle = services.wlock(self_id).run().unwrap();
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         let task_handle = task.write().unwrap().run().unwrap();
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         let time = Instant::now();
         receiver_handle.wait().unwrap();
         thread::sleep(Duration::from_millis(100));

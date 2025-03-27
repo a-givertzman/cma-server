@@ -41,7 +41,7 @@ mod tests {
         ];
         for (value, target) in test_data {
             let result = ConfKeywd::from_str(value).unwrap();
-            debug!("value: {:?}   |   ConfKind: {:?}   |   target: {:?}", value, result, target);
+            log::debug!("value: {:?}   |   ConfKind: {:?}   |   target: {:?}", value, result, target);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }

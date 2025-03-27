@@ -67,28 +67,28 @@ impl ProfinetClient {
             Ok(mut diagnosis) => {
                 match diagnosis.get_mut(kewd) {
                     Some(point) => {
-                        debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", self_id, kewd);
+                        log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", self_id, kewd);
                         if let Some(point) = point.next(value) {
                             if let Err(err) = tx_send.send(point) {
-                                warn!("{}.yield_status | Send error: {}", self_id, err);
+                                log::warn!("{}.yield_status | Send error: {}", self_id, err);
                             }
                         }
                     }
-                    None => debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", self_id, kewd),
+                    None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", self_id, kewd),
                 }
             }
-            Err(err) => error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", self_id, err),
+            Err(err) => log::error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", self_id, err),
         }
     }
     ///
     /// Sends all configured points from the current DB with the given status
     fn yield_status(self_id: &str, dbs: &mut FxIndexMap<String, ProfinetDb>, tx_send: &Sender<Point>) {
         for (db_name, db) in dbs {
-            debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
+            log::debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(Status::Invalid, tx_send) {
                 Ok(_) => {}
                 Err(err) => {
-                    error!("{}.yield_status | send errors: \n\t{:?}", self_id, err);
+                    log::error!("{}.yield_status | send errors: \n\t{:?}", self_id, err);
                 }
             };
         }
@@ -96,7 +96,7 @@ impl ProfinetClient {
     ///
     /// Reads data slice from the S7 device,
     fn read(&mut self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
-        info!("{}.read | starting...", self.id);
+        log::info!("{}.read | starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
         let exit = self.exit.clone();
@@ -105,7 +105,7 @@ impl ProfinetClient {
         match conf.cycle {
             Some(cycle_interval) => {
                 if cycle_interval > Duration::ZERO {
-                    info!("{}.read | Preparing thread...", self_id);
+                    log::info!("{}.read | Preparing thread...", self_id);
                     let handle = thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {
                         let mut is_connected = ChangeNotify::new(
                             &self_id,
@@ -117,10 +117,10 @@ impl ProfinetClient {
                         );
                         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
                         for (db_name, db_conf) in conf.dbs {
-                            info!("{}.read | configuring DB: {:?}...", self_id, db_name);
+                            log::info!("{}.read | configuring DB: {:?}...", self_id, db_name);
                             let db = ProfinetDb::new(&self_id, tx_id, &db_conf);
                             dbs.insert(db_name.clone(), db);
-                            info!("{}.read | configuring DB: {:?} - ok", self_id, db_name);
+                            log::info!("{}.read | configuring DB: {:?} - ok", self_id, db_name);
                         }
                         let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
                         let mut client = S7Client::new(self_id.clone(), conf.ip.clone());
@@ -135,20 +135,20 @@ impl ProfinetClient {
                                     'read: while !exit.load(Ordering::SeqCst) {
                                         cycle.start();
                                         for (db_name, db) in &mut dbs {
-                                            trace!("{}.read | DB '{}' - reading...", self_id, db_name);
+                                            log::trace!("{}.read | DB '{}' - reading...", self_id, db_name);
                                             match db.read(&client, &tx_send) {
                                                 Ok(_) => {
                                                     error_limit.reset();
-                                                    trace!("{}.read | DB '{}' - reading - ok", self_id, db_name);
+                                                    log::trace!("{}.read | DB '{}' - reading - ok", self_id, db_name);
                                                 }
                                                 Err(err) => {
-                                                    error!("{}.read | DB '{}' - reading - error: {:?}", self_id, db_name, err);
+                                                    log::error!("{}.read | DB '{}' - reading - error: {:?}", self_id, db_name, err);
                                                     if error_limit.add().is_err() {
-                                                        error!("{}.read | DB '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_name);
+                                                        log::error!("{}.read | DB '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_name);
                                                         status = Status::Invalid;
                                                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
                                                         if let Err(err) = client.close() {
-                                                            error!("{}.read | {:?}", self_id, err);
+                                                            log::error!("{}.read | {:?}", self_id, err);
                                                         };
                                                         break 'read;
                                                     }
@@ -166,22 +166,22 @@ impl ProfinetClient {
                                 }
                                 Err(err) => {
                                     is_connected.add(false, format!("{}.read | Connection lost: {:?}", self_id, err));
-                                    trace!("{}.read | Connection error: {:?}", self_id, err);
+                                    log::trace!("{}.read | Connection error: {:?}", self_id, err);
                                 }
                             }
                             thread::sleep(conf.reconnect_cycle);
                         }
-                        info!("{}.read | Exit", self_id);
+                        log::info!("{}.read | Exit", self_id);
                     });
-                    info!("{}.read | Started", self.id);
+                    log::info!("{}.read | Started", self.id);
                     handle
                 } else {
-                    info!("{}.read | Disabled", self.id);
+                    log::info!("{}.read | Disabled", self.id);
                     thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {})
                 }
             }
             None => {
-                info!("{}.read | Disabled", self.id);
+                log::info!("{}.read | Disabled", self.id);
                 thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {})
             }
         }
@@ -195,7 +195,7 @@ impl ProfinetClient {
         let conf = self.conf.clone();
         let services = self.services.clone();
         let diagnosis = self.diagnosis.clone();
-        info!("{}.write | Preparing thread...", self_id);
+        log::info!("{}.write | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.write", self_id.clone())).spawn(move || {
             let mut is_connected = ChangeNotify::new(
                 &self_id,
@@ -208,16 +208,16 @@ impl ProfinetClient {
             let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
             let mut points: Vec<PointConfig> = vec![];
             for (db_name, db_conf) in conf.dbs {
-                info!("{}.write | configuring ProfinetDb: {:?}...", self_id, db_name);
+                log::info!("{}.write | configuring ProfinetDb: {:?}...", self_id, db_name);
                 let db = ProfinetDb::new(&self_id, tx_id, &db_conf);
                 dbs.insert(db_name.clone(), db);
-                info!("{}.write | configuring ProfinetDb: {:?} - ok", self_id, db_name);
+                log::info!("{}.write | configuring ProfinetDb: {:?} - ok", self_id, db_name);
                 points.extend(db_conf.points());
             }
             let points = points.iter().map(|point_conf| {
                 SubscriptionCriteria::new(&point_conf.name, Cot::Act)
             }).collect::<Vec<SubscriptionCriteria>>();
-            debug!("{}.write | Points subscribed on: ({})", self_id, points.len());
+            log::debug!("{}.write | Points subscribed on: ({})", self_id, points.len());
             for name in &points {
                 println!("\t{:?}", name);
             }
@@ -236,25 +236,25 @@ impl ProfinetClient {
                                     let point_name = point.name();
                                     let point_value = point.value();
                                     let db_name = point_name.split('/').nth(3).unwrap();
-                                    debug!("{}.write | ProfinetDb '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
+                                    log::debug!("{}.write | ProfinetDb '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
                                     // let dbName = point_name.split("/").skip(1).collect::<String>();
                                     match dbs.get_mut(db_name) {
                                         Some(db) => {
                                             match db.write(&client, point.clone()) {
                                                 Ok(_) => {
                                                     errors_limit.reset();
-                                                    debug!("{}.write | ProfinetDb '{}' - writing point '{}'\t({:?}) - ok", self_id, db_name, point_name, point_value);
+                                                    log::debug!("{}.write | ProfinetDb '{}' - writing point '{}'\t({:?}) - ok", self_id, db_name, point_name, point_value);
                                                     let reply = Self::reply_point(tx_id, point);
                                                     match tx_send.send(reply.clone()) {
-                                                        Ok(_) => debug!("{}.write | ProfinetDb '{}' - sent reply: {:#?}", self_id, db_name, reply),
-                                                        Err(err) => error!("{}.write | Error sending to queue: {:?}", self_id, err),
+                                                        Ok(_) => log::debug!("{}.write | ProfinetDb '{}' - sent reply: {:#?}", self_id, db_name, reply),
+                                                        Err(err) => log::error!("{}.write | Error sending to queue: {:?}", self_id, err),
                                                         // break 'main;
                                                     };
                                                 }
                                                 Err(err) => {
-                                                    warn!("{}.write | ProfinetDb '{}' - write - error: {:?}", self_id, db_name, err);
+                                                    log::warn!("{}.write | ProfinetDb '{}' - write - error: {:?}", self_id, db_name, err);
                                                     if errors_limit.add().is_err() {
-                                                        error!("{}.write | ProfinetDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
+                                                        log::error!("{}.write | ProfinetDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
                                                         if let Err(err) = tx_send.send(Point::String(PointHlr::new(
                                                             tx_id,
@@ -264,11 +264,11 @@ impl ProfinetClient {
                                                             Cot::ActErr,
                                                             chrono::offset::Utc::now(),
                                                         ))) {
-                                                            error!("{}.write | Error sending to queue: {:?}", self_id, err);
+                                                            log::error!("{}.write | Error sending to queue: {:?}", self_id, err);
                                                             // break 'main;
                                                         };
                                                         if let Err(err) = client.close() {
-                                                            error!("{}.write | {:?}", self_id, err);
+                                                            log::error!("{}.write | {:?}", self_id, err);
                                                         };
                                                         break 'write;
                                                     }
@@ -276,7 +276,7 @@ impl ProfinetClient {
                                             }
                                         }
                                         None => {
-                                            error!("{}.write | ProfinetDb '{}' - not found", self_id, db_name);
+                                            log::error!("{}.write | ProfinetDb '{}' - not found", self_id, db_name);
                                         }
                                     };
                                 }
@@ -284,7 +284,7 @@ impl ProfinetClient {
                                     match err {
                                         mpsc::RecvTimeoutError::Timeout => {}
                                         mpsc::RecvTimeoutError::Disconnected => {
-                                            error!("{}.write | Error receiving from queue: {:?}", self_id, err);
+                                            log::error!("{}.write | Error receiving from queue: {:?}", self_id, err);
                                             Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
                                             break 'main;
                                         }
@@ -298,13 +298,13 @@ impl ProfinetClient {
                     }
                     Err(err) => {
                         is_connected.add(false, format!("{}.write | Connection lost: {:?}", self_id, err));
-                        trace!("{}.write | Connection error: {:?}", self_id, err);
+                        log::trace!("{}.write | Connection error: {:?}", self_id, err);
                     }
                 }
             }
-            info!("{}.write | Exit", self_id);
+            log::info!("{}.write | Exit", self_id);
         });
-        info!("{}.write | Started", self.id);
+        log::info!("{}.write | Started", self.id);
         handle
     }
     ///
@@ -397,7 +397,7 @@ impl Service for ProfinetClient {
         Self::yield_diagnosis(&self.id, &self.diagnosis.clone(), &DiagKeywd::Connection, Status::Invalid, &tx_send);
         let handle_read = self.read(tx_send.clone());
         let handle_write = self.write(tx_send);
-        info!("{}.run | started", self.id);
+        log::info!("{}.run | started", self.id);
         match (handle_read, handle_write) {
             (Ok(handle_read), Ok(handle_write)) => {
                 Ok(ServiceHandles::new(vec![

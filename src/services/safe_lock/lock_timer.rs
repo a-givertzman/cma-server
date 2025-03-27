@@ -41,7 +41,7 @@ impl LockTimer {
                     break;
                 }
                 if timer.elapsed() > duration {
-                    error!("{}.run | Maximum lock duration ({:?}) exceeded for type: '{}'", self_id, duration, type_);
+                    log::error!("{}.run | Maximum lock duration ({:?}) exceeded for type: '{}'", self_id, duration, type_);
                     // std::process::exit(80);   // SOFTWARE: ExitCode = 80
                 }
 

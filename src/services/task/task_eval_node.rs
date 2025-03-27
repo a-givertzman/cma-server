@@ -38,7 +38,7 @@ impl TaskEvalNode {
             }
         }
         self.input.push(input.clone());
-        trace!("TaskEvalNode.add_input | evalNode '{}' - input '{}' added", self.id, input.borrow().hash());
+        log::trace!("TaskEvalNode.add_input | evalNode '{}' - input '{}' added", self.id, input.borrow().hash());
         input
     }
     ///
@@ -113,14 +113,14 @@ impl TaskEvalNode {
     ///  - eval all conaining outs
     pub fn eval(&mut self) {
         for eval_node_var in &self.vars {
-            trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", self.id, eval_node_var.borrow_mut().id());
+            log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", self.id, eval_node_var.borrow_mut().id());
             eval_node_var.borrow_mut().eval();
-            trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", self.id, eval_node_var.borrow_mut().id());
+            log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", self.id, eval_node_var.borrow_mut().id());
         };
         for eval_node_out in &self.outs {
-            trace!("TaskEvalNode.eval | evalNode '{}' out...", self.id);
+            log::trace!("TaskEvalNode.eval | evalNode '{}' out...", self.id);
             let out = eval_node_out.borrow_mut().out();
-            trace!("TaskEvalNode.eval | evalNode '{}' out: {:?}", self.id, out);
+            log::trace!("TaskEvalNode.eval | evalNode '{}' out: {:?}", self.id, out);
         };
     }
 }

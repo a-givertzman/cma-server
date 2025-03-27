@@ -89,7 +89,7 @@ impl ConfDuration {
 impl FromStr for ConfDuration {
     type Err = String;
     fn from_str(input: &str) -> Result<ConfDuration, String> {
-        trace!("ConfDuration.from_str | input: {}", input);
+        log::trace!("ConfDuration.from_str | input: {}", input);
         let re = r#"^[ \t]*(\d+)[ \t]*(ns|us|ms|s|m|h){0,1}[ \t]*$"#;
         let re = RegexBuilder::new(re).multi_line(true).build().unwrap();
         let groupValue = 1;

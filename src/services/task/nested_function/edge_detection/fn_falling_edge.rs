@@ -55,7 +55,7 @@ impl FnOut for FnFallingEdge {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:#?}", self.id, input);
+        log::trace!("{}.out | input: {:#?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let input_value = input.to_bool().as_bool().value.0;
@@ -68,7 +68,7 @@ impl FnOut for FnFallingEdge {
                     input.timestamp(),
                 ));
                 self.prev = input_value;
-                trace!("{}.out | value: {:#?}", self.id, value);
+                log::trace!("{}.out | value: {:#?}", self.id, value);
                 FnResult::Ok(value)
             }
             FnResult::None => {

@@ -67,13 +67,13 @@ impl FnOut for FnDebug {
                 match first {
                     FnResult::Ok(input) => {
                         value = input.to_owned();
-                        debug!("{}.out | value: {:#?}", self.id, value);
+                        log::debug!("{}.out | value: {:#?}", self.id, value);
                         while let Some(input) = inputs.next().cloned() {
                             let input = input.borrow_mut().out();
                             match input {
                                 FnResult::Ok(input) => {
                                     value = input.clone();
-                                    debug!("{}.out | value: {:#?}", self.id, value);
+                                    log::debug!("{}.out | value: {:#?}", self.id, value);
                                 }
                                 FnResult::None => return FnResult::None,
                                 FnResult::Err(err) => return FnResult::Err(err),

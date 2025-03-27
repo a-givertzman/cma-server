@@ -65,7 +65,7 @@ impl SqlMetric {
             !delete
         });
         for name in input_conf_names {
-            trace!("{}.new | input name: {:?}", self_id, name);
+            log::trace!("{}.new | input name: {:?}", self_id, name);
             let input_conf = conf.input_conf(name).unwrap();
             inputs.insert(
                 name.to_owned(), 
@@ -125,10 +125,10 @@ impl FnOut for SqlMetric {
     fn out(&mut self) -> FnResult<Point, String> {
         let self_id = self.id.clone();
         for (full_name, (name, sufix)) in &self.sql_names {
-            trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
+            log::trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
             match self.inputs.get(name) {
                 Some(input) => {
-                    trace!("{}.out | input: {:?} - found", self_id, name);
+                    log::trace!("{}.out | input: {:?} - found", self_id, name);
                     let input = input.borrow_mut().out();
                     match input {
                         FnResult::Ok(input) => {
@@ -143,7 +143,7 @@ impl FnOut for SqlMetric {
                 }
             };
         }
-        trace!("{}.out | sql: {:?}", self_id, self.sql.out());
+        log::trace!("{}.out | sql: {:?}", self_id, self.sql.out());
         FnResult::Ok(Point::String(PointHlr::new_string(
             self.tx_id,
             &self.name.join(), 

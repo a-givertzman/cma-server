@@ -55,7 +55,7 @@ impl S7ParseReal {
         match bytes[start..(start + 4)].try_into() {
             Ok(v) => Ok(f32::from_be_bytes(v)),
             Err(e) => {
-                warn!("S7ParseReal.convert | error: {}", e);
+                log::warn!("S7ParseReal.convert | error: {}", e);
                 Err(e)
             }
         }
@@ -97,7 +97,7 @@ impl S7ParseReal {
             }
             Err(e) => {
                 self.status.add(Status::Invalid);
-                warn!("S7ParseReal.addRaw | convertion error: {:?}", e);
+                log::warn!("S7ParseReal.addRaw | convertion error: {:?}", e);
             }
         }
         if self.is_changed() {

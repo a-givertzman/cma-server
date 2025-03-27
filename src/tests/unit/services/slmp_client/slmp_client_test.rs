@@ -36,7 +36,7 @@ mod slmp_client {
         let slmp_packet = SlmpPacket::new(self_id, DeviceCode::D, 1112, 4);
         match slmp_packet.read_packet(FrameType::BinReqSt) {
             Ok(read_request) => {
-                debug!("read request: {:02X?}", read_request);
+                log::debug!("read request: {:02X?}", read_request);
                 loop {
                     match TcpStream::connect("192.168.120.200:4999") {
                         Ok(mut stream) => {
@@ -85,20 +85,20 @@ mod slmp_client {
                                                 //     .collect::<Vec<i32>>();
                                                 // println!("\tbig ints: {:?}", ints);
                                             },
-                                            Err(err) => warn!("Tcp read error: {:#?}", err),
+                                            Err(err) => log::warn!("Tcp read error: {:#?}", err),
                                         }
                                     }
-                                    Err(err) => warn!("Tcp send error: {:#?}", err),
+                                    Err(err) => log::warn!("Tcp send error: {:#?}", err),
                                 }
                                 thread::sleep(Duration::from_millis(1000));
                             }
                         },
-                        Err(err) => warn!("Tcp connection error: {:#?}", err),
+                        Err(err) => log::warn!("Tcp connection error: {:#?}", err),
                     }
                     thread::sleep(Duration::from_millis(1000));
                 }
             }
-            Err(err) => warn!("Build write request error:: {:#?}", err),
+            Err(err) => log::warn!("Build write request error:: {:#?}", err),
         }
         // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         test_duration.exit();
@@ -138,24 +138,24 @@ mod slmp_client {
                 Ok(mut stream) => {
                     loop {
                         let write_bytes = &(-32768i16).to_le_bytes();
-                        debug!("write bytes: {:02X?}", write_bytes);
+                        log::debug!("write bytes: {:02X?}", write_bytes);
                         match slmp_packet.write_packet(FrameType::BinReqSt, write_bytes) {
                             Ok(write_request) => {
-                                debug!("write request: {:02X?}", write_request);
+                                log::debug!("write request: {:02X?}", write_request);
                                 match stream.write_all(&write_request) {
                                     Ok(_) => {
                                         println!("\t write - Ok");
                                         io::stdout().flush().unwrap();
                                     }
-                                    Err(err) => warn!("Tcp send error: {:#?}", err),
+                                    Err(err) => log::warn!("Tcp send error: {:#?}", err),
                                 }
                                 thread::sleep(Duration::from_millis(1000));
                             },
-                            Err(err) => warn!("Build write request error:: {:#?}", err),
+                            Err(err) => log::warn!("Build write request error:: {:#?}", err),
                         }
                     }
                 },
-                Err(err) => warn!("Tcp connection error: {:#?}", err),
+                Err(err) => log::warn!("Tcp connection error: {:#?}", err),
             }
             thread::sleep(Duration::from_millis(1000));
         }

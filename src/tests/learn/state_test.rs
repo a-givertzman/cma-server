@@ -66,7 +66,7 @@ mod tests {
             switchState.add(value);
             let state = switchState.state();
             let changed = switchState.changed();
-            info!("state: {},\t changed: {},\t value: {}", state, changed, value);
+            log::info!("state: {},\t changed: {},\t value: {}", state, changed, value);
         }
         // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
     }

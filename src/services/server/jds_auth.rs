@@ -15,7 +15,7 @@ impl TcpServerAuth {
     ///
     /// 
     pub fn new(value: ConfTree) -> Self {
-        debug!("TcpServerAuth.new | value: {:?}", value);
+        log::debug!("TcpServerAuth.new | value: {:?}", value);
         match value.key.to_lowercase().as_str() {
             "auth" => {
                 match value.conf.as_str() {

@@ -44,7 +44,7 @@ impl FnInput {
             FnConfPointType::Any => Some(false.to_point(tx_id, &conf.name)),
             FnConfPointType::Unknown => panic!("{}.function | Point type required", self_id),
         };
-        trace!("{}.function | Input initial: {:?}", self_id, initial);
+        log::trace!("{}.function | Input initial: {:?}", self_id, initial);
         Self {
             id: self_id,
             kind: FnKind::Input,
@@ -63,7 +63,7 @@ impl FnIn for FnInput {
     //
     //
     fn add(&mut self, point: &Point) {
-        trace!("{}.add | value: {:?}", self.id, &self.point);
+        log::trace!("{}.add | value: {:?}", self.id, &self.point);
         if let Some(status) = self.status {
             if point.status() != status {
                 return
@@ -80,7 +80,7 @@ impl FnIn for FnInput {
                         match p.value.parse() {
                             Ok(value) => Point::Bool(PointHlr::new(p.tx_id, &p.name, Bool(value), p.status, p.cot, p.timestamp)),
                             Err(err) => {
-                                error!("{}.add | Error conversion into<bool> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
+                                log::error!("{}.add | Error conversion into<bool> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
                             }
                         }
@@ -97,7 +97,7 @@ impl FnIn for FnInput {
                         match p.value.parse() {
                             Ok(value) => Point::Int(PointHlr::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
                             Err(err) => {
-                                error!("{}.add | Error conversion into<i64> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
+                                log::error!("{}.add | Error conversion into<i64> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
                             }
                         }
@@ -122,7 +122,7 @@ impl FnIn for FnInput {
                         match p.value.parse() {
                             Ok(value) => Point::Real(PointHlr::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
                             Err(err) => {
-                                error!("{}.add | Error conversion into<f32> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
+                                log::error!("{}.add | Error conversion into<f32> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
                             }
                         }
@@ -147,7 +147,7 @@ impl FnIn for FnInput {
                         match p.value.parse() {
                             Ok(value) => Point::Double(PointHlr::new(p.tx_id, &p.name, value, p.status, p.cot, p.timestamp)),
                             Err(err) => {
-                                error!("{}.add | Error conversion into<f64> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
+                                log::error!("{}.add | Error conversion into<f64> value: {:?}\n\terror: {:#?}", self.id, self.point, err);
                                 return;
                             }
                         }
@@ -205,7 +205,7 @@ impl FnOut for FnInput {
     }
     //
     fn out(&mut self) -> FnResult<Point, String> {
-        trace!("{}.out | value: {:?}", self.id, &self.point);
+        log::trace!("{}.out | value: {:?}", self.id, &self.point);
         match &self.point {
             Some(point) => FnResult::Ok(point.to_owned()),
             None => FnResult::Err(concat_string!(self.id, ".out | Not initialized")),

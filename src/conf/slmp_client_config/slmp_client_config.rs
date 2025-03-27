@@ -52,43 +52,43 @@ impl SlmpClientConfig {
     /// Creates new instance of the [SlmpClientConfig]:
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
         println!();
-        trace!("SlmpClientConfig.new | conf_tree: {:#?}", conf_tree);
+        log::trace!("SlmpClientConfig.new | conf_tree: {:#?}", conf_tree);
         let self_id = format!("SlmpClientConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | self_conf: {:?}", self_id, self_conf);
+        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
         let self_name = Name::new(parent, self_conf.sufix());
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = self_conf.get_duration("cycle");
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let reconnect_cycle = self_conf.get_duration("reconnect").map_or(Duration::from_secs(1), |reconnect| reconnect);
-        debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
+        log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let subscribe = self_conf.get_param_value("subscribe").unwrap().as_str().unwrap().to_string();
-        debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
+        log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
         let send_to = LinkName::from_str(self_conf.get_send_to().unwrap().as_str()).unwrap();
-        debug!("{}.new | send-to: '{}'", self_id, send_to);
+        log::debug!("{}.new | send-to: '{}'", self_id, send_to);
         let description = self_conf.get_param_value("description").unwrap().as_str().unwrap().to_string();
-        debug!("{}.new | description: {:?}", self_id, description);
+        log::debug!("{}.new | description: {:?}", self_id, description);
         let ip = self_conf.get_param_value("ip").unwrap().as_str().unwrap().to_string();
-        debug!("{}.new | ip: {:?}", self_id, ip);
+        log::debug!("{}.new | ip: {:?}", self_id, ip);
         let port = self_conf.get_param_value("port").unwrap().as_u64().unwrap();
-        debug!("{}.new | port: {:?}", self_id, ip);
+        log::debug!("{}.new | port: {:?}", self_id, ip);
         let diagnosis = self_conf.get_diagnosis(&self_name);
-        debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
+        log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::new();
         for key in &self_conf.keys {
             let keyword = Keywd::from_str(key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();
                 let mut device_conf = self_conf.get(key).unwrap();
-                debug!("{}.new | DB '{}'", self_id, db_name);
-                trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
+                log::debug!("{}.new | DB '{}'", self_id, db_name);
+                log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
                 let node_conf = SlmpDbConfig::new(&self_name, &db_name, &mut device_conf);
                 dbs.insert(
                     db_name,
                     node_conf,
                 );
             } else {
-                debug!("{}.new | device expected, but found {:?}", self_id, keyword);
+                log::debug!("{}.new | device expected, but found {:?}", self_id, keyword);
             }
         }
         SlmpClientConfig {

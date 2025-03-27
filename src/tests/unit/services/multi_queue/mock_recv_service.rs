@@ -78,21 +78,21 @@ impl Service for MockRecvService {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let in_recv = self.rx_recv.lock().unwrap().take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             match recv_limit {
                 Some(recv_limit) => {
                     let mut received_count = 0;
                     loop {
                         match in_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
-                                trace!("{}.run | received: {:?}", self_id, point);
+                                log::trace!("{}.run | received: {:?}", self_id, point);
                                 received.write().push(point);
                                 received_count += 1;
                             }
@@ -110,7 +110,7 @@ impl Service for MockRecvService {
                     loop {
                         match in_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
-                                trace!("{}.run | received: {:?}", self_id, point);
+                                log::trace!("{}.run | received: {:?}", self_id, point);
                                 received.write().push(point);
                             }
                             Err(_) => {}
@@ -124,12 +124,12 @@ impl Service for MockRecvService {
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }        

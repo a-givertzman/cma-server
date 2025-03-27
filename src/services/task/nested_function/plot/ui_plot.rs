@@ -307,7 +307,7 @@ impl eframe::App for UiPlot {
                                     }
                                 }
                             }
-                            None => error!("{}.update | Unknown plot key '{}'", self.id, label),
+                            None => log::error!("{}.update | Unknown plot key '{}'", self.id, label),
                         }
                     }
                 });

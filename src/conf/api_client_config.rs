@@ -40,25 +40,25 @@ impl ApiClientConfig {
     ///                     ...
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
         let self_id = format!("ApiClientConfig({})", conf.key);
-        trace!("ApiClientConfig.new | confTree: {:?}", conf);
-        trace!("{}.new | selfConf: {:?}", self_id, conf);
+        log::trace!("ApiClientConfig.new | confTree: {:?}", conf);
+        log::trace!("{}.new | selfConf: {:?}", self_id, conf);
         let self_name = Name::new(parent, conf.name().unwrap());
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let address: String = conf.get("address").unwrap();
         let address: SocketAddr = address.parse().unwrap();
-        debug!("{}.new | address: {:?}", self_id, address);
+        log::debug!("{}.new | address: {:?}", self_id, address);
         let database = conf.get("database").unwrap();
-        debug!("{}.new | database: {:?}", self_id, database);
+        log::debug!("{}.new | database: {:?}", self_id, database);
         let auth_token = conf.get("auth_token").unwrap();
-        debug!("{}.new | auth_token: {:?}", self_id, auth_token);
+        log::debug!("{}.new | auth_token: {:?}", self_id, auth_token);
         let cycle = conf.get_duration("cycle").ok();
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").ok();
-        debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
+        log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let (rx, rx_max_len) = conf.get_in_queue().unwrap();
-        debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_len);
+        log::debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_len);
         let debug: bool = conf.get("debug").unwrap_or(false);
-        debug!("{}.new | debug: {:?}", self_id, debug);
+        log::debug!("{}.new | debug: {:?}", self_id, debug);
         Self {
             name: self_name,
             address,

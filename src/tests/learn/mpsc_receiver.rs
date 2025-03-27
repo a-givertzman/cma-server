@@ -37,7 +37,7 @@ mod tests {
         let mut value = -1;
         while value < iterations {
             value = recv.recv_timeout(RECV_TIMEOUT).unwrap();
-            info!("value: {}", value);
+            log::info!("value: {}", value);
             // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }

@@ -57,21 +57,21 @@ impl FnOut for FnMul {
     fn out(&mut self) -> FnResult<Point, String> {
         // TODO Mul overflow check
         let input1 = self.input1.borrow_mut().out();
-        trace!("{}.out | input1: {:?}", self.id, &input1);
+        log::trace!("{}.out | input1: {:?}", self.id, &input1);
         let input1 = match input1 {
             FnResult::Ok(input1) => input1,
             FnResult::None => return FnResult::None,
             FnResult::Err(err) => return FnResult::Err(err),
         };
         let input2 = self.input2.borrow_mut().out();
-        trace!("{}.out | input2: {:?}", self.id, &input2);
+        log::trace!("{}.out | input2: {:?}", self.id, &input2);
         let input2 = match input2 {
             FnResult::Ok(input2) => input2,
             FnResult::None => return FnResult::None,
             FnResult::Err(err) => return FnResult::Err(err),
         };
         let out = input1 * input2;
-        trace!("{}.out | out: {:?}", self.id, &out);
+        log::trace!("{}.out | out: {:?}", self.id, &out);
         FnResult::Ok(out)
     }
     //

@@ -35,7 +35,7 @@ mod fn_bit_not {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: bool;
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_bit_not = FnBitNot::new(
@@ -52,7 +52,7 @@ mod fn_bit_not {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(&point);
             let result = fn_bit_not.out().unwrap().as_bool().value.0;
-            debug!("step {}  |  ! value: {:?} | result: {:?}", step, value, result);
+            log::debug!("step {}  |  ! value: {:?} | result: {:?}", step, value, result);
             target = ! value;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -64,7 +64,7 @@ mod fn_bit_not {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: i64;
         let input = init_each("0", FnConfPointType::Int);
         let mut fn_bit_not = FnBitNot::new(
@@ -88,7 +88,7 @@ mod fn_bit_not {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(&point);
             let result = fn_bit_not.out().unwrap().as_int().value;
-            debug!("step {}  |  ! value1: {:?} | result: {:?}", step, value, result);
+            log::debug!("step {}  |  ! value1: {:?} | result: {:?}", step, value, result);
             target = ! value;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }

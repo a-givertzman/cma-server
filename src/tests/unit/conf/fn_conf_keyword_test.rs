@@ -54,7 +54,7 @@ mod fn_conf_keywd {
         ];
         for (value, target) in test_data {
             let fn_config_type = FnConfKeywd::from_str(value).unwrap();
-            debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, fn_config_type, target);
+            log::debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, fn_config_type, target);
             assert_eq!(fn_config_type, target);
         }
     }
@@ -65,7 +65,7 @@ mod fn_conf_keywd {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        info!("test_create_invalid");
+        log::info!("test_create_invalid");
         // let (initial, switches) = init_each();
         let test_data: Vec<(&str, Result<&str, ()>)> = vec![
             ("fn:name", Err(())),
@@ -95,7 +95,7 @@ mod fn_conf_keywd {
         ];
         for (value, target) in test_data {
             let fn_config_type = FnConfKeywd::from_str(value);
-            debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, fn_config_type, target);
+            log::debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, fn_config_type, target);
             assert_eq!(fn_config_type.is_err(), true);
         }
     }
@@ -106,7 +106,7 @@ mod fn_conf_keywd {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        debug!("valid_options");
+        log::debug!("valid_options");
         // let (initial, switches) = init_each();
         let test_data = vec![
             ("input1 fn fnName", FnConfKeywd::Fn( FnConfKeywdValue {input: format!("input1"), type_: FnConfPointType::Unknown, data: format!("fnName"), options: FnConfOptions::default()} )),
@@ -132,7 +132,7 @@ mod fn_conf_keywd {
         ];
         for (value, target) in test_data {
             let result = FnConfKeywd::from_str(value).unwrap();
-            debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, result, target);
+            log::debug!("value: {:?}   |   fnConfigType: {:?}   |   target: {:?}", value, result, target);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }

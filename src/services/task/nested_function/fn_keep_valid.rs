@@ -55,10 +55,10 @@ impl FnOut for FnKeepValid {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, input);
+        log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
-                trace!("{}.out | value: {:?}", self.id, &input);
+                log::trace!("{}.out | value: {:?}", self.id, &input);
                 self.state = Some(input.clone());
                 FnResult::Ok(input)
             }

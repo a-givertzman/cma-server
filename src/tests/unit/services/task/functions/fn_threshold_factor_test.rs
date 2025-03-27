@@ -55,7 +55,7 @@ mod fn_threshold_factor {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_int";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let threshold = init_each(&self_id, Value::Double(0.0));
         let factor = init_each(&self_id, Value::Double(0.5));
         let input = init_each(&self_id, Value::Int(0));
@@ -94,7 +94,7 @@ mod fn_threshold_factor {
             // debug!("input: {:?}", &input);
             let result = fn_threshold.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_int().value == target, "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
             println!("------------")
         }
@@ -106,7 +106,7 @@ mod fn_threshold_factor {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_real";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let threshold = init_each(&self_id, Value::Double(0.0));
         let factor = init_each(&self_id, Value::Double(0.5));
         let input = init_each(&self_id, Value::Real(0.0));
@@ -147,7 +147,7 @@ mod fn_threshold_factor {
             // debug!("input: {:?}", &input);
             let result = fn_threshold.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_real().value == target, "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
             println!("------------")
         }
@@ -159,7 +159,7 @@ mod fn_threshold_factor {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_double";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let threshold = init_each(&self_id, Value::Double(0.0));
         let factor = init_each(&self_id, Value::Double(0.5));
         let input = init_each(&self_id, Value::Double(0.0));
@@ -200,7 +200,7 @@ mod fn_threshold_factor {
             // debug!("input: {:?}", &input);
             let result = fn_threshold.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
             assert!(result.as_double().value == target, "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
             println!("------------")
         }

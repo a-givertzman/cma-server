@@ -37,7 +37,7 @@ mod fn_count {
     fn test_single() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_single");
+        log::info!("test_single");
         let initial = Some(init_each("0", FnConfPointType::Int));
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_count = FnCount::new(
@@ -67,7 +67,7 @@ mod fn_count {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target);
         }
     }
@@ -77,7 +77,7 @@ mod fn_count {
     fn test_multiple() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_multiple");
+        log::info!("test_multiple");
         let initial = Some(init_each("0", FnConfPointType::Int));
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_count = FnCount::new(
@@ -107,7 +107,7 @@ mod fn_count {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target);
         }
     }
@@ -116,7 +116,7 @@ mod fn_count {
     fn test_multiple_reset() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_multiple_reset");
+        log::info!("test_multiple_reset");
         let initial = Some(init_each("0", FnConfPointType::Int));
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_count = FnCount::new(
@@ -149,7 +149,7 @@ mod fn_count {
             // debug!("input: {:?}", &input);
             let state = fn_count.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state.as_int().value, target);
         }
     }

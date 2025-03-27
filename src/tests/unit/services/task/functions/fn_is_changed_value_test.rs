@@ -36,7 +36,7 @@ mod fn_is_changed_value {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "is_changed_bool";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let input1 = init_each("false", format!("/{}/Bool", self_id), FnConfPointType::Bool);
         let input2 = init_each("0", format!("/{}/Int", self_id), FnConfPointType::Int);
         let input3 = init_each("0.0", format!("/{}/Real", self_id), FnConfPointType::Real);
@@ -96,7 +96,7 @@ mod fn_is_changed_value {
             // debug!("input: {:?}", &input);
             let state = fn_is_changed.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {}   |   value: {:?}   |   state: {:?}", step, value, state);
+            log::debug!("step {}   |   value: {:?}   |   state: {:?}", step, value, state);
             assert!(state.as_bool().value.0 == (target > 0), "step {} \n result: {:?} \ntarget: {}", step, state.as_bool().value.0, target > 0);
         }
     }

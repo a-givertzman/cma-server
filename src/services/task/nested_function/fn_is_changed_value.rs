@@ -70,12 +70,12 @@ impl FnOut for FnIsChangedValue {
         let tx_id = PointTxId::from_str(&self.id);
         let mut value = false;
         let state = FxHashMap::from_iter(self.state.iter().map(|(name, p)| (name, p.value())));
-        trace!("{}.out | state: {:#?}", self.id, state);
+        log::trace!("{}.out | state: {:#?}", self.id, state);
         for input in &self.inputs {
             let input = input.borrow_mut().out();
             match input {
                 FnResult::Ok(input) => {
-                    trace!("{}.out | input '{}': {:#?}", self.id, input.name(), input);
+                    log::trace!("{}.out | input '{}': {:#?}", self.id, input.name(), input);
                     let state = self.state
                         .entry(input.name())
                         .or_insert_with(|| {
@@ -83,7 +83,7 @@ impl FnOut for FnIsChangedValue {
                             input.clone()
                         });
                     if !input.cmp_value(state) {
-                        trace!("{}.out | changed: {}  |  state '{:?}', value: {:?}", self.id, input.name(), state.value(), input.value());
+                        log::trace!("{}.out | changed: {}  |  state '{:?}', value: {:?}", self.id, input.name(), state.value(), input.value());
                         *state = input;
                         value = true;
                     }
@@ -92,7 +92,7 @@ impl FnOut for FnIsChangedValue {
                 FnResult::Err(err) => return FnResult::Err(err),
             }
         }
-        trace!("{}.out | value: {:#?}", self.id, value);
+        log::trace!("{}.out | value: {:#?}", self.id, value);
         FnResult::Ok(Point::Bool(
             PointHlr::new(
                 tx_id,

@@ -103,7 +103,7 @@ impl Service for MockMultiQueue {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let recv = self.rx_recv.lock().unwrap().take().unwrap();
@@ -116,24 +116,24 @@ impl Service for MockMultiQueue {
             static_subscriptions.insert(PointTxId::from_str(send_queue), tx_send);
         }
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
-            info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", self_id);
             loop {
                 let subscriptions = subscriptions.rlock(&self_id);
                 match recv.recv() {
                     Ok(point) => {
                         let point_id = point.name();
-                        trace!("{}.run | received: {:?}", self_id, point);
+                        log::trace!("{}.run | received: {:?}", self_id, point);
                         for (receiver_id, sender) in subscriptions.iter(&point_id).chain(&static_subscriptions) {
                             match sender.send(point.clone()) {
                                 Ok(_) => {}
                                 Err(err) => {
-                                    error!("{}.run | subscriptions '{}', receiver '{}' - send error: {:?}", self_id, point_id, receiver_id, err);
+                                    log::error!("{}.run | subscriptions '{}', receiver '{}' - send error: {:?}", self_id, point_id, receiver_id, err);
                                 }
                             };
                         }
                     }
                     Err(err) => {
-                        warn!("{}.run | recv error: {:?}", self_id, err);
+                        log::warn!("{}.run | recv error: {:?}", self_id, err);
                     }
                 }
                 if exit.load(Ordering::SeqCst) {
@@ -143,12 +143,12 @@ impl Service for MockMultiQueue {
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }        

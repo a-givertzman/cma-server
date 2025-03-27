@@ -32,7 +32,7 @@ mod task_config_read {
         init_each();
         let self_id = "task_config_new_test";
         let self_name = Name::new("", self_id);
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let target = TaskConfig {
             name: Name::new(&self_name, "Task1"),
             cycle: Some(Duration::from_millis(100)),
@@ -102,10 +102,10 @@ mod task_config_read {
                 ),
             ])
         };
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/conf/task_config/task_config_test.yaml";
         let metric_config = TaskConfig::read(&self_name, path);
-        trace!("fnConfig: {:?}", metric_config);
+        log::trace!("fnConfig: {:?}", metric_config);
         assert_eq!(metric_config, target);
     }
 }

@@ -70,7 +70,7 @@ impl TcpServerConnections {
     ///
     /// Inserts a new connection, if connection_id olready exists, connection will be updated
     pub fn insert(&mut self, connection_id: &str, handle: JoinHandle<()>, send: Sender<Action>) {
-        info!("{}.insert | connection: '{}'", self.id, connection_id);
+        log::info!("{}.insert | connection: '{}'", self.id, connection_id);
         self.connections.insert(
             connection_id.to_string(),
             Connection::new(
@@ -108,9 +108,9 @@ impl TcpServerConnections {
     pub fn wait(&mut self) {
         while !self.connections.is_empty() {
             let keys: Vec<String> = self.connections.keys().map(|k| {k.to_string()}).collect();
-            info!("{}.run | Wait for connections:", self.id);
+            log::info!("{}.run | Wait for connections:", self.id);
             for key in &keys {
-                info!("{}.run | \tconnection: {:?}\t isActive: {}", self.id, key, self.connections.get(key).unwrap().is_active());
+                log::info!("{}.run | \tconnection: {:?}\t isActive: {}", self.id, key, self.connections.get(key).unwrap().is_active());
             }
             match keys.first() {
                 Some(key) => {
@@ -129,25 +129,25 @@ impl TcpServerConnections {
     /// - removes finished connections
     pub fn clean(&mut self) {
         let mut to_remove = vec![];
-        info!("{}.clean | Cleaning connections...", self.id);
+        log::info!("{}.clean | Cleaning connections...", self.id);
         for (name, connection) in &self.connections {
-            info!("{}.clean | Checking connection '{}' \t '{}' - finished: {}", self.id, name, connection.handle.thread().name().unwrap_or("unnamed"), connection.is_finished());
+            log::info!("{}.clean | Checking connection '{}' \t '{}' - finished: {}", self.id, name, connection.handle.thread().name().unwrap_or("unnamed"), connection.is_finished());
             if connection.is_finished() {
                 to_remove.push(name.clone());
             }
         }
-        info!("{}.clean | Finished connections found: {:#?}", self.id, to_remove);
+        log::info!("{}.clean | Finished connections found: {:#?}", self.id, to_remove);
         for name in to_remove {
             match self.connections.remove(&name) {
                 Some(connection) => {
                     match connection.handle.wait() {
-                        Ok(_) => info!("{}.clean | Connection '{}' removed successful", self.id, name),
-                        Err(err) => error!("{}.clean | Connection '{}' wait error: {:#?}", self.id, name, err),
+                        Ok(_) => log::info!("{}.clean | Connection '{}' removed successful", self.id, name),
+                        Err(err) => log::error!("{}.clean | Connection '{}' wait error: {:#?}", self.id, name, err),
                     }
                 }
-                None => error!("{}.clean | Connection '{}':", self.id, name),
+                None => log::error!("{}.clean | Connection '{}':", self.id, name),
             }
         }
-        info!("{}.clean | Cleaning connections - ok", self.id);
+        log::info!("{}.clean | Cleaning connections - ok", self.id);
     }
 }

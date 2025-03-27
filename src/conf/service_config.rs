@@ -70,7 +70,7 @@ impl ServiceConfig {
     pub fn name(&self) -> String {
         match ConfKeywd::from_str(&self.conf.key) {
             Ok(self_keyword) => {
-                trace!("{}.name | selfKeyword: {:?}", self.id, self_keyword);
+                log::trace!("{}.name | selfKeyword: {:?}", self.id, self_keyword);
                 self_keyword.name()
             }
             Err(err) => panic!("{}.name | Keyword error in {:?}\n\tdetales: {:?}", self.id, self.conf.key, err),
@@ -81,7 +81,7 @@ impl ServiceConfig {
     pub fn sufix(&self) -> String {
         match ConfKeywd::from_str(&self.conf.key) {
             Ok(self_keyword) => {
-                trace!("{}.sufix | selfKeyword: {:?}", self.id, self_keyword);
+                log::trace!("{}.sufix | selfKeyword: {:?}", self.id, self_keyword);
                 self_keyword.sufix()
             }
             Err(err) => panic!("{}.sufix | Keyword error in {:?}\n\tdetales: {:?}", self.id, self.conf.key, err),
@@ -169,7 +169,7 @@ impl ServiceConfig {
         match self.get_param_by_keyword(prefix, ConfKind::Queue) {
             Ok((keyword, self_recv_queue)) => {
                 let name = format!("{} {} {}", keyword.prefix(), keyword.kind().to_string(), keyword.name());
-                debug!("{}.get_in_queue | self in-queue params {}: {:?}", self.id, name, self_recv_queue);
+                log::debug!("{}.get_in_queue | self in-queue params {}: {:?}", self.id, name, self_recv_queue);
                 let max_length = match self_recv_queue.get(sub_param) {
                     Some(conf_tree) => Ok(conf_tree.conf),
                     None => Err(format!("{}.get_in_queue | '{}' - not found in: {:?}", self.id, name, self.conf)),
@@ -186,7 +186,7 @@ impl ServiceConfig {
         match self.get_param_by_keyword(prefix, ConfKind::Queue) {
             Ok((keyword, tx_name)) => {
                 let name = format!("{} {} {}", keyword.prefix(), keyword.kind().to_string(), keyword.name());
-                debug!("{}.get_out_queue | self out-queue params {}: {:?}", self.id, name, tx_name);
+                log::debug!("{}.get_out_queue | self out-queue params {}: {:?}", self.id, name, tx_name);
                 Ok(tx_name.conf.as_str().unwrap().to_string())
             }
             Err(err) => Err(format!("{}.get_out_queue | {} queue - not found in: {:#?}\n\terror: {:?}", self.id, prefix, self.conf, err)),
@@ -209,7 +209,7 @@ impl ServiceConfig {
             Ok(conf) => {
                 match conf {
                     serde_yaml::Value::Null => {
-                        warn!("{}.get_send_to_many | Parameter 'send-to' - is empty", self.id);
+                        log::warn!("{}.get_send_to_many | Parameter 'send-to' - is empty", self.id);
                         ConfParam::Ok(vec![])
                     }
                     serde_yaml::Value::Sequence(conf) => {
@@ -240,18 +240,18 @@ impl ServiceConfig {
                     if keyword.kind() == FnConfKindName::Point {
                         let point_name = Name::new(parent, keyword.data()).join();
                         let point_conf = diag_node_conf.get(key).unwrap();
-                        trace!("{}.get_diagnosis | Point '{}'", self.id, point_name);
+                        log::trace!("{}.get_diagnosis | Point '{}'", self.id, point_name);
                         let point = PointConfig::new(parent, &point_conf);
                         let point_name_keywd = DiagKeywd::new(&point.name);
                         points.insert(point_name_keywd, point);
                     } else {
-                        warn!("{}.get_diagnosis | point conf expected, but found: {:?}", self.id, keyword);
+                        log::warn!("{}.get_diagnosis | point conf expected, but found: {:?}", self.id, keyword);
                     }
                 }
 
             }
             Err(err) => {
-                warn!("{}.get_diagnosis | diagnosis - not found in {:#?},\n\terror: {:#?}", self.id, self.conf, err);
+                log::warn!("{}.get_diagnosis | diagnosis - not found in {:#?},\n\terror: {:#?}", self.id, self.conf, err);
             }
         };
         points

@@ -39,7 +39,7 @@ impl App {
     pub fn new(path: Vec<impl AsRef<Path>>) -> Self {
         let self_id = "App".to_owned();
         path.iter().for_each(|p| {
-            info!("{}.run | Configuration path: '{}'", self_id, p.as_ref().display());
+            log::info!("{}.run | Configuration path: '{}'", self_id, p.as_ref().display());
         });
         let conf: AppConfig = AppConfig::read(path);
         Self {
@@ -52,62 +52,62 @@ impl App {
     /// Executes all services
     pub fn run(self) -> Result<(), String>  {
         let self_id = self.id.clone();
-        info!("{}.run | Starting application...", self_id);
+        log::info!("{}.run | Starting application...", self_id);
         let conf = self.conf.clone();
         let self_name = Name::new("", conf.name);
         let app = Arc::new(RwLock::new(self));
         let services = Arc::new(RwLock::new(Services::new(&self_id, conf.services.clone())));
-        info!("{}.run |     Configuring services...", self_id);
+        log::info!("{}.run |     Configuring services...", self_id);
         for (node_keywd, node_conf) in conf.nodes {
             let node_name = node_keywd.name();
             let node_sufix = node_keywd.sufix();
-            info!("{}.run |         Configuring service: {}({})...", self_id, node_name, node_sufix);
-            trace!("{}.run |         Config: {:#?}", self_id, node_conf);
+            log::info!("{}.run |         Configuring service: {}({})...", self_id, node_name, node_sufix);
+            log::trace!("{}.run |         Config: {:#?}", self_id, node_conf);
             services.wlock(&self_id).insert(
                 Self::build_service(&self_id, &self_name, &node_name, &node_sufix, node_conf, services.clone()),
             );
-            info!("{}.run |         Configuring service: {}({}) - ok\n", self_id, node_name, node_sufix);
+            log::info!("{}.run |         Configuring service: {}({}) - ok\n", self_id, node_name, node_sufix);
         }
-        info!("{}.run |     All services configured\n", self_id);
+        log::info!("{}.run |     All services configured\n", self_id);
         thread::sleep(Duration::from_millis(100));
         let handles = services.wlock(&self_id).run().unwrap();
         let name = services.rlock(&self_id).id().to_owned();
         app.write().unwrap().insert_handles(&name, handles);
         thread::sleep(Duration::from_millis(100));
-        info!("{}.run |     Starting services...", self_id);
+        log::info!("{}.run |     Starting services...", self_id);
         let services_iter = services.rlock(&self_id).all();
         for (name, service) in services_iter {
-            info!("{}.run |         Starting service: {}...", self_id, name);
+            log::info!("{}.run |         Starting service: {}...", self_id, name);
             let handles = service.wlock(&self_id).run();
             match handles {
                 Ok(handles) => {
                     app.write().unwrap().insert_handles(&name, handles);
-                    info!("{}.run |         Starting service: {} - ok", self_id, name);
+                    log::info!("{}.run |         Starting service: {} - ok", self_id, name);
                 }
                 Err(err) => {
-                    error!("{}.run |         Error starting service '{}': {:#?}", self_id, name, err);
+                    log::error!("{}.run |         Error starting service '{}': {:#?}", self_id, name, err);
                 }
             };
             thread::sleep(Duration::from_millis(100));
         }
-        info!("{}.run |     All services started\n", self_id);
-        info!("{}.run | Application started\n", self_id);
+        log::info!("{}.run |     All services started\n", self_id);
+        log::info!("{}.run | Application started\n", self_id);
         Self::listen_sys_signals(self_id.clone(), services.clone());
         loop {
             let servece_ids: Vec<String> = app.read().unwrap().handles.keys().cloned().collect();
             match servece_ids.first() {
                 Some(service_name) => {
-                    info!("{}.run | Waiting for service '{}' being finished...", self_id, service_name);
+                    log::info!("{}.run | Waiting for service '{}' being finished...", self_id, service_name);
                     let handles = app.write().unwrap().handles.remove(service_name).unwrap();
                     handles.wait().unwrap();
-                    info!("{}.run | Waiting for service '{}' being finished - Ok", self_id, service_name);
+                    log::info!("{}.run | Waiting for service '{}' being finished - Ok", self_id, service_name);
                 }
                 None => {
                     break;
                 }
             }
         }
-        info!("{}.run | Application exit - Ok\n", self_id);
+        log::info!("{}.run | Application exit - Ok\n", self_id);
         Ok(())
     }    
     ///

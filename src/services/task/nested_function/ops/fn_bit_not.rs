@@ -60,7 +60,7 @@ impl FnOut for FnBitNot {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:#?}", self.id, input);
+        log::trace!("{}.out | input: {:#?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let value = match input {

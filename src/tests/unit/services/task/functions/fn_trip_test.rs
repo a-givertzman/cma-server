@@ -35,7 +35,7 @@ mod fn_trip {
     fn single_int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_single");
+        log::info!("test_single");
         // let (initial, switches) = init_each();
         let input1 = init_each("0", FnConfPointType::Int);
         let input2 = init_each("0", FnConfPointType::Int);
@@ -66,7 +66,7 @@ mod fn_trip {
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
+            log::debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
             assert_eq!(state.as_bool().value.0, target_state);
         }
     }
@@ -76,7 +76,7 @@ mod fn_trip {
     fn multiple_int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_single");
+        log::info!("test_single");
 
         // let (initial, switches) = init_each();
         let input1 = init_each("0", FnConfPointType::Int);
@@ -112,7 +112,7 @@ mod fn_trip {
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
+            log::debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
             assert_eq!(state.as_bool().value.0, target_dtate);
         }
     }
@@ -122,7 +122,7 @@ mod fn_trip {
     fn multiple_real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_single");
+        log::info!("test_single");
         // let (initial, switches) = init_each();
         let input1 = init_each("0.0", FnConfPointType::Real);
         let input2 = init_each("0.0", FnConfPointType::Real);
@@ -157,7 +157,7 @@ mod fn_trip {
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
+            log::debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
             assert_eq!(state.as_bool().value.0, target_state);
         }
     }
@@ -167,7 +167,7 @@ mod fn_trip {
     fn multiple_double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_single");
+        log::info!("test_single");
         // let (initial, switches) = init_each();
         let input1 = init_each("0.0", FnConfPointType::Real);
         let input2 = init_each("0.0", FnConfPointType::Real);
@@ -202,7 +202,7 @@ mod fn_trip {
             // debug!("input: {:?}", &input);
             let state = fn_trip.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
+            log::debug!("value1: {:?}  >=  value2: {:?}  |   state: {:?}", value1, value2, state);
             assert_eq!(state.as_bool().value.0, target_state);
         }
     }

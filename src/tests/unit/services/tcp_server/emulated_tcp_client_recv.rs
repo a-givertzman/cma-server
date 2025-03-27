@@ -111,13 +111,13 @@ impl EmulatedTcpClientRecv {
     ///
     pub fn wait_all_received(&self) {
         let recv_limit = self.recv_limit.unwrap_or(0);
-        info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
+        log::info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
         loop {
             if self.received.read().unwrap().len() >= recv_limit {
                 break;
             }
             thread::sleep(Duration::from_millis(100));
-            trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
+            log::trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
         }
     }
     ///
@@ -125,13 +125,13 @@ impl EmulatedTcpClientRecv {
     pub fn wait_marker_received(&self) {
         match &self.must_received {
             Some(must_received) => {
-                info!("{}.waitMarkerReceived | Wait for {:?} marker beeng received", self.id, must_received);
+                log::info!("{}.waitMarkerReceived | Wait for {:?} marker beeng received", self.id, must_received);
                 loop {
                     if self.marker_received.load(Ordering::SeqCst) {
                         break;
                     }
                     thread::sleep(Duration::from_millis(100));
-                    trace!("{}.waitMarkerReceived | wait for {:?} marker beeng received", self.id, self.must_received);
+                    log::trace!("{}.waitMarkerReceived | wait for {:?} marker beeng received", self.id, self.must_received);
                 }
             }
             None => {}
@@ -173,7 +173,7 @@ impl Service for EmulatedTcpClientRecv {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let marker_received = self.marker_received.clone();
@@ -183,13 +183,13 @@ impl Service for EmulatedTcpClientRecv {
         let must_received = self.must_received.clone();
         let disconnect = self.disconnect.iter().map(|v| {(*v as f32) / 100.0}).collect();
         let handle = thread::Builder::new().name(format!("{}.run Read", self_id)).spawn(move || {
-            info!("{}.run | Preparing thread Read - ok", self_id);
+            log::info!("{}.run | Preparing thread Read - ok", self_id);
             let mut switch_state = Self::switch_state(1, disconnect, 1.0);
             let mut switch_state_changed = false;
             'connect: loop {
                 match TcpStream::connect(addr) {
                     Ok(mut tcp_stream) => {
-                        info!("{}.run | connected on: {:?}", self_id, addr);
+                        log::info!("{}.run | connected on: {:?}", self_id, addr);
                         let mut jds_deserialize = JdsDeserialize::new(
                             self_id.clone(),
                             JdsDecodeMessage::new(
@@ -204,10 +204,10 @@ impl Service for EmulatedTcpClientRecv {
                                     loop {
                                         match jds_deserialize.read(&tcp_stream) {
                                             ConnectionStatus::Active(result) => {
-                                                trace!("{}.run | received: {:?}", self_id, result);
+                                                log::trace!("{}.run | received: {:?}", self_id, result);
                                                 match result {
                                                     OpResult::Ok(point) => {
-                                                        debug!("{}.run | received: {:?}", self_id, point);
+                                                        log::debug!("{}.run | received: {:?}", self_id, point);
                                                         received.write().unwrap().push(point.clone());
                                                         received_count += 1;
                                                         progress_percent = (received_count as f32) / (recv_limit as f32);
@@ -221,33 +221,33 @@ impl Service for EmulatedTcpClientRecv {
                                                                 Value::String(value) => value == &point.as_string().value,
                                                             };
                                                             if marker_received_ {
-                                                                info!("{}.run | received marker {:?}, exiting...", self_id, point);
+                                                                log::info!("{}.run | received marker {:?}, exiting...", self_id, point);
                                                                 marker_received.store(marker_received_, Ordering::SeqCst);
                                                                 break;
                                                             }
                                                         }
                                                     }
                                                     OpResult::Err(err) => {
-                                                        warn!("{}.run | read socket error: {:?}", self_id, err);
+                                                        log::warn!("{}.run | read socket error: {:?}", self_id, err);
                                                     }
                                                     OpResult::Timeout() => {}
                                                 }
                                             }
                                             ConnectionStatus::Closed(err) => {
-                                                warn!("{}.run | socket connection closed: {:?}", self_id, err);
+                                                log::warn!("{}.run | socket connection closed: {:?}", self_id, err);
                                                 break;
                                             }
                                         };
                                         if switch_state_changed {
                                             switch_state_changed = false;
-                                            info!("{}.run | state: {} progress percent: {}", self_id, switch_state.state(), progress_percent);
+                                            log::info!("{}.run | state: {} progress percent: {}", self_id, switch_state.state(), progress_percent);
                                             tcp_stream.shutdown(std::net::Shutdown::Both).unwrap();
                                             drop(tcp_stream);
                                             thread::sleep(Duration::from_millis(1000));
                                             break;
                                         }
                                         if switch_state.changed() {
-                                            info!("{}.run | state: {} progress percent: {}", self_id, switch_state.state(), progress_percent);
+                                            log::info!("{}.run | state: {} progress percent: {}", self_id, switch_state.state(), progress_percent);
                                             switch_state_changed = true;
                                             tcp_stream.flush().unwrap();
                                         }
@@ -265,19 +265,19 @@ impl Service for EmulatedTcpClientRecv {
                                 loop {
                                     match jds_deserialize.read(&tcp_stream) {
                                         ConnectionStatus::Active(result) => {
-                                            trace!("{}.run | received: {:?}", self_id, result);
+                                            log::trace!("{}.run | received: {:?}", self_id, result);
                                             match result {
                                                 OpResult::Ok(point) => {
                                                     received.write().unwrap().push(point);
                                                 }
                                                 OpResult::Err(err) => {
-                                                    warn!("{}.run | read socket error: {:?}", self_id, err);
+                                                    log::warn!("{}.run | read socket error: {:?}", self_id, err);
                                                 }
                                                 OpResult::Timeout() => {}
                                             }
                                         }
                                         ConnectionStatus::Closed(err) => {
-                                            warn!("{}.run | socket connection closed: {:?}", self_id, err);
+                                            log::warn!("{}.run | socket connection closed: {:?}", self_id, err);
                                             break;
                                         }
                                     };
@@ -289,7 +289,7 @@ impl Service for EmulatedTcpClientRecv {
                         };
                     }
                     Err(err) => {
-                        warn!("{}.run | connection error: {:?}", self_id, err);
+                        log::warn!("{}.run | connection error: {:?}", self_id, err);
                         thread::sleep(Duration::from_millis(1000))
                     }
                 }
@@ -297,16 +297,16 @@ impl Service for EmulatedTcpClientRecv {
                     break 'connect;
                 }
             }
-            info!("{}.run | Exit thread Recv", self_id);
+            log::info!("{}.run | Exit thread Recv", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

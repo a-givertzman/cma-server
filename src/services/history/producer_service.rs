@@ -77,7 +77,7 @@ impl ProducerService {
             }
             Err(err) => {
                 if log::max_level() >= log::LevelFilter::Trace {
-                    warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
+                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
                 }
             }
         }
@@ -109,7 +109,7 @@ impl Service for ProducerService {
     //
     // 
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
         let tx_id = PointTxId::from_str(&self_id);
@@ -124,7 +124,7 @@ impl Service for ProducerService {
         let mut gen_points = Self::build_gen_points(&self.id, tx_id, self.conf.points());
         let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
             'main: loop {
-                trace!("{}.run | Step...", self_id);
+                log::trace!("{}.run | Step...", self_id);
                 for (_, gen_point) in &mut gen_points {
                     cycle.start();
                     if let Some(point) = gen_point.next(&Value::Bool(false), Utc::now()) {
@@ -134,7 +134,7 @@ impl Service for ProducerService {
                                 if debug {Self::log(&self_id, &self_name, &point);}
                             }
                             Err(err) => {
-                                warn!("{}.run | Send error: {:?}", self_id, err);
+                                log::warn!("{}.run | Send error: {:?}", self_id, err);
                             }
                         }
                     };
@@ -146,16 +146,16 @@ impl Service for ProducerService {
                     }
                 }
             }
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Started", self.id);
+                log::info!("{}.run | Started", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }
@@ -215,7 +215,7 @@ impl PointGen {
     /// Returns Point
     fn to_point(&self) -> Option<Point> {
         if self.is_changed {
-            trace!("{}.to_point | generating point type '{:?}'...", self.id, self._type);
+            log::trace!("{}.to_point | generating point type '{:?}'...", self.id, self._type);
             match &self._type {
                 PointConfigType::Bool => {
                     Some(Point::Bool(PointHlr::new(

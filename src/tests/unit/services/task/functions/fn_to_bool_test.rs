@@ -35,7 +35,7 @@ mod fn_to_bool {
     fn test_bool() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_bool");
+        log::info!("test_bool");
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_to_bool = FnToBool::new(
             "test",
@@ -49,7 +49,7 @@ mod fn_to_bool {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(&point);
             let state = fn_to_bool.out().unwrap();
-            debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
+            log::debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
             assert!(state.as_bool().value.0 == target, "step {} \n result: {:?} \ntarget: {}", step, state.as_bool().value.0, target);
         }
     }
@@ -59,7 +59,7 @@ mod fn_to_bool {
     fn test_int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_int");
+        log::info!("test_int");
         let input = init_each("0", FnConfPointType::Int);
         let mut fn_to_bool = FnToBool::new(
             "test",
@@ -79,7 +79,7 @@ mod fn_to_bool {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(&point);
             let state = fn_to_bool.out().unwrap();
-            debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
+            log::debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
             assert!(state.as_bool().value.0 == target, "step {} \n result: {:?} \ntarget: {}", step, state.as_bool().value.0, target);
         }
     }
@@ -89,7 +89,7 @@ mod fn_to_bool {
     fn real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("fn_to_bool_real");
+        log::info!("fn_to_bool_real");
         let input = init_each("0.0", FnConfPointType::Real);
         let mut fn_to_bool = FnToBool::new(
             "test",
@@ -109,7 +109,7 @@ mod fn_to_bool {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(&point);
             let state = fn_to_bool.out().unwrap();
-            debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
+            log::debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
             assert!(state.as_bool().value.0 == target, "step {} \n result: {:?} \ntarget: {}", step, state.as_bool().value.0, target);
         }
     }
@@ -119,7 +119,7 @@ mod fn_to_bool {
     fn double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("fn_to_bool_double");
+        log::info!("fn_to_bool_double");
         let input = init_each("0.0", FnConfPointType::Double);
         let mut fn_to_bool = FnToBool::new(
             "test",
@@ -139,7 +139,7 @@ mod fn_to_bool {
             let point = value.to_point(0, "test");
             input.borrow_mut().add(&point);
             let state = fn_to_bool.out().unwrap();
-            debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
+            log::debug!("{}   |   value: {:?}   |   state: {:?}", step, value, state);
             assert!(state.as_bool().value.0 == target, "step {} \n result: {:?} \ntarget: {}", step, state.as_bool().value.0, target);
         }
     }

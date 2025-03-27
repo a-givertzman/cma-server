@@ -130,12 +130,12 @@ mod tests {
             ),
         ];
         for (value, target) in test_data {
-            debug!("test value: {:?}", value);
+            log::debug!("test value: {:?}", value);
             let conf: serde_yaml::Value = serde_yaml::from_str(value).unwrap();
-            debug!("value: {:?}   |   conf: {:?}   |   target: {:?}", "_", conf, target);
+            log::debug!("value: {:?}   |   conf: {:?}   |   target: {:?}", "_", conf, target);
             let mut vars = vec![];
             let fn_config = FnConfig::from_yaml(self_id, &self_name, &conf, &mut vars);
-            debug!("\tfnConfig: {:?}", fn_config);
+            log::debug!("\tfnConfig: {:?}", fn_config);
             assert_eq!(fn_config, target);
         }
     }

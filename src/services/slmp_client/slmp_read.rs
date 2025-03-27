@@ -62,11 +62,11 @@ impl SlmpRead {
     /// Sends all configured points from the current DB with the given status
     fn yield_status(self_id: &str, status: Status, dbs: &mut FxIndexMap<String, SlmpDb>, dest: &Sender<Point>) {
         for (db_name, db) in dbs {
-            debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
+            log::debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(status, dest) {
                 Ok(_) => {}
                 Err(err) => {
-                    error!("{}.yield_status | send errors: \n\t{:?}", self_id, err);
+                    log::error!("{}.yield_status | send errors: \n\t{:?}", self_id, err);
                 }
             };
         }
@@ -76,17 +76,17 @@ impl SlmpRead {
     pub fn build_dbs(self_id: &str, tx_id: usize, conf: &SlmpClientConfig) -> FxIndexMap<String, SlmpDb> {
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for (db_name, db_conf) in &conf.dbs {
-            info!("{}.build_dbs | Configuring SlmpDb: {:?}...", self_id, db_name);
+            log::info!("{}.build_dbs | Configuring SlmpDb: {:?}...", self_id, db_name);
             let db = SlmpDb::new(self_id, tx_id, &db_conf);
             dbs.insert(db_name.clone(), db);
-            info!("{}.build_dbs | Configuring SlmpDb: {:?} - ok", self_id, db_name);
+            log::info!("{}.build_dbs | Configuring SlmpDb: {:?} - ok", self_id, db_name);
         }
         dbs
     }
     ///
     /// Cyclicaly reads data slice from the device,
     pub fn run(&mut self, mut tcp_stream: TcpStream) -> Result<JoinHandle<()>, std::io::Error> {
-        info!("{}.read | starting...", self.id);
+        log::info!("{}.read | starting...", self.id);
         let self_id = self.id.clone();
         let status = self.status.clone();
         let exit = self.exit.clone();
@@ -96,7 +96,7 @@ impl SlmpRead {
         let cycle = conf.cycle.map_or(None, |cycle| if cycle != Duration::ZERO {Some(cycle)} else {None});
         match cycle {
             Some(cycle_interval) => {
-                info!("{}.read | Preparing thread...", self_id);
+                log::info!("{}.read | Preparing thread...", self_id);
                 let handle = thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {
                     let mut is_connected = ChangeNotify::new(
                         &self_id,
@@ -113,16 +113,16 @@ impl SlmpRead {
                         is_connected.add(true, format!("{}.read | Connection established", self_id));
                         cycle.start();
                         for (db_name, db) in dbs.iter_mut() {
-                            trace!("{}.read | SlmpDb '{}' - reading...", self_id, db_name);
+                            log::trace!("{}.read | SlmpDb '{}' - reading...", self_id, db_name);
                             match db.read(&mut tcp_stream, &dest) {
                                 Ok(_) => {
                                     error_limit.reset();
-                                    trace!("{}.read | SlmpDb '{}' - reading - ok", self_id, db_name);
+                                    log::trace!("{}.read | SlmpDb '{}' - reading - ok", self_id, db_name);
                                 }
                                 Err(err) => {
-                                    warn!("{}.read | SlmpDb '{}' - reading - error: {:?}", self_id, db_name, err);
+                                    log::warn!("{}.read | SlmpDb '{}' - reading - error: {:?}", self_id, db_name, err);
                                     if error_limit.add().is_err() {
-                                        error!("{}.read | SlmpDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_name);
+                                        log::error!("{}.read | SlmpDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_name);
                                         status.store(Status::Invalid.into(), Ordering::SeqCst);
                                         exit.exit_pair();
                                         break 'main;
@@ -138,16 +138,16 @@ impl SlmpRead {
                     if status.load(Ordering::SeqCst) != u32::from(Status::Ok) {
                         Self::yield_status(&self_id, Status::Invalid, &mut dbs, &dest);
                     }
-                    info!("{}.read | Exit", self_id);
+                    log::info!("{}.read | Exit", self_id);
                 });
-                info!("{}.read | Started", self.id);
+                log::info!("{}.read | Started", self.id);
                 handle
             }
             None => {
-                info!("{}.read | Disabled", self.id);
+                log::info!("{}.read | Disabled", self.id);
                 let exit = self.exit.clone();
                 thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {
-                    info!("{}.read | Started disabled", self_id);
+                    log::info!("{}.read | Started disabled", self_id);
                     while !exit.get() {
                         thread::sleep(Duration::from_millis(64));
                     }
@@ -155,7 +155,7 @@ impl SlmpRead {
                         let mut dbs = dbs.lock().unwrap();
                         Self::yield_status(&self_id, Status::Invalid, &mut dbs, &dest);
                     }
-                    info!("{}.read | Exit", self_id);
+                    log::info!("{}.read | Exit", self_id);
                 })
             }
         }

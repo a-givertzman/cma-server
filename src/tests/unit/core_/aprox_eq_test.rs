@@ -27,7 +27,7 @@ mod tests {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        info!("test_f32");
+        log::info!("test_f32");
 
         // let (initial, switches) = init_each();
         let test_data = vec![
@@ -43,7 +43,7 @@ mod tests {
         ];
         for (decimals, (value, target)) in test_data {
             let aproxEq = value.trunc_eq(target, decimals);
-            debug!("value: {:?}   |   target: {:?}  |    decimals: {:?}     |   aproxEq: {:?}", value, target, decimals, aproxEq);
+            log::debug!("value: {:?}   |   target: {:?}  |    decimals: {:?}     |   aproxEq: {:?}", value, target, decimals, aproxEq);
             assert_eq!(aproxEq, true, "value: {:?}   |   target: {:?}  |    decimals: {:?}    |   aproxEq: {:?}", value, target, decimals, aproxEq);
         }
     }
@@ -53,7 +53,7 @@ mod tests {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        info!("test_f64");
+        log::info!("test_f64");
 
         // let (initial, switches) = init_each();
         let test_data = vec![
@@ -77,7 +77,7 @@ mod tests {
         ];
         for (decimals, (value, target)) in test_data {
             let aproxEq = value.trunc_eq(target, decimals);
-            debug!("value: {:?}   |   target: {:?}  |    decimals: {:?}     |   aproxEq: {:?}", value, target, decimals, aproxEq);
+            log::debug!("value: {:?}   |   target: {:?}  |    decimals: {:?}     |   aproxEq: {:?}", value, target, decimals, aproxEq);
             assert_eq!(aproxEq, true, "value: {:?}   |   target: {:?}  |    decimals: {:?}    |   aproxEq: {:?}", value, target, decimals, aproxEq);
         }
     }

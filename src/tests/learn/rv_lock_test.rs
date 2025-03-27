@@ -58,7 +58,7 @@ mod tests {
                         received_local_len += 1;
                     }
                     Err(err) => {
-                        error!("Error receiving value: {:?}", err);
+                        log::error!("Error receiving value: {:?}", err);
                     }
                 }
             }
@@ -80,12 +80,12 @@ mod tests {
                                 sent_local += 1;
                             }
                             Err(err) => {
-                                error!("Error sending value to the sender '{:?}'", err);
+                                log::error!("Error sending value to the sender '{:?}'", err);
                             }
                         }
                     }
                     None => {
-                        error!("Error getting sender '{}'", key);
+                        log::error!("Error getting sender '{}'", key);
                     }
                 }
             }
@@ -136,7 +136,7 @@ mod tests {
                         received_local_len += 1;
                     }
                     Err(err) => {
-                        error!("Error receiving value: {:?}", err);
+                        log::error!("Error receiving value: {:?}", err);
                     }
                 }
             }
@@ -158,12 +158,12 @@ mod tests {
                                 sent_local += 1;
                             }
                             Err(err) => {
-                                error!("Error sending value to the sender '{:?}'", err);
+                                log::error!("Error sending value to the sender '{:?}'", err);
                             }
                         }
                     }
                     None => {
-                        error!("Error getting sender '{}'", key);
+                        log::error!("Error getting sender '{}'", key);
                     }
                 }
             }
@@ -216,7 +216,7 @@ mod tests {
                         received_local_len += 1;
                     }
                     Err(err) => {
-                        error!("Error receiving value: {:?}", err);
+                        log::error!("Error receiving value: {:?}", err);
                     }
                 }
             }
@@ -238,12 +238,12 @@ mod tests {
                                 sent_local += 1;
                             }
                             Err(err) => {
-                                error!("Error sending value to the sender '{:?}'", err);
+                                log::error!("Error sending value to the sender '{:?}'", err);
                             }
                         }
                     }
                     None => {
-                        error!("Error getting sender '{}'", key);
+                        log::error!("Error getting sender '{}'", key);
                     }
                 }
             }
@@ -296,7 +296,7 @@ mod tests {
                         received_local_len += 1;
                     }
                     Err(err) => {
-                        error!("Error receiving value: {:?}", err);
+                        log::error!("Error receiving value: {:?}", err);
                     }
                 }
             }
@@ -317,7 +317,7 @@ mod tests {
                             Ok(_) => {
                                 sent_local += 1;
                             }
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_03" => {
@@ -325,7 +325,7 @@ mod tests {
                             Ok(_) => {
                                 sent_local += 1;
                             }
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_04" => {
@@ -333,73 +333,73 @@ mod tests {
                             Ok(_) => {
                                 sent_local += 1;
                             }
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         };
                     }
                     "stream_05" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_06" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_07" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_08" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_09" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_10" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_11" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_12" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_13" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_14" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     "stream_15" => {
                         match send.send(value) {
                             Ok(_) => sent_local += 1,
-                            Err(err) => error!("Error sending value to the sender '{:?}'", err),
+                            Err(err) => log::error!("Error sending value to the sender '{:?}'", err),
                         }
                     }
                     _ => panic!("Unknown key '{}'", key),

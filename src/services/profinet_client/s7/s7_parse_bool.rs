@@ -64,7 +64,7 @@ impl S7ParseBool {
                 Ok(b > 0)
             }
             Err(e) => {
-                warn!("S7ParseBool.convert | error: {}", e);
+                log::warn!("S7ParseBool.convert | error: {}", e);
                 Err(e)
             }
         }
@@ -106,7 +106,7 @@ impl S7ParseBool {
             }
             Err(e) => {
                 self.status = Status::Invalid;
-                warn!("S7ParseBool.addRaw | convertion error: {:?}", e);
+                log::warn!("S7ParseBool.addRaw | convertion error: {:?}", e);
             }
         }
     }

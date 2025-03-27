@@ -90,7 +90,7 @@ impl FnOut for FnAcc {
                     Point::Bool(_) => acc + input.to_int(),
                     _ => acc + input,
                 };
-                trace!("{}.out | out: {:?}", self.id, acc);
+                log::trace!("{}.out | out: {:?}", self.id, acc);
                 self.acc = Some(acc.clone());
                 FnResult::Ok(acc)
             }

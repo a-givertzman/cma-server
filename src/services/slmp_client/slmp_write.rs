@@ -66,7 +66,7 @@ impl SlmpWrite {
     ///
     /// Writes point's to the device,
     pub fn run(&mut self, mut tcp_stream: TcpStream) -> Result<JoinHandle<()>, std::io::Error> {
-        info!("{}.run | starting...", self.id);
+        log::info!("{}.run | starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
         let status = self.status.clone();
@@ -79,7 +79,7 @@ impl SlmpWrite {
         let cycle = conf.cycle.map_or(None, |cycle| if cycle != Duration::ZERO {Some(cycle)} else {None});
         match cycle {
             Some(cycle_interval) => {
-                info!("{}.run | Preparing thread...", self_id);
+                log::info!("{}.run | Preparing thread...", self_id);
                 let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
                     let mut is_connected = ChangeNotify::new(
                         &self_id,
@@ -104,24 +104,24 @@ impl SlmpWrite {
                                 let point_name = point.name();
                                 let point_value = point.value();
                                 let db_name = point_name.split('/').nth(3).unwrap();
-                                debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
+                                log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
                                 match dbs.get_mut(db_name) {
                                     Some(db) => {
                                         match db.write(&mut tcp_stream, point.clone()) {
                                             Ok(_) => {
                                                 error_limit.reset();
-                                                debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?}) - ok", self_id, db_name, point_name, point_value);
+                                                log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?}) - ok", self_id, db_name, point_name, point_value);
                                                 let reply = Self::reply_point(tx_id, point);
                                                 match dest.send(reply.clone()) {
-                                                    Ok(_) => debug!("{}.run | ProfinetDb '{}' - sent reply: {:#?}", self_id, db_name, reply),
-                                                    Err(err) => error!("{}.run | Error sending to queue: {:?}", self_id, err),
+                                                    Ok(_) => log::debug!("{}.run | ProfinetDb '{}' - sent reply: {:#?}", self_id, db_name, reply),
+                                                    Err(err) => log::error!("{}.run | Error sending to queue: {:?}", self_id, err),
                                                     // break 'main;
                                                 };
                                             }
                                             Err(err) => {
-                                                warn!("{}.run | SlmpDb '{}' - write - error: {:?}", self_id, db_name, err);
+                                                log::warn!("{}.run | SlmpDb '{}' - write - error: {:?}", self_id, db_name, err);
                                                 if error_limit.add().is_err() {
-                                                    error!("{}.run | SlmpDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
+                                                    log::error!("{}.run | SlmpDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                     exit.exit_pair();
                                                     status.store(Status::Invalid.into(), Ordering::SeqCst);
                                                     if let Err(err) = dest.send(Point::String(PointHlr::new(
@@ -132,7 +132,7 @@ impl SlmpWrite {
                                                         Cot::ActErr,
                                                         chrono::offset::Utc::now(),
                                                     ))) {
-                                                        error!("{}.run | Error sending to queue: {:?}", self_id, err);
+                                                        log::error!("{}.run | Error sending to queue: {:?}", self_id, err);
                                                         // break 'main;
                                                     };
                                                     break 'main;
@@ -141,7 +141,7 @@ impl SlmpWrite {
                                         }
                                     }
                                     None => {
-                                        error!("{}.run | SlmpDb '{}' - not found", self_id, db_name);
+                                        log::error!("{}.run | SlmpDb '{}' - not found", self_id, db_name);
                                     }
                                 }
                             }
@@ -149,20 +149,20 @@ impl SlmpWrite {
                                 match err {
                                     mpsc::RecvTimeoutError::Timeout => {}
                                     mpsc::RecvTimeoutError::Disconnected => {
-                                        error!("{}.run | Error receiving from queue: {:?}", self_id, err);
+                                        log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
                                         break 'main;
                                     }
                                 }
                             }
                         }
                     }
-                    info!("{}.run | Exit", self_id);
+                    log::info!("{}.run | Exit", self_id);
                 });
-                info!("{}.run | Started", self.id);
+                log::info!("{}.run | Started", self.id);
                 handle
             }
             None => {
-                info!("{}.run | Disabled", self.id);
+                log::info!("{}.run | Disabled", self.id);
                 thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {})
             }
         }

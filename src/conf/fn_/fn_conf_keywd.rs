@@ -146,7 +146,7 @@ impl FnConfKeywd {
 impl FromStr for FnConfKeywd {
     type Err = String;
     fn from_str(input: &str) -> Result<Self, String> {
-        trace!("FnConfKeywd.from_str | input: {}", input);
+        log::trace!("FnConfKeywd.from_str | input: {}", input);
         let re = r#"[ \t]*(?:(\w+)[ \t]+)*(?:(let|fn|const|point){1}(?:[ \t](bool|int|real|double|string|any))*(?:$|(?:[ \t]+['"]*([\w/.-]+)['"]*)))(?:[ \t](.+))?"#;
         let re = RegexBuilder::new(re).multi_line(true).build().unwrap();
         let group_input = 1;
@@ -165,7 +165,7 @@ impl FromStr for FnConfKeywd {
                         match FnConfKeywd::match_type(&arg.as_str().to_lowercase()) {
                             Ok(type_) => type_,
                             Err(_err) => {
-                                warn!("ConfKeywd.from_str | Error reading type of keyword '{}'", &input);
+                                log::warn!("ConfKeywd.from_str | Error reading type of keyword '{}'", &input);
                                 FnConfPointType::Unknown
                             }
                         }
@@ -185,7 +185,7 @@ impl FromStr for FnConfKeywd {
                     }
                 };
                 let options = caps.get(group_options).map_or(FnConfOptions::default(), |options| {
-                    trace!("ConfKeywd.from_str | Options: '{:?}'", options);
+                    log::trace!("ConfKeywd.from_str | Options: '{:?}'", options);
                     FnConfOptions::from_str(options.as_str()).unwrap_or(FnConfOptions::default())
                 });
                 match data {

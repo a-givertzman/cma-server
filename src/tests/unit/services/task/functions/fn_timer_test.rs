@@ -35,7 +35,7 @@ mod fn_timer {
     fn elapsed_repeat_false() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_elapsed_repeat_false");
+        log::info!("test_elapsed_repeat_false");
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_timer = FnTimer::new(
             "id",
@@ -89,7 +89,7 @@ mod fn_timer {
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, fn_timer_elapsed);
+            log::debug!("value: {:?}   |   state: {:?}", value, fn_timer_elapsed);
             assert!(fn_timer_elapsed.aprox_eq(target, 2), "current '{}' != target '{}'", fn_timer_elapsed, target);
             thread::sleep(Duration::from_secs_f64(0.1));
         }
@@ -100,7 +100,7 @@ mod fn_timer {
     fn total_elapsed_repeat() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_total_elapsed_repeat");
+        log::info!("test_total_elapsed_repeat");
         let input = init_each("false", FnConfPointType::Bool);
         let initial = init_each("0.0", FnConfPointType::Double);
         let mut fn_timer = FnTimer::new(
@@ -150,7 +150,7 @@ mod fn_timer {
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, fn_timer_elapsed);
+            log::debug!("value: {:?}   |   state: {:?}", value, fn_timer_elapsed);
             assert!(fn_timer_elapsed.aprox_eq(target, 2), "current '{}' != target '{}'", fn_timer_elapsed, target);
             thread::sleep(Duration::from_secs_f64(0.1));
         }
@@ -161,7 +161,7 @@ mod fn_timer {
     fn total_elapsed_repeat_reset() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_total_elapsed_repeat_reset");
+        log::info!("test_total_elapsed_repeat_reset");
         let input = init_each("false", FnConfPointType::Bool);
         let initial = init_each("0.0", FnConfPointType::Double);
         let mut fn_timer = FnTimer::new(
@@ -218,7 +218,7 @@ mod fn_timer {
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}   |   target {}{}", value, fn_timer_elapsed, target, if reset {"\t<-- reset"} else {""});
+            log::debug!("value: {:?}   |   state: {:?}   |   target {}{}", value, fn_timer_elapsed, target, if reset {"\t<-- reset"} else {""});
             assert!(fn_timer_elapsed.aprox_eq(target, 2), "current '{}' != target '{}'", fn_timer_elapsed, target);
             thread::sleep(Duration::from_secs_f64(0.1));
         }
@@ -229,7 +229,7 @@ mod fn_timer {
     fn initial_repeat() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_initial_repeat");
+        log::info!("test_initial_repeat");
         let initial = 123.1234f64;
         let input = init_each("false", FnConfPointType::Bool);
         let initial_input = init_each(initial.to_string().as_str(), FnConfPointType::Double);
@@ -280,7 +280,7 @@ mod fn_timer {
             // debug!("input: {:?}", &input);
             let fn_timer_elapsed = fn_timer.out().unwrap().as_double().value;
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, fn_timer_elapsed);
+            log::debug!("value: {:?}   |   state: {:?}", value, fn_timer_elapsed);
             assert!(fn_timer_elapsed.aprox_eq(target, 2), "step: {} | current '{}' != target '{}'", step, fn_timer_elapsed, target);
             thread::sleep(Duration::from_secs_f64(0.3));
         }

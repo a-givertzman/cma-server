@@ -98,7 +98,7 @@ impl<F> TcpStreamRead for JdsRoutes<F> where
                         let result = (self.rautes)(self.parent_id.clone(), self.name.clone(), point, self.services.clone(), self.shared.clone());
                         if let Some(point) = result.retply {
                             if let Err(err) = self.req_reply_send.send(point) {
-                                error!("{}.read | Send reply error: {:?}", self.id, err)
+                                log::error!("{}.read | Send reply error: {:?}", self.id, err)
                             }
                         };
                         match result.pass {
@@ -108,7 +108,7 @@ impl<F> TcpStreamRead for JdsRoutes<F> where
                     }
                     OpResult::Err(err) => {
                         if log::max_level() == LevelFilter::Trace {
-                            warn!("{}.read | error: {:?}", self.id, err);
+                            log::warn!("{}.read | error: {:?}", self.id, err);
                         }
                         ConnectionStatus::Active(OpResult::Err(err))
                     }
@@ -116,7 +116,7 @@ impl<F> TcpStreamRead for JdsRoutes<F> where
                 }
             }
             ConnectionStatus::Closed(err) => {
-                warn!("{}.read | error: {:?}", self.id, err);
+                log::warn!("{}.read | error: {:?}", self.id, err);
                 ConnectionStatus::Closed(err)
             }
         }

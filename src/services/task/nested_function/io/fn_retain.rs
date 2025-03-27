@@ -96,19 +96,19 @@ impl FnRetain {
                     Ok(mut f) => {
                         match f.write_all(value.as_bytes()) {
                             Ok(_) => {
-                                trace!("{}.store | Retain stored in: {:?}", self.id, path);
+                                log::trace!("{}.store | Retain stored in: {:?}", self.id, path);
                                 Ok(())
                             }
                             Err(err) => {
                                 let message = format!("{}.store | Error writing to file: '{:?}'\n\terror: {:?}", self.id, path, err);
-                                error!("{}", message);
+                                log::error!("{}", message);
                                 Err(message)
                             }
                         }
                     }
                     Err(err) => {
                         let message = format!("{}.store | Error open file: '{:?}'\n\terror: {:?}", self.id, path, err);
-                        error!("{}", message);
+                        log::error!("{}", message);
                         Err(message)
                     }
                 }
@@ -129,7 +129,7 @@ impl FnRetain {
                     Ok(_) => Ok(path),
                     Err(err) => {
                         let message = format!("{}.create_dir | Error create path: '{:?}'\n\terror: {:?}", self_id, path, err);
-                        error!("{}", message);
+                        log::error!("{}", message);
                         Err(message)
                     }
                 }
@@ -151,7 +151,7 @@ impl FnRetain {
                                         "true" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
                                         "false" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                         _ => {
-                                            error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self.id, input, path);
+                                            log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self.id, input, path);
                                             None
                                         }
                                     }
@@ -160,7 +160,7 @@ impl FnRetain {
                                             Some(Point::Int(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
-                                            error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
+                                            log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
                                             None
                                         }
                                     }
@@ -169,7 +169,7 @@ impl FnRetain {
                                             Some(Point::Real(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
-                                            error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
+                                            log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
                                             None
                                         }
                                     }
@@ -178,7 +178,7 @@ impl FnRetain {
                                             Some(Point::Double(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
-                                            error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
+                                            log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
                                             None
                                         }
                                     }
@@ -192,19 +192,19 @@ impl FnRetain {
 
                             }
                             Err(err) => {
-                                error!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", self.id, path, err);
+                                log::error!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", self.id, path, err);
                                 None
                             }
                         }
                     }
                     Err(err) => {
-                        error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self.id, path, err);
+                        log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self.id, path, err);
                         None
                     }
                 }
             }
             Err(err) => {
-                error!("{}.load | Error: {:?}", self.id, err);
+                log::error!("{}.load | Error: {:?}", self.id, err);
                 None
             }
         }
@@ -243,7 +243,7 @@ impl FnOut for FnRetain {
         let enable = match &self.enable {
             Some(enable) => {
                 let enable = enable.borrow_mut().out();
-                trace!("{}.out | enable: {:?}", self.id, enable);
+                log::trace!("{}.out | enable: {:?}", self.id, enable);
                 match enable {
                     FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
                     FnResult::None => return FnResult::None,
@@ -252,16 +252,16 @@ impl FnOut for FnRetain {
             }
             None => true,
         };
-        trace!("{}.out | enable: {:?}", self.id, enable);
+        log::trace!("{}.out | enable: {:?}", self.id, enable);
         if enable {
             match &self.input {
                 Some(input) => {
                     let input = input.borrow_mut().out();
-                    trace!("{}.out | input: {:?}", self.id, input);
+                    log::trace!("{}.out | input: {:?}", self.id, input);
                     match input {
                         FnResult::Ok(input) => {
                             if let Err(err) = self.store(&input) {
-                                error!("{}.out | Error: '{:?}'", self.id, err);
+                                log::error!("{}.out | Error: '{:?}'", self.id, err);
                             };
                             FnResult::Ok(input)
                         }
@@ -273,7 +273,7 @@ impl FnOut for FnRetain {
                     let default = match &self.default {
                         Some(default) => {
                             let default = default.borrow_mut().out();
-                            trace!("{}.out | default: {:?}", self.id, default);
+                            log::trace!("{}.out | default: {:?}", self.id, default);
                             match default {
                                 FnResult::Ok(default) => default,
                                 FnResult::None => return FnResult::None,
@@ -287,7 +287,7 @@ impl FnOut for FnRetain {
                             Some(point) => point,
                             None => default,
                         };
-                        trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
+                        log::trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
                         FnResult::Ok(point)
                     } else {
                         let point = match &self.cache {
@@ -300,7 +300,7 @@ impl FnOut for FnRetain {
                             }
                         };
                         self.cache = Some(point.clone());
-                        trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
+                        log::trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
                         FnResult::Ok(point)
                     }
                 }

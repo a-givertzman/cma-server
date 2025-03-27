@@ -130,7 +130,7 @@ impl Service for EmulatedTcpClientSend {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let point_path = self.point_path.clone();
         let exit = self.exit.clone();
@@ -141,12 +141,12 @@ impl Service for EmulatedTcpClientSend {
         let disconnect = self.disconnect.iter().map(|v| {(*v as f32) / 100.0}).collect();
         let _wait_on_finish = self.wait_on_finish;
         let handle = thread::Builder::new().name(format!("{}.run Read", self_id)).spawn(move || {
-            info!("{}.run | Preparing thread Read - ok", self_id);
+            log::info!("{}.run | Preparing thread Read - ok", self_id);
             let mut switch_state = Self::switch_state(1, disconnect, 1.0);
             'connect: loop {
                 match TcpStream::connect(addr) {
                     Ok(mut tcp_stream) => {
-                        info!("{}.run | connected on: {:?}", self_id, addr);
+                        log::info!("{}.run | connected on: {:?}", self_id, addr);
                         thread::sleep(Duration::from_millis(100));
                         if !test_data.is_empty() {
                             let (send, recv) = mpsc::channel();
@@ -179,10 +179,10 @@ impl Service for EmulatedTcpClientSend {
                                                 sent_count += 1;
                                                 progress_percent = (sent_count as f32) / (total_count as f32);
                                                 switch_state.add(progress_percent);
-                                                debug!("{}.run | sent: {:?}", self_id, value);
+                                                log::debug!("{}.run | sent: {:?}", self_id, value);
                                             }
                                             Err(err) => {
-                                                warn!("{}.run | socket write error: {:?}", self_id, err);
+                                                log::warn!("{}.run | socket write error: {:?}", self_id, err);
                                             }
                                         }
                                     }
@@ -197,7 +197,7 @@ impl Service for EmulatedTcpClientSend {
                                 //     }
                                 // }
                                 if switch_state.changed() {
-                                    info!("{}.run | state: {} progress percent: {}", self_id, switch_state.state(), progress_percent);
+                                    log::info!("{}.run | state: {} progress percent: {}", self_id, switch_state.state(), progress_percent);
                                     thread::sleep(Duration::from_millis(1000));
                                     tcp_stream.flush().unwrap();
                                     thread::sleep(Duration::from_millis(1000));
@@ -212,44 +212,44 @@ impl Service for EmulatedTcpClientSend {
                             }
                         }
                         if switch_state.is_max() {
-                            info!("{}.run | switchState.isMax, exiting", self_id);
+                            log::info!("{}.run | switchState.isMax, exiting", self_id);
                             break 'connect;
                         }
                         if test_data.is_empty() {
-                            info!("{}.run | test_data.is_empty, exiting", self_id);
+                            log::info!("{}.run | test_data.is_empty, exiting", self_id);
                             tcp_stream.flush().unwrap();
                             thread::sleep(Duration::from_millis(1000));
                             break 'connect;
                         }
                     }
                     Err(err) => {
-                        warn!("{}.run | connection error: {:?}", self_id, err);
+                        log::warn!("{}.run | connection error: {:?}", self_id, err);
                         thread::sleep(Duration::from_millis(1000))
                     }
                 }
                 if switch_state.is_max() {
-                    info!("{}.run | switchState.isMax, exiting", self_id);
+                    log::info!("{}.run | switchState.isMax, exiting", self_id);
                     break 'connect;
                 }
                 if test_data.is_empty() {
-                    info!("{}.run | test_data.is_empty, exiting", self_id);
+                    log::info!("{}.run | test_data.is_empty, exiting", self_id);
                     break 'connect;
                 }
                 if exit.load(Ordering::SeqCst) {
-                    info!("{}.run | exit detected, exiting", self_id);
+                    log::info!("{}.run | exit detected, exiting", self_id);
                     break 'connect;
                 }
             }
-            info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", self_id);
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }    }

@@ -100,12 +100,12 @@ impl FnOut for FnPiecewiseLineApprox {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, input);
+        log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let value = self.pieces.line_approx(input.to_double().as_double().value);
                 let out = self.build_point(&input, value);
-                trace!("{}.out | out: {:?}", self.id, &out);
+                log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(out)
             }
             FnResult::None => FnResult::None,
@@ -215,20 +215,20 @@ impl Linears {
     ///
     /// 
     fn line_approx(&self, value: f64) -> f64 {
-        trace!("{}.line_approx | value: {:?}", self.id, value);
+        log::trace!("{}.line_approx | value: {:?}", self.id, value);
         let mut pieces = self.pieces.iter();
         match pieces.next() {
             Some(first) => if first.is_less(value) {
-                trace!("{}.line_approx | less first: {:#?}", self.id, first);
+                log::trace!("{}.line_approx | less first: {:#?}", self.id, first);
                 return first.left.y
             } else {
                 if first.contains(value) {
-                    trace!("{}.line_approx | first: {:#?}", self.id, first);
+                    log::trace!("{}.line_approx | first: {:#?}", self.id, first);
                     return first.linear_approx(value);
                 }
                 while let Some(piece) = pieces.next() {
                     if piece.contains(value) {
-                        trace!("{}.line_approx | piece: {:#?}", self.id, piece);
+                        log::trace!("{}.line_approx | piece: {:#?}", self.id, piece);
                         return piece.linear_approx(value);
                     }
                 }

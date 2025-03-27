@@ -62,9 +62,9 @@ impl SlmpParseReal {
         _bit: usize,
     ) -> Result<f32, String> {
         if bytes.len() > start + Self::SIZE {
-            trace!("{}.convert | start: {},  end: {:?}", self.id, start, start + Self::SIZE);
-            trace!("{}.convert | raw: {:02X?}", self.id, &bytes[start..(start + Self::SIZE)]);
-            trace!("{}.convert | converted f32: {:?}", self.id, f32::from_le_bytes(bytes[start..(start + Self::SIZE)].try_into().unwrap()));
+            log::trace!("{}.convert | start: {},  end: {:?}", self.id, start, start + Self::SIZE);
+            log::trace!("{}.convert | raw: {:02X?}", self.id, &bytes[start..(start + Self::SIZE)]);
+            log::trace!("{}.convert | converted f32: {:?}", self.id, f32::from_le_bytes(bytes[start..(start + Self::SIZE)].try_into().unwrap()));
             match bytes[start..(start + Self::SIZE)].try_into() {
                 Ok(v) => Ok(f32::from_le_bytes(v)),
                 Err(e) => {
@@ -116,7 +116,7 @@ impl SlmpParseReal {
             }
             Err(e) => {
                 self.status.add(Status::Invalid);
-                warn!("{}.add_raw | convertion error: {:?}", self.id, e);
+                log::warn!("{}.add_raw | convertion error: {:?}", self.id, e);
             }
         }
     }
@@ -167,7 +167,7 @@ impl ParsePoint for SlmpParseReal {
             Point::Double(_) => Ok(point.to_real().as_real().value.to_le_bytes().to_vec()),
             _ => {
                 let message = format!("{}.write | Point of type 'Real / Double' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

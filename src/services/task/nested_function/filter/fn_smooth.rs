@@ -59,22 +59,22 @@ impl FnOut for FnSmooth {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let factor = self.factor.borrow_mut().out();
-        trace!("{}.out | factor: {:?}", self.id, factor);
+        log::trace!("{}.out | factor: {:?}", self.id, factor);
         let factor = match factor {
             FnResult::Ok(factor) => factor.to_double().as_double(),
             FnResult::None => return FnResult::None,
             FnResult::Err(err) => return FnResult::Err(err),
         };
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, input);
+        log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let input_type = input.type_();
-                trace!("{}.out | factor: {:?}", self.id, factor);
+                log::trace!("{}.out | factor: {:?}", self.id, factor);
                 let delta = input.to_double().as_double() - self.value.to_double().as_double();
-                trace!("{}.out | delta: {:?}", self.id, delta);
+                log::trace!("{}.out | delta: {:?}", self.id, delta);
                 let value = self.value.to_double().as_double() + delta * factor;
-                trace!("{}.out | value: {:?}", self.id, value);
+                log::trace!("{}.out | value: {:?}", self.id, value);
                 let value = Point::Double(value);
                 self.value = match input_type {
                     PointConfigType::Int => value.to_int(),
@@ -82,7 +82,7 @@ impl FnOut for FnSmooth {
                     PointConfigType::Double => value.to_double(),
                     _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
                 };
-                trace!("{}.out | value: {:?}", self.id, self.value);
+                log::trace!("{}.out | value: {:?}", self.id, self.value);
                 FnResult::Ok(self.value.clone())
             }
             FnResult::None => FnResult::None,

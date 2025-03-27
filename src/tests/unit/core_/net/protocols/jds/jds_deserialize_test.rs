@@ -143,7 +143,7 @@ mod jds_deserialize {
                                         OpResult::Ok(point) => {
                                             received.fetch_add(1, Ordering::SeqCst);
                                             let recv_index = (received.load(Ordering::SeqCst) - 1) % test_data_len;
-                                            trace!("socket read - received[{}]: {:?}", recv_index, point);
+                                            log::trace!("socket read - received[{}]: {:?}", recv_index, point);
                                             assert!(point.name() == test_data[recv_index].1.name(), "\nreceived: {:?}\nexpected: {:?}", point.name(), test_data[recv_index].1.name());
                                             assert!(point.status() == test_data[recv_index].1.status(), "\nreceived: {:?}\nexpected: {:?}", point.status(), test_data[recv_index].1.status());
                                             assert!(point.cot() == test_data[recv_index].1.cot(), "\nreceived: {:?}\nexpected: {:?}", point.cot(), test_data[recv_index].1.cot());
@@ -187,18 +187,18 @@ mod jds_deserialize {
         let mut sent = 0;
         let test_data = test_data.to_owned().clone();
         thread::spawn(move || {
-            info!("TCP server | Preparing test server...");
+            log::info!("TCP server | Preparing test server...");
             let mut rng = rand::thread_rng();
             match TcpListener::bind(addr) {
                 Ok(listener) => {
-                    info!("TCP server | Preparing test server - ok");
+                    log::info!("TCP server | Preparing test server - ok");
                     let mut accept_count = 2;
                     let mut max_read_errors = 3;
                     while accept_count > 0 {
                         accept_count -= 1;
                         match listener.accept() {
                             Ok((mut _socket, addr)) => {
-                                info!("TCP server | accept connection - ok\n\t{:?}", addr);
+                                log::info!("TCP server | accept connection - ok\n\t{:?}", addr);
                                 let eot = [4];
                                 for _ in 0..count {
                                     for (msg, _) in &test_data {
@@ -209,13 +209,13 @@ mod jds_deserialize {
                                         match _socket.write(bytes1) {
                                             Ok(_bytes) => {
                                                 sent += 1;
-                                                debug!("socket sent: {:?}", msg);
+                                                log::debug!("socket sent: {:?}", msg);
                                             }
                                             Err(err) => {
-                                                debug!("socket read - error: {:?}", err);
+                                                log::debug!("socket read - error: {:?}", err);
                                                 max_read_errors -= 1;
                                                 if max_read_errors <= 0 {
-                                                    error!("TCP server | socket read error: {:?}", err);
+                                                    log::error!("TCP server | socket read error: {:?}", err);
                                                     break;
                                                 }
                                             }
@@ -224,27 +224,27 @@ mod jds_deserialize {
                                         match _socket.write(&[bytes2, &eot].concat()) {
                                             Ok(_bytes) => {
                                                 sent += 1;
-                                                trace!("socket sent: {:?}", msg);
+                                                log::trace!("socket sent: {:?}", msg);
                                             }
                                             Err(err) => {
-                                                debug!("socket read - error: {:?}", err);
+                                                log::debug!("socket read - error: {:?}", err);
                                                 max_read_errors -= 1;
                                                 if max_read_errors <= 0 {
-                                                    error!("TCP server | socket read error: {:?}", err);
+                                                    log::error!("TCP server | socket read error: {:?}", err);
                                                     break;
                                                 }
                                             }
                                         };
                                     }
                                 }
-                                info!("TCP server | all sent: {:?}", sent);
+                                log::info!("TCP server | all sent: {:?}", sent);
                                 while received.load(Ordering::SeqCst) < count {
                                     thread::sleep(Duration::from_micros(10));
                                 }
                                 // while received.len() < count {}
                             }
                             Err(err) => {
-                                info!("incoming connection - error: {:?}", err);
+                                log::info!("incoming connection - error: {:?}", err);
                             }
                         }
                     }

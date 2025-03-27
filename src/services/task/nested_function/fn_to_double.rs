@@ -55,7 +55,7 @@ impl FnOut for FnToDouble {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
-        trace!("{}.out | input: {:?}", self.id, input);
+        log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let out = match &input {
@@ -73,7 +73,7 @@ impl FnOut for FnToDouble {
                     }
                     _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
                 };
-                trace!("{}.out | out: {:?}", self.id, &out);
+                log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::Double(
                     PointHlr::new(
                         input.tx_id(),

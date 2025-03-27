@@ -35,7 +35,7 @@ mod fn_bit_and {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: bool;
         let input1 = init_each("false", FnConfPointType::Bool);
         let input2 = init_each("false", FnConfPointType::Bool);
@@ -58,7 +58,7 @@ mod fn_bit_and {
             input1.borrow_mut().add(&point1);
             input2.borrow_mut().add(&point2);
             let result = fn_bit_and.out().unwrap().as_bool().value.0;
-            debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
+            log::debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 & value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -70,7 +70,7 @@ mod fn_bit_and {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool_3";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: bool;
         let input1 = init_each("false", FnConfPointType::Bool);
         let input2 = init_each("false", FnConfPointType::Bool);
@@ -101,7 +101,7 @@ mod fn_bit_and {
             input2.borrow_mut().add(&point2);
             input3.borrow_mut().add(&point3);
             let result = fn_bit_and.out().unwrap().as_bool().value.0;
-            debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
+            log::debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
             target = value1 & value2 & value3;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -113,7 +113,7 @@ mod fn_bit_and {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: i64;
         let input1 = init_each("0", FnConfPointType::Int);
         let input2 = init_each("0", FnConfPointType::Int);
@@ -143,7 +143,7 @@ mod fn_bit_and {
             input1.borrow_mut().add(&point1);
             input2.borrow_mut().add(&point2);
             let result = fn_bit_and.out().unwrap().as_int().value;
-            debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
+            log::debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
             target = value1 & value2;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -155,7 +155,7 @@ mod fn_bit_and {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int_3";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let mut target: i64;
         let input1 = init_each("0", FnConfPointType::Int);
         let input2 = init_each("0", FnConfPointType::Int);
@@ -189,7 +189,7 @@ mod fn_bit_and {
             input2.borrow_mut().add(&point2);
             input3.borrow_mut().add(&point3);
             let result = fn_bit_and.out().unwrap().as_int().value;
-            debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
+            log::debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
             target = value1 & value2 & value3;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }

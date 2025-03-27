@@ -55,7 +55,7 @@ mod fn_rising_edge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let input = init_each(&self_id, Value::Bool(false));
         let mut fn_rising_edge = FnRisingEdge::new(
             self_id,
@@ -84,7 +84,7 @@ mod fn_rising_edge {
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }
@@ -95,7 +95,7 @@ mod fn_rising_edge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let input = init_each(&self_id, Value::Int(0));
         let mut fn_rising_edge = FnRisingEdge::new(
             self_id,
@@ -124,7 +124,7 @@ mod fn_rising_edge {
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }
@@ -135,7 +135,7 @@ mod fn_rising_edge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let input = init_each(&self_id, Value::Real(0.0));
         let mut fn_rising_edge = FnRisingEdge::new(
             self_id,
@@ -164,7 +164,7 @@ mod fn_rising_edge {
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }
@@ -175,7 +175,7 @@ mod fn_rising_edge {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
-        info!("{}", self_id);
+        log::info!("{}", self_id);
         let input = init_each(&self_id, Value::Double(0.0));
         let mut fn_rising_edge = FnRisingEdge::new(
             self_id,
@@ -204,7 +204,7 @@ mod fn_rising_edge {
             // debug!("input: {:?}", &input);
             let result = fn_rising_edge.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
+            log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
     }     

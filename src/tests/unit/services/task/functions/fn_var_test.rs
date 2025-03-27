@@ -36,7 +36,7 @@ mod tests {
     fn test_bool() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_bool");
+        log::info!("test_bool");
         let input = init_each("false", FnConfPointType::Bool);
         let mut fn_var = FnVar::new(
             "test",
@@ -65,7 +65,7 @@ mod tests {
             fn_var.eval();
             let state = fn_var.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state, point);
         }
     }
@@ -75,7 +75,7 @@ mod tests {
     fn test_int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_int");
+        log::info!("test_int");
         let input = init_each("0", FnConfPointType::Int);
         let mut fn_var = FnVar::new(
             "test",
@@ -101,7 +101,7 @@ mod tests {
             fn_var.eval();
             let state = fn_var.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state, point);
         }
     }
@@ -111,7 +111,7 @@ mod tests {
     fn test_real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_real");
+        log::info!("test_real");
         let input = init_each("0.0", FnConfPointType::Real);
         let mut fn_var = FnVar::new(
             "test",
@@ -137,7 +137,7 @@ mod tests {
             fn_var.eval();
             let state = fn_var.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state, point);
         }
     }
@@ -147,7 +147,7 @@ mod tests {
     fn test_double() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        info!("test_double");
+        log::info!("test_double");
         let input = init_each("0.0", FnConfPointType::Double);
         let mut fn_var = FnVar::new(
             "test",
@@ -173,7 +173,7 @@ mod tests {
             fn_var.eval();
             let state = fn_var.out().unwrap();
             // debug!("input: {:?}", &mut input);
-            debug!("value: {:?}   |   state: {:?}", value, state);
+            log::debug!("value: {:?}   |   state: {:?}", value, state);
             assert_eq!(state, point);
         }
     }

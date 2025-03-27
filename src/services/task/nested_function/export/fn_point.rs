@@ -129,10 +129,10 @@ impl FnPoint {
             };
             match tx_send.send(point.clone()) {
                 Ok(_) => {
-                    trace!("{}.out | Point sent: {:#?}", self.id, point);
+                    log::trace!("{}.out | Point sent: {:#?}", self.id, point);
                 }
                 Err(err) => {
-                    error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
+                    log::error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
                 }
             };
         }
@@ -184,7 +184,7 @@ impl FnOut for FnPoint {
                     None => false,
                 };
                 let input = input.borrow_mut().out();
-                trace!("{}.out | input: {:?}", self.id, input);
+                log::trace!("{}.out | input: {:?}", self.id, input);
                 match input {
                     FnResult::Ok(point) => {
                         match &self.state {

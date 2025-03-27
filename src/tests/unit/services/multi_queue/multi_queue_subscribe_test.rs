@@ -60,7 +60,7 @@ mod multi_queue {
         "#.to_string();
         let conf = serde_yaml::from_str(&conf).unwrap();
         let mq_conf = MultiQueueConfig::from_yaml(self_id, &conf);
-        debug!("mqConf: {:?}", mq_conf);
+        log::debug!("mqConf: {:?}", mq_conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
@@ -219,11 +219,11 @@ impl Service for MockReceiver {
                         match recv.recv_timeout(Duration::from_secs(3)) {
                             Ok(point) => {
                                 received_len += 1;
-                                trace!("{}.run | Received point: {:#?}", self_id, point);
+                                log::trace!("{}.run | Received point: {:#?}", self_id, point);
                                 received.write().unwrap().push(point);
                             }
                             Err(err) => match err {
-                                std::sync::mpsc::RecvTimeoutError::Timeout      => warn!("{}.run | Receive error: {:#?}", self_id, err),
+                                std::sync::mpsc::RecvTimeoutError::Timeout      => log::warn!("{}.run | Receive error: {:#?}", self_id, err),
                                 std::sync::mpsc::RecvTimeoutError::Disconnected => {}
                             }
                         }
@@ -239,7 +239,7 @@ impl Service for MockReceiver {
                                 received.write().unwrap().push(point)
                             }
                             Err(err) => match err {
-                                std::sync::mpsc::RecvTimeoutError::Timeout      => warn!("{}.run | Receive error: {:#?}", self_id, err),
+                                std::sync::mpsc::RecvTimeoutError::Timeout      => log::warn!("{}.run | Receive error: {:#?}", self_id, err),
                                 std::sync::mpsc::RecvTimeoutError::Disconnected => {}
                             }
                         }
@@ -252,12 +252,12 @@ impl Service for MockReceiver {
         });
         match handle {
             Ok(handle) => {
-                info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.id);
                 Ok(ServiceHandles::new(vec![(self.id.to_owned(), handle)]))
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                warn!("{}", message);
+                log::warn!("{}", message);
                 Err(message)
             }
         }

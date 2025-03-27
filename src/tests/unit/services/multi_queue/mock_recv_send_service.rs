@@ -84,21 +84,21 @@ impl Service for MockRecvSendService {
     //
     //
     fn run(&mut self) -> Result<ServiceHandles<()>, String> {
-        info!("{}.run | Starting...", self.id);
+        log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let rx_recv = self.rx_recv.lock().unwrap().take().unwrap();
         let received = self.received.clone();
         let recvLimit = self.recvLimit.clone();
         let handle_recv = thread::Builder::new().name(format!("{}.run | Recv", self_id)).spawn(move || {
-            info!("{}.run | Preparing thread Recv - ok", self_id);
+            log::info!("{}.run | Preparing thread Recv - ok", self_id);
             match recvLimit {
                 Some(recvLimit) => {
                     let mut receivedCount = 0;
                     loop {
                         match rx_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
-                                trace!("{}.run | received: {:?}", self_id, point);
+                                log::trace!("{}.run | received: {:?}", self_id, point);
                                 received.write().unwrap().push(point);
                                 receivedCount += 1;
                             }
@@ -116,7 +116,7 @@ impl Service for MockRecvSendService {
                     loop {
                         match rx_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
-                                trace!("{}.run | received: {:?}", self_id, point);
+                                log::trace!("{}.run | received: {:?}", self_id, point);
                                 received.write().unwrap().push(point);
                             }
                             Err(_) => {}
@@ -136,17 +136,17 @@ impl Service for MockRecvSendService {
         let test_data = self.test_data.clone();
         let sent = self.sent.clone();
         let handle_send = thread::Builder::new().name(format!("{}.run | Send", self_id)).spawn(move || {
-            info!("{}.run | Preparing thread Send - ok", self_id);
+            log::info!("{}.run | Preparing thread Send - ok", self_id);
             let txId = PointTxId::from_str(&self_id);
             for value in test_data.iter() {
                 let point = value.to_point(txId,&format!("{}/test", self_id));
                 match txSend.send(point.clone()) {
                     Ok(_) => {
-                        trace!("{}.run | send: {:?}", self_id, point);
+                        log::trace!("{}.run | send: {:?}", self_id, point);
                         sent.write().unwrap().push(point);
                     }
                     Err(err) => {
-                        warn!("{}.run | send error: {:?}", self_id, err);
+                        log::warn!("{}.run | send error: {:?}", self_id, err);
                     }
                 }
                 if exit.load(Ordering::SeqCst) {

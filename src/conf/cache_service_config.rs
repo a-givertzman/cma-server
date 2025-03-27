@@ -32,19 +32,19 @@ impl CacheServiceConfig {
     /// ````
     pub fn new(parent: impl Into<String>, conf_tree: &mut ConfTree) -> Self {
         println!();
-        trace!("CacheServiceConfig.new | conf_tree: {:?}", conf_tree);
+        log::trace!("CacheServiceConfig.new | conf_tree: {:?}", conf_tree);
         let self_id = format!("CacheServiceConfig({})", conf_tree.key);
         let mut self_conf = ServiceConfig::new(&self_id, conf_tree.clone());
-        trace!("{}.new | self_conf: {:?}", self_id, self_conf);
+        log::trace!("{}.new | self_conf: {:?}", self_id, self_conf);
         let sufix = self_conf.sufix();
         let self_name = Name::new(parent, if sufix.is_empty() {self_conf.name()} else {sufix});
-        debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", self_id, self_name);
         let retain = self_conf.get_param_value("retain").unwrap_or(serde_yaml::Value::Bool(false)).as_bool().unwrap();
-        debug!("{}.new | retain: {:?}", self_id, retain);
+        log::debug!("{}.new | retain: {:?}", self_id, retain);
         let retain_delay = self_conf.get_duration("retain-delay").unwrap_or(Duration::from_secs(30));
-        debug!("{}.new | retain-delay: {:?}", self_id, retain_delay);
+        log::debug!("{}.new | retain-delay: {:?}", self_id, retain_delay);
         let subscribe = ConfSubscribe::new(self_conf.get_param_value("subscribe").unwrap_or(serde_yaml::Value::Null));
-        debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
+        log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
         Self {
             name: self_name,
             retain,

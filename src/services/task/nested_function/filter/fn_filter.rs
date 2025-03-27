@@ -66,7 +66,7 @@ impl FnOut for FnFilter {
     //
     fn out(&mut self) -> FnResult<Point, String> {
         let pass_point = self.pass.borrow_mut().out();
-        trace!("{}.out | pass: {:?}", self.id, pass_point);
+        log::trace!("{}.out | pass: {:?}", self.id, pass_point);
         let pass = match pass_point {
             FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
             FnResult::None => return FnResult::None,
@@ -74,10 +74,10 @@ impl FnOut for FnFilter {
         };
         if pass {
             let input = self.input.borrow_mut().out();
-            trace!("{}.out | input: {:?}", self.id, input);
+            log::trace!("{}.out | input: {:?}", self.id, input);
             match input {
                 FnResult::Ok(input) => {
-                    trace!("{}.out | Passed: {:?}", self.id, input);
+                    log::trace!("{}.out | Passed: {:?}", self.id, input);
                     self.state = Some(input.clone());
                     FnResult::Ok(input)
                 }

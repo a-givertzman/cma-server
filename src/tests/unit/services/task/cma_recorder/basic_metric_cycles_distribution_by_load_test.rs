@@ -44,7 +44,7 @@ mod cma_recorder {
         test_duration.run().unwrap();
         //
         // can be changed
-        trace!("dir: {:?}", env::current_dir());
+        log::trace!("dir: {:?}", env::current_dir());
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
             Some("assets/testing/retain/"),
             Some(RetainPointConf::new("point/id.json", None))
@@ -120,15 +120,15 @@ mod cma_recorder {
         let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
         let api_client_handle = api_client.write().unwrap().run().unwrap();
         let receiver_handle = receiver.write().unwrap().run().unwrap();
-        info!("receiver runing - ok");
+        log::info!("receiver runing - ok");
         for task in &tasks {
             let handle = task.write().unwrap().run().unwrap();
             task_handles.push(handle);
         }
-        info!("task runing - ok");
+        log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(300));
         let producer_handle = producer.write().unwrap().run().unwrap();
-        info!("producer runing - ok");
+        log::info!("producer runing - ok");
         thread::sleep(Duration::from_millis(300));
         let time = Instant::now();
         receiver_handle.wait().unwrap();

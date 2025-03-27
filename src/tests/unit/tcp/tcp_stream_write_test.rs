@@ -71,7 +71,7 @@ mod tcp_stream_write {
         for _ in 0..count {
             test_data.push(random_bytes(message_len))
         }
-        info!("test_data: {:?}", test_data);
+        log::info!("test_data: {:?}", test_data);
         let mut tcp_stream_write = TcpStreamWrite::new(
             "test",
             true,
@@ -91,10 +91,10 @@ mod tcp_stream_write {
                             ConnectionStatus::Active(result) => match result {
                                 OpResult::Ok(_) => {
                                     sent.fetch_add(1, Ordering::SeqCst);
-                                    debug!("sent: {}/{}", sent.load(Ordering::SeqCst), count);
+                                    log::debug!("sent: {}/{}", sent.load(Ordering::SeqCst), count);
                                 }
                                 OpResult::Err(err) => {
-                                    warn!(
+                                    log::warn!(
                                         "sent: {}/{}, socket write error: {}",
                                         sent.load(Ordering::SeqCst),
                                         count,
@@ -104,7 +104,7 @@ mod tcp_stream_write {
                                 OpResult::Timeout() => {}
                             },
                             ConnectionStatus::Closed(err) => {
-                                warn!(
+                                log::warn!(
                                     "sent: {}/{}, socket closed, error: {}",
                                     sent.load(Ordering::SeqCst),
                                     count,
@@ -116,7 +116,7 @@ mod tcp_stream_write {
                     }
                 }
                 Err(err) => {
-                    warn!(
+                    log::warn!(
                         "sent: {}/{}, connection error: {}",
                         sent.load(Ordering::SeqCst),
                         count,
@@ -134,12 +134,12 @@ mod tcp_stream_write {
                 test_duration,
             );
             // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
-            warn!("sent total: {}/{}", sent.load(Ordering::SeqCst), count);
+            log::warn!("sent total: {}/{}", sent.load(Ordering::SeqCst), count);
         }
         let wait_duration = Duration::from_millis(10);
         let mut wait_attempts = test_duration.as_micros() / wait_duration.as_micros();
         while received.lock().unwrap().len() < count {
-            debug!(
+            log::debug!(
                 "waiting while all data beeng received {}/{}...",
                 received.lock().unwrap().len(),
                 count,
@@ -175,7 +175,7 @@ mod tcp_stream_write {
         for target in test_data {
             let result = match received.first() {
                 Some(bytes) => {
-                    debug!("\nresult: {:?}\ntarget: {:?}", bytes, target);
+                    log::debug!("\nresult: {:?}\ntarget: {:?}", bytes, target);
                     bytes
                 }
                 None => panic!("received is empty"),
@@ -198,18 +198,18 @@ mod tcp_stream_write {
         received: Arc<Mutex<Vec<Vec<u8>>>>,
     ) {
         thread::spawn(move || {
-            info!("TCP server | Preparing test server...");
+            log::info!("TCP server | Preparing test server...");
             match TcpListener::bind(&addr) {
                 Ok(listener) => {
-                    info!("TCP server | Preparing test server - ok ({})", addr);
+                    log::info!("TCP server | Preparing test server - ok ({})", addr);
                     let mut accept_count = 2;
                     // let mut maxReadErrors = 3;
                     while accept_count > 0 {
                         accept_count -= 1;
-                        info!("TCP server | waiting connection...");
+                        log::info!("TCP server | waiting connection...");
                         match listener.accept() {
                             Ok((mut _socket, addr)) => {
-                                info!("TCP server | accept connection - ok\n\t{:?}", addr);
+                                log::info!("TCP server | accept connection - ok\n\t{:?}", addr);
                                 let mut buffer = Vec::new();
                                 while received.lock().unwrap().len() < count {
                                     let mut bytes = vec![0u8; message_len];
@@ -218,22 +218,22 @@ mod tcp_stream_write {
                                             buffer.append(&mut bytes);
                                             if buffer.len() >= message_len {
                                                 let v = buffer.drain(0..message_len).collect();
-                                                debug!("TCP server | received: {:?}", v);
+                                                log::debug!("TCP server | received: {:?}", v);
                                                 received.lock().unwrap().push(v);
                                             }
                                         }
                                         Err(err) => {
-                                            warn!("{:?}", err);
+                                            log::warn!("{:?}", err);
                                         }
                                     }
                                 }
-                                info!(
+                                log::info!(
                                     "TCP server | all received: {:?}",
                                     received.lock().unwrap().len(),
                                 );
                             }
                             Err(err) => {
-                                warn!("TCP server | incoming connection - error: {:?}", err);
+                                log::warn!("TCP server | incoming connection - error: {:?}", err);
                             }
                         }
                     }

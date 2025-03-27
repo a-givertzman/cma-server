@@ -45,7 +45,7 @@ impl FnOut for FnConst {
     }
     //
     fn out(&mut self) -> FnResult<Point, String> {
-        trace!("{}.out | value: {:?}", self.id, &self.point);
+        log::trace!("{}.out | value: {:?}", self.id, &self.point);
         FnResult::Ok(self.point.clone())
     }
     //

@@ -82,30 +82,30 @@ mod api_client {
         let mut buf = [0; 1024 * 4];
         let receiver_handle = thread::spawn(move || {
             let mut received = received_ref.lock().unwrap();
-            info!("TCP server | Preparing test server...");
+            log::info!("TCP server | Preparing test server...");
             match TcpListener::bind(addr) {
                 Ok(listener) => {
-                    info!("TCP server | Preparing test server - ok");
+                    log::info!("TCP server | Preparing test server - ok");
                     let mut accept_count = 2;
                     let mut max_read_errors = 3;
                     while accept_count > 0 {
                         accept_count -= 1;
                         match listener.accept() {
                             Ok((mut _socket, addr)) => {
-                                info!("TCP server | accept connection - ok\n\t{:?}", addr);
+                                log::info!("TCP server | accept connection - ok\n\t{:?}", addr);
                                 _socket.set_read_timeout(Some(Duration::from_millis(100))).unwrap();
                                 while received.len() < count {
                                     for e in buf.iter_mut() {*e = 0;}
                                     match _socket.read(&mut buf) {
                                         Ok(bytes) => {
-                                            debug!("TCP server | received bytes: {:?}", bytes);
+                                            log::debug!("TCP server | received bytes: {:?}", bytes);
                                             let raw = String::from_utf8(buf.to_vec()).unwrap();
                                             let raw = raw.trim_matches(char::from(0));
-                                            debug!("TCP server | received raw: {:?}", raw);
+                                            log::debug!("TCP server | received raw: {:?}", raw);
                                             match serde_json::from_str(&raw) {
                                                 Ok(value) => {
                                                     let value: serde_json::Value = value;
-                                                    debug!("TCP server | received: {:?}", value);
+                                                    log::debug!("TCP server | received: {:?}", value);
                                                     received.push(value.clone());
                                                     let obj = value.as_object().unwrap();
                                                     let reply = ApiReply::new(
@@ -117,34 +117,34 @@ mod api_client {
                                                     );
                                                     match _socket.write(&reply.as_bytes()) {
                                                         Ok(bytes) => {
-                                                            debug!("TCP server | sent bytes: {:?}", bytes);
+                                                            log::debug!("TCP server | sent bytes: {:?}", bytes);
                                                         }
                                                         Err(err) => {
-                                                            debug!("TCP server | socket write - error: {:?}", err);
+                                                            log::debug!("TCP server | socket write - error: {:?}", err);
                                                         }
                                                     };
                                                     // debug!("TCP server | received / count: {:?}", received.len() / count);
                                                     if (state == 0) && received.len() as f64 / count as f64 > 0.333 {
                                                         state = 1;
                                                         let duration = Duration::from_millis(500);
-                                                        debug!("TCP server | beaking socket connection for {:?}", duration);
+                                                        log::debug!("TCP server | beaking socket connection for {:?}", duration);
                                                         _socket.flush().unwrap();
                                                         _socket.shutdown(std::net::Shutdown::Both).unwrap();
                                                         thread::sleep(duration);
-                                                        debug!("TCP server | beaking socket connection for {:?} - elapsed, restoring...", duration);
+                                                        log::debug!("TCP server | beaking socket connection for {:?} - elapsed, restoring...", duration);
                                                         break;
                                                     }
                                                 }
                                                 Err(err) => {
-                                                    debug!("TCP server | parse read data error: {:?}", err);
+                                                    log::debug!("TCP server | parse read data error: {:?}", err);
                                                 }
                                             };
                                         }
                                         Err(err) => {
-                                            debug!("socket read - error: {:?}", err);
+                                            log::debug!("socket read - error: {:?}", err);
                                             max_read_errors -= 1;
                                             if max_read_errors <= 0 {
-                                                error!("TCP server | socket read error: {:?}", err);
+                                                log::error!("TCP server | socket read error: {:?}", err);
                                                 break;
                                             }
                                         }
@@ -153,7 +153,7 @@ mod api_client {
                                 }
                             }
                             Err(err) => {
-                                info!("incoming connection - error: {:?}", err);
+                                log::info!("incoming connection - error: {:?}", err);
                             }
                         }
                     }
@@ -186,7 +186,7 @@ mod api_client {
             let target = sent.pop().unwrap();
             let result = received.pop().unwrap();
             let result = result.as_object().unwrap().get("sql").unwrap().as_object().unwrap().get("sql").unwrap().as_str().unwrap();
-            debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
+            log::debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
             assert!(result == &target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();
