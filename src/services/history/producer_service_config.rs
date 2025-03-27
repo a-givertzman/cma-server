@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
 use std::{fs, str::FromStr, time::Duration};
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -47,23 +47,22 @@ impl ProducerServiceConfig {
     ///         point Winch.LVDT1: 
     ///             type: Real
     /// ```
-    pub fn new(parent: impl Into<String>, conf: &mut ConfTree) -> ProducerServiceConfig {
+    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> ProducerServiceConfig {
         log::trace!("ProducerServiceConfig.new | confTree: {:?}", conf);
         let self_id = format!("ProducerServiceConfig({})", conf.key);
         log::trace!("{}.new | self_conf: {:?}", self_id, conf);
-        let self_name = Name::new(parent, conf.sufix());
+        let self_name = Name::new(parent, conf.sufix().unwrap());
         log::debug!("{}.new | name: {:?}", self_id, self_name);
-        let cycle = conf.get_duration("cycle");
+        let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send_to: '{}'", self_id, send_to);
-        let debug = conf.get_param_value("debug").unwrap_or(serde_yaml::Value::Bool(false)).as_bool().unwrap();
+        let debug = conf.get("debug").unwrap_or(false);
         log::debug!("{}.new | debug: '{}'", self_id, debug);
         let mut nodes = IndexMap::new();
-        for node_name in conf.keys.clone() {
-            let node_conf = conf.get(&node_name).unwrap();
-            let node_conf = ServiceConfig::new(&self_id, node_conf);
-            for key in &node_conf.keys {
+        for node_name in conf.keys() {
+            let node_conf: ConfTree = conf.get(&node_name).unwrap();
+            for key in &node_conf.keys() {
                 let keyword = FnConfKeywd::from_str(key).unwrap();
                 if keyword.kind() == FnConfKindName::Point {
                     let point_name = format!("{}/{}", self_name, keyword.data());
@@ -93,7 +92,7 @@ impl ProducerServiceConfig {
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> ProducerServiceConfig {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
-                Self::new(parent, &mut ConfTree::new(key.as_str().unwrap(), value.clone()))
+                Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
             }
             None => {
                 panic!("ProducerServiceConfig.from_yaml | Format error or empty conf: {:#?}", value)
