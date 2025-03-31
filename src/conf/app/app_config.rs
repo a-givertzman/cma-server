@@ -68,8 +68,8 @@ impl AppConfig {
     /// Creates new instance of the [AppConfig]:
     pub fn new(conf: ConfTree) -> Self {
         log::trace!("AppConfig.new | conf: {:?}", conf);
-        let self_id = format!("AppConfig({})", conf.key);
         let self_name = conf.get("name").unwrap();
+        let self_id = format!("AppConfig({})", self_name);
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let description = conf.get("description").unwrap();
         log::debug!("{}.new | description: {:?}", self_id, description);
