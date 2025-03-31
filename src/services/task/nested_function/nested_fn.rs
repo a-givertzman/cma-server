@@ -18,7 +18,8 @@ use crate::{
                 fn_add::FnAdd, fn_bit_and::FnBitAnd, fn_bit_not::FnBitNot, fn_bit_or::FnBitOr, fn_bit_xor::FnBitXor,
                 fn_div::FnDiv, fn_mul::FnMul, fn_pow::FnPow, fn_sub::FnSub,
             },
-            plot::fn_plot::FnPlot, sql_metric::SqlMetric
+            plot::fn_plot::FnPlot,
+            // sql_metric::SqlMetric
         },
         task_nodes::TaskNodes,
     },
@@ -189,11 +190,12 @@ impl NestedFn {
                         )))
                     }
                     //
-                    Functions::SqlMetric => {
-                        Rc::new(RefCell::new(Box::new(
-                            SqlMetric::new(parent, conf, task_nodes, services)
-                        )))
-                    }
+                    // TODO: To be removed
+                    // Functions::SqlMetric => {
+                    //     Rc::new(RefCell::new(Box::new(
+                    //         SqlMetric::new(parent, conf, task_nodes, services)
+                    //     )))
+                    // }
                     //
                     Functions::PointId => {
                         let name = "input";

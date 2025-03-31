@@ -109,7 +109,7 @@ impl TaskNodes {
                         var,
                     );
                 }
-                self.new_node_vars.as_mut().unwrap().addVar(name.clone().into());
+                self.new_node_vars.as_mut().unwrap().add_var(name.clone().into());
             }
             None => panic!("{}.addVar | Error: call beginNewNode first, then you can add inputs", self.id),
         }
@@ -120,7 +120,7 @@ impl TaskNodes {
         assert!(!name.clone().into().is_empty(), "Variable name can't be emty");
         match self.new_node_vars {
             Some(_) => {
-                self.new_node_vars.as_mut().unwrap().addVar(name.clone().into());
+                self.new_node_vars.as_mut().unwrap().add_var(name.clone().into());
             }
             None => panic!("{}.addVarOut | Error: call beginNewNode first, then you can add inputs", self.id),
         }
@@ -131,7 +131,7 @@ impl TaskNodes {
         match self.new_node_vars {
             Some(_) => {
                 let mut vars: Vec<FnInOutRef> = vec![];
-                for var_name in self.new_node_vars.as_mut().unwrap().getVars() {
+                for var_name in self.new_node_vars.as_mut().unwrap().get_vars() {
                     match self.vars.get(&var_name) {
                         Some(var) => {
                             vars.push(

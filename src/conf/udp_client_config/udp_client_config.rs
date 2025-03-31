@@ -58,7 +58,7 @@ impl UdpClientConfig {
     ///
     /// Creates new instance of the [UdpClientConfig]:
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
-        log::trace!("UdpClientConfig.new | conf: {:#?}", conf);
+        log::debug!("UdpClientConfig.new | conf: {:#?}", conf);
         let self_id = format!("UdpClientConfig({})", conf.key);
         let sufix = conf.sufix().unwrap();
         let self_name = Name::new(parent, if sufix.is_empty() {conf.name().unwrap()} else {sufix});
@@ -84,7 +84,7 @@ impl UdpClientConfig {
         let diagnosis = conf.get_diagnosis(&self_name);
         log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
-        for key in conf.keys() {
+        for key in conf.keys(&["description", "sudscribe", "send-to", "cycle", "reconnect", "protocol", "local-address", "remote-address", "mtu", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == keywd::Kind::Db {
                 let db_name = keyword.name();

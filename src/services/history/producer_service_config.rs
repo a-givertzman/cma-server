@@ -55,13 +55,13 @@ impl ProducerServiceConfig {
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
         let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
-        log::debug!("{}.new | send_to: '{}'", self_id, send_to);
+        log::debug!("{}.new | send-to: '{}'", self_id, send_to);
         let debug = conf.get("debug").unwrap_or(false);
         log::debug!("{}.new | debug: '{}'", self_id, debug);
         let mut nodes = IndexMap::new();
-        for node_name in conf.keys() {
+        for node_name in conf.keys(&["cycle", "send-to", "debug"]) {
             let node_conf: ConfTree = conf.get(&node_name).unwrap();
-            for key in &node_conf.keys() {
+            for key in &node_conf.keys(&[""]) {
                 let keyword = FnConfKeywd::from_str(key).unwrap();
                 if keyword.kind() == FnConfKindName::Point {
                     let point_name = format!("{}/{}", self_name, keyword.data());

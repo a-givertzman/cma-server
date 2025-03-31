@@ -36,7 +36,7 @@ impl SlmpDbConfig {
         let size: u64 = conf.get("size").unwrap();
         log::debug!("{}.new | size: {:?}", self_id, size);
         let mut points = vec![];
-        for key in conf.keys() {
+        for key in conf.keys(&["cycle", "description", "device-code", "offset", "size"]) {
             let keyword = FnConfKeywd::from_str(&key).unwrap();
             if keyword.kind() == FnConfKindName::Point {
                 let point_name = format!("{}/{}", self_name, keyword.data());

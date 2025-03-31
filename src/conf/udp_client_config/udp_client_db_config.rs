@@ -26,7 +26,7 @@ impl UdpClientDbConfig {
         let description = conf.get("description").unwrap_or_default();
         log::debug!("{}.new | description: {:?}", self_id, description);
         let mut points = vec![];
-        for key in conf.keys() {
+        for key in conf.keys(&["description"]) {
             let keyword = FnConfKeywd::from_str(&key).unwrap();
             if keyword.kind() == FnConfKindName::Point {
                 let point_name = format!("{}/{}", self_name, keyword.data());

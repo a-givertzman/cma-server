@@ -26,7 +26,7 @@ mod task_config_read {
     ///
     #[test]
     fn valid() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
         let self_id = "task_config_new_test";
@@ -35,8 +35,8 @@ mod task_config_read {
         let target = TaskConfig {
             name: Name::new(&self_name, "Task1"),
             cycle: Some(Duration::from_millis(100)),
-            rx: format!("recv-queue"),
-            rx_max_length: 10000,
+            // rx: format!("recv-queue"),
+            // rx_max_length: 10000,
             subscribe: ConfSubscribe::new(serde_yaml::Value::Null),
             vars: vec![format!("VarName2")],
             nodes: IndexMap::from([
@@ -103,9 +103,9 @@ mod task_config_read {
         };
         log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/conf/task_config/task_config_test.yaml";
-        let metric_config = TaskConfig::read(&self_name, path);
-        log::trace!("fnConfig: {:?}", metric_config);
-        assert_eq!(metric_config, target);
+        let result = TaskConfig::read(&self_name, path);
+        log::trace!("fnConfig: {:?}", result);
+        assert_eq!(result, target, "\nresult: {:?}, \ntarget: {:?}", result, target);
     }
 }
 

@@ -35,7 +35,8 @@ impl Task {
         Task {
             id: conf.name.join(),
             name: conf.name.clone(),
-            in_send: HashMap::from([(conf.rx.clone(), send)]),
+            // in_send: HashMap::from([(conf.rx.clone(), send)]),
+            in_send: HashMap::from([("in-send".to_owned(), send)]),
             rx_recv: Mutex::new(Some(recv)),
             services,
             conf,
@@ -131,8 +132,9 @@ impl Service for Task {
     //
     //
     fn get_link(&mut self, name: &str) -> Sender<Point> {
-        match self.in_send.get(name) {
-            Some(send) => send.clone(),
+        // match self.in_send.get(name) {
+        match self.in_send.iter().next() {
+            Some((_, send)) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
         }
     }

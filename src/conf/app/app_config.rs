@@ -74,7 +74,7 @@ impl AppConfig {
         let description = conf.get("description").unwrap();
         log::debug!("{}.new | description: {:?}", self_id, description);
         let mut nodes = IndexMap::new();
-        for key in conf.keys().into_iter().filter(|key| ! ["name", "description", "retain"].contains(&key.to_string().as_str())) {
+        for key in conf.keys(&["name", "description", "services", "retain"]) {
             let keyword = ConfKeywd::from_str(&key).unwrap();
             match keyword.kind() {
                 k if k == ConfKind::Service.to_string() || k == ConfKind::Task.to_string() => {

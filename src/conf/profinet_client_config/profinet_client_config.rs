@@ -56,9 +56,8 @@ impl ProfinetClientConfig {
     ///
     /// Creates new instance of the [ProfinetClientConfig]:
     pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
-        log::trace!("ProfinetClientConfig.new | conf_tree: {:#?}", conf);
         let self_id = format!("ProfinetClientConfig({})", conf.key);
-        log::trace!("{}.new | conf: {:?}", self_id, conf);
+        log::trace!("{}.new | conf: {:#?}", self_id, conf);
         let self_name = Name::new(parent, conf.sufix().unwrap());
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = conf.get_duration("cycle").ok();
@@ -85,7 +84,7 @@ impl ProfinetClientConfig {
         let diagnosis = conf.get_diagnosis(&self_name);
         log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::new();
-        for key in conf.keys() {
+        for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "protocol", "description", "ip", "rack", "slot", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();
