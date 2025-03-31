@@ -3,12 +3,12 @@
 mod udp_client {
     use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use rand::Rng;
-    use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::udp_client_config::udp_client_config::UdpClientConfig,
-        services::{safe_lock::rwlock::SafeLock, services::Services, task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient},
+        services::{task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient},
         tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig},
     };
     ///
@@ -54,15 +54,20 @@ mod udp_client {
         let test_data: Vec<i16> = (0..count).map(|_| rng.random_range(-2048..2048) as i16).collect();
         // let test_data: Vec<i16> = (0..count).collect();
         log::info!("{}.random_i16 | test data len: {}", self_id, test_data.len());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
         ))));
         let path = "./src/tests/unit/services/udp_client/udp-client.yaml";
         let conf = UdpClientConfig::read(self_id, path);
         let udp_client = Arc::new(RwLock::new(UdpClient::new(conf, services.clone())));
         services.wlock(self_id).insert(udp_client.clone());
-        // let conf = MultiQueueConfig::from_yaml(
+        // let conf = MultiQueueConf::from_yaml(
         //     self_id,
         //     &serde_yaml::from_str(r"service MultiQueue:
         //         in queue in-queue:

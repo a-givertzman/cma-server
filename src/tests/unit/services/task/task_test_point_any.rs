@@ -1,13 +1,13 @@
 #[cfg(test)]
 
 mod task {
-        use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
     use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
-        services::{safe_lock::rwlock::SafeLock, services::Services, task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver}},
+        services::task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver},
     };
     ///
     ///
@@ -53,7 +53,12 @@ mod task {
         "#, self_name)).unwrap();
         let config = TaskConfig::from_yaml(&self_name, &conf);
         log::trace!("config: {:?}", &config);
-        let services = Arc::new(RwLock::new(Services::new(&self_name, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
             &self_name.join(),
             "",

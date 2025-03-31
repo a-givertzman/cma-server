@@ -12,8 +12,8 @@ mod multi_queue {
         stuff::{random_test_values::RandomTestValues, max_test_duration::TestDuration, wait::WaitTread},
     };
     use crate::{
-        conf::multi_queue_config::MultiQueueConfig,
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services},
+        conf::multi_queue_config::MultiQueueConf,
+        services::{safe_lock::rwlock::SafeLock, services::Services},
         tests::unit::services::multi_queue::{mock_send_service::MockSendService, multi_queue_subscribe_test::MockReceiver},
     };
     ///
@@ -56,7 +56,7 @@ mod multi_queue {
                 send-to:  # direct send links - are empty, because only client subscribtions will be used
         "#.to_string();
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(self_id, &conf);
+        let mq_conf = MultiQueueConf::from_yaml(self_id, &conf);
         log::debug!("mqConf: {:?}", mq_conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));

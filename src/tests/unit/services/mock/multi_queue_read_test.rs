@@ -6,7 +6,7 @@ mod multi_queue {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::multi_queue_config::MultiQueueConfig, services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::nested_function::reset_counter::AtomicReset},
+        conf::services::{safe_lock::rwlock::SafeLock, services::Services, task::nested_function::reset_counter::AtomicReset},
         tests::unit::services::multi_queue::{mock_recv_service::MockRecvService, mock_send_service::{self, MockSendService}},
     };
     ///
@@ -96,7 +96,7 @@ mod multi_queue {
             conf = format!("{}\n                    - {}.in-queue", conf, s.read().unwrap().name().join())
         }
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(self_id, &conf);
+        let mq_conf = MultiQueueConf::from_yaml(self_id, &conf);
         log::debug!("mqConf: {:?}", mq_conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());

@@ -1,8 +1,8 @@
 #[cfg(test)]
 
 mod tcp_client {
-        use sal_sync::services::{
-        entity::{object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::service::Service
+    use sal_sync::services::{
+        conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services
     };
     use std::{io::Write, net::TcpListener, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
@@ -10,7 +10,7 @@ mod tcp_client {
     use crate::{
         conf::tcp_client_config::TcpClientConfig,
         core_::net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize},
-        services::{safe_lock::rwlock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
+        services::tcp_client::tcp_client::TcpClient,
         tcp::steam_read::StreamRead, tests::unit::services::tcp_client::mock_multiqueue::MockMultiQueue,
     };
     ///
@@ -84,7 +84,12 @@ mod tcp_client {
         );
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         let multi_queue = Arc::new(RwLock::new(MockMultiQueue::new(self_id, "", Some(total_count))));
         let tcp_client = Arc::new(RwLock::new(TcpClient::new(conf, services.clone())));
         let multi_queue_service_id = multi_queue.read().unwrap().id().to_owned();

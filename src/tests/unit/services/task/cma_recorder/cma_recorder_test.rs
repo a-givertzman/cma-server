@@ -2,14 +2,14 @@
 
 mod cma_recorder {
         use regex::Regex;
-    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
     use std::{env, fs, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{api_client_config::ApiClientConfig, multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
+        conf::{api_client_config::ApiClientConfig, task_config::TaskConfig},
         services::{
-            api_cient::api_client::ApiClient, multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services,
+            api_cient::api_client::ApiClient,
             task::{task::Task, task_test_receiver::TaskTestReceiver},
         },
         tests::unit::services::task::task_test_producer::TaskTestProducer,
@@ -44,7 +44,9 @@ mod cma_recorder {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, ConfTree::new_root(serde_yaml::from_str(r#""#).unwrap()),
+        ))));
         let mut tasks = vec![];
         let mut task_handles = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/cma-recorder.yaml";
@@ -67,7 +69,7 @@ mod cma_recorder {
             }
             Err(err) => panic!("{}.read | File {} reading error: {:?}", self_id, path, err),
         }
-        let conf = MultiQueueConfig::from_yaml(
+        let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:

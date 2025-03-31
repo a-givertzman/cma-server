@@ -1,13 +1,17 @@
 #[cfg(test)]
 
 mod fn_export {
-        use sal_sync::services::{entity::name::Name, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
+    use sal_sync::services::{
+        conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name,
+        multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf},
+        safe_lock::rwlock::SafeLock, service::service::Service, services::Services,
+    };
     use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig},
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
+        conf::task_config::TaskConfig,
+        services::task::{task::Task, task_test_receiver::TaskTestReceiver},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer,
     };
     ///
@@ -23,14 +27,24 @@ mod fn_export {
     ///
     /// returns:
     ///  - ...
-    fn init_each() -> () {}
+    fn init_each(dbg: &str) -> Arc<RwLock<Services>> {
+        let services = Arc::new(RwLock::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
+        ))));
+        services
+    }
     ///
     /// Testing Task function 'Export' with 'enable' input used
     #[test]
     fn export_point_with_enable() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        init_each();
         let self_id = "App";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -39,10 +53,7 @@ mod fn_export {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
-        ))));
+        let services = init_each(self_id);
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -74,7 +85,7 @@ mod fn_export {
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
         services.wlock(self_id).insert(task.clone());
-        let conf = MultiQueueConfig::from_yaml(
+        let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
@@ -176,7 +187,6 @@ mod fn_export {
     fn export_point_without_enable() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        init_each();
         let self_id = "App";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -185,10 +195,7 @@ mod fn_export {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
-        ))));
+        let services = init_each(self_id);
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -221,7 +228,7 @@ mod fn_export {
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
 
         services.wlock(self_id).insert(task.clone());
-        let conf = MultiQueueConfig::from_yaml(
+        let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
@@ -308,7 +315,6 @@ mod fn_export {
     fn export_unconfigured_point() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        init_each();
         let self_id = "App";
         let self_name = Name::new("", self_id);
         println!("\n{}", self_id);
@@ -317,10 +323,7 @@ mod fn_export {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
-        ))));
+        let services = init_each(self_id);
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -351,7 +354,7 @@ mod fn_export {
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
 
         services.wlock(self_id).insert(task.clone());
-        let conf = MultiQueueConfig::from_yaml(
+        let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:

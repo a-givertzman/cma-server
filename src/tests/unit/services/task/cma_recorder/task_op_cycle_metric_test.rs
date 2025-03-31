@@ -1,13 +1,13 @@
 #[cfg(test)]
 
 mod cma_recorder {
-        use sal_sync::services::{entity::{name::Name, point::point::Point}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, service::service::Service};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, point::point::Point}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
     use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, task_config::TaskConfig}, 
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, services::Services, task::{task::Task, task_test_receiver::TaskTestReceiver}},
+        conf::task_config::TaskConfig,
+        services::task::{task::Task, task_test_receiver::TaskTestReceiver},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer
     };
     ///
@@ -39,9 +39,14 @@ mod cma_recorder {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-            Some("assets/testing/retain/"),
-            Some(RetainPointConf::new("point/id.json", None))
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+            "#).unwrap()),
         ))));
         let config = TaskConfig::from_yaml(
             &self_name,
@@ -125,7 +130,7 @@ mod cma_recorder {
         let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
         services.wlock(self_id).insert(task.clone());
-        let conf = MultiQueueConfig::from_yaml(
+        let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:

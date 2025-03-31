@@ -1,14 +1,15 @@
 #[cfg(test)]
 
 mod tcp_server {
-    use sal_sync::services::{entity::name::Name, retain::retain_conf::RetainConf, service::service::Service};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
     use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues, wait::WaitTread}, session::test_session::TestSession};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{multi_queue_config::MultiQueueConfig, tcp_server_config::TcpServerConfig},
-        services::{multi_queue::multi_queue::MultiQueue, safe_lock::rwlock::SafeLock, server::tcp_server::TcpServer, services::Services,
-            task::{task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver}
+        conf::tcp_server_config::TcpServerConfig,
+        services::{
+            server::tcp_server::TcpServer,
+            task::{task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver},
         },
         tests::unit::services::tcp_server::{emulated_tcp_client_recv::EmulatedTcpClientRecv, emulated_tcp_client_send::EmulatedTcpClientSend},
     };
@@ -48,7 +49,12 @@ mod tcp_server {
         let total_count = test_data.len();
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -73,7 +79,7 @@ mod tcp_server {
                 send-to:
         "#;
         let mq_conf = serde_yaml::from_str(mq_conf).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(self_name, &mq_conf);
+        let mq_conf = MultiQueueConf::from_yaml(self_name, &mq_conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let producer = Arc::new(RwLock::new(TaskTestProducer::new(
@@ -143,7 +149,12 @@ mod tcp_server {
         let total_count = test_data.len();
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -166,7 +177,7 @@ mod tcp_server {
                     - {}/TaskTestReceiver.queue
         "#, self_name);
         let mq_conf = serde_yaml::from_str(&mq_conf).unwrap();
-        let mq_conf = MultiQueueConfig::from_yaml(self_name, &mq_conf);
+        let mq_conf = MultiQueueConf::from_yaml(self_name, &mq_conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
         services.wlock(self_id).insert(mq_service.clone());
         let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(

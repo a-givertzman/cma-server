@@ -1,9 +1,8 @@
 #[cfg(test)]
 
 mod sql_metric {
-                use regex::RegexBuilder;
-    use sal_sync::services::entity::{name::Name, point::point::{Point, ToPoint}};
-    use sal_sync::services::retain::retain_conf::RetainConf;
+    use regex::RegexBuilder;
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, point::point::{Point, ToPoint}}, services::Services};
     use std::sync::RwLock;
     use std::sync::{Once, Arc};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -43,7 +42,12 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         nodes.build_nodes(&self_name, conf, services);
         log::debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -116,7 +120,12 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         nodes.build_nodes(&self_name, conf, services);
         log::debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -199,7 +208,12 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         nodes.build_nodes(&self_name, conf, services);
         log::debug!("taskNodes: {:?}", nodes);
         let test_data = vec![

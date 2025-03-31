@@ -6,19 +6,15 @@ mod fn_va_fft {
     use concat_in_place::strcat;
     use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
     use sal_sync::services::{
-            entity::{name::Name, object::Object, point::{point::ToPoint, point_config_filters::PointConfigFilter, point_tx_id::PointTxId}}, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf},
-            service::service::Service, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions},
+            conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, object::Object, point::{point::ToPoint, point_config_filters::PointConfigFilter, point_tx_id::PointTxId}}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}
         };
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::fn_config::FnConfig, core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::fn_in_out_ref::FnInOutRef},
-        services::{
-            safe_lock::rwlock::SafeLock, services::Services,
-            task::{
-                nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
-                task_test_receiver::TaskTestReceiver,
-            }
+        services::task::{
+            nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
+            task_test_receiver::TaskTestReceiver,
         },
     };
     ///
@@ -69,9 +65,14 @@ mod fn_va_fft {
             (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
         for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
-            let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-                Some("assets/testing/retain/"),
-                Some(RetainPointConf::new("point/id.json", None))
+            let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+                self_id, 
+                ConfTree::new_root(serde_yaml::from_str(r#"
+                    retain:
+                        path: assets/testing/retain/
+                        point:
+                            path: point/id.json
+                "#).unwrap()),
             ))));
             let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
                 self_id,
@@ -240,9 +241,14 @@ mod fn_va_fft {
             (300_000,    300_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
         for (sampl_freq, fft_size, target_ffts, threshold, target_freqs) in test_data {
-            let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(
-                Some("assets/testing/retain/"),
-                Some(RetainPointConf::new("point/id.json", None))
+            let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+                self_id, 
+                ConfTree::new_root(serde_yaml::from_str(r#"
+                    retain:
+                        path: assets/testing/retain/
+                        point:
+                            path: point/id.json
+                "#).unwrap()),
             ))));
             let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
                 self_id,

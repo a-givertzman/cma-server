@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tcp_client {
-        use sal_sync::services::{entity::{object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf};
+    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, services::Services};
     use std::{io::BufReader, net::TcpListener, sync::{Arc, Once, RwLock}, thread::{self, JoinHandle}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::tcp_client_config::TcpClientConfig,
         core_::net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}},
-        services::{safe_lock::rwlock::SafeLock, services::Services, tcp_client::tcp_client::TcpClient},
+        services::tcp_client::tcp_client::TcpClient,
         tcp::tcp_stream_write::OpResult, tests::unit::services::tcp_client::mock_multiqueue::MockMultiQueue,
     };
     ///
@@ -82,7 +82,12 @@ mod tcp_client {
         );
         let test_data: Vec<Value> = test_data.collect();
 
-        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            self_id, 
+            ConfTree::new_root(serde_yaml::from_str(r#"
+                retain:
+            "#).unwrap()),
+        ))));
         let multi_queue = Arc::new(RwLock::new(MockMultiQueue::new(self_id, "", None)));
         let tcp_client = Arc::new(RwLock::new(TcpClient::new(conf, services.clone())));
         let tcp_client_service_id = tcp_client.read().unwrap().id().to_owned();

@@ -5,7 +5,7 @@ use sal_sync::services::{
     subscription::{subscription_criteria::SubscriptionCriteria, subscriptions::Subscriptions},
 };
 use crate::{
-    conf::multi_queue_config::MultiQueueConfig, 
+    conf::
     core_::constants::constants::RECV_TIMEOUT, 
     services::{safe_lock::rwlock::SafeLock, services::Services},
 };
@@ -32,7 +32,7 @@ impl MultiQueue {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: MultiQueueConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: MultiQueueConf, services: Arc<RwLock<Services>>) -> Self {
         let self_id = format!("{}", conf.name);
         let (send, recv) = mpsc::channel();
         let send_queues = conf.send_to;
