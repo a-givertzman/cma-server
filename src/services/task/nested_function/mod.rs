@@ -45,7 +45,7 @@ pub mod fn_to_string;
 
 pub mod nested_fn;
 
-// pub mod sql_metric;
+pub mod sql_metric;
 
 pub mod edge_detection;
 pub mod export;

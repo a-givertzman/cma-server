@@ -67,10 +67,10 @@ impl TaskConfig {
         log::debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_length);
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
         let subscribe = ConfSubscribe::new(subscribe);
-        log::debug!("{}.new | sudscribe: {:#?}", self_id, subscribe);
+        log::debug!("{}.new | subscribe: {:#?}", self_id, subscribe);
         let mut node_index = 0;
         let mut nodes = IndexMap::new();
-        for key in conf.keys(&["cycle", "sudscribe", format!("in queue {}", rx).as_str()]) {
+        for key in conf.keys(&["cycle", "subscribe", format!("in queue {}", rx).as_str()]) {
             let node_conf = conf.get(key).unwrap();
             log::trace!("{}.new | nodeConf: {:?}", self_id, node_conf);
             node_index += 1;

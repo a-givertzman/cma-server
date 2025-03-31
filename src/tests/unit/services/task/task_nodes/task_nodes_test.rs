@@ -7,7 +7,7 @@ mod task_nodes {
     use crate::{
         conf::task_config::TaskConfig,
         services::task::{nested_function::{
-            comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult,
+            comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric,
             // sql_metric
         }, task_nodes::TaskNodes},
     };
@@ -51,7 +51,7 @@ mod task_nodes {
         ))));
         let mock_service = Arc::new(RwLock::new(MockService::new(self_id, "queue")));
         services.wlock(self_id).insert(mock_service.clone());
-        // let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);
+        let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);
         let fn_count_count = fn_count::COUNT.load(Ordering::SeqCst);
         let fn_ge_count = fn_ge::COUNT.load(Ordering::SeqCst);
         task_nodes.build_nodes(&Name::from(self_id), conf, services);

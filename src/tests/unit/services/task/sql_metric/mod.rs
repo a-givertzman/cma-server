@@ -1,1 +1,1 @@
-pub mod sql_metric_test;
+mod sql_metric_test;
