@@ -10,6 +10,8 @@ use crate::conf::fn_::{
 /// ```yaml
 /// service Task operatingMetric:
 ///     cycle: 100 ms
+///         in queue recv-queue:
+///             max-length: 10000
 ///     metrics:
 ///         fn sqlUpdateMetric:
 ///             table: "TableName"
@@ -26,8 +28,8 @@ use crate::conf::fn_::{
 pub struct TaskConfig {
     pub(crate) name: Name,
     pub(crate) cycle: Option<Duration>,
-    // pub(crate) rx: String,
-    // pub(crate) rx_max_length: i64,
+    pub(crate) rx: String,
+    pub(crate) rx_max_length: i64,
     pub(crate) subscribe: ConfSubscribe,
     pub(crate) nodes: IndexMap<String, FnConfKind>,
     pub(crate) vars: Vec<String>,
@@ -40,6 +42,8 @@ impl TaskConfig {
     /// ```yaml
     /// task taskName:
     ///     cycle: 100 ms
+    ///     in queue recv-queue:
+    ///         max-length: 10000
     ///     fn sqlUpdateMetric:
     ///         table: "TableName"
     ///         sql: "UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';"
@@ -59,14 +63,14 @@ impl TaskConfig {
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", self_id, cycle);
-        // let (rx, rx_max_length) = conf.get_in_queue().unwrap();
-        // log::debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_length);
+        let (rx, rx_max_length) = conf.get_in_queue().unwrap();
+        log::debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_length);
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
         let subscribe = ConfSubscribe::new(subscribe);
         log::debug!("{}.new | sudscribe: {:#?}", self_id, subscribe);
         let mut node_index = 0;
         let mut nodes = IndexMap::new();
-        for key in conf.keys(&["cycle", "sudscribe"]) {
+        for key in conf.keys(&["cycle", "sudscribe", format!("in queue {}", rx).as_str()]) {
             let node_conf = conf.get(key).unwrap();
             log::trace!("{}.new | nodeConf: {:?}", self_id, node_conf);
             node_index += 1;
@@ -79,8 +83,8 @@ impl TaskConfig {
         TaskConfig {
             name: self_name,
             cycle,
-            // rx,
-            // rx_max_length,
+            rx,
+            rx_max_length,
             subscribe,
             nodes,
             vars,

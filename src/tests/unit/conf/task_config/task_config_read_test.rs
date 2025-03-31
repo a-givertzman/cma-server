@@ -35,8 +35,8 @@ mod task_config_read {
         let target = TaskConfig {
             name: Name::new(&self_name, "Task1"),
             cycle: Some(Duration::from_millis(100)),
-            // rx: format!("recv-queue"),
-            // rx_max_length: 10000,
+            rx: format!("recv-queue"),
+            rx_max_length: 10000,
             subscribe: ConfSubscribe::new(serde_yaml::Value::Null),
             vars: vec![format!("VarName2")],
             nodes: IndexMap::from([
