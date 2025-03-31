@@ -65,7 +65,7 @@ impl ProfinetClientConfig {
         let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
         log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
         let subscribe = conf.get("subscribe").unwrap();
-        log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
+        log::debug!("{}.new | subscribe: {:?}", self_id, subscribe);
         let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: {}", self_id, send_to);
         if let Ok((_, _)) = conf.get_by_keywd("out", ConfKind::Queue) {

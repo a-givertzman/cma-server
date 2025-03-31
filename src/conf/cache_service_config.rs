@@ -39,7 +39,7 @@ impl CacheServiceConfig {
         let retain_delay = conf.get_duration("retain-delay").unwrap_or(Duration::from_secs(30));
         log::debug!("{}.new | retain-delay: {:?}", self_id, retain_delay);
         let subscribe = ConfSubscribe::new(conf.get("subscribe").unwrap_or(serde_yaml::Value::Null));
-        log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
+        log::debug!("{}.new | subscribe: {:?}", self_id, subscribe);
         Self {
             name: self_name,
             retain,

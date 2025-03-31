@@ -57,7 +57,7 @@ impl SlmpClientConfig {
         let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(1), |reconnect| reconnect);
         log::debug!("{}.new | reconnect: {:?}", self_id, reconnect_cycle);
         let subscribe = conf.get("subscribe").unwrap();
-        log::debug!("{}.new | sudscribe: {:?}", self_id, subscribe);
+        log::debug!("{}.new | subscribe: {:?}", self_id, subscribe);
         let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
         log::debug!("{}.new | send-to: '{}'", self_id, send_to);
         let description = conf.get("description").unwrap();
@@ -69,7 +69,7 @@ impl SlmpClientConfig {
         let diagnosis = conf.get_diagnosis(&self_name);
         log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
         let mut dbs = IndexMap::new();
-        for key in conf.keys(&["cycle", "reconnect", "sudscribe", "send-to", "description", "ip", "port", "diagnosis"]) {
+        for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "description", "ip", "port", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();
