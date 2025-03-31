@@ -3482,7 +3482,7 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 [[package]]
 name = "sal-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/rust-sal-core.git?tag=0.0.2#7aa0c16d2dc69023f334823aa7089176cedb9983"
+source = "git+https://github.com/a-givertzman/rust-sal-core.git?tag=0.0.3#5a8bf625511dea0a6135a4c0fc641ac5343196cd"
 dependencies = [
  "debugging",
  "env_logger",
@@ -3493,7 +3493,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.0.4"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.0.4#8d0b8cec3775048d1a2b964688704f8477f1f2e7"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.0.4#17f7ca5c9d0da10cf1418d59423165a7c22116bb"
 dependencies = [
  "api-tools 0.0.6 (git+https://github.com/a-givertzman/rust-api-tools.git?tag=0.1.1)",
  "chrono",

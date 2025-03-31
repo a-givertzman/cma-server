@@ -4,7 +4,10 @@ version = "0.1.3"
 edition = "2021"
 build = "build.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+#
+# Used for `Plot` service and `fnPlot` function only
+#plot = ["dep:winit"]
 
 [dependencies]
 log = "^0.4"
@@ -16,7 +19,7 @@ chrono = "^0.4"
 testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.0.6" }
-sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.2" }
+sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
 # sal-sync = { path = "../sal-sync" }
 sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.0.4" }
 
@@ -61,8 +64,8 @@ egui = "^0.31"
 egui_plot = "^0.31"
 egui_extras = "^0.31"
 eframe = "^0.31"
-winit = "^0.30"
 hsl = "^0.1"
+winit = { version = "^0.30" }
 
 uid = "^0.1"
 

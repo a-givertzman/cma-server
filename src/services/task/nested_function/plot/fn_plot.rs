@@ -3,7 +3,7 @@ use eframe::EventLoopBuilderHook;
 use egui::ViewportBuilder;
 use indexmap::IndexMap;
 use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
-use winit::platform::x11::EventLoopBuilderExtX11;
+// use winit::platform::x11::EventLoopBuilderExtX11;
 use std::{mem::MaybeUninit, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Once}, thread};
 use crate::{
     core_::types::fn_in_out_ref::FnInOutRef,
@@ -149,6 +149,7 @@ impl FnInOut for FnPlot {}
 static COUNT: AtomicUsize = AtomicUsize::new(1);
 
 
+// #[cfg(feature = "plot")]
 fn ui_plot(parent: String) -> &'static Sender<(String, egui::accesskit::Point)> {
     // Create an uninitialized static
     static mut SINGLETON: MaybeUninit<Sender<(String, egui::accesskit::Point)>> = MaybeUninit::uninit();
@@ -159,7 +160,9 @@ fn ui_plot(parent: String) -> &'static Sender<(String, egui::accesskit::Point)> 
             let singleton = send.clone();
             thread::spawn(|| {
                 let event_loop_builder: Option<EventLoopBuilderHook> = Some(Box::new(|event_loop_builder| {
-                    event_loop_builder.with_any_thread(true);
+                    event_loop_builder.build().unwrap();
+                    // winit::platform::x11::EventLoopBuilderExtX11::with_any_thread(event_loop_builder, true);
+                    // event_loop_builder.with_any_thread(true);
                 }));
                 eframe::run_native(
                     "TaskPlot", 
