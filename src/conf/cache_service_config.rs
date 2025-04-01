@@ -28,18 +28,18 @@ impl CacheServiceConfig {
     ///     suscribe:
     ///         /App/MultiQueue: []
     /// ````
-    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
-        log::trace!("CacheServiceConfig.new | conf: {:?}", conf);
-        let self_id = format!("CacheServiceConfig({})", conf.key);
-        let sufix = conf.sufix().unwrap();
-        let self_name = Name::new(parent, if sufix.is_empty() {conf.name().unwrap()} else {sufix});
-        log::debug!("{}.new | name: {:?}", self_id, self_name);
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
+        let me = conf.sufix_or(conf.name().unwrap());
+        let dbg = format!("CacheServiceConfig({})", me);
+        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        let self_name = Name::new(parent, me);
+        log::debug!("{}.new | name: {:?}", dbg, self_name);
         let retain = conf.get("retain").unwrap_or(false);
-        log::debug!("{}.new | retain: {:?}", self_id, retain);
+        log::debug!("{}.new | retain: {:?}", dbg, retain);
         let retain_delay = conf.get_duration("retain-delay").unwrap_or(Duration::from_secs(30));
-        log::debug!("{}.new | retain-delay: {:?}", self_id, retain_delay);
+        log::debug!("{}.new | retain-delay: {:?}", dbg, retain_delay);
         let subscribe = ConfSubscribe::new(conf.get("subscribe").unwrap_or(serde_yaml::Value::Null));
-        log::debug!("{}.new | subscribe: {:?}", self_id, subscribe);
+        log::debug!("{}.new | subscribe: {:?}", dbg, subscribe);
         Self {
             name: self_name,
             retain,

@@ -20,14 +20,14 @@ pub struct JdsServiceConfig {
 impl JdsServiceConfig {
     ///
     /// Creates new instance of the [JdsServiceConfig]:
-    pub fn new(conf_tree: &mut ConfTree) -> Self {
-        log::trace!("JdsServiceConfig.new | confTree: {:?}", conf_tree);
+    pub fn new(conf: ConfTree) -> Self {
+        log::trace!("JdsServiceConfig.new | confTree: {:?}", conf);
         // self conf from first sub node
         //  - if additional sub nodes presents hit warning, FnConf must have single item
-        if conf_tree.count() > 1 {
-            log::error!("JdsServiceConfig.new | JdsServiceConfig conf must have single item, additional items was ignored: {:?}", conf_tree)
+        if conf.count() > 1 {
+            log::error!("JdsServiceConfig.new | JdsServiceConfig conf must have single item, additional items was ignored: {:?}", conf)
         };
-        match conf_tree.next() {
+        match conf.next() {
             Some(mut conf) => {
                 let self_id = format!("JdsServiceConfig({})", conf.key);
                 log::trace!("{}.new | conf: {:?}", self_id, conf);

@@ -18,10 +18,9 @@ pub struct SlmpDbConfig {
 impl SlmpDbConfig {
     ///
     /// Creates new instance of the SlmpDbConfig
-    pub fn new(parent: impl Into<String>, name: &str, mut conf: ConfTree) -> Self {
+    pub fn new(parent: impl Into<String>, name: &str, conf: ConfTree) -> Self {
         log::trace!("SlmpDbConfig.new | conf: {:?}", conf);
-        let self_conf = conf.clone();
-        let self_id = format!("SlmpDbConfig({})", self_conf.key);
+        let self_id = format!("SlmpDbConfig({})", name);
         let self_name = Name::new(parent, name);
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let cycle = conf.get_duration("cycle").ok();

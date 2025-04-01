@@ -57,47 +57,48 @@ pub struct UdpClientConfig {
 impl UdpClientConfig {
     ///
     /// Creates new instance of the [UdpClientConfig]:
-    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
-        let self_id = format!("UdpClientConfig({})", conf.key);
-        log::trace!("{}.new | conf: {:#?}", self_id, conf);
-        let sufix = conf.sufix().unwrap();
-        let self_name = Name::new(parent, if sufix.is_empty() {conf.name().unwrap()} else {sufix});
-        log::debug!("{}.new | name: {:?}", self_id, self_name);
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
+        let me = conf.sufix_or(conf.name().unwrap());
+        let dbg = format!("UdpClientConfig({})", me);
+        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        let self_name = Name::new(parent, me);
+        log::debug!("{}.new | name: {:?}", dbg, self_name);
         let description = conf.get("description").unwrap_or_default();
-        log::debug!("{}.new | description: {:?}", self_id, description);
+        log::debug!("{}.new | description: {:?}", dbg, description);
         let subscribe = ConfSubscribe::new(conf.get("subscribe").unwrap_or(serde_yaml::Value::Null));
-        log::debug!("{}.new | subscribe: {:?}", self_id, subscribe);
-        let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
-        log::debug!("{}.new | send-to: {}", self_id, send_to);
+        log::debug!("{}.new | subscribe: {:?}", dbg, subscribe);
+        let send_to: String = conf.get("send-to").unwrap();
+        let send_to = LinkName::from_str(&send_to).unwrap();
+        log::debug!("{}.new | send-to: {}", dbg, send_to);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect = conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
-        log::debug!("{}.new | reconnect: {:?}", self_id, reconnect);
+        log::debug!("{}.new | reconnect: {:?}", dbg, reconnect);
         let protocol = conf.get("protocol").unwrap();
-        log::debug!("{}.new | protocol: {:?}", self_id, protocol);
+        log::debug!("{}.new | protocol: {:?}", dbg, protocol);
         let local_address = conf.get("local-address").unwrap();
-        log::debug!("{}.new | local-address: {:?}", self_id, local_address);
+        log::debug!("{}.new | local-address: {:?}", dbg, local_address);
         let remote_address = conf.get("remote-address").unwrap();
-        log::debug!("{}.new | remote-address: {:?}", self_id, remote_address);
+        log::debug!("{}.new | remote-address: {:?}", dbg, remote_address);
         let mtu = conf.get("mtu");
-        log::debug!("{}.new | mtu: {:?}", self_id, mtu);
+        log::debug!("{}.new | mtu: {:?}", dbg, mtu);
         let diagnosis = conf.get_diagnosis(&self_name);
-        log::debug!("{}.new | diagnosis: {:#?}", self_id, diagnosis);
+        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis);
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for key in conf.keys(&["description", "subscribe", "send-to", "cycle", "reconnect", "protocol", "local-address", "remote-address", "mtu", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == keywd::Kind::Db {
                 let db_name = keyword.name();
                 let device_conf = conf.get(key).unwrap();
-                log::debug!("{}.new | DB '{}'", self_id, db_name);
-                log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, db_name, device_conf);
+                log::debug!("{}.new | DB '{}'", dbg, db_name);
+                log::trace!("{}.new | DB '{}'   |   conf: {:?}", dbg, db_name, device_conf);
                 let node_conf = UdpClientDbConfig::new(&self_name, &db_name, device_conf);
                 dbs.insert(
                     db_name,
                     node_conf,
                 );
             } else {
-                log::debug!("{}.new | device expected, but found {:?}", self_id, keyword);
+                log::debug!("{}.new | device expected, but found {:?}", dbg, keyword);
             }
         }
         UdpClientConfig {

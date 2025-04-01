@@ -18,32 +18,31 @@ impl ProfinetDbConfig {
     /// Creates new instance of the ProfinetDbConfig
     pub fn new(parent: impl Into<String>, name: &str, conf: ConfTree) -> Self {
         log::trace!("ProfinetDbConfig.new | conf: {:?}", conf);
-        let self_conf = conf.clone();
-        let self_id = format!("ProfinetDbConfig({})", self_conf.key);
+        let dbg = format!("ProfinetDbConfig({})", name);
         let self_name = Name::new(parent, name);
-        log::debug!("{}.new | name: {:?}", self_id, self_name);
+        log::debug!("{}.new | name: {:?}", dbg, self_name);
         let description = conf.get("description").unwrap_or(String::new());
-        log::debug!("{}.new | description: {:?}", self_id, description);
+        log::debug!("{}.new | description: {:?}", dbg, description);
         let number = conf.get("number").unwrap();
-        log::debug!("{}.new | number: {:?}", self_id, number);
+        log::debug!("{}.new | number: {:?}", dbg, number);
         let offset = conf.get("offset").unwrap();
-        log::debug!("{}.new | offset: {:?}", self_id, offset);
+        log::debug!("{}.new | offset: {:?}", dbg, offset);
         let size = conf.get("size").unwrap();
-        log::debug!("{}.new | size: {:?}", self_id, size);
+        log::debug!("{}.new | size: {:?}", dbg, size);
         let mut points = vec![];
         for key in conf.keys(&["description", "number", "offset", "size"]) {
             let keyword = FnConfKeywd::from_str(&key).unwrap();
             if keyword.kind() == FnConfKindName::Point {
                 let point_name = format!("{}/{}", self_name, keyword.data());
                 let point_conf = conf.get(key).unwrap();
-                log::trace!("{}.new | Point '{}'", self_id, point_name);
-                log::trace!("{}.new | Point '{}'   |   conf: {:?}", self_id, point_name, point_conf);
+                log::trace!("{}.new | Point '{}'", dbg, point_name);
+                log::trace!("{}.new | Point '{}'   |   conf: {:?}", dbg, point_name, point_conf);
                 let node_conf = PointConfig::new(&self_name, &point_conf);
                 points.push(
                     node_conf,
                 );
             } else {
-                log::debug!("{}.new | device expected, but found {:?}", self_id, keyword);
+                log::debug!("{}.new | device expected, but found {:?}", dbg, keyword);
             }
         }
         Self {

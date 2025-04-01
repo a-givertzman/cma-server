@@ -37,26 +37,27 @@ impl ApiClientConfig {
     ///         max-length: 10000
     ///     debug: false                # API debug mode, optional, default false
     ///                     ...
-    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> Self {
-        let self_id = format!("ApiClientConfig({})", conf.key);
-        log::trace!("ApiClientConfig.new | conf: {:?}", conf);
-        let self_name = Name::new(parent, conf.name().unwrap());
-        log::debug!("{}.new | name: {:?}", self_id, self_name);
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
+        let me = conf.sufix_or(conf.name().unwrap());
+        let dbg = format!("ApiClientConfig({})", me);
+        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        let self_name = Name::new(parent, me);
+        log::debug!("{}.new | name: {:?}", dbg, self_name);
         let address: String = conf.get("address").unwrap();
         let address: SocketAddr = address.parse().unwrap();
-        log::debug!("{}.new | address: {:?}", self_id, address);
+        log::debug!("{}.new | address: {:?}", dbg, address);
         let database = conf.get("database").unwrap();
-        log::debug!("{}.new | database: {:?}", self_id, database);
+        log::debug!("{}.new | database: {:?}", dbg, database);
         let auth_token = conf.get("auth_token").unwrap();
-        log::debug!("{}.new | auth_token: {:?}", self_id, auth_token);
+        log::debug!("{}.new | auth_token: {:?}", dbg, auth_token);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").ok();
-        log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
+        log::debug!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
         let (rx, rx_max_len) = conf.get_in_queue().unwrap();
-        log::debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_len);
+        log::debug!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_len);
         let debug: bool = conf.get("debug").unwrap_or(false);
-        log::debug!("{}.new | debug: {:?}", self_id, debug);
+        log::debug!("{}.new | debug: {:?}", dbg, debug);
         Self {
             name: self_name,
             address,

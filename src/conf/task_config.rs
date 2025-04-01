@@ -55,7 +55,7 @@ impl TaskConfig {
     ///             input2:
     ///                 fn SqlMetric:
     ///                     ...
-    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TaskConfig {
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> TaskConfig {
         log::debug!("TaskConfig.new | conf: {:#?}", conf);
         let mut vars = vec![];
         let self_id = format!("TaskConfig({})", conf.key);

@@ -37,26 +37,27 @@ impl TcpClientConfig {
     ///         max-length: 10000
     ///     send-to: MultiQueue.queue
     ///                     ...
-    pub fn new(parent: impl Into<String>, mut conf: ConfTree) -> TcpClientConfig {
-        log::trace!("TcpClientConfig.new | confTree: {:?}", conf);
-        let self_id = format!("TcpClientConfig({})", conf.key);
-        log::trace!("{}.new | selfConf: {:?}", self_id, conf);
-        let self_name = Name::new(parent, conf.name().unwrap());
-        log::debug!("{}.new | name: {:?}", self_id, self_name);
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> TcpClientConfig {
+        let me = conf.sufix_or(conf.name().unwrap());
+        let dbg = format!("TcpClientConfig({})", me);
+        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        let self_name = Name::new(parent, me);
+        log::debug!("{}.new | name: {:?}", dbg, self_name);
         let address: String = conf.get("address").unwrap();
         let self_address: SocketAddr = address.parse().unwrap();
-        log::debug!("{}.new | address: {:?}", self_id, self_address);
+        log::debug!("{}.new | address: {:?}", dbg, self_address);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").ok();
-        log::debug!("{}.new | reconnectCycle: {:?}", self_id, reconnect_cycle);
+        log::debug!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
         let (rx, rx_max_len) = conf.get_in_queue().unwrap();
         let rx_buffered = rx_max_len > 0;
-        log::debug!("{}.new | RX: {},\tmax-length: {}", self_id, rx, rx_max_len);
-        let send_to = LinkName::from_str(conf.get_send_to().unwrap().as_str()).unwrap();
-        log::debug!("{}.new | send-to: {}", self_id, send_to);
+        log::debug!("{}.new | RX: {},\tmax-length: {}", dbg, rx, rx_max_len);
+        let send_to: String = conf.get("send-to").unwrap();
+        let send_to = LinkName::from_str(&send_to).unwrap();
+        log::debug!("{}.new | send-to: {}", dbg, send_to);
         if let Ok((_, _)) = conf.get_by_keywd("out", ConfKind::Queue) {
-            log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", self_id, conf)
+            log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", dbg, conf)
         }
         TcpClientConfig {
             name: self_name,
