@@ -17,6 +17,11 @@ use lazy_static::lazy_static;
 /// - 'legend' - legend wil be displayed if true
 /// - 'enable' - enables functionality
 /// - Returns value from 'enable' input
+/// 
+/// **Note !** To activate fn Plot use:
+/// - `cargo test --features=plot` or 
+/// - `cargo run --features=plot`
+/// 
 #[derive(Debug)]
 pub struct FnPlot {
     id: String,
@@ -179,7 +184,7 @@ fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
 #[cfg(not(feature = "plot"))]
 fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
     let (send, recv) = std::sync::mpsc::channel();
-    log::info!(
+    println!(
         "fn_plot.ui_plot | To activate fn Plot use: \n\t`cargo test --features=plot` or \n\t`cargo run --features=plot`",
     );
     thread::spawn(move || {
