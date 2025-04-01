@@ -2,6 +2,7 @@ use std::{
     collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
 };
 use hashers::fx_hash::FxHasher;
+use sal_core::error::Error;
 use sal_sync::services::{entity::{cot::Cot, name::Name, point::point::Point}, safe_lock::rwlock::SafeLock, service::service_handles::ServiceHandles, services::Services, subscription::subscription_criteria::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
@@ -96,7 +97,7 @@ impl JdsConnection {
     }
     ///
     /// Main loop of the connection 
-    pub fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    pub fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
@@ -262,9 +263,9 @@ impl JdsConnection {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

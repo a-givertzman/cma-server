@@ -71,7 +71,7 @@ impl Debug for MockTcpServer {
 impl Service for MockTcpServer {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

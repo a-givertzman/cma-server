@@ -132,10 +132,10 @@ mod tests {
                 let state = self.state.clone();
                 let stream = self.stream.clone();
                 let h = thread::spawn(move || {
-                    let mut rnd = rand::thread_rng();
+                    let mut rnd = rand::rng();
                     println!("TestConnect | connecting...");
                     thread::sleep(Duration::from_millis(20));
-                    match rnd.gen_bool(0.7) {
+                    match rnd.random_bool(0.7) {
                         true => {
                             println!("TestConnect | connecting - ok");
                             stream.lock().unwrap().push(format!("Stream"));

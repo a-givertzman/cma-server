@@ -206,7 +206,7 @@ impl Service for MultiQueue {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();

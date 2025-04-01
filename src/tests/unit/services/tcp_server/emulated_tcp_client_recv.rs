@@ -1,3 +1,4 @@
+use sal_core::error::Error;
 use sal_sync::{
     kernel::state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged},
     services::{
@@ -171,7 +172,7 @@ impl Service for EmulatedTcpClientRecv {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
@@ -304,9 +305,9 @@ impl Service for EmulatedTcpClientRecv {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

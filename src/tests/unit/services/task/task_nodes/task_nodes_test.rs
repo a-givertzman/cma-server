@@ -1,6 +1,7 @@
 #[cfg(test)]
 
 mod task_nodes {
+    use sal_core::error::Error;
     use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services};
     use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -205,7 +206,7 @@ mod task_nodes {
         }
         //
         //
-        fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+        fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
             log::info!("{}.run | Starting...", self.id);
             let self_id = self.id.clone();
             let exit = self.exit.clone();
@@ -231,9 +232,9 @@ mod task_nodes {
                     Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
                 }
                 Err(err) => {
-                    let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                    log::warn!("{}", message);
-                    Err(message)
+                    let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                    log::warn!("{}", err);
+                    Err(err)
                 }
             }
         }

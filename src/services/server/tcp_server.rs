@@ -1,3 +1,4 @@
+use sal_core::error::Error;
 use sal_sync::services::{entity::{name::Name, object::Object}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services};
 use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, RwLock}, thread, time::Duration
@@ -169,7 +170,7 @@ impl Debug for TcpServer {
 impl Service for TcpServer {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
@@ -237,9 +238,9 @@ impl Service for TcpServer {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

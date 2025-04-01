@@ -1,3 +1,4 @@
+use sal_core::error::Error;
 use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, safe_lock::rwlock::SafeLock, service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services};
 use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use testing::entities::test_value::Value;
@@ -68,7 +69,7 @@ impl Debug for TaskTestProducer {
 impl Service for TaskTestProducer {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         let self_id = self.id.clone();
         let tx_id = PointTxId::from_str(&self_id);
         let mut cycle = ServiceCycle::new(&self_id, self.cycle);
@@ -106,9 +107,9 @@ impl Service for TaskTestProducer {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

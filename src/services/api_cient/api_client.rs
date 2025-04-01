@@ -1,4 +1,5 @@
 use concat_string::concat_string;
+use sal_core::error::Error;
 use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
@@ -115,7 +116,7 @@ impl Service for ApiClient {
     }
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
@@ -197,7 +198,7 @@ impl Service for ApiClient {
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
                 log::warn!("{}", message);
-                Err(message)
+                Err(Error::new(&self.id, "run").pass_with("Start failed", err.to_string()))
             }
         }
     }

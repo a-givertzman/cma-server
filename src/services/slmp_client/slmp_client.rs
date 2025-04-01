@@ -1,4 +1,5 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
+use sal_core::error::Error;
 use sal_sync::{
     collections::map::FxIndexMap, kernel::state::exit_notify::ExitNotify, services::{
         conf::diag_keywd::DiagKeywd, entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
@@ -123,7 +124,7 @@ impl Debug for SlmpClient {
 impl Service for SlmpClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
@@ -223,9 +224,9 @@ impl Service for SlmpClient {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

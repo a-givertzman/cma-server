@@ -1,3 +1,4 @@
+use sal_core::error::Error;
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::point::Point},
     service::{service::Service, service_handles::ServiceHandles},
@@ -63,7 +64,7 @@ impl Service for MockMultiQueue {
     }
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let recv = self.recv.lock().unwrap().take().unwrap();

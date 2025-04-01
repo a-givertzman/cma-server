@@ -6,6 +6,7 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
+use sal_core::error::Error;
 use sal_sync::{collections::map::FxIndexMap, kernel::state::change_notify::ChangeNotify, services::{conf::diag_keywd::DiagKeywd, entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria}};
 use testing::stuff::wait::WaitTread;
 use crate::{
@@ -385,7 +386,7 @@ impl Debug for ProfinetClient {
 impl Service for ProfinetClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         let tx_send = self.services.rlock(&self.id).get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
@@ -394,6 +395,7 @@ impl Service for ProfinetClient {
         let handle_read = self.read(tx_send.clone());
         let handle_write = self.write(tx_send);
         log::info!("{}.run | started", self.id);
+        let error = Error::new(&self.id, "run");
         match (handle_read, handle_write) {
             (Ok(handle_read), Ok(handle_write)) => {
                 Ok(ServiceHandles::new(vec![
@@ -404,15 +406,18 @@ impl Service for ProfinetClient {
             (Ok(handle_read), Err(err)) => {
                 self.exit();
                 handle_read.wait().unwrap();
-                Err(format!("{}.run | Error starting inner thread 'read': {:#?}", self.id, err))
+                Err(error.pass_with("Error starting inner thread 'read'", err.to_string()))
             }
             (Err(err), Ok(handle_write)) => {
                 self.exit();
                 handle_write.wait().unwrap();
-                Err(format!("{}.run | Error starting inner thread 'write': {:#?}", self.id, err))
+                Err(error.pass_with("Error starting inner thread 'write'", err.to_string()))
             }
             (Err(read_err), Err(write_err)) => {
-                Err(format!("{}.run | Error starting inner thread: \n\t  read: {:#?}\n\t write: {:#?}", self.id, read_err, write_err))
+                Err(error.pass_with(
+                    "Error starting inner thread",
+                    format!("\n\t  read: {:#?}\n\t write: {:#?}", read_err, write_err),
+                ))
             }
         }
     }

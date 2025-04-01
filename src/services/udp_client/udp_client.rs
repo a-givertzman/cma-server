@@ -31,6 +31,7 @@
 use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread, time::Duration};
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
+use sal_core::error::Error;
 use sal_sync::{
     collections::map::FxIndexMap, kernel::state::{change_notify::ChangeNotify, switch_state::{Switch, SwitchCondition, SwitchState}}, services::{entity::{name::Name, object::Object, point::point_tx_id::PointTxId}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services}
 };
@@ -241,7 +242,7 @@ static SELF_ID: std::sync::LazyLock<RwLock<String>> = std::sync::LazyLock::new(|
 impl Service for UdpClient {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
@@ -370,9 +371,9 @@ impl Service for UdpClient {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

@@ -1,3 +1,4 @@
+use sal_core::error::Error;
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria
 };
@@ -140,7 +141,7 @@ impl Service for Task {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         log::trace!("{}.run | Self tx_id: {}", self.id, PointTxId::from_str(&self.id));
         let self_id = self.id.clone();
@@ -210,9 +211,9 @@ impl Service for Task {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

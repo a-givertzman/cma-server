@@ -1,6 +1,7 @@
 #[cfg(test)]
 
 mod tcp_stream {
+        use sal_core::error::Error;
         use sal_sync::services::service::service_handles::ServiceHandles;
     use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
     use testing::{session::test_session::TestSession, stuff::{wait::WaitTread, max_test_duration::TestDuration}};
@@ -116,7 +117,7 @@ mod tcp_stream {
     }
     ///
     ///
-    fn server(addr: &str, mut send_bytes: Vec<u8>) -> Result<ServiceHandles<()>, String> {
+    fn server(addr: &str, mut send_bytes: Vec<u8>) -> Result<ServiceHandles<()>, Error> {
         let self_id = "Emuleted TcpServer";
         let addr = addr.to_string();
         log::info!("{}.run | Preparing thread...", self_id);
@@ -188,9 +189,9 @@ mod tcp_stream {
                 Ok(ServiceHandles::new(vec![(self_id.to_owned(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self_id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(self_id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

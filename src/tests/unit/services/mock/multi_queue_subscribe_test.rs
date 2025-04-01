@@ -198,7 +198,7 @@ impl Debug for MockReceiver {
 impl Service for MockReceiver {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let recv_limit = self.recv_limit;

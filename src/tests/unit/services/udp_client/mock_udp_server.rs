@@ -7,6 +7,7 @@
 //!     parameter: value    # meaning
 //! ```
 use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, thread, time::Duration};
+use sal_core::error::Error;
 use sal_sync::{
     kernel::state::change_notify::ChangeNotify,
     services::{entity::{name::Name, object::Object, point::point::Point},
@@ -101,7 +102,7 @@ impl Service for MockUdpServer {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();
@@ -219,9 +220,9 @@ impl Service for MockUdpServer {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }

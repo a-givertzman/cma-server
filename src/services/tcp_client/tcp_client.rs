@@ -1,3 +1,4 @@
+use sal_core::error::Error;
 use sal_sync::services::{
     entity::{name::Name, object::Object, point::point::Point}, safe_lock::rwlock::SafeLock,
     service::{service::Service, service_handles::ServiceHandles}, services::Services,
@@ -87,7 +88,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();
@@ -165,9 +166,9 @@ impl Service for TcpClient {
                 Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }
@@ -197,14 +198,14 @@ impl Service for TcpClient {
     }
     //
     //
-    fn extend_subscription(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), String> {
+    fn extend_subscription(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.extend_subscription | Does not supported", self.id())
     }
     //
     //
-    fn unsubscribe(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), String> {
+    fn unsubscribe(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.unsubscribe | Does not supported", self.id())
