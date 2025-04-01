@@ -19,9 +19,9 @@ Handling data on fly
         - [x] `ProfinetClient`
         - [x] `SlmpClient`
         - [ ] `ModbusTcp`
-- [x] [Task](#1-task-service) service - make configured computation
+- [x] [Task](#1-task-service) service - configurable computation
 - [x] `ApiClient` service - stores some data into the database
-- [x] `Plot` - Displaying values of the `Task` service on the Y(t) diagram
+- [x] `Plot` - Displaying values of the `Task` service on the Y(t) diagram, useful in the testing
 
     To activate fn `Plot` use:
     - `cargo test --features=plot` or 
