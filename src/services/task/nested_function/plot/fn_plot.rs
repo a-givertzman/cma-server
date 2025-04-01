@@ -1,10 +1,7 @@
 use chrono::Utc;
-use eframe::EventLoopBuilderHook;
-use egui::ViewportBuilder;
 use indexmap::IndexMap;
 use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
-// use winit::platform::x11::EventLoopBuilderExtX11;
-use std::{mem::MaybeUninit, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Once}, thread};
+use std::{sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender}, thread};
 use crate::{
     core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{
@@ -12,8 +9,7 @@ use crate::{
         fn_kind::FnKind, fn_result::FnResult,
     },
 };
-
-use super::ui_plot::UiPlot;
+use lazy_static::lazy_static;
 ///
 /// Function | Displaying values of the inputs on the diagram
 /// - 'x' - input of the x-values, default current time
@@ -41,7 +37,7 @@ impl FnPlot {
         let id = format!("{}/FnPlot{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         let tx_id = PointTxId::from_str(&id);
         Self { 
-            plot_send: ui_plot(id.clone()).clone(),
+            plot_send: UI_PLOT.clone(),
             id,
             tx_id,
             kind: FnKind::Fn,
@@ -148,46 +144,55 @@ impl FnInOut for FnPlot {}
 /// Global static counter of FnPlot instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
 
-
-// #[cfg(feature = "plot")]
-fn ui_plot(parent: String) -> &'static Sender<(String, egui::accesskit::Point)> {
-    // Create an uninitialized static
-    static mut SINGLETON: MaybeUninit<Sender<(String, egui::accesskit::Point)>> = MaybeUninit::uninit();
-    static ONCE: Once = Once::new();
-    unsafe {
-        ONCE.call_once(|| {
-            let (send, recv) = std::sync::mpsc::channel();
-            let singleton = send.clone();
-            thread::spawn(|| {
-                let event_loop_builder: Option<EventLoopBuilderHook> = Some(Box::new(|event_loop_builder| {
-                    event_loop_builder.build().unwrap();
-                    // winit::platform::x11::EventLoopBuilderExtX11::with_any_thread(event_loop_builder, true);
-                    // event_loop_builder.with_any_thread(true);
-                }));
-                eframe::run_native(
-                    "TaskPlot", 
-                    eframe::NativeOptions {
-                        // fullscreen: true,
-                        // maximized: true,
-                        event_loop_builder,
-                        viewport: ViewportBuilder::default()
-                            .with_min_inner_size([ 1920.0, 840.0]),
-                        ..Default::default()
-                    }, 
-                    Box::new(|cc| Ok(Box::new(
-                        UiPlot::new(
-                            parent,
-                            cc,
-                            recv,
-                        ),
-                    ))),
-                ).unwrap();    
-            });
-            // debug!("{}.ui_plot | Ui ready", self.id, err);
-            SINGLETON.write(singleton);
-        });
-        // Now we give out a shared reference to the data, which is safe to use
-        // concurrently.
-        SINGLETON.assume_init_ref()
-    }
+lazy_static! {
+    static ref UI_PLOT: Sender<(String, egui::accesskit::Point)> = ui_plot();
+}
+#[cfg(feature = "plot")]
+fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
+    let (send, recv) = std::sync::mpsc::channel();
+    thread::spawn(|| {
+        let event_loop_builder: Option<eframe::EventLoopBuilderHook> = Some(Box::new(|event_loop_builder| {
+            // event_loop_builder.build().unwrap();
+            winit::platform::x11::EventLoopBuilderExtX11::with_any_thread(event_loop_builder, true);
+        }));
+        eframe::run_native(
+            "TaskPlot", 
+            eframe::NativeOptions {
+                // fullscreen: true,
+                // maximized: true,
+                event_loop_builder,
+                viewport: egui::ViewportBuilder::default()
+                    .with_min_inner_size([ 1920.0, 840.0]),
+                ..Default::default()
+            }, 
+            Box::new(|cc| Ok(Box::new(
+                super::ui_plot::UiPlot::new(
+                    "", //parent,
+                    cc,
+                    recv,
+                ),
+            ))),
+        ).unwrap();    
+    });
+    send
+}
+#[cfg(not(feature = "plot"))]
+fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
+    let (send, recv) = std::sync::mpsc::channel();
+    log::info!(
+        "fn_plot.ui_plot | To activate fn Plot use: \n\t`cargo test --features=plot` or \n\t`cargo run --features=plot`",
+    );
+    thread::spawn(move || {
+        loop {
+            if let Err(err) = recv.recv_timeout(sal_sync::services::service::RECV_TIMEOUT) {
+                match err {
+                    std::sync::mpsc::RecvTimeoutError::Timeout => {},
+                    std::sync::mpsc::RecvTimeoutError::Disconnected => {
+                        break;
+                    },
+                }
+            }
+        }
+    });
+    send
 }
