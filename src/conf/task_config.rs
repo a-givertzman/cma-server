@@ -56,23 +56,24 @@ impl TaskConfig {
     ///                 fn SqlMetric:
     ///                     ...
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> TaskConfig {
-        log::debug!("TaskConfig.new | conf: {:#?}", conf);
         let mut vars = vec![];
-        let self_id = format!("TaskConfig({})", conf.key);
-        let self_name = Name::new(parent, conf.sufix().unwrap());
-        log::debug!("{}.new | name: {:?}", self_id, self_name);
+        let me = conf.sufix_or(conf.name().unwrap());
+        let dbg = format!("TaskConfig({})", me);
+        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        let self_name = Name::new(parent, me);
+        log::debug!("{}.new | name: {:?}", dbg, self_name);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{}.new | cycle: {:?}", self_id, cycle);
+        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let (rx, rx_max_length) = conf.get_in_queue().unwrap();
-        log::debug!("{}.new | RX: {},\tmax-length: {:?}", self_id, rx, rx_max_length);
+        log::debug!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_length);
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
         let subscribe = ConfSubscribe::new(subscribe);
-        log::debug!("{}.new | subscribe: {:#?}", self_id, subscribe);
+        log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
         let mut node_index = 0;
         let mut nodes = IndexMap::new();
         for key in conf.keys(&["cycle", "subscribe", format!("in queue {}", rx).as_str()]) {
             let node_conf = conf.get(key).unwrap();
-            log::trace!("{}.new | nodeConf: {:?}", self_id, node_conf);
+            log::trace!("{}.new | nodeConf: {:?}", dbg, node_conf);
             node_index += 1;
             let node_conf = FnConfig::new(&self_name.join(), &self_name, &node_conf, &mut vars);
             nodes.insert(
