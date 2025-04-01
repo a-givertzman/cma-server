@@ -16,8 +16,8 @@ Handling data on fly
     - [x] `TcpServer` - released
     - [ ] `UdpServer`
     - [ ] Additional protocols...
-        -[x] `ProfinetClient`
-        -[x] `SlmpClient`
+        - [x] `ProfinetClient`
+        - [x] `SlmpClient`
 - [x] [Task](#1-task-service) service - make configured computation
 - [x] `ApiClient` service - stores some data into the database
 - [x] `Plot` - Displaying values of the `Task` service on the Y(t) diagram
