@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}, thread, time::Duration};
 use concat_string::concat_string;
-use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr}, status::status::Status}, safe_lock::rwlock::SafeLock, services::Services, subscription::subscription_criteria::SubscriptionCriteria};
+use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, safe_lock::rwlock::SafeLock, services::Services, subscription::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     core_::{

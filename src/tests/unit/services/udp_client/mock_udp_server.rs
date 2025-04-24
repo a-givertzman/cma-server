@@ -9,9 +9,9 @@
 use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, thread, time::Duration};
 use sal_core::error::Error;
 use sal_sync::{
-    kernel::state::change_notify::ChangeNotify,
-    services::{entity::{name::Name, object::Object, point::point::Point},
-    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services}
+    kernel::state::ChangeNotify,
+    services::{entity::{Name, Object, Point},
+    service::{Service, ServiceCycle}, services::Services}
 };
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
@@ -59,9 +59,6 @@ impl MockUdpServer {
 //
 //
 impl Object for MockUdpServer {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -94,7 +91,7 @@ impl Service for MockUdpServer {
     //
     // 
     fn get_link(&mut self, _name: &str) -> Sender<Point> {
-        panic!("{}.get_link | Does not support get_link", self.id())
+        panic!("{}.get_link | Does not support get_link", self.name())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
         //     None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -102,7 +99,7 @@ impl Service for MockUdpServer {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();

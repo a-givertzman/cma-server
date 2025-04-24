@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::conf::{conf_keywd::ConfKeywd, conf_kind::ConfKind, conf_tree::{ConfTree, ConfTreeGet}, services_conf::ServicesConf};
+use sal_sync::services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::Name};
 use std::{fs, path::Path, str::FromStr};
 ///
 /// Creates application config from serde_yaml::Value of following format:
@@ -55,7 +55,7 @@ use std::{fs, path::Path, str::FromStr};
 /// ```
 #[derive(Debug, PartialEq, Clone)]
 pub struct AppConfig {
-    pub(crate) name: String,
+    pub(crate) name: Name,
     pub(crate) description: String,
     // pub(crate) cycle: Option<Duration>,
     pub(crate) nodes: IndexMap<ConfKeywd, ConfTree>,
@@ -65,10 +65,11 @@ pub struct AppConfig {
 // 
 impl AppConfig {
     ///
-    /// Creates new instance of the [AppConfig]:
+    /// Returns [AppConfig] new instance:
     pub fn new(conf: ConfTree) -> Self {
         log::trace!("AppConfig.new | conf: {:?}", conf);
-        let self_name = conf.get("name").unwrap();
+        let name: String = conf.get("name").unwrap();
+        let self_name = Name::new("", name);
         let self_id = format!("AppConfig({})", self_name);
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let description = conf.get("description").unwrap();

@@ -1,7 +1,7 @@
 use sal_core::error::Error;
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::point::Point},
-    service::{service::Service, service_handles::ServiceHandles},
+    entity::{Name, Object, Point},
+    service::{Service},
 };
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 ///
@@ -36,9 +36,6 @@ impl MockMultiQueue {
 //
 // 
 impl Object for MockMultiQueue {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -64,7 +61,7 @@ impl Service for MockMultiQueue {
     }
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let recv = self.recv.lock().unwrap().take().unwrap();

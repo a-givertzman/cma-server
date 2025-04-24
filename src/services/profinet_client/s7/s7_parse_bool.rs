@@ -1,8 +1,5 @@
 use sal_sync::services::{
-    entity::{
-        cot::Cot, point::{point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, point_hlr::PointHlr},
-        status::status::Status
-    },
+    entity::{Cot, Point, PointConfig, PointConfigAddress, PointHlr, Status},
     types::bool::Bool,
 };
 use std::array::TryFromSliceError;

@@ -2,7 +2,7 @@
 
 mod udp_client_config {
     use std::{str::FromStr, sync::Once, time::Duration};
-    use sal_sync::{collections::map::FxIndexMap, services::{conf::diag_keywd::DiagKeywd, entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
+    use sal_sync::{collections::FxIndexMap, services::{conf::diag_keywd::DiagKeywd, entity::{Name, {PointConfig, PointConfigHistory, PointConfigType}}, service::LinkName, subscription::conf_subscribe::ConfSubscribe}};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::udp_client_config::{udp_client_config::UdpClientConfig, udp_client_db_config::UdpClientDbConfig};

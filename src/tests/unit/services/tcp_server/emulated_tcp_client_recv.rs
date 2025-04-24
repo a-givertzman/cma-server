@@ -2,8 +2,8 @@ use sal_core::error::Error;
 use sal_sync::{
     kernel::state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged},
     services::{
-        entity::{name::Name, object::Object, point::point::Point},
-        service::{service::Service, service_handles::ServiceHandles},
+        entity::{Name, Object, Point},
+        service::{Service},
     },
 };
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
@@ -141,9 +141,6 @@ impl EmulatedTcpClientRecv {
 //
 //
 impl Object for EmulatedTcpClientRecv {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -172,7 +169,7 @@ impl Service for EmulatedTcpClientRecv {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::point::point_config::PointConfig};
+use sal_sync::services::{conf::ConfTree, entity::PointConfig};
 use crate::conf::fn_::{fn_config::FnConfig, fn_point_config::FnPointConfig};
 ///
 /// The kinde of the Function config, incapsulating config it self

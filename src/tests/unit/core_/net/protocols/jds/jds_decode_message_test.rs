@@ -3,7 +3,7 @@
 mod jds_decode_message {
     use chrono::{DateTime, Utc};
         use rand::Rng;
-    use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
+    use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::bool::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};

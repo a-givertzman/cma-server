@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, Utc};
-    use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
+    use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::bool::Bool};
     use std::sync::{Once, mpsc};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::net::protocols::jds::jds_serialize::JdsSerialize, tcp::steam_read::StreamRead};

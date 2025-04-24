@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{name::Name, point::{point::Point, point_tx_id::PointTxId}}, services::Services};
+use sal_sync::services::{entity::{Name, {Point, PointTxId}}, services::Services};
 use crate::{
     conf::{fn_::fn_conf_kind::FnConfKind, task_config::TaskConfig}, 
     core_::types::fn_in_out_ref::FnInOutRef, 

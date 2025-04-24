@@ -3,7 +3,7 @@
 //! Which returns exactly the vector from which it was created
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
 use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object, point::point_config::PointConfig}, service::{service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{entity::{Name, Object, PointConfig}, service::{Service}};
 ///
 /// MockServicePoints implements points() method only.
 /// Which returns exactly the vector from which it was created
@@ -29,9 +29,6 @@ impl MockServicePoints {
 //
 // 
 impl Object for MockServicePoints {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -51,7 +48,7 @@ impl Debug for MockServicePoints {
 impl Service for MockServicePoints {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         let err = Error::new(&self.id, "run").err("Not implemented");
         log::warn!("{}", err);
         Err(err)

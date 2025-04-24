@@ -1,4 +1,4 @@
-use sal_sync::services::{entity::{name::Name, point::{point::{Point, ToPoint}, point_hlr::PointHlr, point_tx_id::PointTxId}}, services::Services};
+use sal_sync::services::{entity::{Name, {{Point, ToPoint}, PointHlr, PointTxId}}, services::Services};
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc, RwLock}};
 use indexmap::IndexMap;
 use crate::{

@@ -6,7 +6,7 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{entity::{Name, Object, Point}, service::{Service}};
 use std::{sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
 use crate::{
     conf::tcp_server_config::ServiceNameConfig,

@@ -1,4 +1,4 @@
-use sal_sync::services::entity::point::point::Point;
+use sal_sync::services::entity::Point;
 use super::{fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Input side interface for nested function

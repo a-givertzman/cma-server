@@ -2,14 +2,14 @@
 
 mod jds_routes {
     use sal_sync::services::{
-        conf::{conf_tree::ConfTree, services_conf::ServicesConf},
+        conf::{ConfTree, ServicesConf},
         entity::{
-            cot::Cot, name::Name, object::Object,
-            point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId},
-            status::status::Status,
+            Cot, Name, Object,
+            {Point, PointConfig, PointHlr, PointTxId},
+            Status,
         },
         multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf},
-        safe_lock::rwlock::SafeLock, service::{link_name::LinkName, service::Service}, services::Services,
+        safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services,
     };
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

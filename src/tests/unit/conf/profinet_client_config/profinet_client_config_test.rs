@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod profinet_client_config {
-        use sal_sync::services::entity::{name::Name, point::{point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}};
+        use sal_sync::services::entity::{Name, {PointConfig, PointConfigHistory, PointConfigType}};
     use std::{sync::Once, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::stuff::max_test_duration::TestDuration;

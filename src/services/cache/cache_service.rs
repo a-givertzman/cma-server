@@ -14,18 +14,22 @@
 use std::{
     env, fmt::Debug, fs, hash::{BuildHasher, BuildHasherDefault}, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering},
     mpsc::{self, Receiver, RecvTimeoutError}, Arc, RwLock},
-    thread,
+    thread::{self, JoinHandle},
 };
 use chrono::Utc;
+use coco::Stack;
 use concat_string::concat_string;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_core::error::Error;
-use sal_sync::{collections::map::FxIndexMap, services::{entity::{
-    cot::Cot, name::Name, object::Object,
-    point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId},
-    status::status::Status,
-}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria, types::bool::Bool}};
+use sal_sync::{
+    collections::FxIndexMap,
+    services::{
+        entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status},
+        safe_lock::rwlock::SafeLock, service::Service,
+        services::Services, subscription::SubscriptionCriteria, types::bool::Bool,
+    }
+};
 use serde::Serialize;
 use serde_json::json;
 use crate::{
@@ -43,6 +47,7 @@ pub struct CacheService {
     conf: CacheServiceConfig,
     services: Arc<RwLock<Services>>,
     cache: Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -57,6 +62,7 @@ impl CacheService {
             conf: conf.clone(),
             services,
             cache: Arc::new(RwLock::new(IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))),
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -285,9 +291,6 @@ impl CacheService {
 //
 //
 impl Object for CacheService {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -308,7 +311,7 @@ impl Debug for CacheService {
 impl Service for CacheService {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
@@ -382,7 +385,8 @@ impl Service for CacheService {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -443,6 +447,21 @@ impl Service for CacheService {
             }
         });
         recv
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
     }
     //
     //

@@ -2,7 +2,7 @@
 
 mod sql_metric {
     use regex::RegexBuilder;
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, point::point::{Point, ToPoint}}, services::Services};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, {Point, ToPoint}}, services::Services};
     use std::sync::RwLock;
     use std::sync::{Once, Arc};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

@@ -1,4 +1,4 @@
-use sal_sync::services::entity::point::point_config::PointConfig;
+use sal_sync::services::entity::PointConfig;
 use crate::conf::fn_::fn_conf_kind::FnConfKind;
 ///
 /// Represents configuration of the point in the NestedFn

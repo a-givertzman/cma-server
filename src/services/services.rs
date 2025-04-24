@@ -1,10 +1,10 @@
 use sal_sync::{
-    kernel::state::change_notify::ChangeNotify,
+    kernel::state::ChangeNotify,
     services::{
-        entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig}}, 
+        entity::{Name, Object, {Point, PointConfig}}, 
         future::future::{Future, Sink}, retain::{retain_conf::RetainConf, retain_point_id::RetainPointId}, 
-        service::{link_name::LinkName, service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
-        subscription::subscription_criteria::SubscriptionCriteria
+        service::{LinkName, Service, ServiceCycle},
+        subscription::SubscriptionCriteria
     },
 };
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{Receiver, Sender}, Arc, RwLock}, thread, time::Duration};
@@ -112,7 +112,7 @@ impl Services {
     }
     ///
     /// Main loop of the Services
-    pub fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    pub fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let points_requested = self.points_requested.clone();

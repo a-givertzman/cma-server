@@ -1,5 +1,5 @@
 use std::{net::TcpStream, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread::{self, JoinHandle}, time::Duration};
-use sal_sync::services::service::service_cycle::ServiceCycle;
+use sal_sync::services::service::ServiceCycle;
 use crate::{
     core_::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::{OpResult, TcpStreamWrite} 
 };

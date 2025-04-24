@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{entity::point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, types::type_of::TypeOf};
+use sal_sync::services::{entity::{Point, PointConfigType, PointHlr}, types::type_of::TypeOf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{

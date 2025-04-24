@@ -1,6 +1,6 @@
 use sal_sync::{
-    collections::map::FxHashMap,
-    services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
+    collections::FxHashMap,
+    services::{entity::{Cot, {Point, PointHlr, PointTxId}, Status},
     types::bool::Bool,
 }};
 use std::{collections::HashMap, hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};

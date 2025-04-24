@@ -3,7 +3,7 @@
 mod fn_retain {
     use chrono::Utc;
     use sal_sync::services::{
-        conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{cot::Cot, name::Name, point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, status::status::Status}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services, types::bool::Bool
+        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, {Point, PointConfigType, PointHlr}, Status}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services, types::bool::Bool
     };
     use std::{env, fs, io::Read, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};

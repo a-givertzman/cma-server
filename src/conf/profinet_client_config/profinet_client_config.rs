@@ -1,5 +1,9 @@
 use indexmap::IndexMap;
-use sal_sync::{collections::map::FxIndexMap, services::{conf::{conf_kind::ConfKind, conf_tree::{ConfTree, ConfTreeGet}, diag_keywd::DiagKeywd}, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
+use sal_sync::{
+    collections::FxIndexMap, 
+    services::{conf::{ConfKind, ConfTree, ConfTreeGet, DiagKeywd},
+    entity::{Name, PointConfig}, service::LinkName},
+};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig};
 ///

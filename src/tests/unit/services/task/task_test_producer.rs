@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_config::PointConfig, point_tx_id::PointTxId}}, safe_lock::rwlock::SafeLock, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}, services::Services
+    entity::{Name, Object, {{Point, ToPoint}, PointConfig, PointTxId}}, safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services
 };
 use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use testing::entities::test_value::Value;
@@ -43,9 +43,6 @@ impl TaskTestProducer {
 //
 // 
 impl Object for TaskTestProducer {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -65,7 +62,7 @@ impl Debug for TaskTestProducer {
 impl Service for TaskTestProducer {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         let self_id = self.id.clone();
         let tx_id = PointTxId::from_str(&self_id);
         let cycle = self.cycle;

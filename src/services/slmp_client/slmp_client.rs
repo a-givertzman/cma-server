@@ -1,8 +1,11 @@
-use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::{
-    collections::map::FxIndexMap, kernel::state::exit_notify::ExitNotify, services::{
-        conf::diag_keywd::DiagKeywd, entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
+    collections::FxIndexMap, kernel::state::ExitNotify, services::{
+        conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
+        safe_lock::rwlock::SafeLock, service::Service,
+        services::Services,
     }
 };
 use testing::stuff::wait::WaitTread;
@@ -27,6 +30,7 @@ pub struct SlmpClient {
     conf: SlmpClientConfig,
     services: Arc<RwLock<Services>>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -47,6 +51,7 @@ impl SlmpClient {
             conf: conf.clone(),
             services,
             diagnosis,
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -102,9 +107,6 @@ impl SlmpClient {
 //
 //
 impl Object for SlmpClient {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -124,7 +126,7 @@ impl Debug for SlmpClient {
 impl Service for SlmpClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
@@ -221,7 +223,8 @@ impl Service for SlmpClient {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -234,6 +237,21 @@ impl Service for SlmpClient {
     //
     fn points(&self) -> Vec<PointConfig> {
         self.conf.points()
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
     }
     //
     //

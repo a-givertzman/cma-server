@@ -2,8 +2,8 @@ use sal_core::error::Error;
 use sal_sync::{
     kernel::state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged},
     services::{
-        entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},
-        service::{service::Service, service_handles::ServiceHandles},
+        entity::{Name, Object, {{Point, ToPoint}, PointTxId}},
+        service::{Service},
     },
 };
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc, Arc, Mutex}, thread, time::Duration};
@@ -107,9 +107,6 @@ impl EmulatedTcpClientSend {
 //
 // 
 impl Object for EmulatedTcpClientSend {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -129,7 +126,7 @@ impl Debug for EmulatedTcpClientSend {
 impl Service for EmulatedTcpClientSend {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let point_path = self.point_path.clone();
@@ -255,7 +252,7 @@ impl Service for EmulatedTcpClientSend {
         }    }
     //
     //
-    // fn points(&self) -> Vec<crate::conf::point_config::point_config::PointConfig> {
+    // fn points(&self) -> Vec<crate::conf::point_config::PointConfig> {
     //     let types = vec!["Bool", "Int", "Real", "Double", "String"];
     //     types.iter().map(|type_| {
     //         let conf = format!(

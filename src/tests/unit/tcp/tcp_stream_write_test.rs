@@ -1,4 +1,4 @@
-use sal_sync::services::entity::{name::Name, object::Object};
+use sal_sync::services::entity::{Name, Object};
 use crate::{
     core_::failure::recv_error::RecvError,
     tcp::steam_read::StreamRead,
@@ -41,11 +41,11 @@ mod tcp_stream_write {
     static INDEX: AtomicUsize = AtomicUsize::new(0);
     ///
     fn random_bytes(len: usize) -> Vec<u8> {
-        let mut rnd = rand::thread_rng();
+        let mut rnd = rand::rng();
         let mut bytes = vec![];
         let ix = INDEX.load(Ordering::SeqCst);
         for _ in ix..ix + len {
-            let b = rnd.gen_range(0..255);
+            let b = rnd.random_range(0..255);
             bytes.push(b);
         }
         INDEX.fetch_add(10, Ordering::SeqCst);
@@ -268,9 +268,6 @@ impl<T> MockStreamRead<T> {
 //
 //
 impl<T> Object for MockStreamRead<T> {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }

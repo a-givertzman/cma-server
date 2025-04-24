@@ -6,9 +6,9 @@ use std::{
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_sync::{
-    collections::map::FxIndexMap,
-    kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
-    services::{entity::{point::point::Point, status::status::Status}, service::service_cycle::ServiceCycle},
+    collections::FxIndexMap,
+    kernel::state::{ChangeNotify, ExitNotify},
+    services::{entity::{Point, Status}, service::ServiceCycle},
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,

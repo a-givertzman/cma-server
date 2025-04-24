@@ -1,7 +1,8 @@
+use coco::Stack;
 use concat_string::concat_string;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread, time::Duration};
+use sal_sync::services::{entity::{Name, Object, Point}, service::{Service, ServiceCycle}};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, JoinHandle}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::api_client_config::ApiClientConfig, 
@@ -18,6 +19,7 @@ pub struct ApiClient {
     recv: Mutex<Option<Receiver<Point>>>,
     send: HashMap<String, Sender<Point>>,
     conf: ApiClientConfig,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -34,6 +36,7 @@ impl ApiClient {
             recv: Mutex::new(Some(recv)),
             send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -86,9 +89,6 @@ impl ApiClient {
 //
 // 
 impl Object for ApiClient {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -116,7 +116,7 @@ impl Service for ApiClient {
     }
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
@@ -193,7 +193,8 @@ impl Service for ApiClient {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let message = format!("{}.run | Start failed: {:#?}", self.id, err);
@@ -201,6 +202,21 @@ impl Service for ApiClient {
                 Err(Error::new(&self.id, "run").pass_with("Start failed", err.to_string()))
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
     }
     //
     // 

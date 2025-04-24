@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::FnConfKeywd};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::conf::FnConfKeywd};
 use std::{fs, str::FromStr};
 use crate::conf::fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig};
 ///

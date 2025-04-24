@@ -1,5 +1,5 @@
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use sal_sync::services::entity::{name::Name, object::Object, point::point::Point};
+use sal_sync::services::entity::{Name, Object, Point};
 use crate::{
     core_::{constants::constants::RECV_TIMEOUT, failure::recv_error::RecvError}, tcp::steam_read::StreamRead
 };
@@ -29,9 +29,6 @@ impl JdsSerialize {
 //
 // 
 impl Object for JdsSerialize {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }

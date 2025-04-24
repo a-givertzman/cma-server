@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tests {
-        use sal_sync::services::{entity::name::Name, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::Name, task::functions::conf::{FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::sync::Once;
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

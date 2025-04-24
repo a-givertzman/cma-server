@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod fn_point_id {
-        use sal_sync::services::{entity::{name::Name, point::{point::ToPoint, point_config::PointConfig}}, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::{Name, {ToPoint, PointConfig}}, task::functions::conf::{FnConfPointType, fn_conf_options::FnConfOptions}};
     use testing::entities::test_value::Value;
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
-use sal_sync::services::entity::point::point::Point;
+use sal_sync::services::entity::Point;
 use crate::core_::types::fn_in_out_ref::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
 use egui::mutex::RwLock;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use sal_sync::services::{entity::{Name, Object, Point}, service::{Service}};
 use crate::core_::constants::constants::RECV_TIMEOUT;
 ///
 /// Global static counter of FnOut instances
@@ -47,9 +47,6 @@ impl MockRecvService {
 //
 // 
 impl Object for MockRecvService {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -77,7 +74,7 @@ impl Service for MockRecvService {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

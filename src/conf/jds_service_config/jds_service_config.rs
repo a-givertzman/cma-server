@@ -1,5 +1,5 @@
 use std::fs;
-use sal_sync::services::{conf::conf_tree::ConfTree, entity::point::point_config::PointConfig};
+use sal_sync::services::{conf::ConfTree, entity::PointConfig};
 ///
 /// Creates config from serde_yaml::Value of following format:
 /// ```yaml

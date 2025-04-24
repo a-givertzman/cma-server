@@ -1,7 +1,7 @@
 use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread};
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},
-    service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
+    entity::{Name, Object, {{Point, ToPoint}, PointTxId}},
+    service::{LinkName, Service},
 };
 use testing::entities::test_value::Value;
 use crate::{core_::constants::constants::RECV_TIMEOUT, services::safe_lock::rwlock::SafeLock};
@@ -71,7 +71,7 @@ impl Debug for MockTcpServer {
 impl Service for MockTcpServer {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

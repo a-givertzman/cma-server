@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod fn_average {
         use testing::entities::test_value::Value;
-    use sal_sync::services::{entity::point::point::{Point, ToPoint}, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+    use sal_sync::services::{entity::point::{Point, ToPoint}, task::functions::conf::{FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{

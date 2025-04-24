@@ -1,18 +1,19 @@
-use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
 use chrono::{DateTime, Utc};
+use coco::Stack;
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use rand::Rng;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{
     entity::{
-        cot::Cot, name::Name, object::Object,
-        point::{
-            point::Point, point_config::PointConfig, point_config_history::PointConfigHistory,
-            point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId,
+        Cot, Name, Object,
+        {
+            Point, PointConfig, PointConfigHistory,
+            PointConfigType, PointHlr, PointTxId,
         },
-        status::status::Status,
-    }, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, types::bool::Bool
+        Status,
+    }, safe_lock::rwlock::SafeLock, service::{Service, ServiceCycle}, services::Services, types::bool::Bool
 };
 use serde_json::json;
 use testing::entities::test_value::Value;
@@ -21,10 +22,11 @@ use super::producer_service_config::ProducerServiceConfig;
 /// Service for debuging / testing purposes
 ///  - prodices Point's into the configured service's queue
 pub struct ProducerService {
-    id: String,
+    dbg: Dbg,
     name: Name,
     conf: ProducerServiceConfig,
     services: Arc<RwLock<Services>>,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -32,36 +34,38 @@ pub struct ProducerService {
 impl ProducerService {
     pub fn new(conf: ProducerServiceConfig, services: Arc<RwLock<Services>>) -> Self {
         Self {
-            id: format!("{}(ProducerService)", conf.name),
+            dbg: Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me())),
             name: conf.name.clone(),
             conf,
             services,
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// Returns map of the ParsePoint built from the provided PointConfig's
-    fn build_gen_points(parent_id: &str, tx_id: usize, points: Vec<PointConfig>) -> IndexMap<String, Box<impl ParsePoint<Value>>> {
+    fn build_gen_points(parent: impl Into<String>, tx_id: usize, points: Vec<PointConfig>) -> IndexMap<String, Box<impl ParsePoint<Value>>> {
+        let parent = parent.into();
         let mut gen_points = IndexMap::new();
         for point_conf in points {
             match point_conf.type_ {
                 PointConfigType::Bool => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Int => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Real => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Double => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::String => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Json => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
             }
         }
@@ -69,7 +73,7 @@ impl ProducerService {
     }
     ///
     /// Writes Point into the log file ./logs/parent/points.log
-    fn log(self_id: &str, parent: &Name, point: &Point) {
+    fn log(dbg: &Dbg, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -77,7 +81,7 @@ impl ProducerService {
             }
             Err(err) => {
                 if log::max_level() >= log::LevelFilter::Trace {
-                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
+                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", dbg, path, err)
                 }
             }
         }
@@ -86,9 +90,6 @@ impl ProducerService {
 //
 //
 impl Object for ProducerService {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -99,7 +100,7 @@ impl Debug for ProducerService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("ProducerService")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -108,33 +109,33 @@ impl Debug for ProducerService {
 impl Service for ProducerService {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+    fn run(&mut self) -> Result<(), Error> {
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let self_name = self.name.clone();
-        let tx_id = PointTxId::from_str(&self_id);
+        let tx_id = PointTxId::from_str(&self_name.join());
         let exit = self.exit.clone();
         let debug = self.conf.debug;
         let interval = self.conf.cycle.unwrap_or(Duration::ZERO);
         let delayed = !interval.is_zero();
-        let mut cycle = ServiceCycle::new(&self.id, interval);
-        let send = self.services.rlock(&self_id).get_link(&self.conf.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.id, err);
+        let mut cycle = ServiceCycle::new(&self_name.join(), interval);
+        let send = self.services.rlock(&dbg).get_link(&self.conf.send_to).unwrap_or_else(|err| {
+            panic!("{}.run | services.get_link error: {:#?}", dbg, err);
         });
-        let mut gen_points = Self::build_gen_points(&self.id, tx_id, self.conf.points());
-        let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
+        let mut gen_points = Self::build_gen_points(self_name.join(), tx_id, self.conf.points());
+        let handle = thread::Builder::new().name(self_name.join()).spawn(move || {
             'main: loop {
-                log::trace!("{}.run | Step...", self_id);
+                log::trace!("{}.run | Step...", dbg);
                 for (_, gen_point) in &mut gen_points {
                     cycle.start();
                     if let Some(point) = gen_point.next(&Value::Bool(false), Utc::now()) {
                         match send.send(point.clone()) {
                             Ok(_) => {
                                 // if debug {debug!("{}.run | sent point: {:?}", self_id, point);}
-                                if debug {Self::log(&self_id, &self_name, &point);}
+                                if debug {Self::log(&dbg, &self_name, &point);}
                             }
                             Err(err) => {
-                                log::warn!("{}.run | Send error: {:?}", self_id, err);
+                                log::warn!("{}.run | Send error: {:?}", dbg, err);
                             }
                         }
                     };
@@ -146,15 +147,16 @@ impl Service for ProducerService {
                     }
                 }
             }
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", dbg);
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Started", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                log::info!("{}.run | Started", self.dbg);
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -167,6 +169,21 @@ impl Service for ProducerService {
     }
     //
     //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.dbg.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
+    }
+    //
+    //
     fn exit(&self) {
         self.exit.store(true, Ordering::Relaxed);
     }
@@ -175,7 +192,7 @@ impl Service for ProducerService {
 /// Creates new Point's on call method 'next'
 #[derive(Debug, Clone)]
 pub struct PointGen {
-    id: String,
+    dbg: Dbg,
     pub tx_id: usize,
     _type: PointConfigType,
     pub name: String,
@@ -192,14 +209,14 @@ impl PointGen {
     ///
     /// Creates new instance of the PointGen
     pub fn new(
-        parent_id: &str,
+        parent: impl Into<String>,
         tx_id: usize,
         name: String,
         config: &PointConfig,
         // filter: Filter<T>,
     ) -> PointGen {
         PointGen {
-            id: format!("{}/PointGen({})", parent_id, name),
+            dbg: Dbg::new(parent, format!("PointGen({name})")),
             tx_id,
             _type: config.type_.clone(),
             name,
@@ -215,7 +232,7 @@ impl PointGen {
     /// Returns Point
     fn to_point(&self) -> Option<Point> {
         if self.is_changed {
-            log::trace!("{}.to_point | generating point type '{:?}'...", self.id, self._type);
+            log::trace!("{}.to_point | generating point type '{:?}'...", self.dbg, self._type);
             match &self._type {
                 PointConfigType::Bool => {
                     Some(Point::Bool(PointHlr::new(

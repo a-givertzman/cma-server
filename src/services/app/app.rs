@@ -1,6 +1,7 @@
-use linked_hash_map::LinkedHashMap;
+use sal_core::dbg::Dbg;
 use sal_sync::services::{
-    conf::conf_tree::ConfTree, entity::{name::Name, object::Object}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
+    conf::ConfTree, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock,
+    service::Service, services::Services,
 };
 use std::{path::Path, process::exit, sync::{Arc, RwLock}, thread, time::Duration};
 use libc::{
@@ -25,8 +26,9 @@ use crate::{
 };
 
 pub struct App {
-    id: String,
-    handles: LinkedHashMap<String, ServiceHandles<()>>,
+    dbg: Dbg,
+    name: Name,
+    // handles: LinkedHashMap<String, ServiceHandles<()>>,
     conf: AppConfig,
 }
 //
@@ -36,82 +38,77 @@ impl App {
     /// Creates new instance of the ReatinBuffer
     ///     - path - path to the application configuration
     pub fn new(path: Vec<impl AsRef<Path>>) -> Self {
-        let self_id = "App".to_owned();
         path.iter().for_each(|p| {
-            log::info!("{}.run | Configuration path: '{}'", self_id, p.as_ref().display());
+            log::info!("App.run | Configuration path: '{}'", p.as_ref().display());
         });
         let conf: AppConfig = AppConfig::read(path);
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            id: self_id,
-            handles: LinkedHashMap::new(),
+            dbg,
+            name: conf.name.clone(),
+            // handles: LinkedHashMap::new(),
             conf,
         }
     }
     ///
     /// Executes all services
     pub fn run(self) -> Result<(), String>  {
-        let self_id = self.id.clone();
-        log::info!("{}.run | Starting application...", self_id);
+        let dbg = self.dbg.clone();
+        log::info!("{}.run | Starting application...", dbg);
         let conf = self.conf.clone();
-        let self_name = Name::new("", conf.name);
+        let self_name = conf.name.clone();
         let app = Arc::new(RwLock::new(self));
-        let services = Arc::new(RwLock::new(Services::new(&self_id, conf.services.clone())));
-        log::info!("{}.run |     Configuring services...", self_id);
+        let services = Arc::new(RwLock::new(Services::new(&dbg, conf.services.clone())));
+        log::info!("{}.run |     Configuring services...", dbg);
         for (node_keywd, node_conf) in conf.nodes {
             let node_name = node_keywd.name();
             let node_sufix = node_keywd.sufix();
-            log::info!("{}.run |         Configuring service: {}({})...", self_id, node_name, node_sufix);
-            log::trace!("{}.run |         Config: {:#?}", self_id, node_conf);
-            services.wlock(&self_id).insert(
-                Self::build_service(&self_id, &self_name, &node_name, &node_sufix, node_conf, services.clone()),
+            log::info!("{}.run |         Configuring service: {}({})...", dbg, node_name, node_sufix);
+            log::trace!("{}.run |         Config: {:#?}", dbg, node_conf);
+            services.wlock(&dbg).insert(
+                Self::build_service(&dbg, &self_name, &node_name, &node_sufix, node_conf, services.clone()),
             );
-            log::info!("{}.run |         Configuring service: {}({}) - ok\n", self_id, node_name, node_sufix);
+            log::info!("{}.run |         Configuring service: {}({}) - ok\n", dbg, node_name, node_sufix);
         }
-        log::info!("{}.run |     All services configured\n", self_id);
+        log::info!("{}.run |     All services configured\n", dbg);
         thread::sleep(Duration::from_millis(100));
-        let handles = services.wlock(&self_id).run().unwrap();
-        let name = services.rlock(&self_id).id().to_owned();
-        app.write().unwrap().insert_handles(&name, handles);
+        services.wlock(&dbg).run().unwrap();
+        // let name = services.rlock(&dbg).name().join();
+        // app.write().unwrap().insert_handles(&name, handles);
         thread::sleep(Duration::from_millis(100));
-        log::info!("{}.run |     Starting services...", self_id);
-        let services_iter = services.rlock(&self_id).all();
+        log::info!("{}.run |     Starting services...", dbg);
+        let services_iter = services.rlock(&dbg).all();
         for (name, service) in services_iter {
-            log::info!("{}.run |         Starting service: {}...", self_id, name);
-            let handles = service.wlock(&self_id).run();
-            match handles {
-                Ok(handles) => {
-                    app.write().unwrap().insert_handles(&name, handles);
-                    log::info!("{}.run |         Starting service: {} - ok", self_id, name);
+            log::info!("{}.run |         Starting service: {}...", dbg, name);
+            match service.wlock(&dbg).run() {
+                Ok(_) => {
+                    // app.write().unwrap().insert_handles(&name, handles);
+                    log::info!("{}.run |         Starting service: {} - ok", dbg, name);
                 }
                 Err(err) => {
-                    log::error!("{}.run |         Error starting service '{}': {:#?}", self_id, name, err);
+                    log::error!("{}.run |         Error starting service '{}': {:#?}", dbg, name, err);
                 }
             };
             thread::sleep(Duration::from_millis(100));
         }
-        log::info!("{}.run |     All services started\n", self_id);
-        log::info!("{}.run | Application started\n", self_id);
-        Self::listen_sys_signals(self_id.clone(), services.clone());
-        loop {
-            let servece_ids: Vec<String> = app.read().unwrap().handles.keys().cloned().collect();
-            match servece_ids.first() {
-                Some(service_name) => {
-                    log::info!("{}.run | Waiting for service '{}' being finished...", self_id, service_name);
-                    let handles = app.write().unwrap().handles.remove(service_name).unwrap();
-                    handles.wait().unwrap();
-                    log::info!("{}.run | Waiting for service '{}' being finished - Ok", self_id, service_name);
-                }
-                None => {
-                    break;
-                }
+        log::info!("{}.run |     All services started\n", dbg);
+        log::info!("{}.run | Application started\n", dbg);
+        Self::listen_sys_signals(dbg.clone(), services.clone());
+        for (service_name, service) in services.rlock(&dbg).all() {
+            log::info!("{}.run | Waiting for service '{}' being finished...", dbg, service_name);
+            let future = service.rlock(&dbg).wait();
+            match future.wait() {
+                Ok(_) => log::info!("{}.run | Waiting for service '{}' being finished - Ok", dbg, service_name),
+                Err(err) => log::info!("{}.run | Waiting for service '{}' being finished - Ok", dbg, service_name),
+
             }
         }
-        log::info!("{}.run | Application exit - Ok\n", self_id);
+        log::info!("{}.run | Application exit - Ok\n", dbg);
         Ok(())
     }    
     ///
     /// Returns service by it's name
-    fn build_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<RwLock<Services>>) -> Arc<RwLock<dyn Service>> {
+    fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<RwLock<Services>>) -> Arc<RwLock<dyn Service>> {
         match node_name {
             Services::API_CLIENT => Arc::new(RwLock::new(
                 ApiClient::new(ApiClientConfig::new(parent, node_conf))
@@ -141,21 +138,13 @@ impl App {
                 SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services)
             )),
             _ => {
-                panic!("{}.run | Unknown service: {}({})", self_id, node_name, node_sufix);
+                panic!("{}.build_service | Unknown service: {}({})", dbg, node_name, node_sufix);
             }
         }
     }
     ///
-    /// Inserts new pair service_id & service_join_handle
-    fn insert_handles(&mut self, id:&str, handles: ServiceHandles<()>) {
-        if self.handles.contains_key(id) {
-            panic!("{}.insert | Duplicated service name '{:?}'", self.id, id);
-        }
-        self.handles.insert(id.to_string(), handles);
-    }
-    ///
     /// Listening for signals from the operating system
-    fn listen_sys_signals(self_id: String, services: Arc<RwLock<Services>>) {
+    fn listen_sys_signals(dbg: Dbg, services: Arc<RwLock<Services>>) {
         let signals = Signals::new([
             SIGHUP,     // code: 1	This signal is sent to a process when its controlling terminal is closed or disconnected
             SIGINT,     // code: 2	This signal is sent to a process when the user presses Control+C to interrupt its execution
@@ -173,30 +162,30 @@ impl App {
             Ok(mut signals) => {
                 thread::spawn(move || {
                     let signals_handle = signals.handle();
-                    let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
+                    let dbg_ = dbg.clone();
+                    let handle = thread::Builder::new().name(format!("{}.listen_sys_signals", dbg)).spawn(move || {
+                        let dbg = dbg_;
                         for signal in signals.forever() {
-                            println!("{}.run Received signal {:?}", self_id, signal);
+                            println!("{}.run Received signal {:?}", dbg, signal);
                             match signal {
                                 SIGINT | SIGQUIT | SIGTERM => {
-                                    println!("{}.run Received signal {:?}", self_id, signal);
-                                    println!("{}.run Application exit...", self_id);
-                                    let services_iter = services.rlock(&self_id).all();
-                                    for (_id, service) in services_iter {
-                                        println!("{}.run Stopping service '{}'...", self_id, _id);
-                                        service.rlock(&self_id).exit();
-                                        println!("{}.run Stopping service '{}' - Ok", self_id, _id);
+                                    println!("{}.run Received signal {:?}", dbg, signal);
+                                    println!("{}.run Application exit...", dbg);
+                                    let services_iter = services.rlock(&dbg).all();
+                                    for (id, service) in services_iter {
+                                        println!("{}.run Stopping service '{}'...", dbg, id);
+                                        service.rlock(&dbg).exit();
+                                        println!("{}.run Stopping service '{}' - Ok", dbg, id);
                                     }
-                                    services.rlock(&self_id).exit();
+                                    services.rlock(&dbg).exit();
                                     break;
                                 }
                                 SIGKILL => {
-                                    println!("{}.run Received signal {:?}", self_id, signal);
-                                    println!("{}.run Application halt...", self_id);
+                                    println!("{}.run Received signal {:?}", dbg, signal);
+                                    println!("{}.run Application halt...", dbg);
                                     exit(0);
                                 }
-                                _ => {
-                                    println!("{}.run Received unknown signal {:?}", self_id, signal);
-                                }
+                                _ => println!("{}.run Received unknown signal {:?}", dbg, signal)
                             }
                         }
                     }).unwrap();
@@ -205,7 +194,7 @@ impl App {
                 });
             }
             Err(err) => {
-                panic!("{}.run | Application hook system signals error; {:#?}", self_id, err);
+                panic!("{}.run | Application hook system signals error; {:#?}", dbg, err);
             }
         }
     }

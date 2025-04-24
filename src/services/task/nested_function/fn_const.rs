@@ -1,5 +1,5 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
-use sal_sync::services::entity::point::point::Point;
+use sal_sync::services::entity::Point;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Constant value

@@ -1,12 +1,13 @@
+use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::point::Point}, safe_lock::rwlock::SafeLock,
-    service::{service::Service, service_handles::ServiceHandles}, services::Services,
+    entity::{Name, Object, Point}, safe_lock::rwlock::SafeLock,
+    service::Service, services::Services,
 };
 use std::{
     collections::HashMap, fmt::Debug,
     sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock},
-    thread, time::Duration,
+    thread::{self, JoinHandle}, time::Duration,
 };
 use testing::stuff::wait::WaitTread;
 use crate::{
@@ -32,8 +33,7 @@ pub struct TcpClient {
     in_recv: Mutex<Option<Receiver<Point>>>,
     conf: TcpClientConfig,
     services: Arc<RwLock<Services>>,
-    // tcp_recv_alive: Option<Arc<RwLock<TcpReadAlive>>>,
-    // tcp_send_alive: Option<Arc<RwLock<TcpWriteAlive>>>,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -51,16 +51,12 @@ impl TcpClient {
             in_send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             services,
-            // tcp_recv_alive: None,
-            // tcp_send_alive: None,
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
 }
 impl Object for TcpClient {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -88,7 +84,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let conf = self.conf.clone();
@@ -163,7 +159,8 @@ impl Service for TcpClient {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -174,52 +171,55 @@ impl Service for TcpClient {
     }
     //
     //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
+    }
+    //
+    //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
-        // match &self.tcp_recv_alive {
-        //     Some(tcp_recv_alive) => {
-        //         tcp_recv_alive.rlock(&self.id).exit()
-        //     }
-        //     None => {}
-        // }
-        // match &self.tcp_send_alive {
-        //     Some(tcp_send_alive) => {
-        //         tcp_send_alive.rlock(&self.id).exit()
-        //     }
-        //     None => {}
-        // }
     }
     //
     //
-    fn subscribe(&mut self, receiver_id: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
+    fn subscribe(&mut self, receiver_id: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         let _ = receiver_id;
         let _ = points;
-        std::panic!("{}.subscribe | Does not supported", self.id())
+        std::panic!("{}.subscribe | Does not supported", self.id)
     }
     //
     //
-    fn extend_subscription(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), Error> {
+    fn extend_subscription(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
-        std::panic!("{}.extend_subscription | Does not supported", self.id())
+        std::panic!("{}.extend_subscription | Does not supported", self.id)
     }
     //
     //
-    fn unsubscribe(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Result<(), Error> {
+    fn unsubscribe(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
-        std::panic!("{}.unsubscribe | Does not supported", self.id())
+        std::panic!("{}.unsubscribe | Does not supported", self.id)
     }
     //
     //
-    fn points(&self) -> Vec<sal_sync::services::entity::point::point_config::PointConfig> {
+    fn points(&self) -> Vec<sal_sync::services::entity::PointConfig> {
         std::vec![]
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::subscription::subscription_criteria::SubscriptionCriteria]) -> Receiver<Point> {
+    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Receiver<Point> {
         let _ = receiver_name;
         let _ = points;
-        std::panic!("{}.gi | Does not supported", self.id())
+        std::panic!("{}.gi | Does not supported", self.id)
     }
 }

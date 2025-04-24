@@ -1,6 +1,6 @@
 use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}, services::Services};
+use sal_sync::services::{entity::{Name, Object, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services};
 use testing::entities::test_value::Value;
 ///
 ///
@@ -44,9 +44,6 @@ impl MockSendService {
 //
 // 
 impl Object for MockSendService {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -75,7 +72,7 @@ impl Service for MockSendService {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

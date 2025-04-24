@@ -1,15 +1,15 @@
 #[cfg(test)]
 
 mod task_nodes {
+    use coco::Stack;
     use sal_core::error::Error;
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services};
-    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
+    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread::{self, JoinHandle}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
         services::task::{nested_function::{
             comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric,
-            // sql_metric
         }, task_nodes::TaskNodes},
     };
     ///
@@ -154,6 +154,7 @@ mod task_nodes {
         name: Name,
         links: HashMap<String, Sender<Point>>,
         rx_recv: Mutex<Option<Receiver<Point>>>,
+        handle: Stack<JoinHandle<()>>,
         exit: Arc<AtomicBool>,
     }
     //
@@ -169,6 +170,7 @@ mod task_nodes {
                     (link_name.to_string(), send),
                 ]),
                 rx_recv: Mutex::new(Some(recv)),
+                handle: Stack::new(),
                 exit: Arc::new(AtomicBool::new(false)),
             }
         }
@@ -176,9 +178,6 @@ mod task_nodes {
     //
     //
     impl Object for MockService {
-        fn id(&self) -> &str {
-            &self.id
-        }
         fn name(&self) -> Name {
             self.name.clone()
         }
@@ -206,7 +205,7 @@ mod task_nodes {
         }
         //
         //
-        fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+        fn run(&mut self) -> Result<(), Error> {
             log::info!("{}.run | Starting...", self.id);
             let self_id = self.id.clone();
             let exit = self.exit.clone();
@@ -229,7 +228,8 @@ mod task_nodes {
             match handle {
                 Ok(handle) => {
                     log::info!("{}.run | Starting - ok", self.id);
-                    Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                    self.handle.push(handle);
+                    Ok(())
                 }
                 Err(err) => {
                     let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -237,6 +237,21 @@ mod task_nodes {
                     Err(err)
                 }
             }
+        }
+        //
+        //
+        fn wait(&self) -> sal_sync::services::future::Future<()> {
+            let dbg = self.id.clone();
+            let (future, sink) = sal_sync::services::future::Future::new();
+            if let Some(handle) = self.handle.pop() {
+                std::thread::spawn(move|| {
+                    if let Err(err) = handle.join() {
+                        log::warn!("{dbg}.wait | Error: {:?}", err);
+                    }
+                    sink.add(());
+                });
+            }
+            future
         }
         //
         //

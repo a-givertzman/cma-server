@@ -1,5 +1,5 @@
 use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, RwLock}};
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, services::Services};
+use sal_sync::services::{entity::{Name, Object, Point}, services::Services};
 use crate::{
     core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
     services::server::jds_cnnection::Shared,
@@ -74,9 +74,6 @@ impl<F> Debug for JdsRoutes<F> {
 //
 // 
 impl<F> Object for JdsRoutes<F> {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }

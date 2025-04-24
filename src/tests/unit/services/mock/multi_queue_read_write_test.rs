@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod multi_queue {
-        use sal_sync::services::{retain::retain_conf::RetainConf, service::service::Service};
+        use sal_sync::services::{retain::retain_conf::RetainConf, service::Service};
     use std::{sync::{Arc, Once, RwLock}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

@@ -1,13 +1,6 @@
 use chrono::{DateTime, Utc};
 use sal_sync::services::{
-    entity::{
-        cot::Cot,
-        point::{
-            point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, 
-            point_config_type::PointConfigType, point_hlr::PointHlr,
-        },
-        status::status::Status,
-    },
+    entity::{Cot, Point, PointConfig, PointConfigAddress, PointConfigType, PointHlr, Status},
     types::bool::Bool,
 };
 use crate::services::slmp_client::parse_point::ParsePoint;

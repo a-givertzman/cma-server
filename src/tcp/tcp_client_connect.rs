@@ -1,4 +1,4 @@
-use sal_sync::services::{safe_lock::rwlock::SafeLock, service::service_cycle::ServiceCycle};
+use sal_sync::services::{safe_lock::rwlock::SafeLock, service::ServiceCycle};
 use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::LevelFilter;
 ///

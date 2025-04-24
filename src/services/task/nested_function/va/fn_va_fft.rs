@@ -4,13 +4,13 @@ use derivative::Derivative;
 use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::services::{
     entity::{
-        cot::Cot, name::Name,
-        point::{
-            point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter,
-            point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId,
+        Cot, Name,
+        {
+            Point, PointConfig, PointConfigFilter,
+            PointConfigType, PointHlr, PointTxId,
         },
-        status::status::Status,
-    }, safe_lock::rwlock::SafeLock, service::link_name::LinkName, services::Services, types::bool::Bool
+        Status,
+    }, safe_lock::rwlock::SafeLock, service::LinkName, services::Services, types::bool::Bool
 };
 use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Arc, RwLock}};
 use crate::{

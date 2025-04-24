@@ -3,11 +3,11 @@ use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use sal_sync::{
-    kernel::state::change_notify::ChangeNotify,
+    kernel::state::ChangeNotify,
     services::entity::{
-        name::Name, 
-        point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType},
-        status::status::Status,
+        Name, 
+        {Point, PointConfig, PointConfigType},
+        Status,
     }
 };
 use crate::conf::udp_client_config::udp_client_db_config::UdpClientDbConfig;

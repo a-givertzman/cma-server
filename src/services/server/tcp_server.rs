@@ -1,5 +1,5 @@
 use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services};
+use sal_sync::services::{entity::{Name, Object}, service::{Service, ServiceCycle, ServiceHandles}, services::Services};
 use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, RwLock}, thread, time::Duration
 };
@@ -38,6 +38,8 @@ pub struct TcpServer {
     conf: TcpServerConfig,
     connections: Arc<RwLock<TcpServerConnections>>,
     services: Arc<RwLock<Services>>,
+    handle: ServiceHandles<()>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -56,6 +58,8 @@ impl TcpServer {
             conf: conf.clone(),
             connections: Arc::new(RwLock::new(TcpServerConnections::new(conf.name))),
             services,
+            handle: ServiceHandles::new(vec![]),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -82,9 +86,6 @@ impl TcpServer {
                 );
                 match connection.run() {
                     Ok(handles) => {
-                        if handles.len() != 1 {
-                            panic!("{}.setup_connection | TcpServerConnection.run must return single handle, but returns {}", con_info.self_id, handles.len())
-                        }
                         let (_, handle) = handles.into_iter().next().unwrap();
                         match send.send(Action::Continue(stream)) {
                             Ok(_) => {}
@@ -148,9 +149,6 @@ impl TcpServer {
 //
 //
 impl Object for TcpServer {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -170,7 +168,7 @@ impl Debug for TcpServer {
 impl Service for TcpServer {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
@@ -235,7 +233,8 @@ impl Service for TcpServer {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.insert(self.id, handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -244,8 +243,29 @@ impl Service for TcpServer {
             }
         }
     }
-    ///
-    ///
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+                self.is_finished.store(true, Ordering::SeqCst);
+            });
+        }
+        future
+    }
+    //
+    // 
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
+    }
+    //
+    //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
         thread::sleep(Duration::from_millis(10));

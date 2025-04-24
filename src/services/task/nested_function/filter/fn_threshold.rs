@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use sal_sync::services::entity::point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr};
+use sal_sync::services::entity::{Point, PointConfigType, PointHlr};
 use crate::{
     core_::types::fn_in_out_ref::FnInOutRef, services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},

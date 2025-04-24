@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod fn_timer {
-        use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::point::ToPoint, task::functions::conf::{FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, time::{Instant, Duration}, thread,rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{

@@ -1,5 +1,5 @@
 use concat_string::concat_string;
-use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}}, types::bool::Bool};
+use sal_sync::services::{entity::{Cot, {Point, PointHlr}}, types::bool::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     core_::types::fn_in_out_ref::FnInOutRef,

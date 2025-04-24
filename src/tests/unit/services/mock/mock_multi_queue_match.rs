@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::Point, point_tx_id::PointTxId}},
-    service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
-    subscription::{subscription_criteria::SubscriptionCriteria, subscriptions::Subscriptions}
+    entity::{Name, Object, {Point, PointTxId}},
+    service::{LinkName, Service},
+    subscription::{SubscriptionCriteria, subscriptions::Subscriptions}
 };
 use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
@@ -102,7 +102,7 @@ impl Service for MockMultiQueueMatch {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

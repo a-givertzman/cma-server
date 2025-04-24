@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod task {
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, safe_lock::rwlock::SafeLock, service::Service, services::Services};
     use std::{env, sync::{Arc, Once, RwLock}, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

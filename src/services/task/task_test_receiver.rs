@@ -1,6 +1,7 @@
+use coco::Stack;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread, time::Duration};
+use sal_sync::services::{entity::{Name, Object, Point}, service::Service};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration};
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -10,6 +11,7 @@ pub struct TaskTestReceiver {
     in_send: HashMap<String, Sender<Point>>,
     in_recv: Mutex<Option<Receiver<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -31,6 +33,7 @@ impl TaskTestReceiver {
             in_send: HashMap::from([(recv_queue.to_string(), send)]),
             in_recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -50,9 +53,6 @@ impl TaskTestReceiver {
 //
 // 
 impl Object for TaskTestReceiver {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -80,7 +80,7 @@ impl Service for TaskTestReceiver {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         let self_id = self.id.clone();
         log::info!("{}.run | Starting...", self_id);
         let exit = self.exit.clone();
@@ -140,14 +140,30 @@ impl Service for TaskTestReceiver {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
-            }
+                self.handle.push(handle);
+                Ok(())
+                        }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
     }
     //
     //

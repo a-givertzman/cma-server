@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use egui::{
     accesskit::Point, vec2, Align2, Color32, FontFamily, FontId, TextStyle 
 };
-use sal_sync::kernel::state::change_notify::ChangeNotify;
+use sal_sync::kernel::state::ChangeNotify;
 ///
 /// Plot the point values
 pub struct UiPlot {

@@ -1,5 +1,6 @@
-use std::{any::Any, collections::HashMap, net::TcpStream, sync::mpsc::{SendError, Sender}, thread::JoinHandle};
-use testing::stuff::wait::WaitTread;
+use std::{collections::HashMap, net::TcpStream, sync::mpsc::{SendError, Sender}, thread::JoinHandle};
+use sal_core::error::Error;
+use sal_sync::services::service::Service;
 ///
 /// 
 pub enum Action {
@@ -12,13 +13,13 @@ pub enum Action {
 /// - Sender<Action>
 #[derive(Debug)]
 struct Connection {
-    handle: JoinHandle<()>,
+    handle: Arc::Box<dyn Service>,
     send: Sender<Action>,
 }
 //
 // 
 impl Connection {
-    pub fn new(handle: JoinHandle<()>, send: Sender<Action>,) -> Self {
+    pub fn new(handle: Box<dyn Service>, send: Sender<Action>,) -> Self {
         Self {
             handle,
             send,
@@ -31,8 +32,8 @@ impl Connection {
     }
     ///
     /// 
-    pub fn wait(self) -> Result<(), Box<dyn Any + Send>> {
-        self.handle.wait()
+    pub fn wait(self) -> Result<(), Error> {
+        self.handle.wait().wait()
     }
     ///
     /// 
@@ -68,7 +69,7 @@ impl TcpServerConnections {
     }
     ///
     /// Inserts a new connection, if connection_id olready exists, connection will be updated
-    pub fn insert(&mut self, connection_id: &str, handle: JoinHandle<()>, send: Sender<Action>) {
+    pub fn insert(&mut self, connection_id: &str, handle: Arc<()>, send: Sender<Action>) {
         log::info!("{}.insert | connection: '{}'", self.id, connection_id);
         self.connections.insert(
             connection_id.to_string(),

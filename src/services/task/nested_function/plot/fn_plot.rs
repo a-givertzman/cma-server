@@ -1,6 +1,6 @@
 use chrono::Utc;
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
+use sal_sync::services::{entity::{Cot, {Point, PointHlr, PointTxId}, Status}, types::bool::Bool};
 use std::{sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender}, thread};
 use crate::{
     core_::types::fn_in_out_ref::FnInOutRef,

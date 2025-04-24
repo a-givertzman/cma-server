@@ -3,12 +3,12 @@ use std::{
     thread::{self, JoinHandle}, time::Duration,
 };
 use sal_sync::{
-    collections::map::FxIndexMap,
-    kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
+    collections::FxIndexMap,
+    kernel::state::{ChangeNotify, ExitNotify},
     services::{
-        entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status},
-        safe_lock::rwlock::SafeLock, service::service_cycle::ServiceCycle, services::Services,
-        subscription::subscription_criteria::SubscriptionCriteria,
+        entity::{Cot, {Point, PointHlr}, Status},
+        safe_lock::rwlock::SafeLock, service::ServiceCycle, services::Services,
+        subscription::SubscriptionCriteria,
     },
 };
 use crate::{

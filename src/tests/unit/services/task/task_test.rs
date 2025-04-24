@@ -2,7 +2,7 @@
 
 mod task {
     use sal_sync::services::{
-        conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, safe_lock::rwlock::SafeLock, service::service::Service, services::Services
+        conf::{ConfTree, ServicesConf}, entity::Name, safe_lock::rwlock::SafeLock, service::Service, services::Services
     };
     use std::{env, sync::{Arc, Once, RwLock}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};

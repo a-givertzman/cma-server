@@ -4,10 +4,19 @@ use std::{
     thread::{self, JoinHandle},
     time::Duration,
 };
+use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_core::error::Error;
-use sal_sync::{collections::map::FxIndexMap, kernel::state::change_notify::ChangeNotify, services::{conf::diag_keywd::DiagKeywd, entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria}};
+use sal_sync::{
+    collections::FxIndexMap, kernel::state::ChangeNotify,
+    services::{
+        conf::DiagKeywd, entity::{Cot, Name, Object, Point, PointConfig, PointHlr, PointTxId, Status},
+        safe_lock::rwlock::SafeLock,
+        service::{Service, ServiceCycle},
+        services::Services, subscription::SubscriptionCriteria,
+    },
+};
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
@@ -29,6 +38,7 @@ pub struct ProfinetClient {
     conf: ProfinetClientConfig,
     services: Arc<RwLock<Services>>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
+    handle: Stack<(String, JoinHandle<()>)>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -48,6 +58,7 @@ impl ProfinetClient {
             conf: conf.clone(),
             services,
             diagnosis,
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -364,9 +375,6 @@ impl ProfinetClient {
 //
 //
 impl Object for ProfinetClient {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -386,7 +394,7 @@ impl Debug for ProfinetClient {
 impl Service for ProfinetClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         let tx_send = self.services.rlock(&self.id).get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
@@ -398,10 +406,9 @@ impl Service for ProfinetClient {
         let error = Error::new(&self.id, "run");
         match (handle_read, handle_write) {
             (Ok(handle_read), Ok(handle_write)) => {
-                Ok(ServiceHandles::new(vec![
-                    (format!("{}/read", self.id), handle_read),
-                    (format!("{}/write", self.id), handle_write),
-                ]))
+                self.handle.push((format!("{}/read", self.id), handle_read));
+                self.handle.push((format!("{}/write", self.id), handle_write));
+                Ok(())
             }
             (Ok(handle_read), Err(err)) => {
                 self.exit();
@@ -420,6 +427,27 @@ impl Service for ProfinetClient {
                 ))
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        let mut handles = vec![];
+        while !self.handle.is_empty() {
+            if let Some(h) = self.handle.pop() {
+                handles.push(h);
+            }
+        }
+        std::thread::spawn(move|| {
+            for (id, h) in handles {
+                if let Err(err) = h.join() {
+                    log::warn!("{dbg}.wait | Wait for '{id}' error: {:?}", err);
+                }
+            }
+            sink.add(());
+        });
+        future
     }
     //
     //

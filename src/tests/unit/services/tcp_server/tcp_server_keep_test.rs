@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tcp_server {
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
     use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
     use testing::{
         entities::test_value::Value,

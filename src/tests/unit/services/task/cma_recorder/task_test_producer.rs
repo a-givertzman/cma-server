@@ -1,6 +1,7 @@
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use coco::Stack;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_config::PointConfig, point_tx_id::PointTxId}}, safe_lock::rwlock::SafeLock, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}, services::Services};
+use sal_sync::services::{entity::{Name, Object, Point, ToPoint, PointConfig, PointTxId}, safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services};
 use testing::entities::test_value::Value;
 
 ///
@@ -14,6 +15,7 @@ pub struct TaskTestProducer {
     services: Arc<RwLock<Services>>,
     test_data: Vec<(String, Value)>,
     sent: Arc<RwLock<Vec<Point>>>,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -30,6 +32,7 @@ impl TaskTestProducer {
             services,
             test_data: test_data.to_vec(),
             sent: Arc::new(RwLock::new(vec![])),
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -42,9 +45,6 @@ impl TaskTestProducer {
 //
 // 
 impl Object for TaskTestProducer {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -64,7 +64,7 @@ impl Debug for TaskTestProducer {
 impl Service for TaskTestProducer {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         let self_id = self.id.clone();
         let tx_id = PointTxId::from_str(&self_id);
         let cycle = self.cycle;
@@ -98,7 +98,8 @@ impl Service for TaskTestProducer {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Started", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -132,6 +133,21 @@ impl Service for TaskTestProducer {
                 )
             })
             .collect()
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
     }
     //
     //

@@ -1,9 +1,10 @@
+use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, subscription::subscription_criteria::SubscriptionCriteria
+    entity::{Name, Object, {Point, PointConfig, PointTxId}}, safe_lock::rwlock::SafeLock, service::{Service, ServiceCycle}, services::Services, subscription::SubscriptionCriteria
 };
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::Duration,
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration,
 };
 use concat_string::concat_string;
 use crate::{
@@ -23,6 +24,7 @@ pub struct Task {
     rx_recv: Mutex<Option<Receiver<Point>>>,
     services: Arc<RwLock<Services>>,
     conf: TaskConfig,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -41,6 +43,7 @@ impl Task {
             rx_recv: Mutex::new(Some(recv)),
             services,
             conf,
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -110,9 +113,6 @@ impl Task {
 //
 //
 impl Object for Task {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -141,7 +141,7 @@ impl Service for Task {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         log::trace!("{}.run | Self tx_id: {}", self.id, PointTxId::from_str(&self.id));
         let self_id = self.id.clone();
@@ -208,7 +208,8 @@ impl Service for Task {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -221,6 +222,21 @@ impl Service for Task {
     //
     fn points(&self) -> Vec<PointConfig> {
         self.conf.points()
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
     }
     //
     //

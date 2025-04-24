@@ -2,7 +2,7 @@
 
 mod tcp_client {
     use sal_sync::services::{
-        conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services
+        conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::Service, services::Services
     };
     use std::{io::Write, net::TcpListener, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
@@ -92,8 +92,8 @@ mod tcp_client {
         ))));
         let multi_queue = Arc::new(RwLock::new(MockMultiQueue::new(self_id, "", Some(total_count))));
         let tcp_client = Arc::new(RwLock::new(TcpClient::new(conf, services.clone())));
-        let multi_queue_service_id = multi_queue.read().unwrap().id().to_owned();
-        let tcp_client_service_id = tcp_client.read().unwrap().id().to_owned();
+        let multi_queue_service_id = multi_queue.read().unwrap().name().join();
+        let tcp_client_service_id = tcp_client.read().unwrap().name().join();
         services.wlock(self_id).insert(tcp_client.clone());
         services.wlock(self_id).insert(multi_queue.clone());
         let services_handle = services.wlock(self_id).run().unwrap();

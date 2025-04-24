@@ -28,12 +28,14 @@
 //! - `COUNT` - length of the array in the `DATA` field
 //! - `DATA` - array of values of type specified in the `TYPE` field
 //! 
-use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_core::error::Error;
 use sal_sync::{
-    collections::map::FxIndexMap, kernel::state::{change_notify::ChangeNotify, switch_state::{Switch, SwitchCondition, SwitchState}}, services::{entity::{name::Name, object::Object, point::point_tx_id::PointTxId}, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services}
+    collections::FxIndexMap, kernel::state::{ChangeNotify, Switch, SwitchCondition, SwitchState},
+    services::{entity::{Name, Object, PointTxId}, safe_lock::rwlock::SafeLock, service::{Service, ServiceCycle}, services::Services},
 };
 use crate::{
     conf::udp_client_config::udp_client_config::UdpClientConfig,
@@ -55,6 +57,7 @@ pub struct UdpClient {
     name: Name,
     conf: UdpClientConfig,
     services: Arc<RwLock<Services>>,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -76,6 +79,7 @@ impl UdpClient {
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
+            handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -200,9 +204,6 @@ impl UdpClient {
 //
 //
 impl Object for UdpClient {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -242,7 +243,7 @@ static SELF_ID: std::sync::LazyLock<RwLock<String>> = std::sync::LazyLock::new(|
 impl Service for UdpClient {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
@@ -368,7 +369,8 @@ impl Service for UdpClient {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
@@ -376,6 +378,21 @@ impl Service for UdpClient {
                 Err(err)
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> sal_sync::services::future::Future<()> {
+        let dbg = self.id.clone();
+        let (future, sink) = sal_sync::services::future::Future::new();
+        if let Some(handle) = self.handle.pop() {
+            std::thread::spawn(move|| {
+                if let Err(err) = handle.join() {
+                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                }
+                sink.add(());
+            });
+        }
+        future
     }
     //
     //

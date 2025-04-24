@@ -1,7 +1,8 @@
 [package]
 name = "cma-server"
 version = "0.1.3"
-edition = "2021"
+edition = "2024"
+
 build = "build.rs"
 
 [features]
@@ -21,7 +22,7 @@ debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.0.6" }
 sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
 # sal-sync = { path = "../sal-sync" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.0.4" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.2.0" }
 
 serde = { version = "^1.0", features = ["derive"] }
 serde_yaml = "^0.9"
@@ -31,13 +32,14 @@ regex = "^1.10"
 
 # Math
 rand = "^0.9"
-rustfft = "^6.2"
+rustfft = "^6.3"
 
 # Collections
 linked-hash-map = "^0.5"
 indexmap = "^2.6"
 hashers = "^1.0"
 circular-buffer = "^1.1"
+coco = "^0.3"
 
 # CPP integrations
 # snap7 = "^0.0"
@@ -62,7 +64,7 @@ clap = { version = "^4.5", features = ["derive"] }
 
 # UI
 egui = "^0.31"
-egui_plot = "^0.31"
+egui_plot = "^0.32"
 egui_extras = "^0.31"
 eframe = "^0.31"
 hsl = "^0.1"

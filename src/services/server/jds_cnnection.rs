@@ -1,9 +1,10 @@
 use std::{
-    collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
+    collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread::{self, JoinHandle}, time::Instant, 
 };
+use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{cot::Cot, name::Name, point::point::Point}, safe_lock::rwlock::SafeLock, service::service_handles::ServiceHandles, services::Services, subscription::subscription_criteria::SubscriptionCriteria};
+use sal_sync::services::{entity::{Cot, Name, Point}, safe_lock::rwlock::SafeLock, services::Services, subscription::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -71,7 +72,8 @@ pub struct JdsConnection {
     connection_id: String,
     action_recv: Vec<Receiver<Action>>, 
     services: Arc<RwLock<Services>>,
-    conf: TcpServerConfig, 
+    conf: TcpServerConfig,
+    handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -92,12 +94,13 @@ impl JdsConnection {
             action_recv: vec![action_recv],
             services,
             conf,
+            handle: Stack::new(),
             exit,
         }
     }
     ///
     /// Main loop of the connection 
-    pub fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    pub fn run(&mut self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
@@ -260,7 +263,8 @@ impl JdsConnection {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
                 let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());

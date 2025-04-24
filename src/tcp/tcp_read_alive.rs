@@ -1,5 +1,5 @@
 use log::LevelFilter;
-use sal_sync::services::{entity::point::point::Point, service::service_cycle::ServiceCycle};
+use sal_sync::services::{entity::Point, service::ServiceCycle};
 use std::{
     io::BufReader, net::TcpStream, 
     sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex},

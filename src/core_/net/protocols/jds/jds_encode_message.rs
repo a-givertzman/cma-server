@@ -1,4 +1,4 @@
-use sal_sync::services::entity::{name::Name, object::Object};
+use sal_sync::services::entity::{Name, Object};
 use crate::{core_::failure::recv_error::RecvError, tcp::steam_read::StreamRead};
 use super::{jds_serialize::JdsSerialize, jds_define::JDS_END_OF_TRANSMISSION};
 ///
@@ -28,9 +28,6 @@ impl JdsEncodeMessage {
 //
 // 
 impl Object for JdsEncodeMessage {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
