@@ -13,7 +13,6 @@ pub enum Functions {
     Var,
     /// debuging functions
     Debug,
-    Plot,
     /// user defined functions
     Add,
     Count,
@@ -66,7 +65,6 @@ impl Functions {
     const VAR                           : &'static str = "var";
     /// debuging functions
     const DEBUG                         : &'static str = "Debug";
-    const PLOT                          : &'static str = "Plot";
     /// user defined functions
     const ADD                           : &'static str = "Add";
     const COUNT                         : &'static str = "Count";
@@ -130,7 +128,6 @@ impl Functions {
             Self::SqlMetric             => Self::SQL_METRIC,
             Self::PointId               => Self::POINT_ID,
             Self::Debug                 => Self::DEBUG,
-            Self::Plot                  => Self::PLOT,
             Self::ToBool                => Self::TO_BOOL,
             Self::ToInt                 => Self::TO_INT,
             Self::ToReal                => Self::TO_REAL,
@@ -181,7 +178,6 @@ impl Functions {
             Self::SQL_METRIC            => Ok( Self::SqlMetric ),
             Self::POINT_ID              => Ok( Self::PointId ),
             Self::DEBUG                 => Ok( Self::Debug ),
-            Self::PLOT                  => Ok( Self::Plot ),
             Self::TO_BOOL               => Ok( Self::ToBool ),
             Self::TO_INT                => Ok( Self::ToInt ),
             Self::TO_REAL               => Ok( Self::ToReal ),

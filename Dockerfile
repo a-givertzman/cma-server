@@ -3,6 +3,7 @@ RUN apt update && apt install -y clang
 WORKDIR /build
 COPY Cargo.toml ./Cargo.toml
 COPY Cargo.lock ./Cargo.lock
+COPY build.rs ./build.rs
 COPY src/ ./src/
 COPY lib/ ./lib/
 RUN cargo build --release
@@ -13,4 +14,5 @@ COPY --from=builder /build/target/release/cma-server ./
 COPY config.yaml ./config.yaml
 COPY cma-recorder.yaml ./cma-recorder.yaml
 COPY lib/ ./lib/
-CMD ./cma-server -- --config config.yaml cma-recorder.yaml
+CMD ./cma-server -- --config config.yaml 
+#cma-recorder.yaml

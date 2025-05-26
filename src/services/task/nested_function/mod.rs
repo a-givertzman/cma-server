@@ -54,7 +54,6 @@ pub mod io;
 pub mod filter;
 pub mod comp;
 pub mod ops;
-pub mod plot;
 
 pub mod reset_counter;
 
