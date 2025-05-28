@@ -114,8 +114,31 @@ service Task RecorderTask:
         input fn BitOr:
             input1: opCycleIsActive_
             input2: opCycleIsDone
+    #
+    # Detect if pump #1 of HPU is active (true - isActive, false - isNotActive)
+    let pump1IsActive:
+        input fn Eq: # DsDps.on == 2
+            input0: point int '/App/HPU.Pump1.State' status ok default 0
+            input1: const int 2
+    #
+    # Detect if pump #2 of HPU is active (true - isActive, false - isNotActive)
+    let pump2IsActive:
+        input fn Eq: # DsDps.on == 2
+            input0: point int '/App/HPU.Pump2.State' status ok default 0
+            input1: const int 2
+    #
+    # Detect if emergency pump of HPU is active (true - isActive, false - isNotActive)
+    let emergencyPumpIsActive:
+        input fn Eq: # DsDps.on == 2
+            input0: point int '/App/HPU.EmergencyHPU.State' status ok default 0
+            input1: const int 2
+    #
+    # Detect if any of HPU pumps is active (true - isActive, false - isNotActive)
     let pumpIsActive:
-        input: opCycleIsActive
+        input fn BitOr:
+            input0: pump1IsActive
+            input1: pump2IsActive
+            input2: emergencyPumpIsActive
     #
     # Count the operating cycle ID (retained localy)
     let opCycleId:
@@ -2929,9 +2952,6 @@ service Task RecorderTask:
             sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch3LoadEvent', {input.value}, 0);
             opCycleId: opCycleId
             input: winch3LoadFiltered
-
-
-
     #
     # ========= PLOTTING =========
     # fn Plot Plot1:
