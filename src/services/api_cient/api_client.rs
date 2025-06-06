@@ -133,7 +133,7 @@ impl Service for ApiClient {
         let _queue_max_length = conf.rx_max_len;
         let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
             let mut buffer = RetainBuffer::new(&dbg, "", Some(conf.rx_max_len as usize));
-            let mut cycle = ServiceCycle::new(&dbg.to_string(), cycle_interval);
+            let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
             // let mut connect = TcpClientConnect::new(self_id.clone() + "/TcpSocketClientConnect", conf.address, reconnect);
             let api_keep_alive = true;
             let sql_keep_alive = true;

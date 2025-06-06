@@ -180,7 +180,7 @@ impl Service for TcpServer {
         log::info!("{}.run | Preparing thread...", dbg);
         let handle = thread::Builder::new().name(format!("{}.run", dbg.clone())).spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
-            let mut cycle = ServiceCycle::new(&dbg.to_string(), reconnect_cycle);
+            let mut cycle = ServiceCycle::new(&dbg, reconnect_cycle);
             'main: loop {
                 cycle.start();
                 log::info!("{}.run | Open socket {}...", dbg, conf.address);

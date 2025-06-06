@@ -120,7 +120,7 @@ impl Service for ProducerService {
         let debug = self.conf.debug;
         let interval = self.conf.cycle.unwrap_or(Duration::ZERO);
         let delayed = !interval.is_zero();
-        let mut cycle = ServiceCycle::new(&self_name.join(), interval);
+        let mut cycle = ServiceCycle::new(&dbg, interval);
         let send = self.services.rlock(&dbg).get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", dbg, err);
         });
