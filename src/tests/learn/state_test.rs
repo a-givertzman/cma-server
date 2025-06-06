@@ -2,9 +2,9 @@
 #[cfg(test)]
 
 mod tests {
-        use std::sync::Once;
+    use std::sync::Once;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use sal_sync::kernel::state::{switch_state::{SwitchState, Switch, SwitchCondition}, switch_state_changed::SwitchStateChanged};
+    use sal_sync::kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged};
     ///
     ///
     static INIT: Once = Once::new();

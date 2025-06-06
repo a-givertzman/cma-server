@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::Name};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
 use std::{fs, time::Duration, net::SocketAddr};
 ///
 /// creates config from serde_yaml::Value of following format:
