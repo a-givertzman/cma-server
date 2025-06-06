@@ -873,12 +873,14 @@ dependencies = [
  "hashers",
  "hsl",
  "indexmap",
+ "kanal",
  "lazy_static",
  "libc",
  "libloading",
  "linked-hash-map",
  "log",
  "once_cell",
+ "parking_lot",
  "plotters",
  "rand 0.9.1",
  "regex",
@@ -3616,7 +3618,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.2.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.2.0#4c3e94b0f8e461cb4a098f791509eff9b73afe30"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.2.0#f6d1178b1b6edb25a2ff72414dbe754245ea47d5"
 dependencies = [
  "api-tools 0.0.6 (git+https://github.com/a-givertzman/rust-api-tools.git?tag=0.1.1)",
  "chrono",
@@ -4222,9 +4224,9 @@ dependencies = [
 
 [[package]]
 name = "toml_datetime"
-version = "0.6.9"
+version = "0.6.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3da5db5a963e24bc68be8b17b6fa82814bb22ee8660f192bb182771d498f09a3"
+checksum = "effe3f6fb7aa31e9bfdd3e0fbcc1d35e2899feb2a2ad4ad6dec9e6bd415ed73a"
 
 [[package]]
 name = "toml_edit"

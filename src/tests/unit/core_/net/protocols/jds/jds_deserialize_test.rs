@@ -186,7 +186,7 @@ mod jds_deserialize {
         let test_data = test_data.to_owned().clone();
         thread::spawn(move || {
             log::info!("TCP server | Preparing test server...");
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             match TcpListener::bind(addr) {
                 Ok(listener) => {
                     log::info!("TCP server | Preparing test server - ok");
@@ -200,7 +200,7 @@ mod jds_deserialize {
                                 let eot = [4];
                                 for _ in 0..count {
                                     for (msg, _) in &test_data {
-                                        let pos: usize = rng.gen_range(5..(msg.len() - 5));
+                                        let pos: usize = rng.random_range(5..(msg.len() - 5));
                                         let (msg1, msg2) = msg.split_at(pos);
                                         let bytes1 = msg1.as_bytes();
                                         let bytes2 = msg2.as_bytes();

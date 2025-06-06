@@ -8,7 +8,7 @@ mod jds_routes {
             {Point, PointConfig, PointHlr, PointTxId},
             Status,
         },
-        multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf},
+        multi_queue::{MultiQueue, MultiQueueConf},
         safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services,
     };
     use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
@@ -16,7 +16,7 @@ mod jds_routes {
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once, RwLock}, thread, time::Duration};
     use crate::{
         conf::tcp_server_config::TcpServerConfig,
-        core_::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
+        core_::{net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}},
         services::server::tcp_server::TcpServer,
         tests::unit::services::{mock::mock_recv_service::MockRecvService, service::mock_service_points::MockServicePoints},
     };
@@ -214,8 +214,8 @@ mod jds_routes {
             tcp_stream.write_all(&request).unwrap();
         }
         thread::sleep(Duration::from_millis(2000));
-        receiver.write().unwrap().exit();
-        receiver_handle.wait().unwrap();
+        receiver.read().unwrap().exit();
+        receiver.read().unwrap().wait().unwrap();
         let received = receiver.write().unwrap().received();
         let result = received.write().len();
         assert!(result == 0, "All points must be rejected, but some of them passed: \nresult: {:?}\ntarget: {:?}", result, 0);
@@ -225,9 +225,9 @@ mod jds_routes {
         services.rlock(self_id).exit();
         //
         // Waiting while all services being finished
-        mq_service_handle.wait().unwrap();
-        tcp_server_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        mq_service.write().unwrap().wait().unwrap();
+        tcp_server.write().unwrap().wait().unwrap();
+        services.wlock(self_id).wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();
@@ -334,10 +334,10 @@ mod jds_routes {
         services.rlock(self_id).exit();
         //
         // Waiting while all services being finished
-        receiver_handle.wait().unwrap();
-        mq_service_handle.wait().unwrap();
-        tcp_server_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        receiver.read().unwrap().wait().unwrap();
+        mq_service.read().unwrap().wait().unwrap();
+        tcp_server.read().unwrap().wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();
@@ -518,10 +518,10 @@ mod jds_routes {
         services.rlock(self_id).exit();
         //
         // Waiting while all services being finished
-        receiver_handle.wait().unwrap();
-        mq_service_handle.wait().unwrap();
-        tcp_server_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        receiver.read().unwrap().wait().unwrap();
+        mq_service.read().unwrap().wait().unwrap();
+        tcp_server.read().unwrap().wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();
@@ -633,10 +633,10 @@ mod jds_routes {
         println!("{} | MockRecvService - ready", self_id);
         //
         // Starting all services
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
-        let jds_service_handle = tcp_server.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        receiver.write().unwrap().run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
+        tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(200));
         //
@@ -659,13 +659,13 @@ mod jds_routes {
         println!("{} | Total sent: {}", self_id, sent);
         //
         // Waiting while all events being received
-        receiver_handle.wait().unwrap();
+        receiver.read().unwrap().wait().unwrap();
         thread::sleep(Duration::from_millis(800));
         //
         // Stopping all services
-        receiver.write().unwrap().exit();
-        tcp_server.write().unwrap().exit();
-        mq_service.write().unwrap().exit();
+        receiver.read().unwrap().exit();
+        tcp_server.read().unwrap().exit();
+        mq_service.read().unwrap().exit();
         services.rlock(self_id).exit();
         //
         // Verivications
@@ -710,9 +710,9 @@ mod jds_routes {
         assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         //
         // Waiting while all services being finished
-        mq_service_handle.wait().unwrap();
-        jds_service_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        mq_service.read().unwrap().wait().unwrap();
+        tcp_server.read().unwrap().wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();

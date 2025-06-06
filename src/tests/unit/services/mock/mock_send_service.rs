@@ -1,17 +1,20 @@
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
-use sal_core::error::Error;
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use coco::Stack;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{entity::{Name, Object, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services};
 use testing::entities::test_value::Value;
 ///
 ///
 pub struct MockSendService {
-    id: String,
+    dbg: Dbg,
     name: Name,
     send_to: LinkName,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     delay: Option<Duration>,
+    handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -20,20 +23,22 @@ impl MockSendService {
     pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, delay: Option<Duration>) -> Self {
         let name = Name::new(parent, format!("MockSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
-            id: name.join(),
+            dbg: Dbg::new(name.parent(), name.me()),
             name,
             send_to: LinkName::from_str(send_to).unwrap(),
             services,
             test_data,
             sent: Arc::new(RwLock::new(vec![])),
             delay,
+            handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// 
     pub fn id(&self) -> String {
-        self.id.clone()
+        self.dbg.to_string()
     }
     ///
     /// 
@@ -54,7 +59,7 @@ impl Debug for MockSendService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("MockSendService")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -73,11 +78,11 @@ impl Service for MockSendService {
     //
     //
     fn run(&mut self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+        log::info!("{}.run | Starting...", self.dbg);
+        let self_id = self.dbg.clone();
         let exit = self.exit.clone();
         let tx_send = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.id, err);
+            panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let test_data = self.test_data.clone();
         let sent = self.sent.clone();
@@ -108,15 +113,35 @@ impl Service for MockSendService {
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                log::info!("{}.run | Starting - ok", self.dbg);
+                self.handle.push(handle);
+                Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
+                if let Err(err) = handle.join() {
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
+                }
+            }
+        }
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     //
