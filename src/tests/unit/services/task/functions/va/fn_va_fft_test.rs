@@ -6,12 +6,12 @@ mod fn_va_fft {
     use concat_in_place::strcat;
     use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
     use sal_sync::services::{
-            conf::{ConfTree, ServicesConf}, entity::{Name, Object, {ToPoint, PointConfigFilter, PointTxId}}, safe_lock::rwlock::SafeLock, service::Service, services::Services, task::functions::{FnConfPointType, fn_conf_options::FnConfOptions}
+            conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfigFilter, PointTxId, ToPoint}, safe_lock::rwlock::SafeLock, service::Service, services::Services, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}
         };
-    use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
+    use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_config::FnConfig, core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::fn_in_out_ref::FnInOutRef},
+        core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::FnInOutRef},
         services::task::{
             nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
             task_test_receiver::TaskTestReceiver,
@@ -99,15 +99,15 @@ mod fn_va_fft {
                     len: {}                         # Length of the                         
             "#, receiver_name, export_point_name, sampl_freq, fft_size)).unwrap();
             let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
-                crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
+                FnConfKind::Fn(conf) => conf,
                 _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
             };
             let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
 
             //
             // Runing all services
-            let services_handle = services.wlock(self_id).run().unwrap();
-            let receiver_handle = receiver.write().unwrap().run().unwrap();
+            services.wlock(self_id).run().unwrap();
+            receiver.write().unwrap().run().unwrap();
             thread::sleep(Duration::from_millis(50));
             log::debug!("{} | All services started", self_id);
     
@@ -205,8 +205,8 @@ mod fn_va_fft {
 
             receiver.read().unwrap().exit();
             services.rlock(self_id).exit();
-            services_handle.wait().unwrap();
-            receiver_handle.wait().unwrap();
+            services.read().unwrap().wait().unwrap();
+            receiver.read().unwrap().wait().unwrap();
 
             log::trace!("main | ffts: {}", ffts.len());
             let result = ffts.len();
@@ -277,15 +277,15 @@ mod fn_va_fft {
                         threshold: {:?}
             "#, receiver_name, export_point_name, sampl_freq, fft_size, threshold)).unwrap();
             let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
-                crate::conf::fn_::fn_conf_kind::FnConfKind::Fn(conf) => conf,
+                FnConfKind::Fn(conf) => conf,
                 _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
             };
             let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
 
             //
             // Runing all services
-            let services_handle = services.wlock(self_id).run().unwrap();
-            let receiver_handle = receiver.write().unwrap().run().unwrap();
+            services.wlock(self_id).run().unwrap();
+            receiver.write().unwrap().run().unwrap();
             thread::sleep(Duration::from_millis(50));
             log::debug!("{} | All services started", self_id);
     
@@ -383,8 +383,8 @@ mod fn_va_fft {
 
             receiver.read().unwrap().exit();
             services.rlock(self_id).exit();
-            services_handle.wait().unwrap();
-            receiver_handle.wait().unwrap();
+            services.read().unwrap().wait().unwrap();
+            receiver.read().unwrap().wait().unwrap();
 
             log::trace!("main | ffts: {}", ffts.len());
             let result = ffts.len();

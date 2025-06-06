@@ -1,12 +1,11 @@
 #[cfg(test)]
 
 mod fn_input {
-        use sal_sync::services::{entity::point::ToPoint, task::functions::{FnConfPointType, fn_conf_options::FnConfOptions}};
+    use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_config::FnConfig,
-        core_::types::FnInOutRef,
+         core_::types::FnInOutRef,
         services::task::nested_function::fn_input::FnInput,
     };
     ///

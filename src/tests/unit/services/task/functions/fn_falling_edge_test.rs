@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod fn_falling_edge {
-        use sal_sync::services::{entity::point::ToPoint, task::functions::{FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
     use testing::entities::test_value::Value;
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::fn_config::FnConfig, 
         core_::types::FnInOutRef,
         services::task::nested_function::{
             edge_detection::fn_falling_edge::FnFallingEdge, fn_::FnOut, fn_input::FnInput
