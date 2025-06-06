@@ -3,7 +3,7 @@
 mod fn_conf_keywd {
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
         use sal_sync::services::{
-        entity::status::status::Status, task::functions::conf::{fn_conf_keywd::{FnConfKeywd, FnConfKeywdValue, FnConfPointType}, fn_conf_options::FnConfOptions},
+        entity::status::status::Status, task::functions::{fn_conf_keywd::{FnConfKeywd, FnConfKeywdValue, FnConfPointType}, fn_conf_options::FnConfOptions},
     };
     use std::{sync::Once, str::FromStr};
     ///

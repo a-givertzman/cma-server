@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tests {
-        use sal_sync::services::{entity::point::ToPoint, task::functions::conf::{FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::point::ToPoint, task::functions::{FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{

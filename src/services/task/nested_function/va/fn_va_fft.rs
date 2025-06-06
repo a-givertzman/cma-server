@@ -5,16 +5,12 @@ use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::services::{
     entity::{
         Cot, Name,
-        {
-            Point, PointConfig, PointConfigFilter,
-            PointConfigType, PointHlr, PointTxId,
-        },
+        Point, PointConfig, PointConfigFilter, PointConfigType, PointHlr, PointTxId,
         Status,
-    }, safe_lock::rwlock::SafeLock, service::LinkName, services::Services, types::bool::Bool
+    }, safe_lock::rwlock::SafeLock, service::LinkName, services::Services, task::functions::{FnConfKind, FnConfig}, types::bool::Bool
 };
 use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Arc, RwLock}};
 use crate::{
-    conf::fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig},
     core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::fn_in_out_ref::FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,

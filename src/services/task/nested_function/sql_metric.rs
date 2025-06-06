@@ -1,8 +1,7 @@
-use sal_sync::services::{entity::{Name, {{Point, ToPoint}, PointHlr, PointTxId}}, services::Services};
+use sal_sync::services::{entity::{Name, Point, PointHlr, PointTxId, ToPoint}, services::Services, task::functions::FnConfig};
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc, RwLock}};
 use indexmap::IndexMap;
 use crate::{
-    conf::fn_::fn_config::FnConfig,
     core_::{
         format::format::Format,
         types::fn_in_out_ref::FnInOutRef,

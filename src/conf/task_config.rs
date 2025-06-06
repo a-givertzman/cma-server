@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, subscription::ConfSubscribe, task::functions::FnConfKind};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, subscription::ConfSubscribe, task::functions::{FnConfKind, FnConfig}};
 use std::{fs, time::Duration};
 ///
 /// creates config from serde_yaml::Value of following format:

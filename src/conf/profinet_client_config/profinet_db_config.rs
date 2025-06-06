@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::conf::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::{FnConfKeywd, FnConfKindName}};
 use std::str::FromStr;
 ///
 /// 

@@ -1,11 +1,11 @@
 #[cfg(test)]
 
 mod tests{
-        use sal_sync::services::{entity::Name, task::functions::conf::{FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::Name, task::functions::{FnConfPointType, FnConfOptions, FnConfKind, FnConfig}};
     use std::{sync::Once, env};
     use indexmap::IndexMap;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig, metric_config::MetricConfig};
+    use crate::conf::MetricConfig;
     ///
     ///
     static INIT: Once = Once::new();

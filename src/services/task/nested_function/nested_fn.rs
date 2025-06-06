@@ -1,8 +1,7 @@
-use sal_sync::services::{entity::{Name, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::LinkName, services::Services, task::functions::conf::FnConfPointType};
+use sal_sync::services::{entity::{Name, Point, ToPoint}, safe_lock::rwlock::SafeLock, service::LinkName, services::Services, task::functions::{FnConfKind, FnConfPointType}};
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::{Arc, RwLock}};
 use indexmap::IndexMap;
 use crate::{
-    conf::fn_::fn_conf_kind::FnConfKind,
     core_::types::fn_in_out_ref::FnInOutRef,
     services::task::{
         nested_function::{

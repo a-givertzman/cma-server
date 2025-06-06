@@ -6,7 +6,7 @@ mod fn_va_fft {
     use concat_in_place::strcat;
     use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
     use sal_sync::services::{
-            conf::{ConfTree, ServicesConf}, entity::{Name, Object, {ToPoint, PointConfigFilter, PointTxId}}, safe_lock::rwlock::SafeLock, service::Service, services::Services, task::functions::conf::{FnConfPointType, fn_conf_options::FnConfOptions}
+            conf::{ConfTree, ServicesConf}, entity::{Name, Object, {ToPoint, PointConfigFilter, PointTxId}}, safe_lock::rwlock::SafeLock, service::Service, services::Services, task::functions::{FnConfPointType, fn_conf_options::FnConfOptions}
         };
     use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
