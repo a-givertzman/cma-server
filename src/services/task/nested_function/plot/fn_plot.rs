@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 use sal_sync::services::{entity::{Cot, {Point, PointHlr, PointTxId}, Status}, types::bool::Bool};
 use std::{sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender}, thread};
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef,
+    core_::types::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,

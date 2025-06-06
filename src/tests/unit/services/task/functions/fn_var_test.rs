@@ -6,7 +6,7 @@ mod tests {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::fn_config::FnConfig,
-        core_::types::fn_in_out_ref::FnInOutRef, services::task::nested_function::{
+        core_::types::FnInOutRef, services::task::nested_function::{
             fn_::FnOut, fn_input::FnInput, fn_var::FnVar,
         }
     };

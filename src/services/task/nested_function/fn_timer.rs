@@ -3,7 +3,7 @@ use sal_sync::{
     services::entity::{Cot, {Point, PointConfigType, PointHlr}}
 };
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
-use crate::core_::types::fn_in_out_ref::FnInOutRef;
+use crate::core_::types::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 //
 //

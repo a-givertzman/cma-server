@@ -5,7 +5,7 @@ mod fn_eq {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::fn_config::FnConfig, 
-        core_::types::fn_in_out_ref::FnInOutRef,
+        core_::types::FnInOutRef,
         services::task::nested_function::{comp::fn_eq::FnEq, fn_::FnOut, fn_input::FnInput},
     };
     ///

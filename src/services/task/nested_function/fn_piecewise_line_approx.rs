@@ -3,7 +3,7 @@ use sal_sync::services::{entity::{Point, PointConfigType, PointHlr}, types::type
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef,
+    core_::types::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,

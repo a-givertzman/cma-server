@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_sync::services::entity::{Point, PointHlr};
-use crate::core_::types::fn_in_out_ref::FnInOutRef;
+use crate::core_::types::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Counts number of raised fronts of boolean input

@@ -11,7 +11,7 @@ use sal_sync::services::{
 };
 use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Arc, RwLock}};
 use crate::{
-    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::fn_in_out_ref::FnInOutRef},
+    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     }

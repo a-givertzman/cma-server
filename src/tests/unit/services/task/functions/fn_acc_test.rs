@@ -5,7 +5,7 @@ mod fn_acc {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::fn_::fn_config::FnConfig, 
-        core_::types::fn_in_out_ref::FnInOutRef, 
+        core_::types::FnInOutRef, 
         services::task::nested_function::{fn_::FnOut, fn_acc::{self, FnAcc}, fn_input::FnInput, reset_counter::AtomicReset},
     };
     ///

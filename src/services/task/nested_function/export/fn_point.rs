@@ -1,7 +1,7 @@
 use sal_sync::services::{entity::{Point, PointConfig, PointConfigType, PointHlr, PointTxId}, types::bool::Bool};
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
+    core_::types::FnInOutRef, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///
 /// Function | Used for export Point from Task service to another service
