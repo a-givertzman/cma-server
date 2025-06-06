@@ -171,7 +171,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
+    fn wait(&self) -> Result<(), Error> {
         let dbg = self.id.clone();
         let (future, sink) = sal_sync::services::future::Future::new();
         if let Some(handle) = self.handle.pop() {

@@ -21,7 +21,7 @@ use coco::Stack;
 use concat_string::concat_string;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap,
     services::{
@@ -42,12 +42,13 @@ use crate::{
 /// - Subscribe on points by configured criteria
 /// - Storing all received events on the disk if 'retain' option is true
 pub struct CacheService {
-    id: String,
+    dbg: Dbg,
     name: Name,
     conf: CacheServiceConfig,
     services: Arc<RwLock<Services>>,
     cache: Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -57,12 +58,13 @@ impl CacheService {
     /// Creates new instance of the CacheService
     pub fn new(conf: CacheServiceConfig, services: Arc<RwLock<Services>>) -> Self {
         Self {
-            id: conf.name.join(),
+            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             cache: Arc::new(RwLock::new(IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))),
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -70,20 +72,20 @@ impl CacheService {
     /// Returns vector of the SubscriptionCriteria by config and list of configured Point's
     fn subscriptions(&mut self, conf: &CacheServiceConfig, points: &[PointConfig]) -> (String, Vec<SubscriptionCriteria>) {
         if conf.subscribe.is_empty() {
-            panic!("{}.subscribe | Error. Subscription can`t be empty: {:#?}", self.id, conf.subscribe);
+            panic!("{}.subscribe | Error. Subscription can`t be empty: {:#?}", self.dbg, conf.subscribe);
         } else {
-            log::debug!("{}.subscribe | conf.subscribe: {:#?}", self.id, conf.subscribe);
+            log::debug!("{}.subscribe | conf.subscribe: {:#?}", self.dbg, conf.subscribe);
             let subscriptions = conf.subscribe.with(points);
-            log::trace!("{}.subscribe | subscriptions: {:#?}", self.id, subscriptions);
+            log::trace!("{}.subscribe | subscriptions: {:#?}", self.dbg, subscriptions);
             if subscriptions.len() > 1 {
-                panic!("{}.run | Error. Task does not supports multiple subscriptions for now: {:#?}.\n\tTry to use single subscription.", self.id, subscriptions);
+                panic!("{}.run | Error. Task does not supports multiple subscriptions for now: {:#?}.\n\tTry to use single subscription.", self.dbg, subscriptions);
             } else {
                 match subscriptions.clone().into_iter().next() {
                     Some((service_name, Some(points))) => {
                         (service_name, points)
                     }
-                    Some((_, None)) => panic!("{}.run | Error. Subscription configuration error in: {:#?}", self.id, subscriptions),
-                    None => panic!("{}.run | Error. Subscription configuration error in: {:#?}", self.id, subscriptions),
+                    Some((_, None)) => panic!("{}.run | Error. Subscription configuration error in: {:#?}", self.dbg, subscriptions),
+                    None => panic!("{}.run | Error. Subscription configuration error in: {:#?}", self.dbg, subscriptions),
                 }
             }
         }
@@ -91,7 +93,7 @@ impl CacheService {
     ///
     /// Creates directiry (all necessary folders in the 'path' if not exists)
     ///  - path is relative, will be joined with current working dir
-    fn create_dir(self_id: &str, path: &str) -> Result<PathBuf, String> {
+    fn create_dir(dbg: &Dbg, path: &str) -> Result<PathBuf, String> {
         let current_dir = env::current_dir().unwrap();
         let path = current_dir.join(path);
         match path.exists() {
@@ -100,7 +102,7 @@ impl CacheService {
                 match fs::create_dir_all(&path) {
                     Ok(_) => Ok(path),
                     Err(err) => {
-                        let message = format!("{}.create_dir | Error create path: '{:?}'\n\terror: {:?}", self_id, path, err);
+                        let message = format!("{}.create_dir | Error create path: '{:?}'\n\terror: {:?}", dbg, path, err);
                         log::error!("{}", message);
                         Err(message)
                     }
@@ -110,7 +112,7 @@ impl CacheService {
     }
     ///
     /// Loads retained on the disk points to the self cache
-    fn load(self_id: &str, name: &Name, cache: &Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>) {
+    fn load(dbg: &Dbg, name: &Name, cache: &Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>) {
         match cache.write() {
             Ok(mut cache) => {
                 let path = Name::new("assets/cache/", name.join()).join().trim_start_matches('/').to_owned();
@@ -122,20 +124,20 @@ impl CacheService {
                                 for point in v {
                                     cache.insert(point.dest(), point);
                                 }
-                                log::info!("{}.load | Retained cache loaded from: '{:?}'", self_id, path);
+                                log::info!("{}.load | Retained cache loaded from: '{:?}'", dbg, path);
                             }
                             Err(err) => {
-                                log::error!("{}.load | Deserialize error: '{:?}'\n\tin file: {:?}", self_id, err, path);
+                                log::error!("{}.load | Deserialize error: '{:?}'\n\tin file: {:?}", dbg, err, path);
                             }
                         };
                     }
                     Err(err) => {
-                        log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
+                        log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
                     }
                 }
             }
             Err(err) => {
-                log::error!("{}.load | Error write access cache: {:?}", self_id, err);
+                log::error!("{}.load | Error write access cache: {:?}", dbg, err);
             }
         };
     }
@@ -148,8 +150,8 @@ impl CacheService {
     ///     ...
     /// ]
     /// ```
-    fn write<S: Serialize>(self_id: &str, name: &Name, points: Vec<S>) -> Result<(), String> {
-        match Self::create_dir(self_id, Name::new("assets/cache/", name.join()).join().trim_start_matches('/')) {
+    fn write<S: Serialize>(dbg: &Dbg, name: &Name, points: Vec<S>) -> Result<(), String> {
+        match Self::create_dir(dbg, Name::new("assets/cache/", name.join()).join().trim_start_matches('/')) {
             Ok(path) => {
                 let path = path.join("cache.json");
                 let mut message = String::new();
@@ -165,17 +167,17 @@ impl CacheService {
                     Ok(mut f) => {
                         match f.write_all(cache.as_bytes()) {
                             Ok(_) => {
-                                log::debug!("{}.write | Cache stored in: {:?}", self_id, path);
+                                log::debug!("{}.write | Cache stored in: {:?}", dbg, path);
                             }
                             Err(err) => {
-                                message = format!("{}.write | Error writing to file: '{:?}'\n\terror: {:?}", self_id, path, err);
+                                message = format!("{}.write | Error writing to file: '{:?}'\n\terror: {:?}", dbg, path, err);
                                 log::error!("{}", message);
                             }
                         };
                         if message.is_empty() {Ok(())} else {Err(message)}
                     }
                     Err(err) => {
-                        let message = format!("{}.write | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
+                        let message = format!("{}.write | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
                         log::error!("{}", message);
                         Err(message)
                     }
@@ -189,7 +191,7 @@ impl CacheService {
     }
     ///
     /// Stores self.cache on the disk
-    fn store<T: BuildHasher>(self_id: &str, name: &Name, points: &IndexMap<String, Point, T>, status: Status) -> Result<(), String> {
+    fn store<T: BuildHasher>(dbg: &Dbg, name: &Name, points: &IndexMap<String, Point, T>, status: Status) -> Result<(), String> {
         let points: Vec<Point> = points.into_iter().map(|(_dest, point)| {
             match point.clone() {
                 Point::Bool(mut point) => {
@@ -214,12 +216,12 @@ impl CacheService {
                 }
             }
         }).collect();
-        Self::write(self_id, name, points)
+        Self::write(dbg, name, points)
     }
     ///
     /// Fills self cache with initial values for all configured points
     pub fn initial(
-        self_id: &str, 
+        dbg: &Dbg,
         tx_id: usize, 
         cache: &Arc<RwLock<FxIndexMap<String, Point>>>, 
         points: &[PointConfig],
@@ -283,7 +285,7 @@ impl CacheService {
                 }
             }
             Err(err) => {
-                log::error!("{}.initial | Error write access cache: {:?}", self_id, err);
+                log::error!("{}.initial | Error write access cache: {:?}", dbg, err);
             }
         }
     }
@@ -301,7 +303,7 @@ impl Debug for CacheService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("CacheService")
-            .field("id", &self.id)
+            .field("dbg", &self.dbg)
             .field("name", &self.name)
             .finish()
     }
@@ -312,59 +314,59 @@ impl Service for CacheService {
     //
     //
     fn run(&mut self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let self_name = self.name.clone();
         let tx_id = PointTxId::from_str(&self_name.join());
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let services = self.services.clone();
         let cache = self.cache.clone();
-        let point_configs = services.rlock(&self_id).points(&self_name.join())
+        let point_configs = services.rlock(&dbg).points(&self_name.join())
             .then(
                 |points| points,
             |err| {
-                log::error!("{}.run | Requesting Points error: {:?}", self_id, err);
+                log::error!("{}.run | Requesting Points error: {:?}", dbg, err);
                 vec![]
             }
         );
         let (service_name, points) = self.subscriptions(&conf, &point_configs);
-        log::debug!("{}.run | points: {:#?}", self_id, points.len());
-        log::trace!("{}.run | points: {:#?}", self_id, points);
-        let (_, rx_recv) = services.wlock(&self_id).subscribe(
+        log::debug!("{}.run | points: {:#?}", dbg, points.len());
+        log::trace!("{}.run | points: {:#?}", dbg, points);
+        let (_, rx_recv) = services.wlock(&dbg).subscribe(
             &service_name,
             &self.name.join(),
             &points,
         );
         let mut dely_store = DelyStore::new(conf.retain_delay);
-        log::info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
+        log::info!("{}.run | Preparing thread...", dbg);
+        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
             let initial_status = Status::Invalid;
             let retain_status = Status::Invalid;
-            Self::initial(&self_id, tx_id, &cache, &point_configs, initial_status);
-            Self::load(&self_id, &self_name, &cache);
+            Self::initial(&dbg, tx_id, &cache, &point_configs, initial_status);
+            Self::load(&dbg, &self_name, &cache);
             'main: loop {
                 match rx_recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
                         match cache.write() {
                             Ok(mut cache) => {
                                 cache.insert(point.dest(), point);
-                                if dely_store.exceeded() && Self::store(&self_id, &self_name, &cache, retain_status).is_ok() {
+                                if dely_store.exceeded() && Self::store(&dbg, &self_name, &cache, retain_status).is_ok() {
                                     dely_store.set_stored();
                                 }
                             }
                             Err(err) => {
-                                log::error!("{}.run | Error write access cache: {:?}", self_id, err);
+                                log::error!("{}.run | Error write access cache: {:?}", dbg, err);
                             }
                         }
                     }
                     Err(err) => {
                         match err {
                             RecvTimeoutError::Timeout => {
-                                log::trace!("{}.run | Receive error: {:?}", self_id, err);
+                                log::trace!("{}.run | Receive error: {:?}", dbg, err);
                             }
                             RecvTimeoutError::Disconnected => {
-                                log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
+                                log::error!("{}.run | Error receiving from queue: {:?}", dbg, err);
                                 break 'main;
                             }
                         }
@@ -372,24 +374,24 @@ impl Service for CacheService {
                 }
                 if exit.load(Ordering::SeqCst) {
                     if !dely_store.stored() {
-                        _ = Self::store(&self_id, &self_name, &cache.read().unwrap(), retain_status);
+                        _ = Self::store(&dbg, &self_name, &cache.read().unwrap(), retain_status);
                     }
                     break;
                 }
             }
-            if let Err(err) = services.wlock(&self_id).unsubscribe(&service_name, &self_name.join(), &points) {
-                log::error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
+            if let Err(err) = services.wlock(&dbg).unsubscribe(&service_name, &self_name.join(), &points) {
+                log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", dbg);
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.dbg);
                 self.handle.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -398,12 +400,12 @@ impl Service for CacheService {
     //
     //
     fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Receiver<Point> {
-        let self_id = self.id.clone();
+        let self_id = self.dbg.clone();
         log::info!("{}.gi | Gi requested from: {}", self_id, receiver_name);
         let (send, recv) = mpsc::channel();
         let self_cache = self.cache.clone();
         let points = points.to_owned();
-        thread::spawn(move || {
+        let handle = thread::spawn(move || {
             if points.is_empty() {
                 match self_cache.read() {
                     Ok(cache) => {
@@ -446,22 +448,27 @@ impl Service for CacheService {
                 }
             }
         });
+        self.handle.push(handle);
         recv
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
-        let dbg = self.id.clone();
-        let (future, sink) = sal_sync::services::future::Future::new();
-        if let Some(handle) = self.handle.pop() {
-            std::thread::spawn(move|| {
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
                 if let Err(err) = handle.join() {
-                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                 }
-                sink.add(());
-            });
+            }
         }
-        future
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     //

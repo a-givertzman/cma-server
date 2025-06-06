@@ -57,7 +57,6 @@ impl App {
         log::info!("{}.run | Starting application...", dbg);
         let conf = self.conf.clone();
         let self_name = conf.name.clone();
-        let app = Arc::new(RwLock::new(self));
         let services = Arc::new(RwLock::new(Services::new(&dbg, conf.services.clone())));
         log::info!("{}.run |     Configuring services...", dbg);
         for (node_keywd, node_conf) in conf.nodes {
@@ -96,10 +95,9 @@ impl App {
         Self::listen_sys_signals(dbg.clone(), services.clone());
         for (service_name, service) in services.rlock(&dbg).all() {
             log::info!("{}.run | Waiting for service '{}' being finished...", dbg, service_name);
-            let future = service.rlock(&dbg).wait();
-            match future.wait() {
+            match service.rlock(&dbg).wait() {
                 Ok(_) => log::info!("{}.run | Waiting for service '{}' being finished - Ok", dbg, service_name),
-                Err(err) => log::info!("{}.run | Waiting for service '{}' being finished - Ok", dbg, service_name),
+                Err(err) => log::info!("{}.run | Waiting for service '{}' being finished - Error: \n\t{:?}", dbg, service_name, err),
 
             }
         }

@@ -1,4 +1,5 @@
 use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, RwLock}};
+use sal_core::dbg::Dbg;
 use sal_sync::services::{entity::{Name, Object, Point}, services::Services};
 use crate::{
     core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
@@ -29,8 +30,8 @@ impl RouterReply {
 ///     - pass - Point to be transmitted to the MultiQueue - returned from read method
 ///     - reply - Point to be sent back to the Client, contains reply in the value
 pub struct JdsRoutes<F> {
-    parent_id: String,
-    id: String,
+    parent_id: Dbg,
+    id: Dbg,
     name: Name,
     services: Arc<RwLock<Services>>,
     jds_deserialize: JdsDeserialize,
@@ -44,7 +45,7 @@ impl<F> JdsRoutes<F> {
     ///
     /// 
     pub fn new(
-        parent_id: &str,
+        parent_id: &Dbg,
         parent: &Name, 
         services: Arc<RwLock<Services>>, 
         jds_deserialize: JdsDeserialize, 
@@ -54,7 +55,7 @@ impl<F> JdsRoutes<F> {
     ) -> Self {
         Self {
             parent_id: parent_id.to_owned(),
-            id: format!("{}/JdsRoutes", parent_id), 
+            id: Dbg::new(parent_id, "JdsRoutes"), 
             name: parent.clone(),
             services,
             jds_deserialize,
@@ -82,7 +83,7 @@ impl<F> Object for JdsRoutes<F> {
 // 
 impl<F> TcpStreamRead for JdsRoutes<F> where
     //    parent_id, name
-    F: Fn(String, Name, Point, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
+    F: Fn(Dbg, Name, Point, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
     F: Send {
     ///
     /// Reads single point from source

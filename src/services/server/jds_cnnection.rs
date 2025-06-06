@@ -1,10 +1,10 @@
 use std::{
-    collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread::{self, JoinHandle}, time::Instant, 
+    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread::{self, JoinHandle}, time::Instant 
 };
 use coco::Stack;
 use hashers::fx_hash::FxHasher;
-use sal_core::error::Error;
-use sal_sync::services::{entity::{Cot, Name, Point}, safe_lock::rwlock::SafeLock, services::Services, subscription::SubscriptionCriteria};
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::services::{entity::{Cot, Name, Object, Point}, safe_lock::rwlock::SafeLock, service::Service, services::Services, subscription::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -67,13 +67,14 @@ pub struct Shared {
 ///
 /// Single Jds over TCP connection
 pub struct JdsConnection {
-    id: String,
+    dbg: Dbg,
     name: Name,
     connection_id: String,
-    action_recv: Vec<Receiver<Action>>, 
+    action_recv: Stack<Receiver<Action>>, 
     services: Arc<RwLock<Services>>,
     conf: TcpServerConfig,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -84,25 +85,40 @@ impl JdsConnection {
     /// - parent - id of the parent
     /// - path - path of the parent
     pub fn new(parent_id: &str, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
-        let id = format!("{}/JdsConnection/{}", parent_id, connection_id);
-        let name = Name::new(parent, "Jds");
-        log::debug!("{}.new | name: {:#?}",id, name);
+        let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
+        let name = Name::new(parent, "JdsConnection");
+        log::debug!("{}.new | name: {:#?}", dbg, name);
+        let action_recv_stack = Stack::new();
+        action_recv_stack.push(action_recv);
         Self {
-            id, //: format!("{}/JdsConnection/{}", parent_id, connection_id),
-            name,   //: Name::new(parent, "Jds"),
+            dbg,
+            name,
             connection_id: connection_id.into(),
-            action_recv: vec![action_recv],
+            action_recv: action_recv_stack,
             services,
             conf,
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit,
         }
     }
+
+}
+//
+//
+impl Object for JdsConnection {
+    fn name(&self) -> Name {
+        self.name.clone()
+    }
+}
+//
+//
+impl Service for JdsConnection {
     ///
     /// Main loop of the connection 
-    pub fn run(&mut self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+    fn run(&mut self) -> Result<(), Error> {
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let self_name = self.name.clone();
         let conf = self.conf.clone();
         let self_conf_send_to = conf.send_to.clone();
@@ -125,18 +141,18 @@ impl JdsConnection {
         let exit_pair = Arc::new(AtomicBool::new(false));
         let action_recv = self.action_recv.pop().unwrap();
         let services = self.services.clone();
-        log::info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
-            log::info!("{}.run | Preparing thread - ok", self_id);
+        log::info!("{}.run | Preparing thread...", dbg);
+        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+            log::info!("{}.run | Preparing thread - ok", dbg);
             let receivers = Arc::new(RwLock::new(
                 HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
             ));
-            receivers.write().unwrap().insert(Cot::Req, services.rlock(&self_id).get_link(&self_conf_send_to));
-            let points = services.rlock(&self_id).points(&self_id)
+            receivers.write().unwrap().insert(Cot::Req, services.rlock(&dbg).get_link(&self_conf_send_to));
+            let points = services.rlock(&dbg).points(&dbg)
                 .then(
                     |points| points,
                     |err| {
-                        log::error!("{}.functions | Functions::PointId | Requesting points error: {:?}", self_id, err);
+                        log::error!("{}.functions | Functions::PointId | Requesting points error: {:?}", dbg, err);
                         vec![]
                     },
                 )            
@@ -148,28 +164,28 @@ impl JdsConnection {
                     points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ReqErr));
                     points
                 });
-            let send = services.rlock(&self_id).get_link(&self_conf_send_to).unwrap_or_else(|err| {
-                panic!("{}.run | services.get_link error: {:#?}", self_id, err);
+            let send = services.rlock(&dbg).get_link(&self_conf_send_to).unwrap_or_else(|err| {
+                panic!("{}.run | services.get_link error: {:#?}", dbg, err);
             });
-            log::debug!("{}.run | subscribe: {:?}", self_id, subscribe);
-            let (req_reply_send, recv) = services.wlock(&self_id).subscribe(&subscribe, &receiver_name, &points);
+            log::debug!("{}.run | subscribe: {:?}", dbg, subscribe);
+            let (req_reply_send, recv) = services.wlock(&dbg).subscribe(&subscribe, &receiver_name, &points);
             shared_options.write().unwrap().req_reply_send = vec![req_reply_send.clone()];
             let buffered = rx_max_length > 0;
             let mut tcp_read_alive = TcpReadAlive::new(
-                &self_id,
+                &dbg,
                 Box::new(JdsRoutes::new(
-                    &self_id,
+                    &dbg,
                     &self_name,
                     services.clone(),
                     JdsDeserialize::new(
-                        format!("{}/TcpReadAlive/JdsRoutes", self_id),
+                        format!("{}/TcpReadAlive/JdsRoutes", dbg),
                         JdsDecodeMessage::new(
-                            format!("{}/TcpReadAlive/JdsRoutes/JdsDeserialize", self_id),
+                            format!("{}/TcpReadAlive/JdsRoutes/JdsDeserialize", dbg),
                         ),
                     ),
                     req_reply_send,
                     |parent_id, parent_name, point, services, shared| {
-                        let parent_id: String = parent_id;
+                        let parent_id: Dbg = parent_id;
                         let parent: Name = parent_name;
                         let point: Point = point;
                         log::debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
@@ -198,16 +214,16 @@ impl JdsConnection {
                 Some(exit_pair.clone()),
             );
             let mut tcp_write_alive = TcpWriteAlive::new(
-                &self_id,
+                &dbg,
                 None,
                 TcpStreamWrite::new(
-                    format!("{}/TcpWriteAlive", self_id),
+                    format!("{}/TcpWriteAlive", dbg),
                     buffered,
                     Some(rx_max_length as usize),
                     Box::new(JdsEncodeMessage::new(
-                        format!("{}/TcpWriteAlive/TcpStreamWrite", self_id),
+                        format!("{}/TcpWriteAlive/TcpStreamWrite", dbg),
                         JdsSerialize::new(
-                            format!("{}/TcpWriteAlive/TcpStreamWrite/JdsEncodeMessage", self_id),
+                            format!("{}/TcpWriteAlive/TcpStreamWrite/JdsEncodeMessage", dbg),
                             recv,
                         ),
                     )),
@@ -223,16 +239,16 @@ impl JdsConnection {
                     Ok(action) => {
                         match action {
                             Action::Continue(tcp_stream) => {
-                                log::info!("{}.run | Action - Continue received", self_id);
+                                log::info!("{}.run | Action - Continue received", dbg);
                                 let h_read = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
                                 let h_write = tcp_write_alive.run(tcp_stream);
-                                h_read.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpReadAlive thread, probable exit with errors", self_id));
-                                h_write.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpWriteAlive thread, probable exit with errors", self_id));
-                                log::info!("{}.run | Finished", self_id);
+                                h_read.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpReadAlive thread, probable exit with errors", dbg));
+                                h_write.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpWriteAlive thread, probable exit with errors", dbg));
+                                log::info!("{}.run | Finished", dbg);
                                 duration = Instant::now();
                             }
                             Action::Exit => {
-                                log::info!("{}.run | Action - Exit received", self_id);
+                                log::info!("{}.run | Action - Exit received", dbg);
                                 break;
                             }
                         }
@@ -247,30 +263,65 @@ impl JdsConnection {
                     }
                 }
                 if exit.load(Ordering::SeqCst) {
-                    log::info!("{}.run | Detected exit", self_id);
+                    log::info!("{}.run | Detected exit", dbg);
                     break;
                 }
                 if keep_timeout.checked_sub(duration.elapsed()).is_none() {
-                    log::info!("{}.run | Keeped lost connection timeout({:?}) exceeded", self_id, keep_timeout);
+                    log::info!("{}.run | Keeped lost connection timeout({:?}) exceeded", dbg, keep_timeout);
                     break;
                 }
             }
-            if let Err(err) = services.wlock(&self_id).unsubscribe(&subscribe, &receiver_name, &[]) {
-                log::error!("{}.run | Unsubscribe error: {:#?}", self_id, err);
+            if let Err(err) = services.wlock(&dbg).unsubscribe(&subscribe, &receiver_name, &[]) {
+                log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", dbg);
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.dbg);
                 self.handle.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
+                if let Err(err) = handle.join() {
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
+                }
+            }
+        }
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
+    }
+    //
+    //
+    fn exit(&self) {
+        self.exit.store(true, Ordering::SeqCst);
+    }
+}
+//
+//
+impl Debug for JdsConnection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JdsConnection")
+            .field("dbg", &self.dbg)
+            .field("name", &self.name)
+            .field("connection_id", &self.connection_id)
+            .finish()
     }
 }

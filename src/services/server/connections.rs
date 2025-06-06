@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::TcpStream, sync::mpsc::{SendError, Sender}, thread::JoinHandle};
+use std::{collections::HashMap, net::TcpStream, sync::{mpsc::{SendError, Sender}, Arc}};
 use sal_core::error::Error;
 use sal_sync::services::service::Service;
 ///
@@ -13,15 +13,15 @@ pub enum Action {
 /// - Sender<Action>
 #[derive(Debug)]
 struct Connection {
-    handle: Arc::Box<dyn Service>,
+    service: Arc<Box<dyn Service>>,
     send: Sender<Action>,
 }
 //
 // 
 impl Connection {
-    pub fn new(handle: Box<dyn Service>, send: Sender<Action>,) -> Self {
+    pub fn new(service: Arc<Box<dyn Service>>, send: Sender<Action>,) -> Self {
         Self {
-            handle,
+            service,
             send,
         }
     }
@@ -33,17 +33,17 @@ impl Connection {
     ///
     /// 
     pub fn wait(self) -> Result<(), Error> {
-        self.handle.wait().wait()
+        self.service.wait()
     }
     ///
     /// 
     pub fn is_active(&self) -> bool {
-        !self.handle.is_finished()
+        !self.service.is_finished()
     }
     ///
     /// 
     pub fn is_finished(&self) -> bool {
-        self.handle.is_finished()
+        self.service.is_finished()
     }
 }
 
@@ -69,12 +69,12 @@ impl TcpServerConnections {
     }
     ///
     /// Inserts a new connection, if connection_id olready exists, connection will be updated
-    pub fn insert(&mut self, connection_id: &str, handle: Arc<()>, send: Sender<Action>) {
+    pub fn insert(&mut self, connection_id: &str, service: Arc<Box<dyn Service>>, send: Sender<Action>) {
         log::info!("{}.insert | connection: '{}'", self.id, connection_id);
         self.connections.insert(
             connection_id.to_string(),
             Connection::new(
-                handle,
+                service,
                 send,
             )
         );
@@ -133,7 +133,7 @@ impl TcpServerConnections {
         let mut to_remove = vec![];
         log::info!("{}.clean | Cleaning connections...", self.id);
         for (name, connection) in &self.connections {
-            log::info!("{}.clean | Checking connection '{}' \t '{}' - finished: {}", self.id, name, connection.handle.thread().name().unwrap_or("unnamed"), connection.is_finished());
+            log::info!("{}.clean | Checking connection '{}' \t '{}' - finished: {}", self.id, name, connection.service.name(), connection.is_finished());
             if connection.is_finished() {
                 to_remove.push(name.clone());
             }
@@ -142,7 +142,7 @@ impl TcpServerConnections {
         for name in to_remove {
             match self.connections.remove(&name) {
                 Some(connection) => {
-                    match connection.handle.wait() {
+                    match connection.service.wait() {
                         Ok(_) => log::info!("{}.clean | Connection '{}' removed successful", self.id, name),
                         Err(err) => log::error!("{}.clean | Connection '{}' wait error: {:#?}", self.id, name, err),
                     }

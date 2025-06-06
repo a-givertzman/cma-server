@@ -1,5 +1,5 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}, thread, time::Duration};
-use concat_string::concat_string;
+use sal_core::dbg::Dbg;
 use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, safe_lock::rwlock::SafeLock, services::Services, subscription::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
@@ -15,13 +15,13 @@ impl JdsRequest {
     ///
     /// Detecting kind of the request stored as json string in the incoming point.
     /// Performs the action depending on the Request kind.
-    pub fn handle(parent_id: &str, parent: &Name, tx_id: usize, request: Point, services: Arc<RwLock<Services>>, shared: Arc<RwLock<Shared>>) -> RouterReply {
+    pub fn handle(parent_id: &Dbg, parent: &Name, tx_id: usize, request: Point, services: Arc<RwLock<Services>>, shared: Arc<RwLock<Shared>>) -> RouterReply {
         let mut shared = shared.write().unwrap();
-        let self_id = concat_string!(parent_id, "/JdsRequest");
+        let dbg = Dbg::new(parent_id, "JdsRequest");
         let requester_name = &parent.join();
         match RequestKind::from(request.name()) {
             RequestKind::AuthSecret => {
-                log::debug!("{}.handle | Request '{}': \n\t{:?}", self_id, RequestKind::AUTH_SECRET, request);
+                log::debug!("{}.handle | Request '{}': \n\t{:?}", dbg, RequestKind::AUTH_SECRET, request);
                 let (cot, message) = match &shared.auth {
                     crate::services::server::jds_auth::TcpServerAuth::Secret(auth_secret) => {
                         let secret = match request {
@@ -52,7 +52,7 @@ impl JdsRequest {
                 )
             }
             RequestKind::AuthSsh => {
-                log::debug!("{}.handle | Request '{}': \n\t{:?}", self_id, RequestKind::AUTH_SSH, request);
+                log::debug!("{}.handle | Request '{}': \n\t{:?}", dbg, RequestKind::AUTH_SSH, request);
                 let (cot, message) = match &shared.auth {
                     crate::services::server::jds_auth::TcpServerAuth::Ssh(auth_ssh_path) => {
                         let secret = match request {
@@ -86,11 +86,11 @@ impl JdsRequest {
                 )
             }
             RequestKind::Points => {
-                log::debug!("{}.handle.Points | Request '{}': \n\t{:?}", self_id, RequestKind::POINTS, request);
-                let points = services.rlock(&self_id).points(requester_name).then(
+                log::debug!("{}.handle.Points | Request '{}': \n\t{:?}", dbg, RequestKind::POINTS, request);
+                let points = services.rlock(&dbg).points(requester_name).then(
                     |points| points,
                     |err| {
-                        log::error!("{}.handle.Points | Requesting points error: {:?}", self_id, err);
+                        log::error!("{}.handle.Points | Requesting points error: {:?}", dbg, err);
                         vec![]
                     },
                 );
@@ -110,20 +110,20 @@ impl JdsRequest {
                         chrono::offset::Utc::now(),
                     ))),
                 );
-                log::debug!("{}.handle.Points | Reply: {:?} points", self_id, points_len);
-                log::trace!("{}.handle.Points | Reply: \n\t{:#?}", self_id, reply);
+                log::debug!("{}.handle.Points | Reply: {:?} points", dbg, points_len);
+                log::trace!("{}.handle.Points | Reply: \n\t{:#?}", dbg, reply);
                 reply
             }
             RequestKind::Subscribe => {
-                log::debug!("{}.handle.Subscribe | Request '{}': Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", self_id, RequestKind::SUBSCRIBE, request.name(), request.status(), request.cot(), request.timestamp());
-                log::trace!("{}.handle.Subscribe | Request '{}': \n\t{:?}", self_id, RequestKind::SUBSCRIBE, request);
+                log::debug!("{}.handle.Subscribe | Request '{}': Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", dbg, RequestKind::SUBSCRIBE, request.name(), request.status(), request.cot(), request.timestamp());
+                log::trace!("{}.handle.Subscribe | Request '{}': \n\t{:?}", dbg, RequestKind::SUBSCRIBE, request);
                 let points = match serde_json::from_str(&request.value().as_string()) {
                     Ok(points) => {
                         let points: serde_json::Value = points;
                         match points.as_array() {
                             Some(points) => {
-                                log::debug!("{}.handle.Subscribe | 'Subscribe' request (multicast)", self_id);
-                                log::trace!("{}.handle.Subscribe | 'Subscribe' request (multicast): {:?}", self_id, request);
+                                log::debug!("{}.handle.Subscribe | 'Subscribe' request (multicast)", dbg);
+                                log::trace!("{}.handle.Subscribe | 'Subscribe' request (multicast): {:?}", dbg, request);
                                 points.iter().fold(vec![], |mut points, point| {
                                     if let Some(point_name) = point.as_str() {
                                         points.extend(
@@ -134,10 +134,10 @@ impl JdsRequest {
                                 })
                             }
                             None => {
-                                log::debug!("{}.handle.Subscribe | 'Subscribe' request (broadcast)", self_id);
-                                log::trace!("{}.handle.Subscribe | 'Subscribe' request (broadcast): {:?}", self_id, request);
-                                services.rlock(&self_id).points(requester_name).then(|points| points, |err| {
-                                    log::error!("{}.handle.Subscribe | Requesting points error: {:?}", self_id, err);
+                                log::debug!("{}.handle.Subscribe | 'Subscribe' request (broadcast)", dbg);
+                                log::trace!("{}.handle.Subscribe | 'Subscribe' request (broadcast): {:?}", dbg, request);
+                                services.rlock(&dbg).points(requester_name).then(|points| points, |err| {
+                                    log::error!("{}.handle.Subscribe | Requesting points error: {:?}", dbg, err);
                                     vec![]
                                 })
                                 .iter().fold(vec![], |mut points, point_conf| {
@@ -150,9 +150,9 @@ impl JdsRequest {
                         }
                     }
                     Err(err) => {
-                        log::warn!("{}.handle.Subscribe | 'Subscribe' request parsing error: {:?}\n\t request: {:?}", self_id, err, request);
-                        services.rlock(&self_id).points(requester_name).then(|points| points, |err| {
-                            log::error!("{}.handle.Subscribe | Requesting points error: {:?}", self_id, err);
+                        log::warn!("{}.handle.Subscribe | 'Subscribe' request parsing error: {:?}\n\t request: {:?}", dbg, err, request);
+                        services.rlock(&dbg).points(requester_name).then(|points| points, |err| {
+                            log::error!("{}.handle.Subscribe | Requesting points error: {:?}", dbg, err);
                             vec![]
                         })
                         .iter().fold(vec![], |mut points, point_conf| {
@@ -165,17 +165,17 @@ impl JdsRequest {
                 };
                 // let receiver_name = Name::new(parent, &shared.connection_id).join();
                 let receiver_name = shared.subscribe_receiver.clone();
-                log::debug!("{}.handle.Subscribe | extending subscription for receiver: '{}'", self_id, receiver_name);
-                log::trace!("{}.handle.Subscribe |                              points: {:#?}", self_id, points);
+                log::debug!("{}.handle.Subscribe | extending subscription for receiver: '{}'", dbg, receiver_name);
+                log::trace!("{}.handle.Subscribe |                              points: {:#?}", dbg, points);
                 let (cot, message) = if points.is_empty() {
-                    let message = format!("{}.handle.Subscribe | SUbscribe failed - points not found in the application", self_id);
+                    let message = format!("{}.handle.Subscribe | SUbscribe failed - points not found in the application", dbg);
                     log::warn!("{}", message);
                     (Cot::ReqErr, message)
                 } else {
-                    match services.wlock(&self_id).extend_subscription(&shared.subscribe, &receiver_name, &points) {
+                    match services.wlock(&dbg).extend_subscription(&shared.subscribe, &receiver_name, &points) {
                         Ok(_) => (Cot::ReqCon, "".to_owned()),
                         Err(err) => {
-                            let message = format!("{}.handle.Subscribe | Extend subscription failed with error: {:?}", self_id, err);
+                            let message = format!("{}.handle.Subscribe | Extend subscription failed with error: {:?}", dbg, err);
                             log::warn!("{}", message);
                             (Cot::ReqErr, message)
                         }
@@ -183,8 +183,8 @@ impl JdsRequest {
                 };
                 match shared.cache.clone() {
                     // TODO add named subscription
-                    Some(cache_service) => Self::yield_gi(&self_id, &receiver_name, services, &cache_service, &[], &mut shared),
-                    None => log::warn!("{}.handle.Subscribe | Gi skipped, cache service not configured", self_id),
+                    Some(cache_service) => Self::yield_gi(&dbg, &receiver_name, services, &cache_service, &[], &mut shared),
+                    None => log::warn!("{}.handle.Subscribe | Gi skipped, cache service not configured", dbg),
                 }
                 let reply = RouterReply::new(
                     None,
@@ -197,42 +197,42 @@ impl JdsRequest {
                         chrono::offset::Utc::now(),
                     ))),
                 );
-                log::debug!("{}.handle.Subscribe | Reply: {:?}", self_id, reply);
+                log::debug!("{}.handle.Subscribe | Reply: {:?}", dbg, reply);
                 reply
             }
             RequestKind::Unknown => {
-                log::debug!("{}.handle | Unknown request: \n\t{:?}", self_id, request);
-                log::warn!("{}.handle | Unknown request name: {:?}", self_id, request.name());
+                log::debug!("{}.handle | Unknown request: \n\t{:?}", dbg, request);
+                log::warn!("{}.handle | Unknown request name: {:?}", dbg, request.name());
                 RouterReply::new(None, None)
             }
         }
     }
     ///
     ///
-    fn yield_gi(self_id: &str, receiver_name: &str, services: Arc<RwLock<Services>>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
-        match services.rlock(self_id).get(cache_service) {
+    fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<RwLock<Services>>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
+        match services.rlock(dbg).get(cache_service) {
             Some(cache) => {
-                let recv = cache.rlock(self_id).gi(receiver_name, points);
+                let recv = cache.rlock(dbg).gi(receiver_name, points);
                 match shared.req_reply_send.pop() {
                     Some(send) => {
                         shared.req_reply_send.push(send.clone());
-                        let self_id_clone = self_id.to_owned();
+                        let dbg_clone = dbg.to_owned();
                         thread::spawn(move || {
                             thread::sleep(Duration::from_millis(32));
                             for point in recv.iter() {
                                 if let Err(err) =  send.send(point) {
-                                    log::error!("{}.handle.Subscribe | Send error: {:#?}", self_id_clone, err);
+                                    log::error!("{}.handle.Subscribe | Send error: {:#?}", dbg_clone, err);
                                 }
                             }
                         });
                     }
                     None => {
-                        log::error!("{}.handle.Subscribe | Cant get req_reply_send", self_id)
+                        log::error!("{}.handle.Subscribe | Cant get req_reply_send", dbg)
                     }
                 }
             }
             None => {
-                log::warn!("{}.handle.Subscribe | Cache service '{}' - not found", self_id, cache_service)
+                log::warn!("{}.handle.Subscribe | Cache service '{}' - not found", dbg, cache_service)
             }
         }
         // match cache.slock() {}

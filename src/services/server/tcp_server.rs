@@ -86,7 +86,6 @@ impl TcpServer {
                 );
                 match connection.run() {
                     Ok(handles) => {
-                        let (_, handle) = handles.into_iter().next().unwrap();
                         match send.send(Action::Continue(stream)) {
                             Ok(_) => {}
                             Err(err) => {
@@ -96,7 +95,7 @@ impl TcpServer {
                         log::info!("{}.setup_connection | connections.lock...", con_info.self_id);
                         connections.wlock(con_info.self_id).insert(
                             con_info.connection_id,
-                            handle,
+                            Arc::new(Box::new(connection)),
                             send,
                         );
                         log::info!("{}.setup_connection | connections.lock - ok", con_info.self_id);
@@ -245,7 +244,7 @@ impl Service for TcpServer {
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
+    fn wait(&self) -> Result<(), Error> {
         let dbg = self.id.clone();
         let (future, sink) = sal_sync::services::future::Future::new();
         if let Some(handle) = self.handle.pop() {

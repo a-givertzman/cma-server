@@ -1,6 +1,6 @@
 use coco::Stack;
 use concat_string::concat_string;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{entity::{Name, Object, Point}, service::{Service, ServiceCycle}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, JoinHandle}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
@@ -14,12 +14,13 @@ use crate::{
 /// - Sending messages (wrapped into ApiQuery) from the beginning of the buffer
 /// - Sent messages immediately removed from the buffer
 pub struct ApiClient {
-    id: String,
+    dbg: Dbg,
     name: Name,
     recv: Mutex<Option<Receiver<Point>>>,
     send: HashMap<String, Sender<Point>>,
     conf: ApiClientConfig,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -31,21 +32,22 @@ impl ApiClient {
     pub fn new(conf: ApiClientConfig) -> Self {
         let (send, recv) = mpsc::channel();
         Self {
-            id: format!("{}", conf.name),
+            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             recv: Mutex::new(Some(recv)),
             send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// Reads all avalible at the moment items from the in-queue
-    fn read_queue(self_id: &str, recv: &Receiver<Point>, buffer: &mut RetainBuffer<Point>) {
+    fn read_queue(dbg: &Dbg, recv: &Receiver<Point>, buffer: &mut RetainBuffer<Point>) {
         let max_read_at_once = 1000;
         for (index, point) in recv.try_iter().enumerate() {   
-            log::debug!("{}.read_queue | point: {:?}", self_id, &point);
+            log::debug!("{}.read_queue | point: {:?}", dbg, &point);
             buffer.push(point);
             if index > max_read_at_once {
                 break;
@@ -54,7 +56,7 @@ impl ApiClient {
     }
     ///
     /// Writing sql string to the TcpStream
-    fn send(self_id: &str, request: &mut ApiRequest, database: &str, sql: String, keep_alive: bool) -> Result<ApiReply, String> {
+    fn send(dbg: &Dbg, request: &mut ApiRequest, database: &str, sql: String, keep_alive: bool) -> Result<ApiReply, String> {
         let query = ApiQuery::new(
             ApiQueryKind::Sql(ApiQuerySql::new(database, sql)),
             true,
@@ -63,23 +65,23 @@ impl ApiClient {
             Ok(reply) => {
                 if log::max_level() > log::LevelFilter::Info {
                     let reply_str = std::str::from_utf8(&reply).unwrap();
-                    log::trace!("{}.send | reply str: {:?}", self_id, reply_str);
+                    log::trace!("{}.send | reply str: {:?}", dbg, reply_str);
                 }
                 match serde_json::from_slice(&reply) {
                     Ok(reply) => Ok(reply),
                     Err(err) => {
                         let reply = match std::str::from_utf8(&reply) {
                             Ok(reply) => reply.to_string(),
-                            Err(err) => concat_string!(self_id, ".send | Error parsing reply to utf8 string: ", err.to_string()),
+                            Err(err) => concat_string!(dbg, ".send | Error parsing reply to utf8 string: ", err.to_string()),
                         };
-                        let message = concat_string!(self_id, ".send | Error parsing API reply: {:?} \n\t reply was: {:?}", err.to_string(), reply);
+                        let message = concat_string!(dbg, ".send | Error parsing API reply: {:?} \n\t reply was: {:?}", err.to_string(), reply);
                         log::warn!("{}", message);
                         Err(message)
                     }
                 }
             }
             Err(err) => {
-                let message = concat_string!(self_id, ".send | Error sending API request: {:?}", err);
+                let message = concat_string!(dbg, ".send | Error sending API request: {:?}", err);
                 log::warn!("{}", message);
                 Err(message)
             }
@@ -99,7 +101,7 @@ impl Debug for ApiClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("ApiClient")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -111,14 +113,15 @@ impl Service for ApiClient {
     fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.send.get(name) {
             Some(send) => send.clone(),
-            None => panic!("{}.run | link '{:?}' - not found", self.id, name),
+            None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
         }
     }
     //
     // 
     fn run(&mut self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
+        let is_finished = self.is_finished.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let recv = self.recv.lock().unwrap().take().unwrap();
@@ -128,14 +131,14 @@ impl Service for ApiClient {
         };
         // let reconnect = if conf.reconnectCycle.is_some() {conf.reconnectCycle.unwrap()} else {Duration::from_secs(3)};
         let _queue_max_length = conf.rx_max_len;
-        let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
-            let mut buffer = RetainBuffer::new(&self_id, "", Some(conf.rx_max_len as usize));
-            let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
+        let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
+            let mut buffer = RetainBuffer::new(&dbg, "", Some(conf.rx_max_len as usize));
+            let mut cycle = ServiceCycle::new(&dbg.to_string(), cycle_interval);
             // let mut connect = TcpClientConnect::new(self_id.clone() + "/TcpSocketClientConnect", conf.address, reconnect);
             let api_keep_alive = true;
             let sql_keep_alive = true;
             let mut request = ApiRequest::new(
-                &self_id, 
+                &dbg, 
                 conf.address, 
                 conf.auth_token, 
                 ApiQuery::new(
@@ -147,30 +150,30 @@ impl Service for ApiClient {
             );
             'send: loop {
                 cycle.start();
-                log::trace!("{}.run | Step...", self_id);
-                Self::read_queue(&self_id, &recv, &mut buffer);
-                log::trace!("{}.run | Beffer.len: {}", self_id, buffer.len());
+                log::trace!("{}.run | Step...", dbg);
+                Self::read_queue(&dbg, &recv, &mut buffer);
+                log::trace!("{}.run | Beffer.len: {}", dbg, buffer.len());
                 let mut count = buffer.len();
                 while count > 0 {
                     match buffer.first() {
                         Some(point) => {
                             match point {
-                                Point::Bool(_) => log::warn!("{}.run | Invalid point type 'Bool' in: {:?}", self_id, point),
-                                Point::Int(_) => log::warn!("{}.run | Invalid point type 'Int' in: {:?}", self_id, point),
-                                Point::Real(_) => log::warn!("{}.run | Invalid point type 'Real' in: {:?}", self_id, point),
-                                Point::Double(_) => log::warn!("{}.run | Invalid point type 'Double' in: {:?}", self_id, point),
+                                Point::Bool(_) => log::warn!("{}.run | Invalid point type 'Bool' in: {:?}", dbg, point),
+                                Point::Int(_) => log::warn!("{}.run | Invalid point type 'Int' in: {:?}", dbg, point),
+                                Point::Real(_) => log::warn!("{}.run | Invalid point type 'Real' in: {:?}", dbg, point),
+                                Point::Double(_) => log::warn!("{}.run | Invalid point type 'Double' in: {:?}", dbg, point),
                                 Point::String(point) => {
                                     let sql = point.value.clone();
-                                    match Self::send(&self_id, &mut request, &conf.database, sql, api_keep_alive) {
+                                    match Self::send(&dbg, &mut request, &conf.database, sql, api_keep_alive) {
                                         Ok(reply) => {
                                             if reply.has_error() {
-                                                log::warn!("{}.run | API reply has error: {:?}", self_id, reply.error);
+                                                log::warn!("{}.run | API reply has error: {:?}", dbg, reply.error);
                                             } else {
                                                 buffer.pop_first();
                                             }
                                         }
                                         Err(err) => {
-                                            log::warn!("{}.run | Error: {:?}", self_id, err);
+                                            log::warn!("{}.run | Error: {:?}", dbg, err);
                                         }
                                     }
                                 }
@@ -183,40 +186,45 @@ impl Service for ApiClient {
                 if exit.load(Ordering::SeqCst) {
                     break 'send;
                 }
-                log::trace!("{}.run | Step - done ({:?})", self_id, cycle.elapsed());
+                log::trace!("{}.run | Step - done ({:?})", dbg, cycle.elapsed());
                 if cyclic {
                     cycle.wait();
                 }
-            };            
-            log::info!("{}.run | Exit", self_id);
+            };
+            is_finished.store(true, Ordering::SeqCst);
+            log::info!("{}.run | Exit", dbg);
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.dbg);
                 self.handle.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let message = format!("{}.run | Start failed: {:#?}", self.id, err);
+                let message = format!("{}.run | Start failed: {:#?}", self.dbg, err);
                 log::warn!("{}", message);
-                Err(Error::new(&self.id, "run").pass_with("Start failed", err.to_string()))
+                Err(Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string()))
             }
         }
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
-        let dbg = self.id.clone();
-        let (future, sink) = sal_sync::services::future::Future::new();
-        if let Some(handle) = self.handle.pop() {
-            std::thread::spawn(move|| {
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
                 if let Err(err) = handle.join() {
-                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                 }
-                sink.add(());
-            });
+            }
         }
-        future
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     // 
