@@ -32,7 +32,7 @@ use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic:
 use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::{ChangeNotify, Switch, SwitchCondition, SwitchState},
     services::{entity::{Name, Object, PointTxId}, safe_lock::rwlock::SafeLock, service::{Service, ServiceCycle}, services::Services},
@@ -53,11 +53,12 @@ pub enum Dbs {
 /// Do something ...
 pub struct UdpClient {
     tx_id: usize,
-    id: String,
+    dbg: Dbg,
     name: Name,
     conf: UdpClientConfig,
     services: Arc<RwLock<Services>>,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -75,28 +76,29 @@ impl UdpClient {
         let tx_id = PointTxId::from_str(&conf.name.join());
         Self {
             tx_id,
-            id: conf.name.join(),
+            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// Returns UdpClint's DB blokcs
-    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &UdpClientConfig) -> FxIndexMap<Dbs, UdpClientDb> {
+    pub fn build_dbs(dbg: &Dbg, tx_id: usize, conf: &UdpClientConfig) -> FxIndexMap<Dbs, UdpClientDb> {
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for (db_name, db_conf) in &conf.dbs {
-            log::info!("{}.build_dbs | Configuring UdpClientDb: {:?}...", self_id, db_name);
-            let db = UdpClientDb::new(self_id, tx_id, &db_conf, conf.mtu);
+            log::info!("{}.build_dbs | Configuring UdpClientDb: {:?}...", dbg, db_name);
+            let db = UdpClientDb::new(dbg, tx_id, &db_conf, conf.mtu);
             if db_name.ends_with("data") {
                 dbs.insert(Dbs::Data, db);
             } else {
                 dbs.insert(Dbs::Data, db);
-                log::error!("{}.build_dbs | Unknown kind of DB '{}' in Configuring: {:#?} - ok", self_id, db_name, conf);
+                log::error!("{}.build_dbs | Unknown kind of DB '{}' in Configuring: {:#?} - ok", dbg, db_name, conf);
             }
-            log::info!("{}.build_dbs | Configuring UdpClientDb: {:?} - ok", self_id, db_name);
+            log::info!("{}.build_dbs | Configuring UdpClientDb: {:?} - ok", dbg, db_name);
         }
         dbs
     }
@@ -104,11 +106,11 @@ impl UdpClient {
     /// Returns the socket ready to receive data messages
     /// - Connected to the remote address
     /// - Hanshaked - Start message sent and acknowledged
-    fn handshake(self_id: &str, socket: UdpSocket, conf: &UdpClientConfig, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
+    fn handshake(dbg: &Dbg, socket: UdpSocket, conf: &UdpClientConfig, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
         let mut buf = vec![0; conf.mtu];
         match socket.send_to(&[Self::SYN, Self::EOT], &conf.remote_addr) {
             Ok(_) => {
-                log::debug!("{}.handshake | Start message sent to'{}'", self_id, conf.remote_addr);
+                log::debug!("{}.handshake | Start message sent to'{}'", dbg, conf.remote_addr);
                 let mut error_limit = ErrorLimit::new(4);
                 loop {
                     match socket.recv_from(&mut buf) {
@@ -117,21 +119,21 @@ impl UdpClient {
                             match buf.as_slice() {
                                 // Empty message received
                                 &[] => {
-                                    log::warn!("{}.handshake | {}: Empty message received", self_id, src_addr);
+                                    log::warn!("{}.handshake | {}: Empty message received", dbg, src_addr);
                                 }
                                 // Start ACK received
                                 &[UdpClient::SYN, UdpClient::EOT] | &[UdpClient::SYN, UdpClient::EOT, ..] => {
-                                    log::debug!("{}.handshake | {}: Start message ACK received", self_id, src_addr);
+                                    log::debug!("{}.handshake | {}: Start message ACK received", dbg, src_addr);
                                     return Ok((socket, src_addr, buf[2..].to_vec()))
                                     // switch_state.add(State::Read);
                                 }
                                 // Unexpected Data message received, but Start message expected
                                 &[UdpClient::SYN, _addr, _type_, _c1,_c2,_c3, _c4, ..] => {
-                                    log::warn!("{}.handshake | {}: Start message expected, but Data message received: {:#?}...", self_id, src_addr, &buf[..=10]);
+                                    log::warn!("{}.handshake | {}: Start message expected, but Data message received: {:#?}...", dbg, src_addr, &buf[..=10]);
                                 }
                                 // Unknown message received
                                 _ => {
-                                    log::warn!("{}.handshake | {}: Unknown message format: {:#?}...", self_id, src_addr, &buf[..=10]);
+                                    log::warn!("{}.handshake | {}: Unknown message format: {:#?}...", dbg, src_addr, &buf[..=10]);
                                 }
                             }
                         }
@@ -139,32 +141,32 @@ impl UdpClient {
                             // notify.add(State::UdpRecvError, format!("{}.handshake | UdpSocket recv error: {:#?}", self_id, err)),
                             match err.kind() {
                                 std::io::ErrorKind::WouldBlock => {
-                                    let message = &format!("{}.handshake | Socket read timeout", self_id);
+                                    let message = &format!("{}.handshake | Socket read timeout", dbg);
                                     log::debug!("{}", message);
                                 },
                                 std::io::ErrorKind::TimedOut => {
-                                    let message = &format!("{}.handshake | Socket read timeout", self_id);
+                                    let message = &format!("{}.handshake | Socket read timeout", dbg);
                                     log::debug!("{}", message);
                                 }
                                 _ => {
-                                    let message = format!("{}.handshake | Read start message error: {:#?}", self_id, err);
+                                    let message = format!("{}.handshake | Read start message error: {:#?}", dbg, err);
                                     log::warn!("{}", message);
                                 },
                             }
                             if error_limit.add().is_err() {
                                 // switch_state.add(State::Offline);
-                                return Err(format!("{}.handshake | Socket read errors limit exceeded, trying to reconnect...", self_id))
+                                return Err(format!("{}.handshake | Socket read errors limit exceeded, trying to reconnect...", dbg))
                             }
                         }
                     }
                     if exit.load(Ordering::SeqCst) {
-                        return Err(format!("{}.handshake | Breaked by `exit` ", self_id))
+                        return Err(format!("{}.handshake | Breaked by `exit` ", dbg))
                     }
                 }
             }
             Err(err) => {
                 // switch_state.add(State::Offline);
-                Err(format!("{}.handshake | Start message to '{}' error {:#?}", self_id, conf.remote_addr, err))
+                Err(format!("{}.handshake | Start message to '{}' error {:#?}", dbg, conf.remote_addr, err))
             }
         }
     }
@@ -172,31 +174,31 @@ impl UdpClient {
     /// Returns the socket ready to receive data messages
     /// - Connected to the remote address
     /// - Hanshaked - Start message sent and acknowledged
-    fn connect(self_id: &str, conf: &UdpClientConfig, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
+    fn connect(dbg: &Dbg, conf: &UdpClientConfig, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
         match UdpSocket::bind(&conf.local_addr) {
             Ok(socket) => {
                 loop {
                     match socket.connect(&conf.remote_addr) {
                         Ok(_) => {
                             if let Err(err) = socket.set_read_timeout(Some(Duration::from_millis(100))) {
-                                log::error!("{}.connect | Socket Set timeout error: {:?}", self_id, err);
+                                log::error!("{}.connect | Socket Set timeout error: {:?}", dbg, err);
                             }
-                            return Self::handshake(self_id, socket.try_clone().unwrap(), conf, exit)
+                            return Self::handshake(dbg, socket.try_clone().unwrap(), conf, exit)
                         }
                         Err(err) => {
-                            log::error!("{}.connect | Connect error: {:?}", self_id, err);
+                            log::error!("{}.connect | Connect error: {:?}", dbg, err);
                             // switch_state.add(State::Offline);
                             // Err(format!("{}.connect | Connect error: {:?}", self_id, err))
                         }
                     }
                     if exit.load(Ordering::SeqCst) {
-                        return Err(format!("{}.connect | Breaked by `exit` ", self_id))
+                        return Err(format!("{}.connect | Breaked by `exit` ", dbg))
                     }
                 }
             }
             Err(err) => {
                 // notify.add(NotifyState::UdpBindError, format!("{}.connect | UdpSocket::bind error: {:#?}", self_id, err)),
-                Err(format!("{}.connect | UdpSocket::bind error: {:#?}", self_id, err))
+                Err(format!("{}.connect | UdpSocket::bind error: {:#?}", dbg, err))
             }
         }        
     }
@@ -214,7 +216,7 @@ impl std::fmt::Debug for UdpClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("UdpClient")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -237,24 +239,24 @@ enum State {
 }
 //
 //
-static SELF_ID: std::sync::LazyLock<RwLock<String>> = std::sync::LazyLock::new(|| RwLock::new(String::new()));
+static SELF_ID: std::sync::LazyLock<RwLock<Dbg>> = std::sync::LazyLock::new(|| RwLock::new(Dbg::own("")));
 //
 // 
 impl Service for UdpClient {
     //
     // 
     fn run(&mut self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let tx_id = self.tx_id;
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let services = self.services.clone();
-        log::info!("{}.run | Preparing thread...", self_id);
-        *SELF_ID.write().unwrap() = self_id.clone();
-        let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
-            let self_id = &self_id;
-            let mut notify: ChangeNotify<_, String> = ChangeNotify::new(self_id, NotifyState::Start, vec![
+        log::info!("{}.run | Preparing thread...", dbg);
+        *SELF_ID.write().unwrap() = dbg.clone();
+        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+            let dbg = &dbg;
+            let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
                 (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
                 (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
                 (NotifyState::UdpBindError,   Box::new(|message| log::error!("{}", message))),
@@ -315,14 +317,14 @@ impl Service for UdpClient {
                     },
                 ],
             );
-            let mut dbs = Self::build_dbs(self_id, tx_id, &conf);
-            let send = services.rlock(self_id)
+            let mut dbs = Self::build_dbs(dbg, tx_id, &conf);
+            let send = services.rlock(dbg)
                 .get_link(&conf.send_to)
-                .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", self_id, conf.send_to.name(), err));
-            let mut reconnect = ServiceCycle::new(self_id, conf.reconnect);
+                .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
+            let mut reconnect = ServiceCycle::new(dbg, conf.reconnect);
             'main: loop {
                 reconnect.start();
-                match Self::connect(self_id, &conf, exit.clone()) {
+                match Self::connect(dbg, &conf, exit.clone()) {
                     Ok((socket, remote_addr, bytes)) => {
                         let mut bytes = bytes;
                         'read: loop {
@@ -332,12 +334,12 @@ impl Service for UdpClient {
                                     match db_data.read(&socket, bytes, &send) {
                                         Ok(_) => {
                                             error_limit.reset();
-                                            log::trace!("{}.run | UdpClientDb '{}' - reading from '{}' - ok", self_id, db_data.name, remote_addr);
+                                            log::trace!("{}.run | UdpClientDb '{}' - reading from '{}' - ok", dbg, db_data.name, remote_addr);
                                         }
                                         Err(err) => {
-                                            log::warn!("{}.run | UdpClientDb '{}' - reading from '{}' - error: {:?}", self_id, db_data.name, remote_addr, err);
+                                            log::warn!("{}.run | UdpClientDb '{}' - reading from '{}' - error: {:?}", dbg, db_data.name, remote_addr, err);
                                             if error_limit.add().is_err() {
-                                                log::error!("{}.run | UdpClientDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_data.name);
+                                                log::error!("{}.run | UdpClientDb '{}' - exceeded reading errors limit, trying to reconnect...", dbg, db_data.name);
                                                 switch_state.add(State::Start);
                                                 break 'read;
                                             }
@@ -345,7 +347,7 @@ impl Service for UdpClient {
                                     }
                                 }
                                 None => {
-                                    log::error!("{}.run | UdpClientDb '{:?}' - Not found", self_id, Dbs::Data);
+                                    log::error!("{}.run | UdpClientDb '{:?}' - Not found", dbg, Dbs::Data);
                                 },
                             }
                             bytes = vec![];
@@ -354,7 +356,7 @@ impl Service for UdpClient {
                             }
                         }                    }
                     Err(err) => {
-                        log::error!("{}.run | Error: {:?}", self_id, err);
+                        log::error!("{}.run | Error: {:?}", dbg, err);
                     }
                 }
                 if exit.load(Ordering::SeqCst) {
@@ -368,12 +370,12 @@ impl Service for UdpClient {
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.dbg);
                 self.handle.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -381,18 +383,22 @@ impl Service for UdpClient {
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
-        let dbg = self.id.clone();
-        let (future, sink) = sal_sync::services::future::Future::new();
-        if let Some(handle) = self.handle.pop() {
-            std::thread::spawn(move|| {
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
                 if let Err(err) = handle.join() {
-                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                 }
-                sink.add(());
-            });
+            }
         }
-        future
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     //
