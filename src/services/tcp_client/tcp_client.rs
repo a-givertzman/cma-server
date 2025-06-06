@@ -1,5 +1,5 @@
 use coco::Stack;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{
     entity::{Name, Object, Point}, safe_lock::rwlock::SafeLock,
     service::Service, services::Services,
@@ -27,13 +27,14 @@ use crate::{
 /// - Sending messages (wrapped into ApiQuery) from the beginning of the buffer
 /// - Sent messages immediately removed from the buffer
 pub struct TcpClient {
-    id: String,
+    dbg: Dbg,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
     in_recv: Mutex<Option<Receiver<Point>>>,
     conf: TcpClientConfig,
     services: Arc<RwLock<Services>>,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -45,13 +46,14 @@ impl TcpClient {
     pub fn new(conf: TcpClientConfig, services: Arc<RwLock<Services>>) -> Self {
         let (send, recv) = mpsc::channel();
         Self {
-            id: conf.name.join(),
+            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             in_recv: Mutex::new(Some(recv)),
             in_send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             services,
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -67,7 +69,7 @@ impl Debug for TcpClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("TcpClient")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -79,19 +81,19 @@ impl Service for TcpClient {
     fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
-            None => panic!("{}.run | link '{:?}' - not found", self.id, name),
+            None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
         }
     }
     //
     //
     fn run(&mut self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+        log::info!("{}.run | Starting...", self.dbg);
+        let self_id = self.dbg.clone();
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let exit_pair = Arc::new(AtomicBool::new(false));
         let tx_send = self.services.rlock(&self_id).get_link(&conf.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.id, err);
+            panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let buffered = conf.rx_buffered; // TODO Read this from config
         let in_recv = self.in_recv.lock().unwrap().take().unwrap();
@@ -158,12 +160,12 @@ impl Service for TcpClient {
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.dbg);
                 self.handle.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -172,17 +174,21 @@ impl Service for TcpClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        let dbg = self.id.clone();
-        let (future, sink) = sal_sync::services::future::Future::new();
-        if let Some(handle) = self.handle.pop() {
-            std::thread::spawn(move|| {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
                 if let Err(err) = handle.join() {
-                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                 }
-                sink.add(());
-            });
+            }
         }
-        future
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     //
@@ -194,21 +200,21 @@ impl Service for TcpClient {
     fn subscribe(&mut self, receiver_id: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         let _ = receiver_id;
         let _ = points;
-        std::panic!("{}.subscribe | Does not supported", self.id)
+        std::panic!("{}.subscribe | Does not supported", self.dbg)
     }
     //
     //
     fn extend_subscription(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
-        std::panic!("{}.extend_subscription | Does not supported", self.id)
+        std::panic!("{}.extend_subscription | Does not supported", self.dbg)
     }
     //
     //
     fn unsubscribe(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
-        std::panic!("{}.unsubscribe | Does not supported", self.id)
+        std::panic!("{}.unsubscribe | Does not supported", self.dbg)
     }
     //
     //
@@ -220,6 +226,6 @@ impl Service for TcpClient {
     fn gi(&self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Receiver<Point> {
         let _ = receiver_name;
         let _ = points;
-        std::panic!("{}.gi | Does not supported", self.id)
+        std::panic!("{}.gi | Does not supported", self.dbg)
     }
 }
