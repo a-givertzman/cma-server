@@ -84,7 +84,7 @@ impl JdsConnection {
     /// Creates new instance of the [JdsConnection]
     /// - parent - id of the parent
     /// - path - path of the parent
-    pub fn new(parent_id: &str, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
+    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
         let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
         let name = Name::new(parent, "JdsConnection");
         log::debug!("{}.new | name: {:#?}", dbg, name);
