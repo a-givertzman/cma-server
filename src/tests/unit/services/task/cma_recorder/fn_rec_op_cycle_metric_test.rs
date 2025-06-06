@@ -3,7 +3,7 @@
 mod cma_recorder {
     use sal_sync::services::{
         conf::{ConfTree, ServicesConf}, entity::{Name, Point},
-        multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf},
+        multi_queue::{MultiQueue, MultiQueueConf},
         safe_lock::rwlock::SafeLock, service::Service, services::Services,
     };
     use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};

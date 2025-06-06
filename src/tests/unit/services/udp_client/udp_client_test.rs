@@ -4,7 +4,7 @@ mod udp_client {
     use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use rand::Rng;
     use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, safe_lock::rwlock::SafeLock, service::Service, services::Services};
-    use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
+    use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::udp_client_config::udp_client_config::UdpClientConfig,
@@ -93,13 +93,13 @@ mod udp_client {
         )));
         services.wlock(self_id).insert(udp_server.clone());
         let time = Instant::now();
-        let services_handle = services.wlock(self_id).run().unwrap();
+        services.wlock(self_id).run().unwrap();
         thread::sleep(Duration::from_millis(10));
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        receiver.write().unwrap().run().unwrap();
         // let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
-        let udp_client_handle = udp_client.write().unwrap().run().unwrap();
+        udp_client.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(10));
-        let udp_server_handle = udp_server.write().unwrap().run().unwrap();
+        udp_server.write().unwrap().run().unwrap();
         
         let mut received = 0;
         let timeout = Duration::from_secs(3);
@@ -114,7 +114,7 @@ mod udp_client {
             }
         }
         receiver.read().unwrap().exit();
-        receiver_handle.wait().unwrap();
+        receiver.read().unwrap().wait().unwrap();
         let elapsed = time.elapsed();
         log::debug!("{} | wait for receiver - finished", self_id);
         log::debug!("{} | get received...", self_id);
@@ -148,13 +148,13 @@ mod udp_client {
             assert!(result == *target as i64, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
         udp_client.write().unwrap().exit();
-        udp_client_handle.wait().unwrap();
+        udp_client.read().unwrap().wait().unwrap();
         udp_server.read().unwrap().exit();
         // multi_queue.read().unwrap().exit();
         services.read().unwrap().exit();
-        udp_server_handle.wait().unwrap();
+        udp_server.read().unwrap().wait().unwrap();
         // multi_queue_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         test_duration.exit();
     }
 }

@@ -150,11 +150,12 @@ mod task_nodes {
     ///
     ///
     struct MockService {
-        id: String,
+        dbg: String,
         name: Name,
         links: HashMap<String, Sender<Point>>,
         rx_recv: Mutex<Option<Receiver<Point>>>,
         handle: Stack<JoinHandle<()>>,
+        is_finished: Arc<AtomicBool>,
         exit: Arc<AtomicBool>,
     }
     //
@@ -164,13 +165,14 @@ mod task_nodes {
             let (send, recv) = mpsc::channel();
             let name = Name::new(parent, format!("MockService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
             Self {
-                id: name.join(),
+                dbg: name.join(),
                 name,
                 links: HashMap::from([
                     (link_name.to_string(), send),
                 ]),
                 rx_recv: Mutex::new(Some(recv)),
                 handle: Stack::new(),
+                is_finished: Arc::new(AtomicBool::new(false)),
                 exit: Arc::new(AtomicBool::new(false)),
             }
         }
@@ -188,7 +190,7 @@ mod task_nodes {
         fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             formatter
                 .debug_struct("MockService")
-                .field("id", &self.id)
+                .field("id", &self.dbg)
                 .finish()
         }
     }
@@ -200,14 +202,14 @@ mod task_nodes {
         fn get_link(&mut self, name: &str) -> Sender<Point> {
             match self.links.get(name) {
                 Some(send) => send.clone(),
-                None => panic!("{}.run | link '{:?}' - not found", self.id, name),
+                None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
             }
         }
         //
         //
         fn run(&mut self) -> Result<(), Error> {
-            log::info!("{}.run | Starting...", self.id);
-            let self_id = self.id.clone();
+            log::info!("{}.run | Starting...", self.dbg);
+            let self_id = self.dbg.clone();
             let exit = self.exit.clone();
             let rx_recv = self.rx_recv.lock().unwrap().take().unwrap();
             let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
@@ -227,12 +229,12 @@ mod task_nodes {
             });
             match handle {
                 Ok(handle) => {
-                    log::info!("{}.run | Starting - ok", self.id);
+                    log::info!("{}.run | Starting - ok", self.dbg);
                     self.handle.push(handle);
                     Ok(())
                 }
                 Err(err) => {
-                    let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                    let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                     log::warn!("{}", err);
                     Err(err)
                 }
@@ -240,18 +242,22 @@ mod task_nodes {
         }
         //
         //
-        fn wait(&self) -> sal_sync::services::future::Future<()> {
-            let dbg = self.id.clone();
-            let (future, sink) = sal_sync::services::future::Future::new();
-            if let Some(handle) = self.handle.pop() {
-                std::thread::spawn(move|| {
+        fn wait(&self) -> Result<(), Error> {
+            while !self.handle.is_empty() {
+                if let Some(handle) = self.handle.pop() {
                     if let Err(err) = handle.join() {
-                        log::warn!("{dbg}.wait | Error: {:?}", err);
+                        log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                        return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                     }
-                    sink.add(());
-                });
+                }
             }
-            future
+            self.is_finished.store(true, Ordering::SeqCst);
+            Ok(())
+        }
+        //
+        //
+        fn is_finished(&self) -> bool {
+            self.is_finished.load(Ordering::SeqCst)
         }
         //
         //

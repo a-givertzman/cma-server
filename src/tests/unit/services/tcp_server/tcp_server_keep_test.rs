@@ -1,11 +1,11 @@
 #[cfg(test)]
 
 mod tcp_server {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
     use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
     use testing::{
         entities::test_value::Value,
-        stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues, wait::WaitTread},
+        stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues},
         session::test_session::TestSession,
     };
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -98,13 +98,13 @@ mod tcp_server {
             Some(test_data.last().unwrap().clone()),
             vec![25, 50, 75],
         )));
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
+        tcp_server.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let emulated_tcp_client_recv_handle = emulated_tcp_client_recv.write().unwrap().run().unwrap();
+        emulated_tcp_client_recv.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.write().unwrap().run().unwrap();
+        producer.write().unwrap().run().unwrap();
         emulated_tcp_client_recv.read().unwrap().wait_marker_received();
         let received = emulated_tcp_client_recv.read().unwrap().received();
         let received = received.read().unwrap();
@@ -120,11 +120,11 @@ mod tcp_server {
         tcp_server.read().unwrap().exit();
         mq_service.read().unwrap().exit();
         services.rlock(self_id).exit();
-        emulated_tcp_client_recv_handle.wait().unwrap();
-        producer_handle.wait().unwrap();
-        tcp_server_handle.wait().unwrap();
-        mq_service_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        emulated_tcp_client_recv.read().unwrap().wait().unwrap();
+        producer.read().unwrap().wait().unwrap();
+        tcp_server.read().unwrap().wait().unwrap();
+        mq_service.read().unwrap().wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         test_duration.exit();
     }
     ///
@@ -196,16 +196,16 @@ mod tcp_server {
             vec![25, 50, 75],
             true,
         )));
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
+        tcp_server.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let emulated_tcp_client_handle = emulated_tcp_client.write().unwrap().run().unwrap();
+        emulated_tcp_client.write().unwrap().run().unwrap();
         thread::sleep(Duration::from_millis(100));
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
-        receiver_handle.wait().unwrap();
+        receiver.write().unwrap().run().unwrap();
+        receiver.read().unwrap().wait().unwrap();
         emulated_tcp_client.read().unwrap().exit();
-        emulated_tcp_client_handle.wait().unwrap();
+        emulated_tcp_client.read().unwrap().wait().unwrap();
         let received = receiver.read().unwrap().received();
         let mut received = received.write().unwrap();
         let target = total_count;
@@ -219,9 +219,9 @@ mod tcp_server {
         tcp_server.read().unwrap().exit();
         mq_service.read().unwrap().exit();
         services.rlock(self_id).exit();
-        tcp_server_handle.wait().unwrap();
-        mq_service_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        tcp_server.read().unwrap().wait().unwrap();
+        mq_service.read().unwrap().wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         test_duration.exit();
     }
 }

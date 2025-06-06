@@ -11,7 +11,7 @@ mod jds_routes {
         multi_queue::{MultiQueue, MultiQueueConf},
         safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services,
     };
-    use testing::{session::test_session::TestSession, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
+    use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once, RwLock}, thread, time::Duration};
     use crate::{
@@ -198,10 +198,10 @@ mod jds_routes {
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        receiver.write().unwrap().run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
+        tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -301,10 +301,10 @@ mod jds_routes {
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        receiver.write().unwrap().run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
+        tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -454,10 +454,10 @@ mod jds_routes {
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
-        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
-        let tcp_server_handle = tcp_server.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        receiver.write().unwrap().run().unwrap();
+        mq_service.write().unwrap().run().unwrap();
+        tcp_server.write().unwrap().run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //

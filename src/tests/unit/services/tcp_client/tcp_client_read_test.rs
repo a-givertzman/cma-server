@@ -5,7 +5,7 @@ mod tcp_client {
         conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::Service, services::Services
     };
     use std::{io::Write, net::TcpListener, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
+    use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::tcp_client_config::TcpClientConfig,
@@ -96,11 +96,11 @@ mod tcp_client {
         let tcp_client_service_id = tcp_client.read().unwrap().name().join();
         services.wlock(self_id).insert(tcp_client.clone());
         services.wlock(self_id).insert(multi_queue.clone());
-        let services_handle = services.wlock(self_id).run().unwrap();
+        services.wlock(self_id).run().unwrap();
         let sent = Arc::new(RwLock::new(vec![]));
         let tcp_client = services.rlock(self_id).get(&tcp_client_service_id).unwrap();
         log::debug!("Running service {}...", multi_queue_service_id);
-        let handle = multi_queue.write().unwrap().run().unwrap();
+        multi_queue.write().unwrap().run().unwrap();
         log::debug!("Running service {} - ok", multi_queue_service_id);
         log::debug!("Running service {}...", tcp_client_service_id);
         tcp_client.wlock(self_id).run().unwrap();
@@ -110,8 +110,8 @@ mod tcp_client {
         let timer = Instant::now();
         log::debug!("Test - setup - ok");
         services.rlock(self_id).exit();
-        handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        multi_queue.read().unwrap().wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         let mut sent = sent.write().unwrap();
         println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", total_count);
