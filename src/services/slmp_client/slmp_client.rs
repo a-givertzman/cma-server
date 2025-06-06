@@ -1,6 +1,6 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration};
 use coco::Stack;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ExitNotify, services::{
         conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
@@ -25,12 +25,13 @@ use crate::{
 /// - Writes Point to the protocol (SLMP device) specific address
 pub struct SlmpClient {
     tx_id: usize,
-    id: String,
+    dbg: Dbg,
     name: Name,
     conf: SlmpClientConfig,
     services: Arc<RwLock<Services>>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -46,19 +47,20 @@ impl SlmpClient {
         }).collect()));
         Self {
             tx_id,
-            id: conf.name.join(),
+            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             diagnosis,
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// Sends diagnosis point
     fn yield_diagnosis(
-        self_id: &str,
+        dbg: &Dbg,
         diagnosis: &Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         kewd: &DiagKeywd,
         value: Status,
@@ -68,37 +70,37 @@ impl SlmpClient {
             Ok(mut diagnosis) => {
                 match diagnosis.get_mut(kewd) {
                     Some(point) => {
-                        log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", self_id, kewd);
+                        log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", dbg, kewd);
                         if let Some(point) = point.next(value) {
                             if let Err(err) = dest.send(point) {
-                                log::warn!("{}.yield_status | Send error: {}", self_id, err);
+                                log::warn!("{}.yield_status | Send error: {}", dbg, err);
                             }
                         }
                     }
-                    None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", self_id, kewd),
+                    None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", dbg, kewd),
                 }
             }
-            Err(err) => log::error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", self_id, err),
+            Err(err) => log::error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", dbg, err),
         }
     }
     ///
     /// Applies a write / read timeout for TcpStream
-    fn set_stream_timout(self_id: &str, stream: &TcpStream, read_timeout: Duration, write_timeout: Option<Duration>) {
+    fn set_stream_timout(dbg: &Dbg, stream: &TcpStream, read_timeout: Duration, write_timeout: Option<Duration>) {
         match stream.set_read_timeout(Some(read_timeout)) {
             Ok(_) => {
-                log::info!("{}.set_stream_timout | Socket set read timeout {:?} - ok", self_id, read_timeout);
+                log::info!("{}.set_stream_timout | Socket set read timeout {:?} - ok", dbg, read_timeout);
             }
             Err(err) => {
-                log::warn!("{}.set_stream_timout | Socket set read timeout error {:?}", self_id, err);
+                log::warn!("{}.set_stream_timout | Socket set read timeout error {:?}", dbg, err);
             }
         }
         if let Some(timeout) = write_timeout {
             match stream.set_write_timeout(Some(timeout)) {
                 Ok(_) => {
-                    log::info!("{}.set_stream_timout | Socket set write timeout {:?} - ok", self_id, timeout);
+                    log::info!("{}.set_stream_timout | Socket set write timeout {:?} - ok", dbg, timeout);
                 }
                 Err(err) => {
-                    log::warn!("{}.set_stream_timout | Socket set write timeout error {:?}", self_id, err);
+                    log::warn!("{}.set_stream_timout | Socket set write timeout error {:?}", dbg, err);
                 }
             }
         }
@@ -117,7 +119,7 @@ impl Debug for SlmpClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("SlmpClient")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -127,28 +129,28 @@ impl Service for SlmpClient {
     //
     //
     fn run(&mut self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let tx_id = self.tx_id;
         let conf = self.conf.clone();
         let services = self.services.clone();
         let diagnosis = self.diagnosis.clone();
         let status = Arc::new(AtomicU32::new(Status::Ok.into()));
-        let exit = Arc::new(ExitNotify::new(&self_id, Some(self.exit.clone()), None));
-        let tx_send = self.services.rlock(&self_id).get_link(&conf.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.id, err);
+        let exit = Arc::new(ExitNotify::new(&dbg, Some(self.exit.clone()), None));
+        let tx_send = self.services.rlock(&dbg).get_link(&conf.send_to).unwrap_or_else(|err| {
+            panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let mut tcp_client_connect = TcpClientConnect::new(
-            self_id.clone(), 
+            dbg.clone(), 
             format!("{}:{}", conf.ip, conf.port),
             conf.reconnect_cycle,
             Some(self.exit.clone()),
         );
-        log::info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
-            log::info!("{}.run | Preparing thread - ok", self_id);
+        log::info!("{}.run | Preparing thread...", dbg);
+        let handle = thread::Builder::new().name(format!("{}.run", dbg.clone())).spawn(move || {
+            log::info!("{}.run | Preparing thread - ok", dbg);
             let mut slmp_read = SlmpRead::new(
-                &self_id,
+                &dbg,
                 tx_id,
                 // self.name.clone(),
                 conf.clone(),
@@ -158,7 +160,7 @@ impl Service for SlmpClient {
                 exit.clone(),
             );
             let mut slmp_write = SlmpWrite::new(
-                &self_id,
+                &dbg,
                 tx_id,
                 // self.name.clone(),
                 conf.clone(),
@@ -168,20 +170,20 @@ impl Service for SlmpClient {
                 status,
                 exit.clone(),
             );
-            Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
-            Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
+            Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
+            Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
                 loop {
-                log::info!("{}.run | Connecting...", self_id);
+                log::info!("{}.run | Connecting...", dbg);
                 exit.reset_pair();
                 match tcp_client_connect.connect() {
                     Some(tcp_stream) =>  {
                         Self::set_stream_timout(
-                            &self_id,
+                            &dbg,
                             &tcp_stream,
                             conf.cycle.map_or(RECV_TIMEOUT, |cycle| cycle),
                             Some(RECV_TIMEOUT),
                         );
-                        Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
+                        Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
                         // info!("{}.run | Connecting...", self_id);
                         let h_r = slmp_read.run(tcp_stream.try_clone().unwrap());
                         let h_w = slmp_write.run(tcp_stream);
@@ -191,43 +193,43 @@ impl Service for SlmpClient {
                                 h_w.wait().unwrap();
                             },
                             (Ok(h_r), Err(_)) => {
-                                Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
+                                Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
                                 exit.exit_pair();
                                 h_r.wait().unwrap();
                             },
                             (Err(_), Ok(h_w)) => {
-                                Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
+                                Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
                                 exit.exit_pair();
                                 h_w.wait().unwrap();
                             }
                             (Err(_), Err(_)) => {
-                                Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
+                                Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
                                 exit.exit_pair();
                             }
                         }
-                        log::info!("{}.run | All thrad exited...", self_id);
+                        log::info!("{}.run | All thrad exited...", dbg);
                     }
                     None => {
-                        Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
+                        Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
                     }
                 }
                 if exit.get_parent() {
                     break;
                 }
-                log::info!("{}.run | Sleeping {:?}...", self_id, conf.reconnect_cycle);
+                log::info!("{}.run | Sleeping {:?}...", dbg, conf.reconnect_cycle);
                 thread::sleep(conf.reconnect_cycle);
-                log::warn!("{}.run | TcpClient connection failed - trying to reconnect...", self_id);
+                log::warn!("{}.run | TcpClient connection failed - trying to reconnect...", dbg);
             }
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", dbg);
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.dbg);
                 self.handle.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -240,18 +242,22 @@ impl Service for SlmpClient {
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
-        let dbg = self.id.clone();
-        let (future, sink) = sal_sync::services::future::Future::new();
-        if let Some(handle) = self.handle.pop() {
-            std::thread::spawn(move|| {
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
                 if let Err(err) = handle.join() {
-                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                 }
-                sink.add(());
-            });
+            }
         }
-        future
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     //
