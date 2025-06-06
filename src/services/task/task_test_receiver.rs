@@ -1,17 +1,18 @@
 use coco::Stack;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{entity::{Name, Object, Point}, service::Service};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration};
 ///
 /// 
 pub struct TaskTestReceiver {
-    id: String,
+    dbg: Dbg,
     name: Name,
     iterations: usize, 
     in_send: HashMap<String, Sender<Point>>,
     in_recv: Mutex<Option<Receiver<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -27,13 +28,14 @@ impl TaskTestReceiver {
         let (send, recv): (Sender<Point>, Receiver<Point>) = mpsc::channel();
         let name = Name::new(parent, format!("TaskTestReceiver{}", index.into()));
         Self {
-            id: name.join(),
+            dbg: Dbg::new(name.parent(), name.me()),
             name,
             iterations,
             in_send: HashMap::from([(recv_queue.to_string(), send)]),
             in_recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -63,7 +65,7 @@ impl Debug for TaskTestReceiver {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("TaskTestReceiver")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -75,21 +77,21 @@ impl Service for TaskTestReceiver {
     fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
-            None => panic!("{}.run | link '{:?}' - not found", self.id, name),
+            None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
         }        
     }
     //
     //
     fn run(&mut self) -> Result<(), Error> {
-        let self_id = self.id.clone();
-        log::info!("{}.run | Starting...", self_id);
+        let dbg = self.dbg.clone();
+        log::info!("{}.run | Starting...", dbg);
         let exit = self.exit.clone();
         let received = self.received.clone();
         let mut count = 0;
         // let mut error_count = 0;
         let in_recv = self.in_recv.lock().unwrap().take().unwrap();
         let iterations = self.iterations;
-        let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
+        let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
             // log::info!("Task({}).run | prepared", name);
             'main: loop {
                 if exit.load(Ordering::Relaxed) {
@@ -98,8 +100,8 @@ impl Service for TaskTestReceiver {
                 match in_recv.recv_timeout(Duration::from_millis(100)) {
                     Ok(point) => {
                         count += 1;
-                        log::trace!("{}.run | received: {}/{}, (value: {:?})", self_id, count, iterations, point.value());
-                        log::trace!("{}.run | received Point: {:#?}", self_id, point);
+                        log::trace!("{}.run | received: {}/{}, (value: {:?})", dbg, count, iterations, point.value());
+                        log::trace!("{}.run | received Point: {:#?}", dbg, point);
                         // debug!("{}.run | value: {}\treceived SQL: {:?}", value, sql);
                         received.write().unwrap().push(point.clone());
                         if count >= iterations {
@@ -120,7 +122,7 @@ impl Service for TaskTestReceiver {
                     Err(err) => {
                         match err {
                             mpsc::RecvTimeoutError::Timeout => {},
-                            mpsc::RecvTimeoutError::Disconnected => log::error!("{}.run | Error receiving from queue: {:?}", self_id, err),
+                            mpsc::RecvTimeoutError::Disconnected => log::error!("{}.run | Error receiving from queue: {:?}", dbg, err),
                         }
                         // error_count += 1;
                         // if errorCount > 10 {
@@ -133,18 +135,18 @@ impl Service for TaskTestReceiver {
                     break 'main;
                 }
             };
-            log::info!("{}.run | received {} Point's", self_id, count);
-            log::info!("{}.run | exit", self_id);
+            log::info!("{}.run | received {} Point's", dbg, count);
+            log::info!("{}.run | exit", dbg);
             // thread::sleep(Duration::from_secs_f32(2.1));
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
+                log::info!("{}.run | Starting - ok", self.dbg);
                 self.handle.push(handle);
                 Ok(())
                         }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -152,18 +154,22 @@ impl Service for TaskTestReceiver {
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
-        let dbg = self.id.clone();
-        let (future, sink) = sal_sync::services::future::Future::new();
-        if let Some(handle) = self.handle.pop() {
-            std::thread::spawn(move|| {
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
                 if let Err(err) = handle.join() {
-                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                 }
-                sink.add(());
-            });
+            }
         }
-        future
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     //
