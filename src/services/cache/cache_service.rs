@@ -392,7 +392,7 @@ impl Service for CacheService {
         let (send, recv) = mpsc::channel();
         let cache = Arc::new(self.cache.clone());
         let points = points.to_owned();
-        let handle = thread::spawn(move || {
+        thread::spawn(move || {
             if points.is_empty() {
                 for point in cache.iter().map(|r| r.value().clone()) {
                     match send.send(point.clone()) {
