@@ -68,7 +68,7 @@ impl Debug for MockSendService {
 impl Service for MockSendService {
     //
     //
-    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, _name: &str) -> std::sync::mpsc::Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -77,7 +77,7 @@ impl Service for MockSendService {
     }
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();

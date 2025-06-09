@@ -105,7 +105,7 @@ impl ProfinetClient {
     }
     ///
     /// Reads data slice from the S7 device,
-    fn read(&mut self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn read(&self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
         log::info!("{}.read | starting...", self.dbg);
         let dbg = self.dbg.clone();
         let tx_id = self.tx_id;
@@ -198,7 +198,7 @@ impl ProfinetClient {
     }
     ///
     /// Writes Point to the protocol (PROFINET device) specific address
-    fn write(&mut self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn write(&self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
         let dbg = self.dbg.clone();
         let self_name = self.name.clone();
         let tx_id = self.tx_id;
@@ -397,7 +397,7 @@ impl Debug for ProfinetClient {
 impl Service for ProfinetClient {
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         let tx_send = self.services.rlock(&self.dbg).get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });

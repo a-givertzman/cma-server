@@ -51,7 +51,7 @@ impl Task {
     }
     ///
     ///
-    fn subscriptions(&mut self, conf: &TaskConfig, services: &Arc<RwLock<Services>>) -> Option<(String, Vec<SubscriptionCriteria>)> {
+    fn subscriptions_(&self, conf: &TaskConfig, services: &Arc<RwLock<Services>>) -> Option<(String, Vec<SubscriptionCriteria>)> {
         if conf.subscribe.is_empty() {
             None
         } else {
@@ -93,7 +93,7 @@ impl Task {
     }
     ///
     ///
-    fn subscribe(&mut self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<RwLock<Services>>) -> Receiver<Point> {
+    fn subscribe_(&self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<RwLock<Services>>) -> Receiver<Point> {
         match subscriptions {
             Some((service_name, points)) => {
                 let (_, rx_recv) = services.wlock(&self.dbg).subscribe(
@@ -134,7 +134,7 @@ impl Debug for Task {
 impl Service for Task {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
+    fn get_link(&self, name: &str) -> Sender<Point> {
         // match self.in_send.get(name) {
         match self.in_send.iter().next() {
             Some((_, send)) => send.clone(),
@@ -143,7 +143,7 @@ impl Service for Task {
     }
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         log::trace!("{}.run | Self tx_id: {}", self.dbg, PointTxId::from_str(&self.name.join()));
         let dbg = self.dbg.clone();
@@ -155,8 +155,8 @@ impl Service for Task {
             Some(interval) => (interval > Duration::ZERO, interval, interval),
             None => (false, Duration::ZERO, RECV_TIMEOUT),
         };
-        let subscriptions = self.subscriptions(&conf, &services);
-        let rx_recv = self.subscribe(&subscriptions, &services);
+        let subscriptions = self.subscriptions_(&conf, &services);
+        let rx_recv = self.subscribe_(&subscriptions, &services);
         let handle = thread::Builder::new().name(format!("{} - main", dbg)).spawn(move || {
             let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
             let mut task_nodes = TaskNodes::new(&dbg);

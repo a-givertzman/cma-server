@@ -74,7 +74,7 @@ impl Debug for MockRecvSendService {
 impl Service for MockRecvSendService {
     //
     //
-    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, name: &str) -> std::sync::mpsc::Sender<Point> {
         match self.rxSend.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -82,7 +82,7 @@ impl Service for MockRecvSendService {
     }
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();

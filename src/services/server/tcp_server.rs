@@ -168,7 +168,7 @@ impl Debug for TcpServer {
 impl Service for TcpServer {
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let self_name = self.name.clone();

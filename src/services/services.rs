@@ -112,7 +112,7 @@ impl Services {
     }
     ///
     /// Main loop of the Services
-    pub fn run(&mut self) -> Result<(), Error> {
+    pub fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let points_requested = self.points_requested.clone();

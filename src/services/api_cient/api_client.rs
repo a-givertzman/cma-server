@@ -110,7 +110,7 @@ impl Debug for ApiClient {
 impl Service for ApiClient {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
+    fn get_link(&self, name: &str) -> Sender<Point> {
         match self.send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
@@ -118,7 +118,7 @@ impl Service for ApiClient {
     }
     //
     // 
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let is_finished = self.is_finished.clone();

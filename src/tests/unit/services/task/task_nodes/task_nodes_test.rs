@@ -199,7 +199,7 @@ mod task_nodes {
     impl Service for MockService {
         //
         //
-        fn get_link(&mut self, name: &str) -> Sender<Point> {
+        fn get_link(&self, name: &str) -> Sender<Point> {
             match self.links.get(name) {
                 Some(send) => send.clone(),
                 None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
@@ -207,7 +207,7 @@ mod task_nodes {
         }
         //
         //
-        fn run(&mut self) -> Result<(), Error> {
+        fn run(&self) -> Result<(), Error> {
             log::info!("{}.run | Starting...", self.dbg);
             let self_id = self.dbg.clone();
             let exit = self.exit.clone();

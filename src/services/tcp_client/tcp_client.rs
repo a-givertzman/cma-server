@@ -78,7 +78,7 @@ impl Debug for TcpClient {
 impl Service for TcpClient {
     //
     // 
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
+    fn get_link(&self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
@@ -86,7 +86,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let self_id = self.dbg.clone();
         let conf = self.conf.clone();
@@ -197,21 +197,21 @@ impl Service for TcpClient {
     }
     //
     //
-    fn subscribe(&mut self, receiver_id: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
+    fn subscribe(&self, receiver_id: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         let _ = receiver_id;
         let _ = points;
         std::panic!("{}.subscribe | Does not supported", self.dbg)
     }
     //
     //
-    fn extend_subscription(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
+    fn extend_subscription(&self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.extend_subscription | Does not supported", self.dbg)
     }
     //
     //
-    fn unsubscribe(&mut self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
+    fn unsubscribe(&self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.unsubscribe | Does not supported", self.dbg)

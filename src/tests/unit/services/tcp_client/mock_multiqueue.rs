@@ -60,13 +60,13 @@ impl Debug for MockMultiQueue {
 impl Service for MockMultiQueue {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
+    fn get_link(&self, name: &str) -> Sender<Point> {
         assert!(name == "queue", "{}.run | link '{:?}' - not found", self.dbg, name);
         self.send.clone()
     }
     //
     // 
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
         let recv = self.recv.lock().unwrap().take().unwrap();

@@ -131,7 +131,7 @@ impl Debug for EmulatedTcpClientSend {
 impl Service for EmulatedTcpClientSend {
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let point_path = self.point_path.clone();

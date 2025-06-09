@@ -67,7 +67,7 @@ impl Debug for TaskTestProducer {
 impl Service for TaskTestProducer {
     //
     // 
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         let self_id = self.dbg.clone();
         let tx_id = PointTxId::from_str(&self_id);
         let cycle = self.cycle;

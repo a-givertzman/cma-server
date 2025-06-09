@@ -60,7 +60,7 @@ impl std::fmt::Debug for ServiceName {
 impl Service for ServiceName {
     //
     // 
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
+    fn get_link(&self, name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),

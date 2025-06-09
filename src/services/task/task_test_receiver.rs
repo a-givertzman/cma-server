@@ -74,7 +74,7 @@ impl Debug for TaskTestReceiver {
 impl Service for TaskTestReceiver {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<Point> {
+    fn get_link(&self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
@@ -82,7 +82,7 @@ impl Service for TaskTestReceiver {
     }
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         log::info!("{}.run | Starting...", dbg);
         let exit = self.exit.clone();

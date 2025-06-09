@@ -128,7 +128,7 @@ impl Debug for SlmpClient {
 impl Service for SlmpClient {
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let tx_id = self.tx_id;

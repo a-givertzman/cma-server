@@ -50,7 +50,7 @@ impl Debug for MockServicePoints {
 impl Service for MockServicePoints {
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         let err = Error::new(&self.id, "run").err("Not implemented");
         log::warn!("{}", err);
         Err(err)

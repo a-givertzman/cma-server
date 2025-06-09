@@ -95,7 +95,7 @@ enum State {
 impl Service for MockUdpServer {
     //
     // 
-    fn get_link(&mut self, _name: &str) -> Sender<Point> {
+    fn get_link(&self, _name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.name())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -104,7 +104,7 @@ impl Service for MockUdpServer {
     }
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let self_id = self.dbg.clone();
         let conf = self.conf.clone();

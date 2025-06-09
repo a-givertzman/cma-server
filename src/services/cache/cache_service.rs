@@ -69,7 +69,7 @@ impl CacheService {
     }
     ///
     /// Returns vector of the SubscriptionCriteria by config and list of configured Point's
-    fn subscriptions(&mut self, conf: &CacheServiceConfig, points: &[PointConfig]) -> (String, Vec<SubscriptionCriteria>) {
+    fn subscriptions(&self, conf: &CacheServiceConfig, points: &[PointConfig]) -> (String, Vec<SubscriptionCriteria>) {
         if conf.subscribe.is_empty() {
             panic!("{}.subscribe | Error. Subscription can`t be empty: {:#?}", self.dbg, conf.subscribe);
         } else {
@@ -307,7 +307,7 @@ impl Debug for CacheService {
 impl Service for CacheService {
     //
     //
-    fn run(&mut self) -> Result<(), Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let self_name = self.name.clone();
