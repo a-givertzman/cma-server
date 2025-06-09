@@ -1,8 +1,8 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{
-    entity::{Name, Object, Point}, safe_lock::rwlock::SafeLock,
-    service::Service, services::Services,
+    entity::{Name, Object, Point},
+    Service, Services,
 };
 use std::{
     collections::HashMap, fmt::Debug,
@@ -32,7 +32,7 @@ pub struct TcpClient {
     in_send: HashMap<String, Sender<Point>>,
     in_recv: Mutex<Option<Receiver<Point>>>,
     conf: TcpClientConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
@@ -43,7 +43,7 @@ impl TcpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TcpClientConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: TcpClientConfig, services: Arc<Services>) -> Self {
         let (send, recv) = mpsc::channel();
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),

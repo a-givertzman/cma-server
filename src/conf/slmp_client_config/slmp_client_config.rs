@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::{collections::FxIndexMap, services::{conf::{ConfTree, ConfTreeGet, DiagKeywd}, entity::{Name, PointConfig}, service::LinkName}};
+use sal_sync::{collections::FxIndexMap, services::{conf::{ConfTree, ConfTreeGet, DiagKeywd}, entity::{Name, PointConfig}, LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig};
 ///

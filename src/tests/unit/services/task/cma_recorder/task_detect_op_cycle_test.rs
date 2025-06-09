@@ -1,12 +1,12 @@
 #[cfg(test)]
 
 mod cma_recorder {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
-    use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services};
+    use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig, core_::aprox_eq::aprox_eq::AproxEq,
+        conf::task_config::TaskConfig,
         services::task::{task::Task, task_test_receiver::TaskTestReceiver},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer
     };
@@ -41,7 +41,7 @@ mod cma_recorder {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -49,7 +49,7 @@ mod cma_recorder {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -98,9 +98,9 @@ mod cma_recorder {
         );
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        let task = Arc::new(Task::new(config, services.clone()));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
-        services.wlock(self_id).insert(task.clone());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -108,8 +108,8 @@ mod cma_recorder {
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        services.insert(multi_queue.clone());
         let test_data = vec![
         //  step    nape                                input                    OpCycle    target_thrh             target_smooth
             (00,    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
@@ -202,70 +202,70 @@ mod cma_recorder {
         }).collect();
         let target_thrd_count = target_thrd.len();
         let target_smooth_count = target_smooth.len();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        let receiver = Arc::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
             total_count * 2,
-        )));
-        services.wlock(self_id).insert(receiver.clone());
+        ));
+        services.insert(receiver.clone());
         let test_data: Vec<(String, Value)> = test_data.into_iter().map(|(_, name, value, _, _, _)| {
             (name, value)
         }).collect();
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        let producer = Arc::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::ZERO,
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(producer.clone());
-        services.wlock(self_id).run().unwrap();
-        multi_queue.write().unwrap().run().unwrap();
-        receiver.write().unwrap().run().unwrap();
+        ));
+        services.insert(producer.clone());
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
-        task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver.read().unwrap().wait().unwrap();
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        task.read().unwrap().wait().unwrap();
-        producer.read().unwrap().wait().unwrap();
-        multi_queue.read().unwrap().exit();
-        multi_queue.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
+        producer.exit();
+        task.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        multi_queue.exit();
+        multi_queue.wait().unwrap();
         services.rlock(self_id).exit();
-        services.read().unwrap().wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         println!("target smooth   : {:?}", target_smooth_count);
         println!("target threshold: {:?}", target_thrd_count);
 
-        for (i, result) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
+        for (i, result) in receiver.received().read().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
             // assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
         };
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == total_count * 2, "\nresult: {:?}\ntarget: {:?}", result, total_count * 2);
-        let smooth: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
+        let smooth: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Smooth", self_id)
         }).collect();
         for (i, result) in smooth.iter().enumerate() {
             println!("smooth: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let thrd: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
+        let thrd: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Threshold", self_id)
         }).collect();
         for (i, result) in thrd.iter().enumerate() {
             println!("threshold: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
+        let op_cycle: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
             point.name() == format!("/{}/RecorderTask/OpCycle", self_id)
         }).collect();
         for (i, result) in op_cycle.iter().enumerate() {

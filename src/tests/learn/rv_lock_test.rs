@@ -3,9 +3,11 @@
 #[cfg(test)]
 mod tests {
     use hashers::fx_hash::FxHasher;
-        use std::{collections::HashMap, hash::BuildHasherDefault, sync::{mpsc, Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
+        use std::{collections::HashMap, hash::BuildHasherDefault, sync::{mpsc, Arc, Mutex, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+
+    use crate::core_::RwLock;
 
     ///
     static INIT: Once = Once::new();

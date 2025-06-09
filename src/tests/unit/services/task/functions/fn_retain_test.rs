@@ -3,13 +3,13 @@
 mod fn_retain {
     use chrono::Utc;
     use sal_sync::services::{
-        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, {Point, PointConfigType, PointHlr}, Status}, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services, types::bool::Bool
+        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, {Point, PointConfigType, PointHlr}, Status}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services, types::Bool
     };
-    use std::{env, fs, io::Read, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{env, fs, io::Read, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig, core_::aprox_eq::aprox_eq::AproxEq,
+        conf::task_config::TaskConfig,
         services::task::{task::Task, task_test_receiver::TaskTestReceiver},
         tests::unit::services::task::task_test_producer::TaskTestProducer
     };
@@ -110,7 +110,7 @@ mod fn_retain {
         log::trace!("dir: {:?}", env::current_dir());
         let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", self_id), PointConfigType::Bool)
             .map_or(false, |init| init.as_bool().value.0);
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -123,7 +123,7 @@ mod fn_retain {
                         auth_token: 123!@#
                         database: crane_data_server
             "#).unwrap()),
-        ))));
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -148,9 +148,9 @@ mod fn_retain {
         );
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        let task = Arc::new(Task::new(config, services.clone()));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
-        services.wlock(self_id).insert(task.clone());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -159,8 +159,8 @@ mod fn_retain {
                 # send-to:
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        services.insert(multi_queue.clone());
         let test_data = vec![
             (format!("/{}/BoolFlag", self_id), Value::Bool(!initial)),
             (format!("/{}/BoolFlag", self_id), Value::Bool(initial)),
@@ -177,44 +177,44 @@ mod fn_retain {
             Value::Bool(initial),
         ];
         let target_count = target_data.len();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        let receiver = Arc::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
             target_count,
-        )));
-        services.wlock(self_id).insert(receiver.clone());      // "TaskTestReceiver",
+        ));
+        services.insert(receiver.clone());      // "TaskTestReceiver",
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        let producer = Arc::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::from_millis(10),
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(producer.clone());
-        services.wlock(self_id).run().unwrap();
-        multi_queue.write().unwrap().run().unwrap();
-        receiver.write().unwrap().run().unwrap();
+        ));
+        services.insert(producer.clone());
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
-        task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
         thread::sleep(Duration::from_millis(100));
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        task.read().unwrap().wait().unwrap();
-        producer.read().unwrap().wait().unwrap();
-        multi_queue.read().unwrap().exit();
-        multi_queue.read().unwrap().wait().unwrap();
-        services.rlock(self_id).exit();
-        services.read().unwrap().wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        producer.exit();
+        task.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        multi_queue.exit();
+        multi_queue.wait().unwrap();
+        services.exit();
+        services.wait().unwrap();
+        let sent = producer.sent().read().unwrap().len();
+        let result = receiver.received().read().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -222,14 +222,14 @@ mod fn_retain {
         for (i, point) in target_data.iter().enumerate() {
             println!("target {}: {:?}", i, point)
         }
-        for (i, point) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
+        for (i, point) in receiver.received().read().unwrap().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         // let target_name = "/AppTest/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.read().unwrap().received().read().unwrap().iter() {
+        for result in receiver.received().read().unwrap().iter() {
             let target = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             // assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
@@ -251,7 +251,7 @@ mod fn_retain {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -264,7 +264,7 @@ mod fn_retain {
                         auth_token: 123!@#
                         database: crane_data_server
             "#).unwrap()),
-        ))));
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -293,10 +293,10 @@ mod fn_retain {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
 
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        let task = Arc::new(Task::new(config, services.clone()));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
 
-        services.wlock(self_id).insert(task.clone());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -305,8 +305,8 @@ mod fn_retain {
                 # send-to:
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        services.insert(multi_queue.clone());
         let test_data = vec![
             (format!("/{}/Load", self_id), Value::Real(0.0)),
             (format!("/{}/Load", self_id), Value::Real(1.5)),
@@ -335,44 +335,44 @@ mod fn_retain {
             Value::Int(initial + 4),
         ];
         let target_count = target_data.len();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        let receiver = Arc::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
             target_count,
-        )));
-        services.wlock(self_id).insert(receiver.clone());      // "TaskTestReceiver",
+        ));
+        services.insert(receiver.clone());      // "TaskTestReceiver",
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        let producer = Arc::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::from_millis(10),
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(producer.clone());
-        services.wlock(self_id).run().unwrap();
-        multi_queue.write().unwrap().run().unwrap();
-        receiver.write().unwrap().run().unwrap();
+        ));
+        services.insert(producer.clone());
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
-        task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
         thread::sleep(Duration::from_millis(100));
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        task.read().unwrap().wait().unwrap();
-        producer.read().unwrap().wait().unwrap();
-        multi_queue.read().unwrap().exit();
-        multi_queue.read().unwrap().wait().unwrap();
-        services.rlock(self_id).exit();
-        services.read().unwrap().wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        producer.exit();
+        task.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        multi_queue.exit();
+        multi_queue.wait().unwrap();
+        services.exit();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -380,14 +380,14 @@ mod fn_retain {
         for (i, point) in target_data.iter().enumerate() {
             println!("target {}: {:?}", i, point)
         }
-        for (i, point) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
+        for (i, point) in receiver.received().read().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         // let target_name = "/AppTest/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.read().unwrap().received().read().unwrap().iter() {
+        for result in receiver.received().read().iter() {
             let target = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             // assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
@@ -412,7 +412,7 @@ mod fn_retain {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -425,7 +425,7 @@ mod fn_retain {
                         auth_token: 123!@#
                         database: crane_data_server
             "#).unwrap()),
-        ))));
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(&format!(r"
@@ -455,10 +455,10 @@ mod fn_retain {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
 
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        let task = Arc::new(Task::new(config, services.clone()));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
 
-        services.wlock(self_id).insert(task.clone());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -467,8 +467,8 @@ mod fn_retain {
                 # send-to:
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        services.insert(multi_queue.clone());
         let test_data = vec![
             (format!("/{}/Load", self_id), Value::Real(0.1)),
             (format!("/{}/Load", self_id), Value::Real(0.2)),
@@ -499,44 +499,44 @@ mod fn_retain {
             Value::Real(initial + 1.1),
         ];
         let target_count = target_data.len();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        let receiver = Arc::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
             target_count,
-        )));
-        services.wlock(self_id).insert(receiver.clone());      // "TaskTestReceiver",
+        ));
+        services.insert(receiver.clone());      // "TaskTestReceiver",
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        let producer = Arc::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::from_millis(10),
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(producer.clone());
-        services.wlock(self_id).run().unwrap();
-        multi_queue.write().unwrap().run().unwrap();
-        receiver.write().unwrap().run().unwrap();
+        ));
+        services.insert(producer.clone());
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
-        task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
         thread::sleep(Duration::from_millis(100));
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        task.read().unwrap().wait().unwrap();
-        producer.read().unwrap().wait().unwrap();
-        multi_queue.read().unwrap().exit();
-        multi_queue.read().unwrap().wait().unwrap();
-        services.rlock(self_id).exit();
-        services.read().unwrap().wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        producer.exit();
+        task.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        multi_queue.exit();
+        multi_queue.wait().unwrap();
+        services.exit();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -544,14 +544,14 @@ mod fn_retain {
         for (i, point) in target_data.iter().enumerate() {
             println!("target {}: {:?}", i, point)
         }
-        for (i, point) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
+        for (i, point) in receiver.received().read().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         // let target_name = "/AppTest/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.read().unwrap().received().read().unwrap().iter() {
+        for result in receiver.received().read().iter() {
             let target = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             // assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
@@ -576,7 +576,7 @@ mod fn_retain {
         log::trace!("dir: {:?}", env::current_dir());
         let initial = load(self_id, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", self_id), PointConfigType::Real)
             .map_or(0.0, |init| init.as_real().value);
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -589,7 +589,7 @@ mod fn_retain {
                         auth_token: 123!@#
                         database: crane_data_server
             "#).unwrap()),
-        ))));
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -618,9 +618,9 @@ mod fn_retain {
         );
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        let task = Arc::new(Task::new(config, services.clone()));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
-        services.wlock(self_id).insert(task.clone());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -629,8 +629,8 @@ mod fn_retain {
                 # send-to:
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        services.insert(multi_queue.clone());
         let test_data = vec![
             (format!("/{}/Load", self_id), Value::Real(0.1)),
             (format!("/{}/Load", self_id), Value::Real(0.1)),
@@ -659,46 +659,46 @@ mod fn_retain {
             Value::Real(initial + 1.1),
         ];
         let target_count = target_data.len();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        let receiver = Arc::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
             target_count,
-        )));
-        services.wlock(self_id).insert(receiver.clone());
+        ));
+        services.insert(receiver.clone());
         thread::sleep(Duration::from_millis(100));
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        let producer = Arc::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::from_millis(10),
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(producer.clone());
+        ));
+        services.insert(producer.clone());
         thread::sleep(Duration::from_millis(100));
-        services.wlock(self_id).run().unwrap();
-        multi_queue.write().unwrap().run().unwrap();
-        receiver.write().unwrap().run().unwrap();
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
-        task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
         thread::sleep(Duration::from_millis(100));
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        task.read().unwrap().wait().unwrap();
-        producer.read().unwrap().wait().unwrap();
-        multi_queue.read().unwrap().exit();
-        multi_queue.read().unwrap().wait().unwrap();
-        services.rlock(self_id).exit();
-        services.read().unwrap().wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        producer.exit();
+        task.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        multi_queue.exit();
+        multi_queue.wait().unwrap();
+        services.exit();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -706,14 +706,14 @@ mod fn_retain {
         for (i, point) in target_data.iter().enumerate() {
             println!("target {}: {:?}", i, point)
         }
-        for (i, point) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
+        for (i, point) in receiver.received().read().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         // let target_name = "/AppTest/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.read().unwrap().received().read().unwrap().iter() {
+        for result in receiver.received().read().iter() {
             let target = target_data.pop().unwrap();
             assert!(result.value().aprox_eq(&target, 3), "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             // assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);

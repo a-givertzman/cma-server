@@ -1,5 +1,5 @@
 use concat_string::concat_string;
-use sal_sync::services::{entity::{Point, PointHlr, Status, ToPoint}, task::functions::{FnConfPointType, FnConfig}, types::bool::Bool};
+use sal_sync::services::{entity::{Point, PointHlr, Status, ToPoint}, task::functions::{FnConfPointType, FnConfig}, types::Bool};
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///

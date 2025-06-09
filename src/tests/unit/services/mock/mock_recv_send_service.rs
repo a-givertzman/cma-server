@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use sal_sync::services::{entity::{Name, Object, {{Point, ToPoint}, PointTxId}}, service::{LinkName, Service}};
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread};
 use testing::entities::test_value::Value;
 use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::rwlock::SafeLock}};
 ///
@@ -11,7 +11,7 @@ pub struct MockRecvSendService {
     rxSend: HashMap<String, Sender<Point>>,
     rx_recv: Mutex<Option<Receiver<Point>>>,
     send_to: LinkName,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
@@ -21,7 +21,7 @@ pub struct MockRecvSendService {
 //
 // 
 impl MockRecvSendService {
-    pub fn new(parent: impl Into<String>, rxQueue: &str, send_to: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, recvLimit: Option<usize>) -> Self {
+    pub fn new(parent: impl Into<String>, rxQueue: &str, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, recvLimit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = mpsc::channel::<Point>();
         Self {

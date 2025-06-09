@@ -5,7 +5,7 @@ mod tests {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        core_::types::FnInOutRef, services::task::nested_function::{
+        core_::FnInOutRef, services::task::nested_function::{
             fn_::FnOut, fn_input::FnInput, fn_var::FnVar,
         }
     };

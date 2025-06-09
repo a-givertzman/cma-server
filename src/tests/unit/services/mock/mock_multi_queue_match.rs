@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread};
 use sal_sync::services::{
     entity::{Name, Object, {Point, PointTxId}},
     service::{LinkName, Service},
     subscription::{SubscriptionCriteria, subscriptions::Subscriptions}
 };
-use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
+use crate::services::{Services};
 ///
 /// - Receives points into the MPSC queue in the blocking mode
 /// - If new point received, immediately sends it to the all subscribed consumers
@@ -17,7 +17,7 @@ pub struct MockMultiQueueMatch {
     rxSend: HashMap<String, Sender<Point>>,
     rx_recv: Mutex<Option<Receiver<Point>>>,
     sendQueues: Vec<String>,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -26,7 +26,7 @@ impl MockMultiQueueMatch {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(parent: impl Into<String>, txQueues: Vec<String>, rxQueue: impl Into<String>, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(parent: impl Into<String>, txQueues: Vec<String>, rxQueue: impl Into<String>, services: Arc<Services>) -> Self {
         let name = Name::new(parent, format!("MockMultiQueueMatch{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = mpsc::channel();
         Self {

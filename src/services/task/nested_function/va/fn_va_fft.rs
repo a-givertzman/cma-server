@@ -7,11 +7,11 @@ use sal_sync::services::{
         Cot, Name,
         Point, PointConfig, PointConfigFilter, PointConfigType, PointHlr, PointTxId,
         Status,
-    }, safe_lock::rwlock::SafeLock, service::LinkName, services::Services, task::functions::{FnConfKind, FnConfig}, types::bool::Bool
+    }, LinkName, Services, task::functions::{FnConfKind, FnConfig}, types::Bool
 };
-use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Arc, RwLock}};
+use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Arc}};
 use crate::{
-    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::FnInOutRef},
+    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     }
@@ -78,7 +78,7 @@ impl FnVaFft {
     ///
     /// Creates new instance of the FnVaFft
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef, conf: FnConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef, conf: FnConfig, services: Arc<Services>) -> Self {
         let parent = parent.into();
         let self_id = format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
         let fft_size = match conf.param("len") {
@@ -180,7 +180,7 @@ impl FnVaFft {
     }
     ///
     /// Returns send_to
-    fn send_to_conf(self_id: &str, conf: &FnConfig, services: &Arc<RwLock<Services>>) -> Option<Sender<Point>> {
+    fn send_to_conf(self_id: &str, conf: &FnConfig, services: &Arc<Services>) -> Option<Sender<Point>> {
         match conf.param("send-to") {
             Ok(send_to) => {
                 let send_to = match send_to {
@@ -188,8 +188,7 @@ impl FnVaFft {
                     _ => panic!("{}.new | Parameter 'send-to' - invalid type (string expected): {:#?}", self_id, send_to),
                 };
                 log::debug!("{}.new | send-to: {:?}", self_id, send_to);
-                let services_lock = services.rlock(self_id);
-                services_lock.get_link(&send_to).map_or(None, |send| Some(send))
+                services.get_link(&send_to).map_or(None, |send| Some(send))
             }
             Err(_) => {
                 log::warn!("{}.new | Parameter 'send-to' - missed in {:#?}", self_id, conf);

@@ -12,7 +12,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
     services::{entity::{Name, Object, Point},
-    service::{Service, ServiceCycle}, services::Services}
+    service::{Service, ServiceCycle}, Services}
 };
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
@@ -37,7 +37,7 @@ pub struct MockUdpServer {
     dbg: Dbg,
     name: Name,
     conf: MockUdpServerConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     test_data: Vec<i16>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
@@ -48,7 +48,7 @@ pub struct MockUdpServer {
 impl MockUdpServer {
     //
     /// Crteates new instance of the MockUdpServer 
-    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<RwLock<Services>>, test_data: &[i16]) -> Self {
+    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<Services>, test_data: &[i16]) -> Self {
         Self {
             dbg: Dbg::new(parent, format!("MockUdpServer({})", conf.name)),
             name: conf.name.clone(),

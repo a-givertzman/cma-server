@@ -1,12 +1,12 @@
 #[cfg(test)]
 
 mod multi_queue {
-    use std::{collections::HashMap, sync::{Arc, RwLock, Once}, thread, time::{Duration, Instant}};
-    use sal_sync::services::{entity::Name, retain::retain_conf::RetainConf, service::Service};
+    use std::{collections::HashMap, sync::{Arc, Once}, thread, time::{Duration, Instant}};
+    use sal_sync::services::{entity::Name, retain::retain_conf::RetainConf, Service};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        services::{safe_lock::rwlock::SafeLock, services::Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
+        services::{Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
     };
     ///
     ///

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread};
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use sal_sync::services::{
     entity::{Name, Object, {{Point, ToPoint}, PointTxId}},
     service::{LinkName, Service},
@@ -11,7 +11,7 @@ pub struct MockTcpServer {
     id: String,
     name: Name,
     multi_queue: LinkName,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
@@ -21,7 +21,7 @@ pub struct MockTcpServer {
 //
 // 
 impl MockTcpServer {
-    pub fn new(parent: impl Into<String>, multi_queue: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, recv_limit: Option<usize>) -> Self {
+    pub fn new(parent: impl Into<String>, multi_queue: &str, services: Arc<Services>, test_data: Vec<Value>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockTcpServer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             id: name.join(),

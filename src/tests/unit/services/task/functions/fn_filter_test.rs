@@ -1,8 +1,8 @@
 #[cfg(test)]
 
 mod cma_recorder {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
-    use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services};
+    use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -39,7 +39,7 @@ mod cma_recorder {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -47,7 +47,7 @@ mod cma_recorder {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        )));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -77,9 +77,9 @@ mod cma_recorder {
         );
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        let task = Arc::new(Task::new(config, services.clone()));
         log::debug!("Task points: {:#?}", task.read().unwrap().points());
-        services.wlock(self_id).insert(task.clone());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -87,8 +87,8 @@ mod cma_recorder {
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        services.insert(multi_queue.clone());
         let test_data = vec![
             (format!("/{}/Load", self_id), Value::Real(-7.035),  None),
             (format!("/{}/Load", self_id), Value::Real(-2.5),    None),
@@ -106,43 +106,43 @@ mod cma_recorder {
         let mut target_data = test_data.iter().filter(|(_, _, target)| target.is_some());
         let total_count = test_data.len();
         let target_count = target_data.clone().count();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        let receiver = Arc::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
             target_count,
-        )));
-        services.wlock(self_id).insert(receiver.clone());
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        ));
+        services.insert(receiver.clone());
+        let producer = Arc::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::from_millis(10),
             services.clone(),
             &test_data.iter().cloned().map(|(name, value, _)| (name, value)).collect::<Vec<(String, Value)>>(),
-        )));
-        services.wlock(self_id).insert(producer.clone());
-        services.wlock(self_id).run().unwrap();
-        multi_queue.write().unwrap().run().unwrap();
-        receiver.write().unwrap().run().unwrap();
+        ));
+        services.insert(producer.clone());
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
         thread::sleep(Duration::from_millis(100));
-        task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver.read().unwrap().wait().unwrap();
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        task.read().unwrap().wait().unwrap();
-        producer.read().unwrap().wait().unwrap();
-        multi_queue.read().unwrap().exit();
-        multi_queue.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
+        producer.exit();
+        task.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        multi_queue.exit();
+        multi_queue.wait().unwrap();
         services.rlock(self_id).exit();
-        services.read().unwrap().wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -150,7 +150,7 @@ mod cma_recorder {
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         let target_name = "/App/RecorderTask/Load002";
-        for result in receiver.read().unwrap().received().read().unwrap().iter() {
+        for result in receiver.received().read().iter() {
             let (_, _, target) = target_data.next().unwrap();
             assert!(result.value().as_real() == target.unwrap(), "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);

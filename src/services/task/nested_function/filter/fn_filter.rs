@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_sync::services::entity::Point;
 use crate::{
-    core_::types::FnInOutRef,
+    core_::FnInOutRef,
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///

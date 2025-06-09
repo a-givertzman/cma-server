@@ -1,7 +1,7 @@
 use sal_sync::services::entity::{Point, PointConfigType, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
-use crate::core_::types::FnInOutRef;
+use crate::core_::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Returns an average value (in Double) of the input

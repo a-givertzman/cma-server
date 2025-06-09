@@ -1,8 +1,10 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, {{Point, ToPoint}, PointTxId}}, safe_lock::rwlock::SafeLock, service::{LinkName, Service, ServiceCycle}, services::Services};
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use sal_sync::services::{entity::{Name, Object, {{Point, ToPoint}, PointTxId}}, LinkName, Service, ServiceCycle, Services};
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use testing::entities::test_value::Value;
+
+use crate::core_::RwLock;
 ///
 /// 
 pub struct TaskTestProducer {
@@ -11,7 +13,7 @@ pub struct TaskTestProducer {
     send_to: LinkName, 
     cycle: Duration,
     // rxSend: HashMap<String, Sender<PointType>>,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     handle: Stack<JoinHandle<()>>,
@@ -26,7 +28,7 @@ impl TaskTestProducer {
     /// - `cycle` - Duration of each send cycle
     /// - `test_data` - Value's to be produced
     #[allow(unused)]
-    pub fn new(parent: &str, send_to: &str, cycle: Duration, services: Arc<RwLock<Services>>, test_data: Vec<Value>) -> Self {
+    pub fn new(parent: &str, send_to: &str, cycle: Duration, services: Arc<Services>, test_data: Vec<Value>) -> Self {
         let name = Name::new(parent, format!("TaskTestProducer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             dbg: Dbg::new(name.parent(), name.me()),
@@ -75,7 +77,7 @@ impl Service for TaskTestProducer {
         let tx_id = PointTxId::from_str(&self.name.join());
         let mut cycle = ServiceCycle::new(&dbg, self.cycle);
         let delayed = !cycle.interval().is_zero();
-        let tx_send = self.services.rlock(&dbg).get_link(&self.send_to).unwrap_or_else(|err| {
+        let tx_send = self.services.get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let sent = self.sent.clone();
@@ -87,8 +89,8 @@ impl Service for TaskTestProducer {
                 let point = value.to_point(tx_id, "/path/Point.Name");
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
-                        sent.write().unwrap().push(point.clone());
-                        log::trace!("{}.run | sent points: {:?}", dbg, sent.read().unwrap().len());
+                        sent.write().push(point.clone());
+                        log::trace!("{}.run | sent points: {:?}", dbg, sent.read().len());
                     }
                     Err(err) => {
                         log::warn!("{}.run | Error write to queue: {:?}", dbg, err);
@@ -98,7 +100,7 @@ impl Service for TaskTestProducer {
                     cycle.wait();
                 }
             }
-            log::info!("{}.run | All sent: {}", dbg, sent.read().unwrap().len());
+            log::info!("{}.run | All sent: {}", dbg, sent.read().len());
             // thread::sleep(Duration::from_secs_f32(0.1));
             // debug!("TaskTestProducer({}).run | calculating step - done ({:?})", name, cycle.elapsed());
         });

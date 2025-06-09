@@ -1,8 +1,8 @@
 use concat_string::concat_string;
-use sal_sync::services::{entity::{Cot, {Point, PointHlr}}, types::bool::Bool};
+use sal_sync::services::{entity::{Cot, {Point, PointHlr}}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::types::FnInOutRef,
+    core_::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     },

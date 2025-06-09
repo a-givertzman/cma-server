@@ -1,9 +1,9 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::{
-    conf::ConfTree, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock,
-    service::Service, services::Services,
+    conf::ConfTree, entity::Name, multi_queue::{MultiQueue, MultiQueueConf},
+    Service, Services,
 };
-use std::{path::Path, process::exit, sync::{Arc, RwLock}, thread, time::Duration};
+use std::{path::Path, process::exit, sync::Arc, thread, time::Duration};
 use libc::{
     SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
     // SIGFPE, SIGILL, SIGSEGV, 
@@ -57,29 +57,29 @@ impl App {
         log::info!("{}.run | Starting application...", dbg);
         let conf = self.conf.clone();
         let self_name = conf.name.clone();
-        let services = Arc::new(RwLock::new(Services::new(&dbg, conf.services.clone())));
+        let services = Arc::new(Services::new(&dbg, conf.services.clone()));
         log::info!("{}.run |     Configuring services...", dbg);
         for (node_keywd, node_conf) in conf.nodes {
             let node_name = node_keywd.name();
             let node_sufix = node_keywd.sufix();
             log::info!("{}.run |         Configuring service: {}({})...", dbg, node_name, node_sufix);
             log::trace!("{}.run |         Config: {:#?}", dbg, node_conf);
-            services.wlock(&dbg).insert(
+            services.insert(
                 Self::build_service(&dbg, &self_name, &node_name, &node_sufix, node_conf, services.clone()),
             );
             log::info!("{}.run |         Configuring service: {}({}) - ok\n", dbg, node_name, node_sufix);
         }
         log::info!("{}.run |     All services configured\n", dbg);
         thread::sleep(Duration::from_millis(100));
-        services.wlock(&dbg).run().unwrap();
+        services.run().unwrap();
         // let name = services.rlock(&dbg).name().join();
         // app.write().unwrap().insert_handles(&name, handles);
         thread::sleep(Duration::from_millis(100));
         log::info!("{}.run |     Starting services...", dbg);
-        let services_iter = services.rlock(&dbg).all();
+        let services_iter = services.all();
         for (name, service) in services_iter {
             log::info!("{}.run |         Starting service: {}...", dbg, name);
-            match service.wlock(&dbg).run() {
+            match service.run() {
                 Ok(_) => {
                     // app.write().unwrap().insert_handles(&name, handles);
                     log::info!("{}.run |         Starting service: {} - ok", dbg, name);
@@ -93,9 +93,9 @@ impl App {
         log::info!("{}.run |     All services started\n", dbg);
         log::info!("{}.run | Application started\n", dbg);
         Self::listen_sys_signals(dbg.clone(), services.clone());
-        for (service_name, service) in services.rlock(&dbg).all() {
+        for (service_name, service) in services.all() {
             log::info!("{}.run | Waiting for service '{}' being finished...", dbg, service_name);
-            match service.rlock(&dbg).wait() {
+            match service.wait() {
                 Ok(_) => log::info!("{}.run | Waiting for service '{}' being finished - Ok", dbg, service_name),
                 Err(err) => log::info!("{}.run | Waiting for service '{}' being finished - Error: \n\t{:?}", dbg, service_name, err),
 
@@ -106,35 +106,35 @@ impl App {
     }    
     ///
     /// Returns service by it's name
-    fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<RwLock<Services>>) -> Arc<RwLock<dyn Service>> {
+    fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<Services>) -> Arc<dyn Service> {
         match node_name {
-            Services::API_CLIENT => Arc::new(RwLock::new(
+            Services::API_CLIENT => Arc::new(
                 ApiClient::new(ApiClientConfig::new(parent, node_conf))
-            )),
-            Services::MULTI_QUEUE => Arc::new(RwLock::new(
+            ),
+            Services::MULTI_QUEUE => Arc::new(
                 MultiQueue::new(MultiQueueConf::new(parent, node_conf), services)
-            )),
-            Services::PROFINET_CLIENT => Arc::new(RwLock::new(
+            ),
+            Services::PROFINET_CLIENT => Arc::new(
                 ProfinetClient::new(ProfinetClientConfig::new(parent, node_conf), services)
-            )),
-            Services::TASK => Arc::new(RwLock::new(
+            ),
+            Services::TASK => Arc::new(
                 Task::new(TaskConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::TCP_CLIENT => Arc::new(RwLock::new(
+            ),
+            Services::TCP_CLIENT => Arc::new(
                 TcpClient::new(TcpClientConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::TCP_SERVER => Arc::new(RwLock::new(
+            ),
+            Services::TCP_SERVER => Arc::new(
                 TcpServer::new(TcpServerConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::PRODUCER_SERVICE => Arc::new(RwLock::new(
+            ),
+            Services::PRODUCER_SERVICE => Arc::new(
                 ProducerService::new(ProducerServiceConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::CACHE_SERVICE => Arc::new(RwLock::new(
+            ),
+            Services::CACHE_SERVICE => Arc::new(
                 CacheService::new(CacheServiceConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::SLMP_CLIENT => Arc::new(RwLock::new(
+            ),
+            Services::SLMP_CLIENT => Arc::new(
                 SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services)
-            )),
+            ),
             _ => {
                 panic!("{}.build_service | Unknown service: {}({})", dbg, node_name, node_sufix);
             }
@@ -142,7 +142,7 @@ impl App {
     }
     ///
     /// Listening for signals from the operating system
-    fn listen_sys_signals(dbg: Dbg, services: Arc<RwLock<Services>>) {
+    fn listen_sys_signals(dbg: Dbg, services: Arc<Services>) {
         let signals = Signals::new([
             SIGHUP,     // code: 1	This signal is sent to a process when its controlling terminal is closed or disconnected
             SIGINT,     // code: 2	This signal is sent to a process when the user presses Control+C to interrupt its execution
@@ -169,13 +169,13 @@ impl App {
                                 SIGINT | SIGQUIT | SIGTERM => {
                                     println!("{}.run Received signal {:?}", dbg, signal);
                                     println!("{}.run Application exit...", dbg);
-                                    let services_iter = services.rlock(&dbg).all();
+                                    let services_iter = services.all();
                                     for (id, service) in services_iter {
                                         println!("{}.run Stopping service '{}'...", dbg, id);
-                                        service.rlock(&dbg).exit();
+                                        service.exit();
                                         println!("{}.run Stopping service '{}' - Ok", dbg, id);
                                     }
-                                    services.rlock(&dbg).exit();
+                                    services.exit();
                                     break;
                                 }
                                 SIGKILL => {

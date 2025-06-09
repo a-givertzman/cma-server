@@ -2,7 +2,7 @@
 
 mod tcp_client {
     use sal_sync::services::{
-        conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::Service, services::Services
+        conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, Service, Services
     };
     use std::{io::Write, net::TcpListener, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};

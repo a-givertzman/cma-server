@@ -1,7 +1,9 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, Point}, service::Service};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use sal_sync::services::{entity::{Name, Object, Point}, Service};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration};
+
+use crate::core_::{Mutex, RwLock};
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -49,7 +51,7 @@ impl TaskTestReceiver {
     /// Clearing vector of received Pont's
     #[allow(unused)]
     pub fn clear_received(&self) {
-        *self.received.write().unwrap() = vec![];
+        *self.received.write() = vec![];
     }
 }
 //
@@ -89,7 +91,7 @@ impl Service for TaskTestReceiver {
         let received = self.received.clone();
         let mut count = 0;
         // let mut error_count = 0;
-        let in_recv = self.in_recv.lock().unwrap().take().unwrap();
+        let in_recv = self.in_recv.lock().take().unwrap();
         let iterations = self.iterations;
         let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
             // log::info!("Task({}).run | prepared", name);
@@ -103,7 +105,7 @@ impl Service for TaskTestReceiver {
                         log::trace!("{}.run | received: {}/{}, (value: {:?})", dbg, count, iterations, point.value());
                         log::trace!("{}.run | received Point: {:#?}", dbg, point);
                         // debug!("{}.run | value: {}\treceived SQL: {:?}", value, sql);
-                        received.write().unwrap().push(point.clone());
+                        received.write().push(point.clone());
                         if count >= iterations {
                             break 'main;
                         }

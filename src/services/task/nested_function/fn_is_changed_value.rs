@@ -1,12 +1,12 @@
 use sal_sync::{
     collections::FxHashMap,
     services::{entity::{Cot, {Point, PointHlr, PointTxId}, Status},
-    types::bool::Bool,
+    types::Bool,
 }};
 use std::{collections::HashMap, hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use chrono::Utc;
 use hashers::fx_hash::FxHasher;
-use crate::core_::types::FnInOutRef;
+use crate::core_::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Returns true if at least one input is changed from prev value

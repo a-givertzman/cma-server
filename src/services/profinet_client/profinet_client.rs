@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug, hash::BuildHasherDefault,
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Sender}, Arc, Mutex, RwLock},
+    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Sender}, Arc},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -12,16 +12,15 @@ use sal_sync::{
     collections::FxIndexMap, kernel::state::ChangeNotify,
     services::{
         conf::DiagKeywd, entity::{Cot, Name, Object, Point, PointConfig, PointHlr, PointTxId, Status},
-        safe_lock::rwlock::SafeLock,
-        service::{Service, ServiceCycle},
-        services::Services, subscription::SubscriptionCriteria,
+        Service, ServiceCycle,
+        Services, subscription::SubscriptionCriteria,
     },
 };
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
     core_::{
-        constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit,
+        constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit, Mutex,
     },
     services::{
         diagnosis::diag_point::DiagPoint,
@@ -36,7 +35,7 @@ pub struct ProfinetClient {
     dbg: Dbg,
     name: Name,
     conf: ProfinetClientConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     handle: Stack<(String, JoinHandle<()>)>,
     is_finished: Arc<AtomicBool>,
@@ -47,7 +46,7 @@ pub struct ProfinetClient {
 impl ProfinetClient {
     ///
     /// Creates new instance of the ProfinetClient
-    pub fn new(conf: ProfinetClientConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: ProfinetClientConfig, services: Arc<Services>) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))
@@ -73,21 +72,16 @@ impl ProfinetClient {
         value: Status,
         tx_send: &Sender<Point>,
     ) {
-        match diagnosis.lock() {
-            Ok(mut diagnosis) => {
-                match diagnosis.get_mut(kewd) {
-                    Some(point) => {
-                        log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", dbg, kewd);
-                        if let Some(point) = point.next(value) {
-                            if let Err(err) = tx_send.send(point) {
-                                log::warn!("{}.yield_status | Send error: {}", dbg, err);
-                            }
-                        }
+        match diagnosis.lock().get_mut(kewd) {
+            Some(point) => {
+                log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", dbg, kewd);
+                if let Some(point) = point.next(value) {
+                    if let Err(err) = tx_send.send(point) {
+                        log::warn!("{}.yield_status | Send error: {}", dbg, err);
                     }
-                    None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", dbg, kewd),
                 }
             }
-            Err(err) => log::error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", dbg, err),
+            None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", dbg, kewd),
         }
     }
     ///
@@ -232,7 +226,7 @@ impl ProfinetClient {
             for name in &points {
                 println!("\t{:?}", name);
             }
-            let (_, rx_recv) = services.wlock(&dbg).subscribe(&conf.subscribe, &self_name.join(), &points);
+            let (_, rx_recv) = services.subscribe(&conf.subscribe, &self_name.join(), &points);
             let mut client = S7Client::new(dbg.clone(), conf.ip.clone());
             'main: while !exit.load(Ordering::SeqCst) {
                 let mut errors_limit = ErrorLimit::new(3);
@@ -398,7 +392,7 @@ impl Service for ProfinetClient {
     //
     //
     fn run(&self) -> Result<(), Error> {
-        let tx_send = self.services.rlock(&self.dbg).get_link(&self.conf.send_to).unwrap_or_else(|err| {
+        let tx_send = self.services.get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         Self::yield_diagnosis(&self.dbg, &self.diagnosis.clone(), &DiagKeywd::Status, Status::Ok, &tx_send);

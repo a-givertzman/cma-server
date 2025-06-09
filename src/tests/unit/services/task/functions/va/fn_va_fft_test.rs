@@ -2,16 +2,16 @@
 
 mod fn_va_fft {
     use core::f64;
-    use std::{cell::RefCell, f64::consts::PI, rc::Rc, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{cell::RefCell, f64::consts::PI, rc::Rc, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use concat_in_place::strcat;
     use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
     use sal_sync::services::{
-            conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfigFilter, PointTxId, ToPoint}, safe_lock::rwlock::SafeLock, service::Service, services::Services, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}
+            conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfigFilter, PointTxId, ToPoint}, Service, Services, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}
         };
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, types::FnInOutRef},
+        core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, FnInOutRef},
         services::task::{
             nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
             task_test_receiver::TaskTestReceiver,
@@ -65,7 +65,7 @@ mod fn_va_fft {
             (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
         for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
-            let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            let services = Arc::new(Services::new(self_id, ServicesConf::new(
                 self_id, 
                 ConfTree::new_root(serde_yaml::from_str(r#"
                     retain:
@@ -73,16 +73,16 @@ mod fn_va_fft {
                         point:
                             path: point/id.json
                 "#).unwrap()),
-            ))));
-            let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+            )));
+            let receiver = Arc::new(TaskTestReceiver::new(
                 self_id,
                 "",
                 "in-queue",
                 usize::MAX,
-            )));
+            ));
             let receiver_name = receiver.read().unwrap().name().join();
             log::debug!("{} | receiver: '{}'", self_id, receiver_name);
-            services.wlock(self_id).insert(receiver.clone());
+            services.insert(receiver.clone());
             //
             // Configuring FnVaFft
             let enable = init_each(Some("true"), FnConfPointType::Bool);
@@ -106,8 +106,8 @@ mod fn_va_fft {
 
             //
             // Runing all services
-            services.wlock(self_id).run().unwrap();
-            receiver.write().unwrap().run().unwrap();
+            services.run().unwrap();
+            receiver.run().unwrap();
             thread::sleep(Duration::from_millis(50));
             log::debug!("{} | All services started", self_id);
     
@@ -203,10 +203,10 @@ mod fn_va_fft {
                 };
             }
 
-            receiver.read().unwrap().exit();
-            services.rlock(self_id).exit();
-            services.read().unwrap().wait().unwrap();
-            receiver.read().unwrap().wait().unwrap();
+            receiver.exit();
+            services.exit();
+            services.wait().unwrap();
+            receiver.wait().unwrap();
 
             log::trace!("main | ffts: {}", ffts.len());
             let result = ffts.len();
@@ -241,7 +241,7 @@ mod fn_va_fft {
             (300_000,    300_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
         for (sampl_freq, fft_size, target_ffts, threshold, target_freqs) in test_data {
-            let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+            let services = Arc::new(Services::new(self_id, ServicesConf::new(
                 self_id, 
                 ConfTree::new_root(serde_yaml::from_str(r#"
                     retain:
@@ -249,16 +249,16 @@ mod fn_va_fft {
                         point:
                             path: point/id.json
                 "#).unwrap()),
-            ))));
-            let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+            )));
+            let receiver = Arc::new(TaskTestReceiver::new(
                 self_id,
                 "",
                 "in-queue",
                 usize::MAX,
-            )));
+            ));
             let receiver_name = receiver.read().unwrap().name().join();
             log::debug!("{} | receiver: '{}'", self_id, receiver_name);
-            services.wlock(self_id).insert(receiver.clone());
+            services.insert(receiver.clone());
             //
             // Configuring FnVaFft
             let enable = init_each(Some("true"), FnConfPointType::Bool);
@@ -284,8 +284,8 @@ mod fn_va_fft {
 
             //
             // Runing all services
-            services.wlock(self_id).run().unwrap();
-            receiver.write().unwrap().run().unwrap();
+            services.run().unwrap();
+            receiver.run().unwrap();
             thread::sleep(Duration::from_millis(50));
             log::debug!("{} | All services started", self_id);
     
@@ -381,10 +381,10 @@ mod fn_va_fft {
                 };
             }
 
-            receiver.read().unwrap().exit();
-            services.rlock(self_id).exit();
-            services.read().unwrap().wait().unwrap();
-            receiver.read().unwrap().wait().unwrap();
+            receiver.exit();
+            services.exit();
+            services.wait().unwrap();
+            receiver.wait().unwrap();
 
             log::trace!("main | ffts: {}", ffts.len());
             let result = ffts.len();

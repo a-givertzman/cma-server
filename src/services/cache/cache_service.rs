@@ -25,15 +25,15 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{
         entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status},
-        safe_lock::rwlock::SafeLock, service::Service,
-        services::Services, subscription::SubscriptionCriteria, types::bool::Bool,
+        Service,
+        Services, subscription::SubscriptionCriteria, types::Bool,
     }
 };
 use serde::Serialize;
 use serde_json::json;
 use crate::{
     conf::cache_service_config::CacheServiceConfig,
-    core_::{constants::constants::RECV_TIMEOUT, types::{FxDashMap, RwLock}},
+    core_::{constants::constants::RECV_TIMEOUT, FxDashMap},
     services::cache::delay_store::DelyStore
 };
 ///
@@ -44,7 +44,7 @@ pub struct CacheService {
     dbg: Dbg,
     name: Name,
     conf: CacheServiceConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     cache: FxDashMap<String, Point>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
@@ -55,7 +55,7 @@ pub struct CacheService {
 impl CacheService {
     ///
     /// Creates new instance of the CacheService
-    pub fn new(conf: CacheServiceConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: CacheServiceConfig, services: Arc<Services>) -> Self {
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
@@ -316,7 +316,7 @@ impl Service for CacheService {
         let conf = self.conf.clone();
         let services = self.services.clone();
         let cache = self.cache.clone();
-        let point_configs = services.rlock(&dbg).points(&self_name.join())
+        let point_configs = services.points(&self_name.join())
             .then(
                 |points| points,
             |err| {
@@ -327,7 +327,7 @@ impl Service for CacheService {
         let (service_name, points) = self.subscriptions(&conf, &point_configs);
         log::debug!("{}.run | points: {:#?}", dbg, points.len());
         log::trace!("{}.run | points: {:#?}", dbg, points);
-        let (_, rx_recv) = services.wlock(&dbg).subscribe(
+        let (_, rx_recv) = services.subscribe(
             &service_name,
             &self.name.join(),
             &points,
@@ -366,7 +366,7 @@ impl Service for CacheService {
                     break;
                 }
             }
-            if let Err(err) = services.wlock(&dbg).unsubscribe(&service_name, &self_name.join(), &points) {
+            if let Err(err) = services.unsubscribe(&service_name, &self_name.join(), &points) {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);

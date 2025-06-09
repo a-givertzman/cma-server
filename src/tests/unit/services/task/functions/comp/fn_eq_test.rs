@@ -4,7 +4,7 @@ mod fn_eq {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        core_::types::FnInOutRef,
+        core_::FnInOutRef,
         services::task::nested_function::{comp::fn_eq::FnEq, fn_::FnOut, fn_input::FnInput},
     };
     ///

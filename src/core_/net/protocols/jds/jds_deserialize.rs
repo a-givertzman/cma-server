@@ -8,7 +8,7 @@ use sal_sync::services::{
         {Point, PointHlr, PointTxId},
         Status,
     }, 
-    types::bool::Bool
+    types::Bool
 };
 use crate::{
     core_::net::connection_status::ConnectionStatus, tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult}

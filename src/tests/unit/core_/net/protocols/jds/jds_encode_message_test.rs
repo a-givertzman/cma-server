@@ -2,7 +2,7 @@
 
 mod jds_encode_message {
     use chrono::{DateTime, Utc};
-    use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::bool::Bool};
+    use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::Bool};
     use std::sync::{Once, mpsc};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, tcp::steam_read::StreamRead};

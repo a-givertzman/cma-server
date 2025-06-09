@@ -3639,7 +3639,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#be7db14de576c1498f97145b0940e59454bab7e6"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#974c53f62376d89ee32997c91488849722095429"
 dependencies = [
  "api-tools 0.0.6 (git+https://github.com/a-givertzman/rust-api-tools.git?tag=0.1.1)",
  "chrono",
@@ -3655,6 +3655,7 @@ dependencies = [
  "kanal",
  "lexical",
  "log",
+ "parking_lot",
  "rand 0.9.1",
  "regex",
  "sal-core",

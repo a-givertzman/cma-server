@@ -1,9 +1,9 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{Name, Point, PointTxId}, services::Services, task::functions::FnConfKind};
+use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
 use crate::{
     conf::task_config::TaskConfig, 
-    core_::types::FnInOutRef, 
+    core_::FnInOutRef, 
     services::task::nested_function::{fn_kind::FnKind, nested_fn::NestedFn},
 };
 use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
@@ -166,7 +166,7 @@ impl TaskNodes {
     ///
     /// Creates all task nodes depending on it config
     ///  - if Task config contains 'point [type] every' then single evaluation node allowed only
-    pub fn build_nodes(&mut self, parent: &Name, conf: TaskConfig, services: Arc<RwLock<Services>>) {
+    pub fn build_nodes(&mut self, parent: &Name, conf: TaskConfig, services: Arc<Services>) {
         let tx_id = PointTxId::from_str(&parent.join());
         for (idx, (_node_name, mut node_conf)) in conf.nodes.into_iter().enumerate() {
             let node_name = node_conf.name();

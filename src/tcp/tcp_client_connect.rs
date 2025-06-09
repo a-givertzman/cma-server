@@ -1,5 +1,6 @@
-use sal_sync::services::{safe_lock::rwlock::SafeLock, service::ServiceCycle};
-use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread, time::Duration};
+use coco::Stack;
+use sal_sync::services::{ServiceCycle};
+use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread, time::Duration};
 use log::LevelFilter;
 ///
 /// Opens a TCP connection to a remote host
@@ -7,7 +8,7 @@ use log::LevelFilter;
 pub struct TcpClientConnect {
     id: String,
     addr: SocketAddr,
-    stream: Arc<RwLock<Vec<TcpStream>>>,
+    stream: Arc<Stack<TcpStream>>,
     reconnect: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -29,7 +30,7 @@ impl TcpClientConnect {
         Self {
             id: format!("{}/TcpClientConnect", parent.into()),
             addr,
-            stream: Arc::new(RwLock::new(Vec::new())),
+            stream: Arc::new(Stack::new()),
             reconnect,
             exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
         }
@@ -51,8 +52,9 @@ impl TcpClientConnect {
                 cycle.start();
                 match TcpStream::connect_timeout(&addr, Duration::from_millis(1000)) {
                     Ok(stream) => {
-                        self_stream.wlock(&self_id).push(stream);
-                        log::info!("{}.connect | connected to: \n\t{:?}", id, self_stream.rlock(&self_id).first().unwrap());
+                        let stream_name = format!("{:?}", stream);
+                        self_stream.push(stream);
+                        log::info!("{}.connect | connected to: \n\t{:?}", id, stream_name);
                         break;
                     }
                     Err(err) => {
@@ -70,8 +72,7 @@ impl TcpClientConnect {
             log::debug!("{}.connect | Exit", id);
         });
         handle.join().unwrap();
-        let mut tcp_stream = self.stream.wlock(&self.id);
-        tcp_stream.pop()
+        self.stream.pop()
     }
     // ///
     // /// Opens a TCP connection to a remote host with a timeout.

@@ -1,10 +1,10 @@
-use sal_sync::services::{entity::{Name, Point, PointHlr, PointTxId, ToPoint}, services::Services, task::functions::FnConfig};
-use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc, RwLock}};
+use sal_sync::services::{entity::{Name, Point, PointHlr, PointTxId, ToPoint}, Services, task::functions::FnConfig};
+use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use indexmap::IndexMap;
 use crate::{
     core_::{
         format::format::Format,
-        types::FnInOutRef,
+        FnInOutRef,
     },
     services::task::{
         task_nodes::TaskNodes,
@@ -50,7 +50,7 @@ pub struct SqlMetric {
 impl SqlMetric {
     //
     //
-    pub fn new(parent: impl Into<String>, conf: &mut FnConfig, task_nodes: &mut TaskNodes, services: Arc<RwLock<Services>>) -> SqlMetric {
+    pub fn new(parent: impl Into<String>, conf: &mut FnConfig, task_nodes: &mut TaskNodes, services: Arc<Services>) -> SqlMetric {
         let self_name = Name::new(parent, format!("SqlMetric{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let self_id = self_name.join();
         let tx_id = PointTxId::from_str(&self_name.join());

@@ -7,10 +7,10 @@
 //!     parameter: value    # meaning
 //! ```
 use sal_sync::services::{entity::{Name, Object, Point}, service::{Service}};
-use std::{sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
+use std::{sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc::Sender}, thread};
 use crate::{
     conf::tcp_server_config::ServiceNameConfig,
-    services::services::Services, 
+    services::Services, 
 };
 ///
 /// Do something ...
@@ -18,7 +18,7 @@ pub struct ServiceName {
     id: String,
     name: Name,
     conf: ServiceNameConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -26,7 +26,7 @@ pub struct ServiceName {
 impl ServiceName {
     //
     /// Crteates new instance of the ServiceName 
-    pub fn new(parent: impl Into<String>, conf: ServiceNameConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: ServiceNameConfig, services: Arc<Services>) -> Self {
         Self {
             id: format!("{}/ServiceName({})", parent.into(), conf.name),
             conf: conf.clone(),

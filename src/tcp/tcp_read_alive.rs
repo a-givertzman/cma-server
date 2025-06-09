@@ -1,11 +1,11 @@
 use log::LevelFilter;
-use sal_sync::services::{entity::Point, service::ServiceCycle};
+use sal_sync::services::{entity::Point, ServiceCycle};
 use std::{
     io::BufReader, net::TcpStream, 
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, Mutex},
+    sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc},
     thread::{self, JoinHandle}, time::Duration,
 };
-use crate::{core_::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::OpResult};
+use crate::{core_::{net::connection_status::ConnectionStatus, Mutex}, tcp::tcp_stream_write::OpResult};
 use super::steam_read::TcpStreamRead;
 
 ///
@@ -53,7 +53,7 @@ impl TcpReadAlive {
         let mut cycle = self.cycle.map(|cycle| ServiceCycle::new(&self_id, cycle));
         let send = self.send.clone();
         let stream_read = self.stream_read.clone();
-        let mut tcp_stream_read = stream_read.lock().unwrap().take().unwrap();
+        let mut tcp_stream_read = stream_read.lock().take().unwrap();
         log::info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Read", self_id.clone())).spawn(move || {
             log::info!("{}.run | Preparing thread - ok", self_id);
@@ -94,7 +94,7 @@ impl TcpReadAlive {
                     break;
                 }
             }
-            stream_read.lock().unwrap().replace(tcp_stream_read);
+            stream_read.lock().replace(tcp_stream_read);
             log::info!("{}.run | Exit", self_id);
         }).unwrap();
         log::info!("{}.run | started", self.id);

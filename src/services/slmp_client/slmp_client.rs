@@ -1,17 +1,17 @@
-use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc}, thread::{self, JoinHandle}, time::Duration};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ExitNotify, services::{
         conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
-        safe_lock::rwlock::SafeLock, service::Service,
-        services::Services,
+        Service,
+        Services,
     }
 };
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::constants::constants::RECV_TIMEOUT,
+    core_::{constants::constants::RECV_TIMEOUT, Mutex},
     services::{
         diagnosis::diag_point::DiagPoint,
         slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
@@ -28,7 +28,7 @@ pub struct SlmpClient {
     dbg: Dbg,
     name: Name,
     conf: SlmpClientConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
@@ -40,7 +40,7 @@ impl SlmpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: SlmpClientConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: SlmpClientConfig, services: Arc<Services>) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))
@@ -66,21 +66,16 @@ impl SlmpClient {
         value: Status,
         dest: &Sender<Point>,
     ) {
-        match diagnosis.lock() {
-            Ok(mut diagnosis) => {
-                match diagnosis.get_mut(kewd) {
-                    Some(point) => {
-                        log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", dbg, kewd);
-                        if let Some(point) = point.next(value) {
-                            if let Err(err) = dest.send(point) {
-                                log::warn!("{}.yield_status | Send error: {}", dbg, err);
-                            }
-                        }
+        match diagnosis.lock().get_mut(kewd) {
+            Some(point) => {
+                log::debug!("{}.yield_diagnosis | Sending diagnosis point '{}' ", dbg, kewd);
+                if let Some(point) = point.next(value) {
+                    if let Err(err) = dest.send(point) {
+                        log::warn!("{}.yield_status | Send error: {}", dbg, err);
                     }
-                    None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", dbg, kewd),
                 }
             }
-            Err(err) => log::error!("{}.yield_diagnosis | Diagnosis lock error: {:#?}", dbg, err),
+            None => log::debug!("{}.yield_diagnosis | Diagnosis point '{}' - not configured", dbg, kewd),
         }
     }
     ///
@@ -137,7 +132,7 @@ impl Service for SlmpClient {
         let diagnosis = self.diagnosis.clone();
         let status = Arc::new(AtomicU32::new(Status::Ok.into()));
         let exit = Arc::new(ExitNotify::new(&dbg, Some(self.exit.clone()), None));
-        let tx_send = self.services.rlock(&dbg).get_link(&conf.send_to).unwrap_or_else(|err| {
+        let tx_send = self.services.get_link(&conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let mut tcp_client_connect = TcpClientConnect::new(

@@ -7,7 +7,7 @@ use sal_sync::{
     kernel::state::{ChangeNotify, ExitNotify},
     services::{
         entity::{Cot, {Point, PointHlr}, Status},
-        safe_lock::rwlock::SafeLock, service::ServiceCycle, services::Services,
+        ServiceCycle, Services,
         subscription::SubscriptionCriteria,
     },
 };
@@ -30,7 +30,7 @@ pub struct SlmpWrite {
     dest: Sender<Point>,
     dbs: Arc<Mutex<FxIndexMap<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     status: Arc<AtomicU32>,
     exit: Arc<ExitNotify>,
 }
@@ -44,7 +44,7 @@ impl SlmpWrite {
         conf: SlmpClientConfig,
         dest: Sender<Point>,
         // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
-        services: Arc<RwLock<Services>>,
+        services: Arc<Services>,
         status: Arc<AtomicU32>,
         exit: Arc<ExitNotify>,
     ) -> Self {

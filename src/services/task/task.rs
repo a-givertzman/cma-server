@@ -1,7 +1,7 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{
-    entity::{Name, Object, {Point, PointConfig, PointTxId}}, safe_lock::rwlock::SafeLock, service::{Service, ServiceCycle}, services::Services, subscription::SubscriptionCriteria
+    entity::{Name, Object, {Point, PointConfig, PointTxId}}, Service, ServiceCycle, Services, subscription::SubscriptionCriteria
 };
 use std::{
     collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration,
@@ -22,7 +22,7 @@ pub struct Task {
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
     rx_recv: Mutex<Option<Receiver<Point>>>,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     conf: TaskConfig,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
@@ -34,7 +34,7 @@ impl Task {
     ///
     /// Creates new instance of [Task]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TaskConfig, services: Arc<RwLock<Services>>) -> Task {
+    pub fn new(conf: TaskConfig, services: Arc<Services>) -> Task {
         let (send, recv) = mpsc::channel();
         Task {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
@@ -51,7 +51,7 @@ impl Task {
     }
     ///
     ///
-    fn subscriptions_(&self, conf: &TaskConfig, services: &Arc<RwLock<Services>>) -> Option<(String, Vec<SubscriptionCriteria>)> {
+    fn subscriptions_(&self, conf: &TaskConfig, services: &Arc<Services>) -> Option<(String, Vec<SubscriptionCriteria>)> {
         if conf.subscribe.is_empty() {
             None
         } else {
@@ -93,7 +93,7 @@ impl Task {
     }
     ///
     ///
-    fn subscribe_(&self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<RwLock<Services>>) -> Receiver<Point> {
+    fn subscribe_(&self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<Services>) -> Receiver<Point> {
         match subscriptions {
             Some((service_name, points)) => {
                 let (_, rx_recv) = services.wlock(&self.dbg).subscribe(

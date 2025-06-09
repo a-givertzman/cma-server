@@ -1,15 +1,15 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object}, service::{Service, ServiceCycle}, services::Services}};
+use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}};
 use std::{
-    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration
+    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc}, thread::{self, JoinHandle}, time::Duration
 };
 use crate::{
     conf::tcp_server_config::TcpServerConfig,
-    core_::constants::constants::RECV_TIMEOUT,
-    services::{safe_lock::rwlock::SafeLock, server::{
+    core_::{constants::constants::RECV_TIMEOUT},
+    services::server::{
         connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection
-    }},
+    },
 };
 ///
 /// 
@@ -37,8 +37,8 @@ pub struct TcpServer {
     dbg: Dbg,
     name: Name,
     conf: TcpServerConfig,
-    connections: Arc<RwLock<TcpServerConnections>>,
-    services: Arc<RwLock<Services>>,
+    connections: Arc<TcpServerConnections>,
+    services: Arc<Services>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
@@ -52,12 +52,12 @@ impl TcpServer {
     /// - filter - all trafic from server to client will be filtered by some criterias, until Subscribe request confirmed:
     ///    - cot - [Cot] - bit mask wich will be passed
     ///    - name - exact name wich passed
-    pub fn new(conf: TcpServerConfig, services: Arc<RwLock<Services>>, ) -> Self {
+    pub fn new(conf: TcpServerConfig, services: Arc<Services>, ) -> Self {
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
-            connections: Arc::new(RwLock::new(TcpServerConnections::new(conf.name))),
+            connections: Arc::new(TcpServerConnections::new(conf.name)),
             services,
             handle: Stack::new(),
             is_finished: Arc::new(AtomicBool::new(false)),
@@ -66,9 +66,9 @@ impl TcpServer {
     }
     ///
     ///                 self_id: &str, self_name: &Name, connection_id: &str
-    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<RwLock<TcpServerConnections>>) {
+    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<TcpServerConnections>) {
         log::info!("{}.setup_connection | Trying to repair Connection '{}'...", con_info.dbg, con_info.connection_id);
-        let repair_result = connections.rlock(con_info.dbg).repair(con_info.connection_id, stream.try_clone().unwrap());
+        let repair_result = connections.repair(con_info.connection_id, stream.try_clone().unwrap());
         match repair_result {
             Ok(_) => {
                 log::info!("{}.setup_connection | Connection '{}' - reparied", con_info.dbg, con_info.connection_id);
@@ -77,7 +77,7 @@ impl TcpServer {
                 log::info!("{}.setup_connection | {}", con_info.dbg, err);
                 log::info!("{}.setup_connection | New connection: '{}'", con_info.dbg, con_info.connection_id);
                 let (send, recv) = mpsc::channel();
-                let mut connection = JdsConnection::new(
+                let connection = JdsConnection::new(
                     con_info.dbg,
                     &Name::from(con_info.self_name.parent()),
                     con_info.connection_id,
@@ -94,7 +94,7 @@ impl TcpServer {
                             }
                         }
                         log::info!("{}.setup_connection | connections.lock...", con_info.dbg);
-                        connections.wlock(con_info.dbg).insert(
+                        connections.insert(
                             con_info.connection_id,
                             Arc::new(Box::new(connection)),
                             send,
@@ -134,15 +134,8 @@ impl TcpServer {
     ///
     /// Chech if finished connection threads are present in the self.connection
     /// - removes finished connections
-    fn clean(dbg: &Dbg, connections: &Arc<RwLock<TcpServerConnections>>) {
-        match connections.write() {
-            Ok(mut connections) => {
-                connections.clean()
-            }
-            Err(err) => {
-                log::warn!("{}.clean | Connections lock error {:?}", dbg, err);
-            }
-        }
+    fn clean(_dbg: &Dbg, connections: &Arc<TcpServerConnections>) {
+        connections.clean();
     }
     
 }
@@ -227,7 +220,7 @@ impl Service for TcpServer {
             }
             log::info!("{}.run | Exit...", dbg);
             // Self::waitConnections(&self_id, connections);
-            connections.wlock(&dbg).wait();
+            connections.wait();
             log::info!("{}.run | Exit", dbg);
         });
         match handle {

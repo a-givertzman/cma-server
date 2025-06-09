@@ -3,7 +3,7 @@ mod socket_read_performance {
     use chrono::{DateTime, Utc};
         use sal_sync::services::{
         entity::{Cot, {Point, PointHlr}, Status},
-        types::bool::Bool,
+        types::Bool,
     };
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Read, BufReader, Write}};
     use testing::session::test_session::TestSession;

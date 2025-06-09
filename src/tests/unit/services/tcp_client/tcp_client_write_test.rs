@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tcp_client {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, services::Services};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, Services};
     use std::{io::BufReader, net::TcpListener, sync::{Arc, Once, RwLock}, thread::{self, JoinHandle}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

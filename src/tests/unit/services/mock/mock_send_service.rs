@@ -1,15 +1,17 @@
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, {Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services};
+use sal_sync::services::{entity::{Name, Object, {Point, ToPoint}}, LinkName, Service, Services};
 use testing::entities::test_value::Value;
+
+use crate::core_::RwLock;
 ///
 ///
 pub struct MockSendService {
     dbg: Dbg,
     name: Name,
     send_to: LinkName,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     delay: Option<Duration>,
@@ -20,7 +22,7 @@ pub struct MockSendService {
 //
 // 
 impl MockSendService {
-    pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, delay: Option<Duration>) -> Self {
+    pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, delay: Option<Duration>) -> Self {
         let name = Name::new(parent, format!("MockSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             dbg: Dbg::new(name.parent(), name.me()),
@@ -81,7 +83,7 @@ impl Service for MockSendService {
         log::info!("{}.run | Starting...", self.dbg);
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
-        let tx_send = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
+        let tx_send = self.services.get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let test_data = self.test_data.clone();
@@ -94,7 +96,7 @@ impl Service for MockSendService {
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
                         log::trace!("{}.run | send: {:?}", self_id, point);
-                        sent.write().unwrap().push(point);
+                        sent.write().push(point);
                     }
                     Err(err) => {
                         log::warn!("{}.run | send error: {:?}", self_id, err);

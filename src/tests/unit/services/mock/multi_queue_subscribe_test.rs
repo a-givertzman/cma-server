@@ -1,11 +1,11 @@
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread, time::Duration};
 use sal_sync::services::{entity::{Name, Object, Point}, service::{Service}};
-use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
+use crate::services::{Services};
 #[cfg(test)]
 
 mod multi_queue {
-        use sal_sync::services::{retain::retain_conf::RetainConf, service::Service};
-    use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
+        use sal_sync::services::{retain::retain_conf::RetainConf, Service};
+    use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::{
         entities::test_value::Value,
@@ -13,7 +13,7 @@ mod multi_queue {
     };
     use crate::{
         conf::multi_queue_config::MultiQueueConf,
-        services::{safe_lock::rwlock::SafeLock, services::Services},
+        services::{Services},
         tests::unit::services::multi_queue::{mock_send_service::MockSendService, multi_queue_subscribe_test::MockReceiver},
     };
     ///
@@ -152,7 +152,7 @@ struct MockReceiver {
     id: String,
     name: Name,
     subscribe: String,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
@@ -160,7 +160,7 @@ struct MockReceiver {
 //
 //
 impl MockReceiver {
-    pub fn new(parent: impl Into<String>, subscribe: &str, services: Arc<RwLock<Services>>, recv_limit: Option<usize>) -> Self {
+    pub fn new(parent: impl Into<String>, subscribe: &str, services: Arc<Services>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockReceiver{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             id: name.join(),

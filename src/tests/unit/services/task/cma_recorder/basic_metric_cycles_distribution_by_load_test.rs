@@ -2,8 +2,8 @@
 
 mod cma_recorder {
         use regex::Regex;
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
-    use std::{env, fs, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services};
+    use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -43,7 +43,7 @@ mod cma_recorder {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -51,7 +51,7 @@ mod cma_recorder {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        )));
         let mut tasks = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/basic-metric-cycles-distribution-by-load.yaml";
         match fs::read_to_string(path) {
@@ -63,8 +63,8 @@ mod cma_recorder {
                             let mut conf = serde_yaml::Mapping::new();
                             conf.insert(key.clone(), config.clone());
                             let config = TaskConfig::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
-                            let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-                            services.wlock( self_id).insert(task.clone());
+                            let task = Arc::new(Task::new(config, services.clone()));
+                            services.insert(task.clone());
                             tasks.push(task);
                         }
                     }
@@ -80,8 +80,8 @@ mod cma_recorder {
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        services.insert(multi_queue.clone());
         let conf = ApiClientConfig::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service ApiClient:
@@ -95,70 +95,70 @@ mod cma_recorder {
                 debug: true
             ").unwrap(),
         );
-        let api_client = Arc::new(RwLock::new(ApiClient::new(conf)));
-        services.wlock(self_id).insert(api_client.clone());
+        let api_client = Arc::new(ApiClient::new(conf));
+        services.insert(api_client.clone());
         let test_data = test_data(self_id);
         let total_count = test_data.len();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        let receiver = Arc::new(TaskTestReceiver::new(
             self_id,
             "",
             "in-queue",
             total_count * 1000,
-        )));
+        ));
         services.wlock(self_id).insert(receiver.clone());
         let test_data: Vec<(String, Value)> = test_data.into_iter().map(|(_, name, value)| {
             (name, value)
         }).collect();
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        let producer = Arc::new(TaskTestProducer::new(
             self_id,
             &format!("/{}/MultiQueue.in-queue", self_id),
             Duration::from_millis(10),
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(producer.clone());
+        ));
+        services.insert(producer.clone());
         thread::sleep(Duration::from_millis(100));
-        services.wlock(self_id).run().unwrap();
-        multi_queue.write().unwrap().run().unwrap();
-        api_client.write().unwrap().run().unwrap();
-        receiver.write().unwrap().run().unwrap();
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        api_client.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
         for task in &tasks {
-            task.write().unwrap().run().unwrap();
+            task.run().unwrap();
         }
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(300));
-        producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         thread::sleep(Duration::from_millis(300));
         let time = Instant::now();
-        receiver.read().unwrap().wait().unwrap();
-        producer.read().unwrap().exit();
-        multi_queue.read().unwrap().exit();
+        receiver.wait().unwrap();
+        producer.exit();
+        multi_queue.exit();
         for task in &tasks {
-            task.read().unwrap().exit();
+            task.exit();
         }
         for task in tasks {
-            task.read().unwrap().wait().unwrap();
+            task.wait().unwrap();
         }
-        services.rlock(self_id).exit();
-        api_client.read().unwrap().exit();
-        api_client.read().unwrap().wait().unwrap();
-        producer.read().unwrap().wait().unwrap();
+        services.exit();
+        api_client.exit();
+        api_client.wait().unwrap();
+        producer.wait().unwrap();
         // exit_producer_handle.wait().unwrap();
-        multi_queue.read().unwrap().wait().unwrap();
-        services.read().unwrap().wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        multi_queue.wait().unwrap();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
-        for (i, result) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
+        for (i, result) in receiver.received().read().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
         let targets = targets();
         let mut index = 0;
-        for result in receiver.read().unwrap().received().read().unwrap().iter() {
+        for result in receiver.received().read().iter() {
             if result.name().starts_with("input34_1") {
                 let name = result.name();
                 let result = result.as_string().value;

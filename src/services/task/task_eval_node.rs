@@ -1,5 +1,5 @@
 use sal_sync::services::entity::Point;
-use crate::core_::types::FnInOutRef;
+use crate::core_::FnInOutRef;
 ///
 /// Holds Task input and all dipendent variables & outputs
 #[derive(Debug)]

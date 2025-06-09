@@ -28,18 +28,18 @@
 //! - `COUNT` - length of the array in the `DATA` field
 //! - `DATA` - array of values of type specified in the `TYPE` field
 //! 
-use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::{ChangeNotify, Switch, SwitchCondition, SwitchState},
-    services::{entity::{Name, Object, PointTxId}, safe_lock::rwlock::SafeLock, service::{Service, ServiceCycle}, services::Services},
+    services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services},
 };
 use crate::{
     conf::udp_client_config::udp_client_config::UdpClientConfig,
-    core_::failure::errors_limit::ErrorLimit,
+    core_::{failure::errors_limit::ErrorLimit, RwLock},
 };
 use super::udp_client_db::UdpClientDb;
 ///
@@ -56,7 +56,7 @@ pub struct UdpClient {
     dbg: Dbg,
     name: Name,
     conf: UdpClientConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
@@ -72,7 +72,7 @@ impl UdpClient {
     pub const HEAD_LEN: usize = 7;
     //
     /// Crteates new instance of the UdpClient 
-    pub fn new(conf: UdpClientConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: UdpClientConfig, services: Arc<Services>) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         Self {
             tx_id,
@@ -253,7 +253,7 @@ impl Service for UdpClient {
         let exit = self.exit.clone();
         let services = self.services.clone();
         log::info!("{}.run | Preparing thread...", dbg);
-        *SELF_ID.write().unwrap() = dbg.clone();
+        *SELF_ID.write() = dbg.clone();
         let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
             let dbg = &dbg;
             let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
@@ -270,7 +270,7 @@ impl Service for UdpClient {
                         conditions: vec![
                             SwitchCondition {
                                 condition: Box::new(|value| {
-                                    log::info!("{}.run | State: {:?}", SELF_ID.read().unwrap(), value);
+                                    log::info!("{}.run | State: {:?}", SELF_ID.read(), value);
                                     value == State::Start
                                 }),
                                 target: State::Start,
@@ -282,14 +282,14 @@ impl Service for UdpClient {
                         conditions: vec![
                             SwitchCondition {
                                 condition: Box::new(|value| {
-                                    log::info!("{}.run | State: {:?}", SELF_ID.read().unwrap(), value);
+                                    log::info!("{}.run | State: {:?}", SELF_ID.read(), value);
                                     value == State::Offline
                                 }),
                                 target: State::Offline,
                             },
                             SwitchCondition {
                                 condition: Box::new(|value| {
-                                    log::info!("{}.run | State: {:?}", SELF_ID.read().unwrap(), value);
+                                    log::info!("{}.run | State: {:?}", SELF_ID.read(), value);
                                     value == State::Read
                                 }),
                                 target: State::Read,
@@ -301,14 +301,14 @@ impl Service for UdpClient {
                         conditions: vec![
                             SwitchCondition {
                                 condition: Box::new(|value| {
-                                    log::info!("{}.run | State: {:?}", SELF_ID.read().unwrap(), value);
+                                    log::info!("{}.run | State: {:?}", SELF_ID.read(), value);
                                     value == State::Offline
                                 }),
                                 target: State::Offline,
                             },
                             SwitchCondition {
                                 condition: Box::new(|value| {
-                                    log::info!("{}.run | State: {:?}", SELF_ID.read().unwrap(), value);
+                                    log::info!("{}.run | State: {:?}", SELF_ID.read(), value);
                                     value == State::Start
                                 }),
                                 target: State::Start,
@@ -318,7 +318,7 @@ impl Service for UdpClient {
                 ],
             );
             let mut dbs = Self::build_dbs(dbg, tx_id, &conf);
-            let send = services.rlock(dbg)
+            let send = services
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
             let mut reconnect = ServiceCycle::new(dbg, conf.reconnect);

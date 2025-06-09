@@ -8,7 +8,7 @@ use indexmap::IndexMap;
 use sal_sync::{
     collections::FxIndexMap,
     kernel::state::{ChangeNotify, ExitNotify},
-    services::{entity::{Point, Status}, service::ServiceCycle},
+    services::{entity::{Point, Status}, ServiceCycle},
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,

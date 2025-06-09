@@ -2,7 +2,7 @@
 
 mod tcp_stream {
     use sal_core::error::Error;
-    use sal_sync::services::service::ServiceHandles;
+    use sal_sync::services::ServiceHandles;
     use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
     use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

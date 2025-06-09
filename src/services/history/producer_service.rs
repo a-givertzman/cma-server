@@ -1,4 +1,4 @@
-use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use chrono::{DateTime, Utc};
 use coco::Stack;
 use concat_string::concat_string;
@@ -13,7 +13,7 @@ use sal_sync::services::{
             PointConfigType, PointHlr, PointTxId,
         },
         Status,
-    }, safe_lock::rwlock::SafeLock, service::{Service, ServiceCycle}, services::Services, types::bool::Bool
+    }, Service, ServiceCycle, Services, types::Bool
 };
 use serde_json::json;
 use testing::entities::test_value::Value;
@@ -25,7 +25,7 @@ pub struct ProducerService {
     dbg: Dbg,
     name: Name,
     conf: ProducerServiceConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
@@ -33,7 +33,7 @@ pub struct ProducerService {
 //
 // 
 impl ProducerService {
-    pub fn new(conf: ProducerServiceConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: ProducerServiceConfig, services: Arc<Services>) -> Self {
         Self {
             dbg: Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me())),
             name: conf.name.clone(),
@@ -121,7 +121,7 @@ impl Service for ProducerService {
         let interval = self.conf.cycle.unwrap_or(Duration::ZERO);
         let delayed = !interval.is_zero();
         let mut cycle = ServiceCycle::new(&dbg, interval);
-        let send = self.services.rlock(&dbg).get_link(&self.conf.send_to).unwrap_or_else(|err| {
+        let send = self.services.get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", dbg, err);
         });
         let mut gen_points = Self::build_gen_points(self_name.join(), tx_id, self.conf.points());

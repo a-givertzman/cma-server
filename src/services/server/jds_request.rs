@@ -1,12 +1,12 @@
-use std::{collections::HashMap, sync::{Arc, RwLock}, thread, time::Duration};
+use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, safe_lock::rwlock::SafeLock, services::Services, subscription::SubscriptionCriteria};
+use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, Services, subscription::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     core_::{
         auth::ssh::auth_ssh::AuthSsh,
-        net::protocols::jds::request_kind::RequestKind,
-    }, services::server::{jds_routes::RouterReply, jds_cnnection::JdsState}
+        net::protocols::jds::request_kind::RequestKind, RwLock,
+    }, services::server::{jds_cnnection::JdsState, jds_routes::RouterReply}
 };
 use super::jds_cnnection::Shared;
 
@@ -15,8 +15,8 @@ impl JdsRequest {
     ///
     /// Detecting kind of the request stored as json string in the incoming point.
     /// Performs the action depending on the Request kind.
-    pub fn handle(parent_id: &Dbg, parent: &Name, tx_id: usize, request: Point, services: Arc<RwLock<Services>>, shared: Arc<RwLock<Shared>>) -> RouterReply {
-        let mut shared = shared.write().unwrap();
+    pub fn handle(parent_id: &Dbg, parent: &Name, tx_id: usize, request: Point, services: Arc<Services>, shared: Arc<RwLock<Shared>>) -> RouterReply {
+        let mut shared = shared.write();
         let dbg = Dbg::new(parent_id, "JdsRequest");
         let requester_name = &parent.join();
         match RequestKind::from(request.name()) {
@@ -87,7 +87,7 @@ impl JdsRequest {
             }
             RequestKind::Points => {
                 log::debug!("{}.handle.Points | Request '{}': \n\t{:?}", dbg, RequestKind::POINTS, request);
-                let points = services.rlock(&dbg).points(requester_name).then(
+                let points = services.points(requester_name).then(
                     |points| points,
                     |err| {
                         log::error!("{}.handle.Points | Requesting points error: {:?}", dbg, err);
@@ -136,7 +136,7 @@ impl JdsRequest {
                             None => {
                                 log::debug!("{}.handle.Subscribe | 'Subscribe' request (broadcast)", dbg);
                                 log::trace!("{}.handle.Subscribe | 'Subscribe' request (broadcast): {:?}", dbg, request);
-                                services.rlock(&dbg).points(requester_name).then(|points| points, |err| {
+                                services.points(requester_name).then(|points| points, |err| {
                                     log::error!("{}.handle.Subscribe | Requesting points error: {:?}", dbg, err);
                                     vec![]
                                 })
@@ -151,7 +151,7 @@ impl JdsRequest {
                     }
                     Err(err) => {
                         log::warn!("{}.handle.Subscribe | 'Subscribe' request parsing error: {:?}\n\t request: {:?}", dbg, err, request);
-                        services.rlock(&dbg).points(requester_name).then(|points| points, |err| {
+                        services.points(requester_name).then(|points| points, |err| {
                             log::error!("{}.handle.Subscribe | Requesting points error: {:?}", dbg, err);
                             vec![]
                         })
@@ -172,7 +172,7 @@ impl JdsRequest {
                     log::warn!("{}", message);
                     (Cot::ReqErr, message)
                 } else {
-                    match services.wlock(&dbg).extend_subscription(&shared.subscribe, &receiver_name, &points) {
+                    match services.extend_subscription(&shared.subscribe, &receiver_name, &points) {
                         Ok(_) => (Cot::ReqCon, "".to_owned()),
                         Err(err) => {
                             let message = format!("{}.handle.Subscribe | Extend subscription failed with error: {:?}", dbg, err);
@@ -209,10 +209,10 @@ impl JdsRequest {
     }
     ///
     ///
-    fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<RwLock<Services>>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
-        match services.rlock(dbg).get(cache_service) {
+    fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<Services>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
+        match services.get(cache_service) {
             Some(cache) => {
-                let recv = cache.rlock(dbg).gi(receiver_name, points);
+                let recv = cache.gi(receiver_name, points);
                 match shared.req_reply_send.pop() {
                     Some(send) => {
                         shared.req_reply_send.push(send.clone());

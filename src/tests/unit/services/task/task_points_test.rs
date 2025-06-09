@@ -1,8 +1,8 @@
 #[cfg(test)]
 
 mod task {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, safe_lock::rwlock::SafeLock, service::Service, services::Services};
-    use std::{env, sync::{Arc, Once, RwLock}, time::Duration};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services};
+    use std::{env, sync::{Arc, Once}, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -40,13 +40,13 @@ mod task {
         let config = TaskConfig::read(&self_name, path);
         log::trace!("config: {:?}", &config);
         println!(" config points: {:?}", config.points());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ))));
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
+        )));
+        let task = Arc::new(Task::new(config, services.clone()));
         services.wlock(self_id).insert(task.clone());
         let target  = 3;
         let points = task.read().unwrap().points();

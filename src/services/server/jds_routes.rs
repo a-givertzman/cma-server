@@ -1,8 +1,8 @@
-use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, RwLock}};
+use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc}};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{entity::{Name, Object, Point}, services::Services};
+use sal_sync::services::{entity::{Name, Object, Point}, Services};
 use crate::{
-    core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
+    core_::{net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, RwLock}, 
     services::server::jds_cnnection::Shared,
     tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult},
 };
@@ -33,7 +33,7 @@ pub struct JdsRoutes<F> {
     parent_id: Dbg,
     id: Dbg,
     name: Name,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     jds_deserialize: JdsDeserialize,
     req_reply_send: Sender<Point>,
     rautes: F,
@@ -47,7 +47,7 @@ impl<F> JdsRoutes<F> {
     pub fn new(
         parent_id: &Dbg,
         parent: &Name, 
-        services: Arc<RwLock<Services>>, 
+        services: Arc<Services>, 
         jds_deserialize: JdsDeserialize, 
         req_reply_send: Sender<Point>, 
         rautes: F, 
@@ -83,7 +83,7 @@ impl<F> Object for JdsRoutes<F> {
 // 
 impl<F> TcpStreamRead for JdsRoutes<F> where
     //    parent_id, name
-    F: Fn(Dbg, Name, Point, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
+    F: Fn(Dbg, Name, Point, Arc<Services>, Arc<RwLock<Shared>>) -> RouterReply,
     F: Send {
     ///
     /// Reads single point from source

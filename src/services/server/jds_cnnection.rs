@@ -1,10 +1,10 @@
 use std::{
-    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread::{self, JoinHandle}, time::Instant 
+    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc}, thread::{self, JoinHandle}, time::Instant 
 };
 use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Cot, Name, Object, Point}, safe_lock::rwlock::SafeLock, service::Service, services::Services, subscription::SubscriptionCriteria};
+use sal_sync::services::{entity::{Cot, Name, Object, Point}, Service, Services, subscription::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -14,13 +14,10 @@ use crate::{
             jds_deserialize::JdsDeserialize, 
             jds_encode_message::JdsEncodeMessage, 
             jds_serialize::JdsSerialize,
-        },
+        }, RwLock,
     }, 
     services::server::{
-            connections::Action, 
-            jds_request::JdsRequest, 
-            jds_routes::{JdsRoutes, RouterReply}, 
-            jds_auth::TcpServerAuth,
+            connections::Action, jds_auth::TcpServerAuth, jds_request::JdsRequest, jds_routes::{JdsRoutes, RouterReply}
         }, 
     tcp::{tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive},
 };
@@ -71,7 +68,7 @@ pub struct JdsConnection {
     name: Name,
     connection_id: String,
     action_recv: Stack<Receiver<Action>>, 
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     conf: TcpServerConfig,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
@@ -84,7 +81,7 @@ impl JdsConnection {
     /// Creates new instance of the [JdsConnection]
     /// - parent - id of the parent
     /// - path - path of the parent
-    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
+    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
         let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
         let name = Name::new(parent, "JdsConnection");
         log::debug!("{}.new | name: {:#?}", dbg, name);
@@ -147,8 +144,8 @@ impl Service for JdsConnection {
             let receivers = Arc::new(RwLock::new(
                 HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
             ));
-            receivers.write().unwrap().insert(Cot::Req, services.rlock(&dbg).get_link(&self_conf_send_to));
-            let points = services.rlock(&dbg).points(&dbg)
+            receivers.write().insert(Cot::Req, services.get_link(&self_conf_send_to));
+            let points = services.points(&dbg)
                 .then(
                     |points| points,
                     |err| {
@@ -164,12 +161,12 @@ impl Service for JdsConnection {
                     points.push(SubscriptionCriteria::new(&point_conf.name, Cot::ReqErr));
                     points
                 });
-            let send = services.rlock(&dbg).get_link(&self_conf_send_to).unwrap_or_else(|err| {
+            let send = services.get_link(&self_conf_send_to).unwrap_or_else(|err| {
                 panic!("{}.run | services.get_link error: {:#?}", dbg, err);
             });
             log::debug!("{}.run | subscribe: {:?}", dbg, subscribe);
-            let (req_reply_send, recv) = services.wlock(&dbg).subscribe(&subscribe, &receiver_name, &points);
-            shared_options.write().unwrap().req_reply_send = vec![req_reply_send.clone()];
+            let (req_reply_send, recv) = services.subscribe(&subscribe, &receiver_name, &points);
+            shared_options.write().req_reply_send = vec![req_reply_send.clone()];
             let buffered = rx_max_length > 0;
             let mut tcp_read_alive = TcpReadAlive::new(
                 &dbg,
@@ -193,7 +190,7 @@ impl Service for JdsConnection {
                         match point.cot() {
                             Cot::Req => JdsRequest::handle(&parent_id, &parent, 0, point, services, shared),
                             _        => {
-                                match shared.read().unwrap().jds_state {
+                                match shared.read().jds_state {
                                     JdsState::Unknown => {
                                         log::warn!("{}.run | Rejected point from socket: \n\t{:?}", parent_id, json!(&point).to_string());
                                         RouterReply::new(None, None)
@@ -271,7 +268,7 @@ impl Service for JdsConnection {
                     break;
                 }
             }
-            if let Err(err) = services.wlock(&dbg).unsubscribe(&subscribe, &receiver_name, &[]) {
+            if let Err(err) = services.unsubscribe(&subscribe, &receiver_name, &[]) {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);

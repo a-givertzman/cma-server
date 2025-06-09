@@ -1,6 +1,6 @@
 use sal_sync::services::entity::Point;
 use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
-use crate::{core_::types::FnInOutRef, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}};
+use crate::{core_::FnInOutRef, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult}};
 ///
 /// Exports data from the input into the associated queue
 #[derive(Debug)]

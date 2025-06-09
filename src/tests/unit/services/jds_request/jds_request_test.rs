@@ -9,11 +9,11 @@ mod jds_routes {
             Status,
         },
         multi_queue::{MultiQueue, MultiQueueConf},
-        safe_lock::rwlock::SafeLock, service::{LinkName, Service}, services::Services,
+        LinkName, Service, Services,
     };
     use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once, RwLock}, thread, time::Duration};
+    use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once}, thread, time::Duration};
     use crate::{
         conf::tcp_server_config::TcpServerConfig,
         core_::{net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}},
@@ -145,7 +145,7 @@ mod jds_routes {
         let test_items_count = test_data.len();        
         //
         // Configuring Services
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -153,10 +153,10 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        )));
         //
         // Configuring Receiver
-        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count))));
+        let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count)));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         //
@@ -169,7 +169,7 @@ mod jds_routes {
                     - {}.in-queue
         "#, receiver.read().unwrap().name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -188,12 +188,12 @@ mod jds_routes {
         "#, tcp_server_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
         // preparing MockServicePoints with the Vec<PontConfig>
-        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
+        let service_points = Arc::new(MockServicePoints::new(self_id, point_configs(&self_name)));
         services.wlock(self_id).insert(service_points);
         println!("\n{} | All configurations - ok\n", self_id);
         //
@@ -246,7 +246,7 @@ mod jds_routes {
         test_duration.run().unwrap();
         //
         // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -254,10 +254,10 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        )));
         //
         // Configuring Receiver
-        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", None)));
+        let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", None));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         let conf = serde_yaml::from_str(&format!(r#"
@@ -268,7 +268,7 @@ mod jds_routes {
                     - {}.in-queue
         "#, receiver.read().unwrap().name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -288,7 +288,7 @@ mod jds_routes {
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -296,7 +296,7 @@ mod jds_routes {
         let self_name = Name::new(self_id, "Jds");
         //
         // preparing MockServicePoints with the Vec<PontConfig>
-        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
+        let service_points = Arc::new(MockServicePoints::new(self_id, point_configs(&self_name)));
         services.wlock(self_id).insert(service_points);
         println!("\n{} | All configurations - ok\n", self_id);
         //
@@ -402,7 +402,7 @@ mod jds_routes {
         let test_items_count = test_data.len();
         //
         // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -410,10 +410,10 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        )));
         //
         // Configuring Receiver
-        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2))));
+        let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2)));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         let conf = serde_yaml::from_str(&format!(r#"
@@ -424,7 +424,7 @@ mod jds_routes {
                     - {}.in-queue
         "#, receiver.read().unwrap().name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -444,12 +444,12 @@ mod jds_routes {
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
         // preparing MockServicePoints with the Vec<PontConfig>
-        let service_points = Arc::new(RwLock::new(MockServicePoints::new(self_id, point_configs(&self_name))));
+        let service_points = Arc::new(MockServicePoints::new(self_id, point_configs(&self_name)));
         services.wlock(self_id).insert(service_points);
         println!("\n{} | All configurations - ok\n", self_id);
         //
@@ -541,7 +541,7 @@ mod jds_routes {
         test_duration.run().unwrap();
         //
         // Configuring MultiQueue service
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
@@ -549,7 +549,7 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        )));
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
                 in queue in-queue:
@@ -558,7 +558,7 @@ mod jds_routes {
                     - {}/MockRecvService0.in-queue
         "#, self_id)).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
         services.wlock(self_id).insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -576,7 +576,7 @@ mod jds_routes {
         "#, tcp_addr, self_id);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(RwLock::new(TcpServer::new(conf, services.clone())));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
         services.wlock(self_id).insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -628,7 +628,7 @@ mod jds_routes {
         let test_items_count = test_data.len();
         //
         // Configuring Receiver
-        let receiver = Arc::new(RwLock::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2))));
+        let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2)));
         services.wlock(self_id).insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         //

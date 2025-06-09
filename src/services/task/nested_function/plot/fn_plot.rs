@@ -1,9 +1,9 @@
 use chrono::Utc;
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{Cot, {Point, PointHlr, PointTxId}, Status}, types::bool::Bool};
+use sal_sync::services::{entity::{Cot, {Point, PointHlr, PointTxId}, Status}, types::Bool};
 use std::{sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender}, thread};
 use crate::{
-    core_::types::FnInOutRef,
+    core_::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -189,7 +189,7 @@ fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
     );
     thread::spawn(move || {
         loop {
-            if let Err(err) = recv.recv_timeout(sal_sync::services::service::RECV_TIMEOUT) {
+            if let Err(err) = recv.recv_timeout(sal_sync::services::RECV_TIMEOUT) {
                 match err {
                     std::sync::mpsc::RecvTimeoutError::Timeout => {},
                     std::sync::mpsc::RecvTimeoutError::Disconnected => {
