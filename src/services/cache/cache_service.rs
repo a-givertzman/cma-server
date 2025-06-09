@@ -12,19 +12,18 @@
 //!         /App/MultiQueue: []
 //! ```
 use std::{
-    env, fmt::Debug, fs, hash::{BuildHasher, BuildHasherDefault}, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering},
-    mpsc::{self, Receiver, RecvTimeoutError}, Arc, RwLock},
+    env, fmt::Debug, fs, hash::BuildHasherDefault, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering},
+    mpsc::{self, Receiver, RecvTimeoutError}, Arc},
     thread::{self, JoinHandle},
 };
 use chrono::Utc;
 use coco::Stack;
 use concat_string::concat_string;
+use dashmap::DashMap;
 use hashers::fx_hash::FxHasher;
-use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    collections::FxIndexMap,
-    services::{
+    collections::FxIndexMap, services::{
         entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status},
         safe_lock::rwlock::SafeLock, service::Service,
         services::Services, subscription::SubscriptionCriteria, types::bool::Bool,
@@ -34,7 +33,7 @@ use serde::Serialize;
 use serde_json::json;
 use crate::{
     conf::cache_service_config::CacheServiceConfig,
-    core_::constants::constants::RECV_TIMEOUT,
+    core_::{constants::constants::RECV_TIMEOUT, types::{FxDashMap, RwLock}},
     services::cache::delay_store::DelyStore
 };
 ///
@@ -46,7 +45,7 @@ pub struct CacheService {
     name: Name,
     conf: CacheServiceConfig,
     services: Arc<RwLock<Services>>,
-    cache: Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>,
+    cache: FxDashMap<String, Point>,
     handle: Stack<JoinHandle<()>>,
     is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
@@ -62,7 +61,7 @@ impl CacheService {
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
-            cache: Arc::new(RwLock::new(IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))),
+            cache: DashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
             handle: Stack::new(),
             is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
@@ -112,34 +111,27 @@ impl CacheService {
     }
     ///
     /// Loads retained on the disk points to the self cache
-    fn load(dbg: &Dbg, name: &Name, cache: &Arc<RwLock<IndexMap<String, Point, BuildHasherDefault<FxHasher>>>>) {
-        match cache.write() {
-            Ok(mut cache) => {
-                let path = Name::new("assets/cache/", name.join()).join().trim_start_matches('/').to_owned();
-                let path = Path::new(&path).join("cache.json");
-                match fs::OpenOptions::new().read(true).open(&path) {
-                    Ok(f) => {
-                        match serde_json::from_reader::<_, Vec<Point>>(f) {
-                            Ok(v) => {
-                                for point in v {
-                                    cache.insert(point.dest(), point);
-                                }
-                                log::info!("{}.load | Retained cache loaded from: '{:?}'", dbg, path);
-                            }
-                            Err(err) => {
-                                log::error!("{}.load | Deserialize error: '{:?}'\n\tin file: {:?}", dbg, err, path);
-                            }
-                        };
+    fn load(dbg: &Dbg, name: &Name, cache: &FxDashMap<String, Point>) {
+        let path = Name::new("assets/cache/", name.join()).join().trim_start_matches('/').to_owned();
+        let path = Path::new(&path).join("cache.json");
+        match fs::OpenOptions::new().read(true).open(&path) {
+            Ok(f) => {
+                match serde_json::from_reader::<_, Vec<Point>>(f) {
+                    Ok(v) => {
+                        for point in v {
+                            cache.insert(point.dest(), point);
+                        }
+                        log::info!("{}.load | Retained cache loaded from: '{:?}'", dbg, path);
                     }
                     Err(err) => {
-                        log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
+                        log::error!("{}.load | Deserialize error: '{:?}'\n\tin file: {:?}", dbg, err, path);
                     }
-                }
+                };
             }
             Err(err) => {
-                log::error!("{}.load | Error write access cache: {:?}", dbg, err);
+                log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
             }
-        };
+        }
     }
     ///
     /// Writes array of the points to the json file:
@@ -191,7 +183,7 @@ impl CacheService {
     }
     ///
     /// Stores self.cache on the disk
-    fn store<T: BuildHasher>(dbg: &Dbg, name: &Name, points: &IndexMap<String, Point, T>, status: Status) -> Result<(), String> {
+    fn store(dbg: &Dbg, name: &Name, points: FxIndexMap<String, Point>, status: Status) -> Result<(), String> {
         let points: Vec<Point> = points.into_iter().map(|(_dest, point)| {
             match point.clone() {
                 Point::Bool(mut point) => {
@@ -223,71 +215,73 @@ impl CacheService {
     pub fn initial(
         dbg: &Dbg,
         tx_id: usize, 
-        cache: &Arc<RwLock<FxIndexMap<String, Point>>>, 
+        cache: &FxDashMap<String, Point>,
         points: &[PointConfig],
         initial_status: Status,
     ) {
-        match cache.write() {
-            Ok(mut cache) => {
-                let timestamp = Utc::now();
-                for point_config in points {
-                    let point = match point_config.type_ {
-                        PointConfigType::Bool => Point::Bool(PointHlr::new(
-                            tx_id,
-                            &point_config.name,
-                            Bool(false),
-                            initial_status,
-                            Cot::Inf,
-                            timestamp,
-                        )),
-                        PointConfigType::Int => Point::Int(PointHlr::new(
-                            tx_id,
-                            &point_config.name,
-                            0,
-                            initial_status,
-                            Cot::Inf,
-                            timestamp,
-                        )),
-                        PointConfigType::Real => Point::Real(PointHlr::new(
-                            tx_id,
-                            &point_config.name,
-                            0.0,
-                            initial_status,
-                            Cot::Inf,
-                            timestamp,
-                        )),
-                        PointConfigType::Double => Point::Double(PointHlr::new(
-                            tx_id,
-                            &point_config.name,
-                            0.0,
-                            initial_status,
-                            Cot::Inf,
-                            timestamp,
-                        )),
-                        PointConfigType::String => Point::String(PointHlr::new(
-                            tx_id,
-                            &point_config.name,
-                            String::new(),
-                            initial_status,
-                            Cot::Inf,
-                            timestamp,
-                        )),
-                        PointConfigType::Json => Point::String(PointHlr::new(
-                            tx_id,
-                            &point_config.name,
-                            String::new(),
-                            initial_status,
-                            Cot::Inf,
-                            timestamp,
-                        )),
-                    };
-                    cache.insert(SubscriptionCriteria::dest(&Cot::Inf, &point_config.name), point);
-                }
-            }
-            Err(err) => {
-                log::error!("{}.initial | Error write access cache: {:?}", dbg, err);
-            }
+        let timestamp = Utc::now();
+        log::trace!("{}.initial | Initial cashe generated at {:?}", dbg, timestamp);
+        for point_config in points {
+            let point = match point_config.type_ {
+                PointConfigType::Bool => Point::Bool(PointHlr::new(
+                    tx_id,
+                    &point_config.name,
+                    Bool(false),
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
+                PointConfigType::Int => Point::Int(PointHlr::new(
+                    tx_id,
+                    &point_config.name,
+                    0,
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
+                PointConfigType::Real => Point::Real(PointHlr::new(
+                    tx_id,
+                    &point_config.name,
+                    0.0,
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
+                PointConfigType::Double => Point::Double(PointHlr::new(
+                    tx_id,
+                    &point_config.name,
+                    0.0,
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
+                PointConfigType::String => Point::String(PointHlr::new(
+                    tx_id,
+                    &point_config.name,
+                    String::new(),
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
+                PointConfigType::Json => Point::String(PointHlr::new(
+                    tx_id,
+                    &point_config.name,
+                    String::new(),
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
+            };
+            cache.insert(SubscriptionCriteria::dest(&Cot::Inf, &point_config.name), point);
         }
+    }
+    ///
+    /// Sorting cached values by key into IndexMap
+    fn sorted(cache: &FxDashMap<String, Point>) -> FxIndexMap<String, Point> {
+        let vec: Vec<(String, Point)> = cache.iter().map(|r| (r.key().to_string(), r.value().clone())).collect();
+        let mut sorted = FxIndexMap::from_iter(vec);
+        sorted.sort_by(|k1, _, k2, _| k1.cmp(&k2));
+        sorted
     }
 }
 //
@@ -348,16 +342,9 @@ impl Service for CacheService {
             'main: loop {
                 match rx_recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
-                        match cache.write() {
-                            Ok(mut cache) => {
-                                cache.insert(point.dest(), point);
-                                if dely_store.exceeded() && Self::store(&dbg, &self_name, &cache, retain_status).is_ok() {
-                                    dely_store.set_stored();
-                                }
-                            }
-                            Err(err) => {
-                                log::error!("{}.run | Error write access cache: {:?}", dbg, err);
-                            }
+                        cache.insert(point.dest(), point);
+                        if dely_store.exceeded() && Self::store(&dbg, &self_name, Self::sorted(&cache), retain_status).is_ok() {
+                            dely_store.set_stored();
                         }
                     }
                     Err(err) => {
@@ -374,7 +361,7 @@ impl Service for CacheService {
                 }
                 if exit.load(Ordering::SeqCst) {
                     if !dely_store.stored() {
-                        _ = Self::store(&dbg, &self_name, &cache.read().unwrap(), retain_status);
+                        _ = Self::store(&dbg, &self_name, Self::sorted(&cache), retain_status);
                     }
                     break;
                 }
@@ -403,13 +390,22 @@ impl Service for CacheService {
         let self_id = self.dbg.clone();
         log::info!("{}.gi | Gi requested from: {}", self_id, receiver_name);
         let (send, recv) = mpsc::channel();
-        let self_cache = self.cache.clone();
+        let cache = Arc::new(self.cache.clone());
         let points = points.to_owned();
         let handle = thread::spawn(move || {
             if points.is_empty() {
-                match self_cache.read() {
-                    Ok(cache) => {
-                        for point in cache.values() {
+                for point in cache.iter().map(|r| r.value().clone()) {
+                    match send.send(point.clone()) {
+                        Ok(_) => {}
+                        Err(err) => {
+                            log::error!("{}.gi | Send error: {:#?}", self_id, err);
+                        }
+                    }
+                }
+            } else {
+                for point in points {
+                    match cache.get(&point.destination()) {
+                        Some(point) => {
                             match send.send(point.clone()) {
                                 Ok(_) => {}
                                 Err(err) => {
@@ -417,38 +413,14 @@ impl Service for CacheService {
                                 }
                             }
                         }
-                    }
-                    Err(err) => {
-                        log::error!("{}.gi | Error read access cache: {:#?}", self_id, err);
-                    }
-                }
-            } else {
-                match self_cache.read() {
-                    Ok(cache) => {
-                        for point in points {
-                            match cache.get(&point.destination()) {
-                                Some(point) => {
-                                    match send.send(point.clone()) {
-                                        Ok(_) => {}
-                                        Err(err) => {
-                                            log::error!("{}.gi | Send error: {:#?}", self_id, err);
-                                        }
-                                    }
-                                }
-                                None => {
-                                    log::error!("{}.gi | Error, requested point '{}' - not found", self_id, point.destination());
-                                }
-                            }
+                        None => {
+                            log::error!("{}.gi | Error, requested point '{}' - not found", self_id, point.destination());
                         }
-
-                    }
-                    Err(err) => {
-                        log::error!("{}.gi | Error read access cache: {:#?}", self_id, err);
                     }
                 }
             }
         });
-        self.handle.push(handle);
+        // self.handle.push(handle);
         recv
     }
     //
