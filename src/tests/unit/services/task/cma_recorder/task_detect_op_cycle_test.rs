@@ -3,7 +3,7 @@
 mod cma_recorder {
     use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
     use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
+    use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig, core_::aprox_eq::aprox_eq::AproxEq,
@@ -220,25 +220,25 @@ mod cma_recorder {
             &test_data,
         )));
         services.wlock(self_id).insert(producer.clone());
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        multi_queue.write().unwrap().run().unwrap();
+        receiver.write().unwrap().run().unwrap();
         log::info!("receiver runing - ok");
-        let task_handle = task.write().unwrap().run().unwrap();
+        task.write().unwrap().run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.write().unwrap().run().unwrap();
+        producer.write().unwrap().run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver_handle.wait().unwrap();
+        receiver.read().unwrap().wait().unwrap();
         producer.read().unwrap().exit();
         task.read().unwrap().exit();
-        task_handle.wait().unwrap();
-        producer_handle.wait().unwrap();
+        task.read().unwrap().wait().unwrap();
+        producer.read().unwrap().wait().unwrap();
         multi_queue.read().unwrap().exit();
-        multi_queue_handle.wait().unwrap();
+        multi_queue.read().unwrap().wait().unwrap();
         services.rlock(self_id).exit();
-        services_handle.wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         let sent = producer.read().unwrap().sent().read().unwrap().len();
         let result = receiver.read().unwrap().received().read().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());

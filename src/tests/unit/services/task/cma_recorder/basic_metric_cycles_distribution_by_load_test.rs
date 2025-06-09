@@ -4,7 +4,7 @@ mod cma_recorder {
         use regex::Regex;
     use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
     use std::{env, fs, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
+    use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{api_client_config::ApiClientConfig, task_config::TaskConfig},
@@ -135,7 +135,7 @@ mod cma_recorder {
         receiver.read().unwrap().wait().unwrap();
         producer.read().unwrap().exit();
         multi_queue.read().unwrap().exit();
-        for task in tasks {
+        for task in &tasks {
             task.read().unwrap().exit();
         }
         for task in tasks {

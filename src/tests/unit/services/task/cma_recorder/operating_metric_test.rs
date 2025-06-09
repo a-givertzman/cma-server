@@ -4,7 +4,7 @@ mod cma_recorder {
     use regex::Regex;
     use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, multi_queue::{MultiQueue, MultiQueueConf}, safe_lock::rwlock::SafeLock, service::Service, services::Services};
     use std::{env, fs, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
+    use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::{api_client_config::ApiClientConfig, task_config::TaskConfig},
@@ -58,7 +58,6 @@ mod cma_recorder {
             "#).unwrap()),
         ))));
         let mut tasks = vec![];
-        let mut task_handles = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/operating-metric.yaml";
         match fs::read_to_string(path) {
             Ok(yaml_string) => {
@@ -293,36 +292,35 @@ mod cma_recorder {
         )));
         services.wlock(self_id).insert(producer.clone());
         thread::sleep(Duration::from_millis(100));
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
-        let api_client_handle = api_client.write().unwrap().run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        services.wlock(self_id).run().unwrap();
+        multi_queue.write().unwrap().run().unwrap();
+        api_client.write().unwrap().run().unwrap();
+        receiver.write().unwrap().run().unwrap();
         log::info!("receiver runing - ok");
         for task in &tasks {
-            let handle = task.write().unwrap().run().unwrap();
-            task_handles.push(handle);
+            task.write().unwrap().run().unwrap();
         }
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(600));
-        let producer_handle = producer.write().unwrap().run().unwrap();
+        producer.write().unwrap().run().unwrap();
         log::info!("producer runing - ok");
         thread::sleep(Duration::from_millis(300));
         let time = Instant::now();
-        receiver_handle.wait().unwrap();
+        receiver.read().unwrap().wait().unwrap();
         producer.read().unwrap().exit();
         multi_queue.read().unwrap().exit();
-        for task in tasks {
+        for task in &tasks {
             task.read().unwrap().exit();
         }
         services.rlock(self_id).exit();
-        for handle in task_handles {
-            handle.wait().unwrap();
+        for task in tasks {
+            task.read().unwrap().wait().unwrap();
         }
         api_client.read().unwrap().exit();
-        api_client_handle.wait().unwrap();
-        producer_handle.wait().unwrap();
-        multi_queue_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        api_client.read().unwrap().wait().unwrap();
+        producer.read().unwrap().wait().unwrap();
+        multi_queue.read().unwrap().wait().unwrap();
+        services.read().unwrap().wait().unwrap();
         let sent = producer.read().unwrap().sent().read().unwrap().len();
         let result = receiver.read().unwrap().received().read().unwrap().len();
         println!(" elapsed: {:?}", time.elapsed());

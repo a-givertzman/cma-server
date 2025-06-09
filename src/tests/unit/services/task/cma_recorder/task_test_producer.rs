@@ -7,7 +7,7 @@ use testing::entities::test_value::Value;
 ///
 /// 
 pub struct TaskTestProducer {
-    id: String,
+    dbg: String,
     name: Name,
     send_to: LinkName, 
     cycle: Duration,
@@ -16,6 +16,7 @@ pub struct TaskTestProducer {
     test_data: Vec<(String, Value)>,
     sent: Arc<RwLock<Vec<Point>>>,
     handle: Stack<JoinHandle<()>>,
+    is_finished: Arc<AtomicBool>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -24,7 +25,7 @@ impl TaskTestProducer {
     pub fn new(parent: &str, send_to: &str, cycle: Duration, services: Arc<RwLock<Services>>, test_data: &[(String, Value)]) -> Self {
         let name = Name::new(parent, format!("TaskTestProducer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
-            id: name.join(),
+            dbg: name.join(),
             name,
             send_to: LinkName::from_str(send_to).unwrap(),
             cycle,
@@ -33,6 +34,7 @@ impl TaskTestProducer {
             test_data: test_data.to_vec(),
             sent: Arc::new(RwLock::new(vec![])),
             handle: Stack::new(),
+            is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -55,7 +57,7 @@ impl Debug for TaskTestProducer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("TaskTestProducer")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -65,12 +67,12 @@ impl Service for TaskTestProducer {
     //
     // 
     fn run(&mut self) -> Result<(), Error> {
-        let self_id = self.id.clone();
+        let self_id = self.dbg.clone();
         let tx_id = PointTxId::from_str(&self_id);
         let cycle = self.cycle;
         let delayed = !cycle.is_zero();
         let tx_send = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.id, err);
+            panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let sent = self.sent.clone();
         let test_data = self.test_data.clone();
@@ -97,12 +99,12 @@ impl Service for TaskTestProducer {
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Started", self.id);
+                log::info!("{}.run | Started", self.dbg);
                 self.handle.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -136,18 +138,22 @@ impl Service for TaskTestProducer {
     }
     //
     //
-    fn wait(&self) -> sal_sync::services::future::Future<()> {
-        let dbg = self.id.clone();
-        let (future, sink) = sal_sync::services::future::Future::new();
-        if let Some(handle) = self.handle.pop() {
-            std::thread::spawn(move|| {
+    fn wait(&self) -> Result<(), Error> {
+        while !self.handle.is_empty() {
+            if let Some(handle) = self.handle.pop() {
                 if let Err(err) = handle.join() {
-                    log::warn!("{dbg}.wait | Error: {:?}", err);
+                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
+                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
                 }
-                sink.add(());
-            });
+            }
         }
-        future
+        self.is_finished.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.is_finished.load(Ordering::SeqCst)
     }
     //
     //
