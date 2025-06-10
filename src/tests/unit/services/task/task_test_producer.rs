@@ -5,7 +5,6 @@ use sal_sync::services::{
 };
 use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use testing::entities::test_value::Value;
-
 use crate::core_::RwLock;
 ///
 /// 
@@ -86,7 +85,7 @@ impl Service for TaskTestProducer {
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
                         sent.write().push(point.clone());
-                        log::trace!("{}.run | sent points: {:?}", self_id, sent.read().unwrap().len());
+                        log::trace!("{}.run | sent points: {:?}", self_id, sent.read().len());
                     }
                     Err(err) => {
                         log::warn!("{}.run | Error write to queue: {:?}", self_id, err);
@@ -96,7 +95,7 @@ impl Service for TaskTestProducer {
                     thread::sleep(cycle);
                 }
             }
-            log::info!("{}.run | All sent: {}", self_id, sent.read().unwrap().len());
+            log::info!("{}.run | All sent: {}", self_id, sent.read().len());
             // thread::sleep(Duration::from_secs_f32(0.1));
             // debug!("TaskTestProducer({}).run | calculating step - done ({:?})", name, cycle.elapsed());
         });

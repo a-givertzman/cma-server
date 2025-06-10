@@ -47,9 +47,9 @@ mod task {
             "#).unwrap()),
         )));
         let task = Arc::new(Task::new(config, services.clone()));
-        services.wlock(self_id).insert(task.clone());
+        services.insert(task.clone());
         let target  = 3;
-        let points = task.read().unwrap().points();
+        let points = task.points();
         let points_count = points.len();
         println!(" points count: {:?}", points_count);
         for point in points {

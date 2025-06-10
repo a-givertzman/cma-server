@@ -9,7 +9,7 @@ mod multi_queue {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use testing::{
         entities::test_value::Value,
-        stuff::{random_test_values::RandomTestValues, max_test_duration::TestDuration, wait::WaitTread},
+        stuff::{random_test_values::RandomTestValues, max_test_duration::TestDuration},
     };
     use crate::{
         conf::multi_queue_config::MultiQueueConf,
@@ -60,7 +60,7 @@ mod multi_queue {
         log::debug!("mqConf: {:?}", mq_conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         let mut receiver_handles = vec![];
         let mut receivers = vec![];
         for _ in 0..receiver_count {
@@ -70,7 +70,7 @@ mod multi_queue {
                 services.clone(),
                 Some(total_test_events),
             )));
-            services.wlock(self_id).insert(receiver.clone());
+            services.insert(receiver.clone());
             receivers.push(receiver);
         }
         let mq_handle = mq_service.write().unwrap().run().unwrap();
@@ -105,10 +105,10 @@ mod multi_queue {
                 dynamic_test_data.clone(),
                 None,
             )));
-            services.wlock(self_id).insert(sender.clone());
+            services.insert(sender.clone());
             senders.push(sender.clone());
         }
-        let services_handle = services.wlock(self_id).run().unwrap();
+        let services_handle = services.run().unwrap();
         for sender in &senders {
             let sender_handle = sender.write().unwrap().run().unwrap();
             sender_handles.push(sender_handle);
@@ -139,7 +139,7 @@ mod multi_queue {
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         mq_service.read().unwrap().exit();
-        services.rlock(self_id).exit();
+        services.exit();
         mq_handle.wait().unwrap();
         services_handle.wait().unwrap();
         test_duration.exit();
@@ -208,7 +208,7 @@ impl Service for MockReceiver {
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
             let self_id = self_id.as_str();
             let points = vec![];
-            let (_, recv) = services.wlock(self_id).subscribe(&subscribe, self_id, &points);
+            let (_, recv) = services.subscribe(&subscribe, self_id, &points);
             match recv_limit {
                 Some(recv_limit) => {
                     let mut received_len = 0;

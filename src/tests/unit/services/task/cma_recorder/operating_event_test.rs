@@ -89,7 +89,7 @@ mod cma_recorder {
             ").unwrap(),
         );
         let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
-        services.wlock(self_id).insert(multi_queue.clone());
+        services.insert(multi_queue.clone());
         let conf = ApiClientConfig::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service ApiClient:
@@ -468,7 +468,7 @@ mod cma_recorder {
         for task in &tasks {
             task.exit();
         }
-        services.rlock(self_id).exit();
+        services.exit();
         for task in tasks {
             task.wait().unwrap();
         }

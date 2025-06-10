@@ -8,7 +8,6 @@ use sal_sync::{
         Services,
     }
 };
-use testing::stuff::wait::WaitTread;
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
     core_::{constants::constants::RECV_TIMEOUT, Mutex},
@@ -184,18 +183,18 @@ impl Service for SlmpClient {
                         let h_w = slmp_write.run(tcp_stream);
                         match (h_r, h_w) {
                             (Ok(h_r), Ok(h_w)) => {
-                                h_r.wait().unwrap();
-                                h_w.wait().unwrap();
+                                h_r.join().unwrap();
+                                h_w.join().unwrap();
                             },
                             (Ok(h_r), Err(_)) => {
                                 Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
                                 exit.exit_pair();
-                                h_r.wait().unwrap();
+                                h_r.join().unwrap();
                             },
                             (Err(_), Ok(h_w)) => {
                                 Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
                                 exit.exit_pair();
-                                h_w.wait().unwrap();
+                                h_w.join().unwrap();
                             }
                             (Err(_), Err(_)) => {
                                 Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);

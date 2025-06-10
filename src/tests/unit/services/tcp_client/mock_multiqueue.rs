@@ -2,9 +2,11 @@ use coco::Stack;
 use sal_core::error::Error;
 use sal_sync::services::{
     entity::{Name, Object, Point},
-    service::{Service},
+    Service,
 };
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc, Mutex, RwLock}, thread::{self, JoinHandle}};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc}, thread::{self, JoinHandle}};
+
+use crate::core_::{Mutex, RwLock};
 ///
 /// 
 pub struct MockMultiQueue {
@@ -69,7 +71,7 @@ impl Service for MockMultiQueue {
     fn run(&self) -> Result<(), Error> {
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
-        let recv = self.recv.lock().unwrap().take().unwrap();
+        let recv = self.recv.lock().take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::spawn(move || {
@@ -79,7 +81,7 @@ impl Service for MockMultiQueue {
                     'main: loop {
                         match recv.recv() {
                             Ok(point) => {
-                                received.write().unwrap().push(point);
+                                received.write().push(point);
                                 received_count += 1;
                                 if received_count >= recv_limit {
                                     break;
@@ -98,7 +100,7 @@ impl Service for MockMultiQueue {
                     'main: loop {
                         match recv.recv() {
                             Ok(point) => {
-                                received.write().unwrap().push(point);
+                                received.write().push(point);
                             }
                             Err(err) => {
                                 log::warn!("{}.run | recv error: {:?}", self_id, err);

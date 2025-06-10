@@ -1,13 +1,11 @@
 #[cfg(test)]
 mod fn_average {
         use testing::entities::test_value::Value;
-    use sal_sync::services::{entity::{Point, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
+    use sal_sync::{math::AproxEq, services::{entity::{Point, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        core_::{
-            aprox_eq::aprox_eq::AproxEq, types::FnInOutRef
-        },
+        core_::FnInOutRef,
         services::task::nested_function::{
             fn_::FnOut, fn_average::FnAverage, fn_input::FnInput, fn_result::FnResult
         }

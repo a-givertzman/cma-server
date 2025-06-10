@@ -312,7 +312,7 @@ mod cma_recorder {
         for task in &tasks {
             task.exit();
         }
-        services.rlock(self_id).exit();
+        services.exit();
         for task in tasks {
             task.wait().unwrap();
         }

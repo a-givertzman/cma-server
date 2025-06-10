@@ -1,7 +1,6 @@
 #[cfg(test)]
 
 mod thread_test {
-        use testing::stuff::wait::WaitTread;
     use std::{sync::Once, thread, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     ///
@@ -36,7 +35,7 @@ mod thread_test {
             log::info!("thread | Finished");
         });
         thread::sleep(Duration::from_millis(3000));
-        handler.wait().unwrap();
+        handler.join().unwrap();
         // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
     }
 }

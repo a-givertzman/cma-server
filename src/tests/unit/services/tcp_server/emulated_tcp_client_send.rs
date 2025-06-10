@@ -4,7 +4,7 @@ use sal_sync::{
     kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged},
     services::{
         entity::{Name, Object, {{Point, ToPoint}, PointTxId}},
-        service::{Service},
+        Service,
     },
 };
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc, Arc, Mutex}, thread::{self, JoinHandle}, time::Duration};

@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-        use testing::stuff::wait::WaitTread;
     use std::{sync::{Once, mpsc::{self, RecvTimeoutError}}, time::Duration, thread::{self}};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::core_::constants::constants::RECV_TIMEOUT;
@@ -65,7 +64,7 @@ mod tests {
             };
             // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        _h.wait().unwrap();
+        _h.join().unwrap();
     }
 
 }

@@ -78,7 +78,7 @@ mod cma_recorder {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
@@ -139,7 +139,7 @@ mod cma_recorder {
         producer.wait().unwrap();
         multi_queue.exit();
         multi_queue.wait().unwrap();
-        services.rlock(self_id).exit();
+        services.exit();
         services.wait().unwrap();
         let sent = producer.sent().read().len();
         let result = receiver.received().read().len();

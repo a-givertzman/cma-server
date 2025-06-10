@@ -9,7 +9,6 @@ use libc::{
     // SIGFPE, SIGILL, SIGSEGV, 
 };
 use signal_hook::iterator::Signals;
-use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
         api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig,
@@ -72,7 +71,7 @@ impl App {
         log::info!("{}.run |     All services configured\n", dbg);
         thread::sleep(Duration::from_millis(100));
         services.run().unwrap();
-        // let name = services.rlock(&dbg).name().join();
+        // let name = services.name().join();
         // app.write().unwrap().insert_handles(&name, handles);
         thread::sleep(Duration::from_millis(100));
         log::info!("{}.run |     Starting services...", dbg);
@@ -187,7 +186,7 @@ impl App {
                             }
                         }
                     }).unwrap();
-                    handle.wait().unwrap();
+                    handle.join().unwrap();
                     signals_handle.close();
                 });
             }

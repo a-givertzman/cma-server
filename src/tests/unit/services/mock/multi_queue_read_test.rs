@@ -3,7 +3,7 @@
 mod multi_queue {
         use sal_sync::services::{entity::Object, retain::{retain_conf::RetainConf, retain_point_conf::RetainPointConf}, Service};
     use std::{sync::{Arc, Once}, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
+    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::services::{Services, task::nested_function::reset_counter::AtomicReset},
@@ -82,7 +82,7 @@ mod multi_queue {
                 "in-queue",
                 Some(iterations),
             )));
-            services.wlock(self_id).insert(recv_service.clone());
+            services.insert(recv_service.clone());
             recv_services.push(recv_service);
         }
         let mut conf = r#"
@@ -99,7 +99,7 @@ mod multi_queue {
         let mq_conf = MultiQueueConf::from_yaml(self_id, &conf);
         log::debug!("mqConf: {:?}", mq_conf);
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         let mut recv_handles = vec![];
         let timer = Instant::now();
         mock_send_service::COUNT.reset(0);
@@ -110,8 +110,8 @@ mod multi_queue {
             test_data.clone(),
             None,
         )));
-        services.wlock(self_id).insert(send_service.clone());
-        let services_handle = services.wlock(self_id).run().unwrap();
+        services.insert(send_service.clone());
+        let services_handle = services.run().unwrap();
         mq_service.write().unwrap().run().unwrap();
         for service in &mut recv_services {
             let handle = service.write().unwrap().run().unwrap();
@@ -135,7 +135,7 @@ mod multi_queue {
         for service in recv_services {
             service.read().unwrap().exit();
         }
-        services.rlock(self_id).exit();
+        services.exit();
         services_handle.wait().unwrap();
         test_duration.exit();
     }

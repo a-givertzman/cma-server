@@ -1,9 +1,9 @@
 #[cfg(test)]
 
 mod multi_queue {
-        use sal_sync::services::{retain::retain_conf::RetainConf, Service};
+    use sal_sync::services::{retain::retain_conf::RetainConf, Service};
     use std::{sync::{Arc, Once}, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
+    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::multi_queue_config::MultiQueueConf,
@@ -84,7 +84,7 @@ mod multi_queue {
         log::debug!("mqConf: {:?}", mq_conf);
         let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         let timer = Instant::now();
         let mut rs_services = vec![];
         for _ in 0..count {
@@ -96,10 +96,10 @@ mod multi_queue {
                 test_data.clone(),
                 Some(total_count),
             )));
-            services.wlock(self_id).insert(rs_service.clone());
+            services.insert(rs_service.clone());
             rs_services.push(rs_service);
         }
-        let services_handle = services.wlock(self_id).run().unwrap();
+        let services_handle = services.run().unwrap();
         mq_service.write().unwrap().run().unwrap();
         let mut recv_handles = vec![];
         for service in &mut rs_services {
@@ -125,7 +125,7 @@ mod multi_queue {
         for service in rs_services {
             service.read().unwrap().exit();
         }
-        services.rlock(self_id).exit();
+        services.exit();
         services_handle.wait().unwrap();
         // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         test_duration.exit();

@@ -2,9 +2,9 @@
 
 mod fn_retain {
     use chrono::Utc;
-    use sal_sync::services::{
-        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, {Point, PointConfigType, PointHlr}, Status}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services, types::Bool
-    };
+    use sal_sync::{math::AproxEq, services::{
+        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointConfigType, PointHlr, Status}, multi_queue::{MultiQueue, MultiQueueConf}, types::Bool, Service, Services
+    }};
     use std::{env, fs, io::Read, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -149,7 +149,7 @@ mod fn_retain {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
@@ -213,8 +213,8 @@ mod fn_retain {
         multi_queue.wait().unwrap();
         services.exit();
         services.wait().unwrap();
-        let sent = producer.sent().read().unwrap().len();
-        let result = receiver.received().read().unwrap().len();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -222,14 +222,14 @@ mod fn_retain {
         for (i, point) in target_data.iter().enumerate() {
             println!("target {}: {:?}", i, point)
         }
-        for (i, point) in receiver.received().read().unwrap().iter().enumerate() {
+        for (i, point) in receiver.received().read().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         // let target_name = "/AppTest/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.received().read().unwrap().iter() {
+        for result in receiver.received().read().iter() {
             let target = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             // assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
@@ -294,7 +294,7 @@ mod fn_retain {
         log::debug!("Task config points: {:#?}", config.points());
 
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
 
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
@@ -456,7 +456,7 @@ mod fn_retain {
         log::debug!("Task config points: {:#?}", config.points());
 
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
 
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
@@ -619,7 +619,7 @@ mod fn_retain {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,

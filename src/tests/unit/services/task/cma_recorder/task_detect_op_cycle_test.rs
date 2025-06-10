@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod cma_recorder {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services};
+    use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services}};
     use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -99,7 +99,7 @@ mod cma_recorder {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
@@ -237,7 +237,7 @@ mod cma_recorder {
         producer.wait().unwrap();
         multi_queue.exit();
         multi_queue.wait().unwrap();
-        services.rlock(self_id).exit();
+        services.exit();
         services.wait().unwrap();
         let sent = producer.sent().read().len();
         let result = receiver.received().read().len();

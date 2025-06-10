@@ -157,7 +157,7 @@ mod jds_routes {
         //
         // Configuring Receiver
         let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count)));
-        services.wlock(self_id).insert(receiver.clone());
+        services.insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         //
         // Configuring MultiQueue service
@@ -167,10 +167,10 @@ mod jds_routes {
                     max-length: 10000
                 send-to:
                     - {}.in-queue
-        "#, receiver.read().unwrap().name().join())).unwrap();
+        "#, receiver.name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
         let tcp_port = TestSession::free_tcp_port_str();
@@ -189,19 +189,19 @@ mod jds_routes {
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
-        services.wlock(self_id).insert(tcp_server.clone());
+        services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
         // preparing MockServicePoints with the Vec<PontConfig>
         let service_points = Arc::new(MockServicePoints::new(self_id, point_configs(&self_name)));
-        services.wlock(self_id).insert(service_points);
+        services.insert(service_points);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
-        services.wlock(self_id).run().unwrap();
-        receiver.write().unwrap().run().unwrap();
-        mq_service.write().unwrap().run().unwrap();
-        tcp_server.write().unwrap().run().unwrap();
+        services.run().unwrap();
+        receiver.run().unwrap();
+        mq_service.run().unwrap();
+        tcp_server.run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -214,20 +214,20 @@ mod jds_routes {
             tcp_stream.write_all(&request).unwrap();
         }
         thread::sleep(Duration::from_millis(2000));
-        receiver.read().unwrap().exit();
-        receiver.read().unwrap().wait().unwrap();
-        let received = receiver.write().unwrap().received();
+        receiver.exit();
+        receiver.wait().unwrap();
+        let received = receiver.received();
         let result = received.write().len();
         assert!(result == 0, "All points must be rejected, but some of them passed: \nresult: {:?}\ntarget: {:?}", result, 0);
-        receiver.write().unwrap().exit();
-        tcp_server.write().unwrap().exit();
-        mq_service.write().unwrap().exit();
-        services.rlock(self_id).exit();
+        receiver.exit();
+        tcp_server.exit();
+        mq_service.exit();
+        services.exit();
         //
         // Waiting while all services being finished
-        mq_service.write().unwrap().wait().unwrap();
-        tcp_server.write().unwrap().wait().unwrap();
-        services.wlock(self_id).wait().unwrap();
+        mq_service.wait().unwrap();
+        tcp_server.wait().unwrap();
+        services.wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();
@@ -258,7 +258,7 @@ mod jds_routes {
         //
         // Configuring Receiver
         let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", None));
-        services.wlock(self_id).insert(receiver.clone());
+        services.insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
@@ -266,10 +266,10 @@ mod jds_routes {
                     max-length: 10000
                 send-to:
                     - {}.in-queue
-        "#, receiver.read().unwrap().name().join())).unwrap();
+        "#, receiver.name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
         let secret = "123!@#qwe";
@@ -289,7 +289,7 @@ mod jds_routes {
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
-        services.wlock(self_id).insert(tcp_server.clone());
+        services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
         // Preparing test data
@@ -297,14 +297,14 @@ mod jds_routes {
         //
         // preparing MockServicePoints with the Vec<PontConfig>
         let service_points = Arc::new(MockServicePoints::new(self_id, point_configs(&self_name)));
-        services.wlock(self_id).insert(service_points);
+        services.insert(service_points);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
-        services.wlock(self_id).run().unwrap();
-        receiver.write().unwrap().run().unwrap();
-        mq_service.write().unwrap().run().unwrap();
-        tcp_server.write().unwrap().run().unwrap();
+        services.run().unwrap();
+        receiver.run().unwrap();
+        mq_service.run().unwrap();
+        tcp_server.run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -328,16 +328,16 @@ mod jds_routes {
         println!("{} | Auth.Secret request successful!\n", self_id);
         //
         // Stopping all services
-        receiver.write().unwrap().exit();
-        tcp_server.write().unwrap().exit();
-        mq_service.write().unwrap().exit();
-        services.rlock(self_id).exit();
+        receiver.exit();
+        tcp_server.exit();
+        mq_service.exit();
+        services.exit();
         //
         // Waiting while all services being finished
-        receiver.read().unwrap().wait().unwrap();
-        mq_service.read().unwrap().wait().unwrap();
-        tcp_server.read().unwrap().wait().unwrap();
-        services.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
+        mq_service.wait().unwrap();
+        tcp_server.wait().unwrap();
+        services.wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();
@@ -414,7 +414,7 @@ mod jds_routes {
         //
         // Configuring Receiver
         let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2)));
-        services.wlock(self_id).insert(receiver.clone());
+        services.insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
@@ -422,10 +422,10 @@ mod jds_routes {
                     max-length: 10000
                 send-to:
                     - {}.in-queue
-        "#, receiver.read().unwrap().name().join())).unwrap();
+        "#, receiver.name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
         let secret = "123!@#qwe";
@@ -445,19 +445,19 @@ mod jds_routes {
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
-        services.wlock(self_id).insert(tcp_server.clone());
+        services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
         // preparing MockServicePoints with the Vec<PontConfig>
         let service_points = Arc::new(MockServicePoints::new(self_id, point_configs(&self_name)));
-        services.wlock(self_id).insert(service_points);
+        services.insert(service_points);
         println!("\n{} | All configurations - ok\n", self_id);
         //
         // Starting all services
-        services.wlock(self_id).run().unwrap();
-        receiver.write().unwrap().run().unwrap();
-        mq_service.write().unwrap().run().unwrap();
-        tcp_server.write().unwrap().run().unwrap();
+        services.run().unwrap();
+        receiver.run().unwrap();
+        mq_service.run().unwrap();
+        tcp_server.run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(1000));
         //
@@ -512,16 +512,16 @@ mod jds_routes {
         println!("{} | Points request successful!\n", self_id);
         //
         // Stopping all services
-        receiver.write().unwrap().exit();
-        tcp_server.write().unwrap().exit();
-        mq_service.write().unwrap().exit();
-        services.rlock(self_id).exit();
+        receiver.exit();
+        tcp_server.exit();
+        mq_service.exit();
+        services.exit();
         //
         // Waiting while all services being finished
-        receiver.read().unwrap().wait().unwrap();
-        mq_service.read().unwrap().wait().unwrap();
-        tcp_server.read().unwrap().wait().unwrap();
-        services.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
+        mq_service.wait().unwrap();
+        tcp_server.wait().unwrap();
+        services.wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();
@@ -559,7 +559,7 @@ mod jds_routes {
         "#, self_id)).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
         let tcp_port = TestSession::free_tcp_port_str();
@@ -577,7 +577,7 @@ mod jds_routes {
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
-        services.wlock(self_id).insert(tcp_server.clone());
+        services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
         // Preparing test data
@@ -629,20 +629,20 @@ mod jds_routes {
         //
         // Configuring Receiver
         let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2)));
-        services.wlock(self_id).insert(receiver.clone());
+        services.insert(receiver.clone());
         println!("{} | MockRecvService - ready", self_id);
         //
         // Starting all services
-        services.wlock(self_id).run().unwrap();
-        receiver.write().unwrap().run().unwrap();
-        mq_service.write().unwrap().run().unwrap();
-        tcp_server.write().unwrap().run().unwrap();
+        services.run().unwrap();
+        receiver.run().unwrap();
+        mq_service.run().unwrap();
+        tcp_server.run().unwrap();
         println!("{} | All services - are executed", self_id);
         thread::sleep(Duration::from_millis(200));
         //
         // Sending test events
         println!("{} | Try to get send from MultiQueue...", self_id);
-        let send = services.wlock(self_id).get_link(&LinkName::from_str("MultiQueue.in-queue").unwrap()).unwrap();
+        let send = services.get_link(&LinkName::from_str("MultiQueue.in-queue").unwrap()).unwrap();
         println!("{} | Try to get send from MultiQueue - ok", self_id);
         let mut sent = 0;
         for point in test_data {
@@ -659,17 +659,17 @@ mod jds_routes {
         println!("{} | Total sent: {}", self_id, sent);
         //
         // Waiting while all events being received
-        receiver.read().unwrap().wait().unwrap();
+        receiver.wait().unwrap();
         thread::sleep(Duration::from_millis(800));
         //
         // Stopping all services
-        receiver.read().unwrap().exit();
-        tcp_server.read().unwrap().exit();
-        mq_service.read().unwrap().exit();
-        services.rlock(self_id).exit();
+        receiver.exit();
+        tcp_server.exit();
+        mq_service.exit();
+        services.exit();
         //
         // Verivications
-        let received = receiver.write().unwrap().received();
+        let received = receiver.received();
         let received_len = received.read().len();
         let result = received_len;
         let target = test_items_count * 2;
@@ -710,9 +710,9 @@ mod jds_routes {
         assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         //
         // Waiting while all services being finished
-        mq_service.read().unwrap().wait().unwrap();
-        tcp_server.read().unwrap().wait().unwrap();
-        services.read().unwrap().wait().unwrap();
+        mq_service.wait().unwrap();
+        tcp_server.wait().unwrap();
+        services.wait().unwrap();
         //
         // Reseting dureation timer
         test_duration.exit();

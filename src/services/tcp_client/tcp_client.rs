@@ -6,16 +6,15 @@ use sal_sync::services::{
 };
 use std::{
     collections::HashMap, fmt::Debug,
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock},
+    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc},
     thread::{self, JoinHandle}, time::Duration,
 };
-use testing::stuff::wait::WaitTread;
 use crate::{
     conf::tcp_client_config::TcpClientConfig,
-    core_::net::protocols::jds::{
+    core_::{net::protocols::jds::{
         jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize,
         jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize,
-    },
+    }, Mutex},
     tcp::{
         tcp_client_connect::TcpClientConnect, tcp_read_alive::TcpReadAlive,
         tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive,
@@ -92,11 +91,11 @@ impl Service for TcpClient {
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let exit_pair = Arc::new(AtomicBool::new(false));
-        let tx_send = self.services.rlock(&self_id).get_link(&conf.send_to).unwrap_or_else(|err| {
+        let tx_send = self.services.get_link(&conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let buffered = conf.rx_buffered; // TODO Read this from config
-        let in_recv = self.in_recv.lock().unwrap().take().unwrap();
+        let in_recv = self.in_recv.lock().take().unwrap();
         // let (cyclic, cycleInterval) = match conf.cycle {
         //     Some(interval) => (interval > Duration::ZERO, interval),
         //     None => (false, Duration::ZERO),
@@ -149,8 +148,8 @@ impl Service for TcpClient {
                 if let Some(tcp_stream) = tcp_client_connect.connect() {
                     let h_r = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
                     let h_w = tcp_write_alive.run(tcp_stream);
-                    h_r.wait().unwrap();
-                    h_w.wait().unwrap();
+                    h_r.join().unwrap();
+                    h_w.join().unwrap();
                 };
                 if exit.load(Ordering::SeqCst) {
                     break;

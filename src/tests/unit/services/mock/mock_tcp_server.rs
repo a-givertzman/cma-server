@@ -77,8 +77,8 @@ impl Service for MockTcpServer {
         let exit = self.exit.clone();
         let mq_service_name = self.multi_queue.service();
         log::debug!("{}.run | Lock services...", self_id);
-        let (_, rx_recv) = self.services.wlock(&self_id).subscribe(&mq_service_name, &self_id, &vec![]);
-        let tx_send = self.services.rlock(&self_id).get_link(&self.multi_queue).unwrap_or_else(|err| {
+        let (_, rx_recv) = self.services.subscribe(&mq_service_name, &self_id, &vec![]);
+        let tx_send = self.services.get_link(&self.multi_queue).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self_id, err);
         });
         log::debug!("{}.run | Lock services - ok", self_id);

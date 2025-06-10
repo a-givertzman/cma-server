@@ -1,5 +1,5 @@
 use std::{
-    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, mpsc::{self, Sender}, Arc, Mutex, RwLock},
+    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, mpsc::{self, Sender}, Arc},
     thread::{self, JoinHandle}, time::Duration,
 };
 use sal_sync::{
@@ -13,7 +13,7 @@ use sal_sync::{
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::failure::errors_limit::ErrorLimit,
+    core_::{failure::errors_limit::ErrorLimit, Mutex},
     services::slmp_client::slmp_db::SlmpDb,
 };
 
@@ -90,11 +90,10 @@ impl SlmpWrite {
                         ],
                     );
                     let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
-                    let mut dbs = dbs.lock().unwrap();
                     let points = conf.points().iter().map(|point_conf| {
                         SubscriptionCriteria::new(&point_conf.name, Cot::Act)
                     }).collect::<Vec<SubscriptionCriteria>>();
-                    let (_, recv) = services.wlock(&self_id).subscribe(&conf.subscribe, &self_id, &points);
+                    let (_, recv) = services.subscribe(&conf.subscribe, &self_id, &points);
                     let mut error_limit = ErrorLimit::new(3);
                     'main: while !exit.get() {
                         is_connected.add(true, format!("{}.run | Connection established", self_id));
@@ -105,7 +104,7 @@ impl SlmpWrite {
                                 let point_value = point.value();
                                 let db_name = point_name.split('/').nth(3).unwrap();
                                 log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
-                                match dbs.get_mut(db_name) {
+                                match dbs.lock().get_mut(db_name) {
                                     Some(db) => {
                                         match db.write(&mut tcp_stream, point.clone()) {
                                             Ok(_) => {

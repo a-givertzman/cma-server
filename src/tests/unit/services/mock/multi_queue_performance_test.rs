@@ -3,7 +3,7 @@
 mod multi_queue {
     use std::{collections::HashMap, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use sal_sync::services::{entity::Name, retain::retain_conf::RetainConf, Service};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
+    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         services::{Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
@@ -51,7 +51,7 @@ mod multi_queue {
                 Some(total_count)
             )));
             let receiver_id = format!("Receiver{}", i + 1);
-            services.wlock(self_id).insert(receiver.clone());
+            services.insert(receiver.clone());
             receivers.insert(receiver_id.clone(), receiver);
             println!(" Receiver {} created", receiver_id);
         }
@@ -67,7 +67,7 @@ mod multi_queue {
         )));
         println!(" Creating Mock Multiqueue - ok");
         println!(" Inserting Mock Multiqueue into Services...");
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         println!(" Inserting Mock Multiqueue into Services - ok");
         let test_data = RandomTestValues::new(
             self_id,
@@ -101,7 +101,7 @@ mod multi_queue {
             iterations,
         );
         let test_data: Vec<Value> = test_data.collect();
-        let services_handle = services.wlock(self_id).run().unwrap();
+        let services_handle = services.run().unwrap();
         println!(" Trying to start Multiqueue...:");
         mq_service.write().unwrap().run().unwrap();
         let mut recv_handles  = vec![];
@@ -159,7 +159,7 @@ mod multi_queue {
                 Some(total_count)
             )));
             let receiver_id = format!("/{}/MockRecvService{}", self_id, i);
-            services.wlock(self_id).insert(receiver.clone());
+            services.insert(receiver.clone());
             receivers.insert(receiver_id.clone(), receiver);
             println!(" Receiver {} created", receiver_id);
         }
@@ -175,7 +175,7 @@ mod multi_queue {
         )));
         println!(" Creating Mock Multiqueue - ok");
         println!(" Inserting Mock Multiqueue into Services...");
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         println!(" Inserting Mock Multiqueue into Services - ok");
         let test_data = RandomTestValues::new(
             self_id,
@@ -191,7 +191,7 @@ mod multi_queue {
             iterations,
         );
         let test_data: Vec<Value> = test_data.collect();
-        let services_handle = services.wlock(self_id).run().unwrap();
+        let services_handle = services.run().unwrap();
         thread::sleep(Duration::from_millis(50));
         println!(" Trying to start Multiqueue...:");
         mq_service.write().unwrap().run().unwrap();

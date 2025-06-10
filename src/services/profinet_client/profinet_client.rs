@@ -16,7 +16,6 @@ use sal_sync::{
         Services, subscription::SubscriptionCriteria,
     },
 };
-use testing::stuff::wait::WaitTread;
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
     core_::{
@@ -409,12 +408,12 @@ impl Service for ProfinetClient {
             }
             (Ok(handle_read), Err(err)) => {
                 self.exit();
-                handle_read.wait().unwrap();
+                handle_read.join().unwrap();
                 Err(error.pass_with("Error starting inner thread 'read'", err.to_string()))
             }
             (Err(err), Ok(handle_write)) => {
                 self.exit();
-                handle_write.wait().unwrap();
+                handle_write.join().unwrap();
                 Err(error.pass_with("Error starting inner thread 'write'", err.to_string()))
             }
             (Err(read_err), Err(write_err)) => {

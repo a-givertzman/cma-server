@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod fn_piecewise_line_approx {
-        use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
+        use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        core_::{aprox_eq::aprox_eq::AproxEq, types::FnInOutRef}, 
+        core_::FnInOutRef, 
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_piecewise_line_approx::FnPiecewiseLineApprox},
     };
     ///

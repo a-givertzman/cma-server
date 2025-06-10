@@ -1,9 +1,8 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread::{self, JoinHandle}};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::{self, JoinHandle}};
 use coco::Stack;
-use egui::mutex::RwLock;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, Point}, service::{Service}};
-use crate::core_::constants::constants::RECV_TIMEOUT;
+use sal_sync::services::{entity::{Name, Object, Point}, Service};
+use crate::core_::{constants::constants::RECV_TIMEOUT, Mutex, RwLock};
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -83,7 +82,7 @@ impl Service for MockRecvService {
         log::info!("{}.run | Starting...", self.dbg);
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
-        let in_recv = self.rx_recv.lock().unwrap().take().unwrap();
+        let in_recv = self.rx_recv.lock().take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {

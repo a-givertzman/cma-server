@@ -1,13 +1,11 @@
 #[cfg(test)]
 mod fn_smooth {
-        use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
+    use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
     use testing::entities::test_value::Value;
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        core_::{
-            aprox_eq::aprox_eq::AproxEq, types::FnInOutRef
-        },
+        core_::FnInOutRef,
         services::task::nested_function::{
             filter::fn_smooth::FnSmooth, fn_::FnOut, fn_input::FnInput
         }

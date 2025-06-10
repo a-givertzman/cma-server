@@ -3,7 +3,7 @@
 //! Which returns exactly the vector from which it was created
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}};
 use sal_core::error::Error;
-use sal_sync::services::{entity::{Name, Object, PointConfig}, service::{Service}};
+use sal_sync::services::{entity::{Name, Object, PointConfig}, Service};
 ///
 /// MockServicePoints implements points() method only.
 /// Which returns exactly the vector from which it was created

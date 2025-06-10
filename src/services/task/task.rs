@@ -4,13 +4,11 @@ use sal_sync::services::{
     entity::{Name, Object, {Point, PointConfig, PointTxId}}, Service, ServiceCycle, Services, subscription::SubscriptionCriteria
 };
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread::{self, JoinHandle}, time::Duration,
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration,
 };
 use concat_string::concat_string;
 use crate::{
-    core_::constants::constants::RECV_TIMEOUT,
-    conf::task_config::TaskConfig, 
-    services::task::task_nodes::TaskNodes,
+    conf::task_config::TaskConfig, core_::{constants::constants::RECV_TIMEOUT, Mutex}, services::task::task_nodes::TaskNodes
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations
@@ -57,7 +55,7 @@ impl Task {
         } else {
             log::debug!("{}.subscriptions | requesting points...", self.dbg);
             let mut self_points = self.conf.points();
-            let mut points = services.rlock(&self.dbg).points(&self.dbg).then(
+            let mut points = services.points(&self.dbg).then(
                 |points| points,
                 |err| {
                     log::error!("{}.subscriptions | Requesting Points error: {:?}", self.dbg, err);
@@ -96,19 +94,14 @@ impl Task {
     fn subscribe_(&self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<Services>) -> Receiver<Point> {
         match subscriptions {
             Some((service_name, points)) => {
-                let (_, rx_recv) = services.wlock(&self.dbg).subscribe(
+                let (_, rx_recv) = services.subscribe(
                     service_name,
                     &self.name.join(),
                     points,
                 );
                 rx_recv
             }
-            None => {
-                match self.rx_recv.lock() {
-                    Ok(mut rx_recv) => rx_recv.take().unwrap(),
-                    Err(err) => panic!("{}.subscribe | self.rx_recv - is not initialized, \n\t error: {:#?}", self.dbg, err),
-                }
-            }
+            None => self.rx_recv.lock().take().unwrap(),
         }
     }
 }
@@ -201,7 +194,7 @@ impl Service for Task {
                 }
             };
             if let Some((service_name, points)) = subscriptions {
-                if let Err(err) = services.wlock(&dbg).unsubscribe(&service_name,&self_name.join(), &points) {
+                if let Err(err) = services.unsubscribe(&service_name,&self_name.join(), &points) {
                     log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
                 }
             }

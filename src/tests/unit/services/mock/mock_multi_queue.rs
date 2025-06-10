@@ -77,10 +77,10 @@ impl Service for MockMultiQueue {
         let (send, recv) = mpsc::channel();
         let receiver_id = PointTxId::from_str(receiver_id);
         if points.is_empty() {
-            self.subscriptions.wlock(&self.id).add_broadcast(receiver_id, send.clone());
+            self.subscriptions.add_broadcast(receiver_id, send.clone());
         } else {
             for subscription_criteria in points {
-                self.subscriptions.wlock(&self.id).add_multicast(receiver_id, &subscription_criteria.destination(), send.clone());
+                self.subscriptions.add_multicast(receiver_id, &subscription_criteria.destination(), send.clone());
             }
         }
         (send, recv)
@@ -90,7 +90,7 @@ impl Service for MockMultiQueue {
     fn unsubscribe(&mut self, receiver_id: &str, points: &[SubscriptionCriteria]) -> Result<(), String> {
         let receiver_id = PointTxId::from_str(receiver_id);
         for subscription_criteria in points {
-            match self.subscriptions.wlock(&self.id).remove(&receiver_id, &subscription_criteria.destination()) {
+            match self.subscriptions.remove(&receiver_id, &subscription_criteria.destination()) {
                 Ok(_) => {}
                 Err(err) => {
                     return Err(err)
@@ -109,7 +109,7 @@ impl Service for MockMultiQueue {
         let subscriptions = self.subscriptions.clone();
         let mut static_subscriptions: HashMap<usize, Sender<Point>> = HashMap::new();
         for send_queue in &self.send_queues {
-            let tx_send = self.services.rlock(&self_id).get_link(&LinkName::from_str(send_queue).unwrap()).unwrap_or_else(|err| {
+            let tx_send = self.services.get_link(&LinkName::from_str(send_queue).unwrap()).unwrap_or_else(|err| {
                 panic!("{}.run | services.get_link error: {:#?}", self.id, err);
             });
             static_subscriptions.insert(PointTxId::from_str(send_queue), tx_send);
@@ -117,7 +117,7 @@ impl Service for MockMultiQueue {
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
             log::info!("{}.run | Preparing thread - ok", self_id);
             loop {
-                let subscriptions = subscriptions.rlock(&self_id);
+                let subscriptions = subscriptions;
                 match recv.recv() {
                     Ok(point) => {
                         let point_id = point.name();

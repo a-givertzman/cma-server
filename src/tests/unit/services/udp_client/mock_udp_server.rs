@@ -6,13 +6,13 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc}, thread::{self, JoinHandle}, time::Duration};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
     services::{entity::{Name, Object, Point},
-    service::{Service, ServiceCycle}, Services}
+    Service, ServiceCycle, Services}
 };
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,

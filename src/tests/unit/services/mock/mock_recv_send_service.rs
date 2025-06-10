@@ -129,7 +129,7 @@ impl Service for MockRecvSendService {
         });
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let txSend = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
+        let txSend = self.services.get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
         let test_data = self.test_data.clone();

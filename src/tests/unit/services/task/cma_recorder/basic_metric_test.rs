@@ -68,7 +68,7 @@ mod cma_recorder {
                             conf.insert(key.clone(), config.clone());
                             let config = TaskConfig::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
                             let task = Arc::new(Task::new(config, services.clone()));
-                            services.wlock( self_id).insert(task.clone());
+                            services.insert(task.clone());
                             tasks.push(task);
                         }
                     }
@@ -85,7 +85,7 @@ mod cma_recorder {
             ").unwrap(),
         );
         let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
-        services.wlock(self_id).insert(multi_queue.clone());
+        services.insert(multi_queue.clone());
         let conf = ApiClientConfig::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service ApiClient:
@@ -100,7 +100,7 @@ mod cma_recorder {
             ").unwrap(),
         );
         let api_client = Arc::new(ApiClient::new(conf));
-        services.wlock(self_id).insert(api_client.clone());
+        services.insert(api_client.clone());
         let test_data = vec![
         //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth
             ("00.-4",    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
@@ -277,7 +277,7 @@ mod cma_recorder {
             "in-queue",
             total_count * 1000,
         ));
-        services.wlock(self_id).insert(receiver.clone());
+        services.insert(receiver.clone());
         let test_data: Vec<(String, Value)> = test_data.into_iter().map(|(_, name, value, _, _, _)| {
             (name, value)
         }).collect();
@@ -310,7 +310,7 @@ mod cma_recorder {
         for task in &tasks {
             task.exit();
         }
-        services.rlock(self_id).exit();
+        services.exit();
         for task in tasks {
             task.wait().unwrap();
         }

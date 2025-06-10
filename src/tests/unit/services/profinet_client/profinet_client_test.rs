@@ -2,10 +2,10 @@
 
 mod profinet_client {
     use chrono::Utc;
-        use std::{sync::{Arc, Once}, thread, time::Duration};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
+    use std::{sync::{Arc, Once}, thread, time::Duration};
+    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, {Point, PointHlr, PointTxId}, Status}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services};
+    use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services}};
     use crate::{conf::profinet_client_config::profinet_client_config::ProfinetClientConfig, services::profinet_client::profinet_client::ProfinetClient};
     ///
     ///
@@ -47,15 +47,15 @@ mod profinet_client {
         let conf = serde_yaml::from_str(&conf).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
         let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
-        services.wlock(self_id).insert(mq_service.clone());
+        services.insert(mq_service.clone());
         let path = "./src/tests/unit/services/profinet_client/profinet_client.yaml";
         let conf = ProfinetClientConfig::read(self_name, path);
         log::debug!("config: {:?}", &conf);
         log::debug!("config points:");
         let client = Arc::new(ProfinetClient::new(conf, services.clone()));
-        services.wlock(self_id).insert(client.clone());
-        services.wlock(self_id).run().unwrap();
-        mq_service.write().unwrap().run().unwrap();
+        services.insert(client.clone());
+        services.run().unwrap();
+        mq_service.run().unwrap();
         client.run().unwrap();
         thread::sleep(Duration::from_millis(2000));
         let tx_id = PointTxId::from_str(self_id);
@@ -72,8 +72,8 @@ mod profinet_client {
             Value::Double(0.10201),
             Value::Double(9.10201),
         ];
-        let send = mq_service.write().unwrap().get_link("in-queue");
-        let (_, recv) = mq_service.write().unwrap().subscribe(self_id, &[]);
+        let send = mq_service.get_link("in-queue");
+        let (_, recv) = mq_service.subscribe(self_id, &[]);
         for value in test_data {
             let point = match value {
                 Value::Bool(value) => panic!("{} | Bool does not supported: {:?}", self_id, value),

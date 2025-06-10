@@ -83,8 +83,8 @@ mod fn_export {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
-        services.wlock(self_id).insert(task.clone());
+        log::debug!("Task points: {:#?}", task.points());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
             self_id,
             &serde_yaml::from_str(r"service MultiQueue:
@@ -93,7 +93,7 @@ mod fn_export {
             ").unwrap(),
         );
         let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
-        services.wlock(self_id).insert(multi_queue.clone());
+        services.insert(multi_queue.clone());
         let test_data = vec![
             (format!("/{}/Enable", self_id), Value::Bool(false)),
             (format!("/{}/Load", self_id), Value::Real(-7.035)),
@@ -225,7 +225,7 @@ mod fn_export {
         log::debug!("Task config points: {:#?}", config.points());
 
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
 
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
@@ -302,7 +302,7 @@ mod fn_export {
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         let target_name = "/App/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.received().read().unwrap().iter() {
+        for result in receiver.received().read().iter() {
             let (_, target) = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
@@ -351,7 +351,7 @@ mod fn_export {
         log::debug!("Task config points: {:#?}", config.points());
 
         let task = Arc::new(Task::new(config, services.clone()));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
+        log::debug!("Task points: {:#?}", task.points());
 
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(

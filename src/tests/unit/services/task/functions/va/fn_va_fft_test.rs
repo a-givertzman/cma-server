@@ -80,7 +80,7 @@ mod fn_va_fft {
                 "in-queue",
                 usize::MAX,
             ));
-            let receiver_name = receiver.read().unwrap().name().join();
+            let receiver_name = receiver.name().join();
             log::debug!("{} | receiver: '{}'", self_id, receiver_name);
             services.insert(receiver.clone());
             //
@@ -164,11 +164,11 @@ mod fn_va_fft {
 
                         // Receiving FnVaFft results
                         let time = Instant::now();
-                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
+                        while receiver.received().read().len() < fft_scalar.len() {
                             thread::sleep(Duration::from_millis(3));
                         }
-                        let received = receiver.read().unwrap().received().read().unwrap().to_vec();
-                        receiver.write().unwrap().clear_received();
+                        let received = receiver.received().read().to_vec();
+                        receiver.clear_received();
                         log::debug!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
                         log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];
@@ -256,7 +256,7 @@ mod fn_va_fft {
                 "in-queue",
                 usize::MAX,
             ));
-            let receiver_name = receiver.read().unwrap().name().join();
+            let receiver_name = receiver.name().join();
             log::debug!("{} | receiver: '{}'", self_id, receiver_name);
             services.insert(receiver.clone());
             //
@@ -342,11 +342,11 @@ mod fn_va_fft {
 
                         // Receiving FnVaFft results
                         let time = Instant::now();
-                        while receiver.read().unwrap().received().read().unwrap().len() < fft_scalar.len() {
+                        while receiver.received().read().len() < fft_scalar.len() {
                             thread::sleep(Duration::from_millis(3));
                         }
-                        let received = receiver.read().unwrap().received().read().unwrap().to_vec();
-                        receiver.write().unwrap().clear_received();
+                        let received = receiver.received().read().to_vec();
+                        receiver.clear_received();
                         log::debug!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
                         log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];

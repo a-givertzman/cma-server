@@ -108,7 +108,7 @@ mod task {
         receiver.wait().unwrap();
         producer.exit();
         task.exit();
-        services.rlock(self_id).exit();
+        services.exit();
         task.wait().unwrap();
         producer.wait().unwrap();
         services.wait().unwrap();

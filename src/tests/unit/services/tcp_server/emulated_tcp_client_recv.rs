@@ -4,16 +4,16 @@ use sal_sync::{
     kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged},
     services::{
         entity::{Name, Object, Point},
-        service::{Service},
+        Service,
     },
 };
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    core_::net::{
+    core_::{net::{
         connection_status::ConnectionStatus,
         protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize},
-    },
+    }, RwLock},
     tcp::tcp_stream_write::OpResult
 };
 
@@ -116,13 +116,13 @@ impl EmulatedTcpClientRecv {
     ///
     pub fn wait_all_received(&self) {
         let recv_limit = self.recv_limit.unwrap_or(0);
-        log::info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
+        log::info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().len(), recv_limit);
         loop {
-            if self.received.read().unwrap().len() >= recv_limit {
+            if self.received.read().len() >= recv_limit {
                 break;
             }
             thread::sleep(Duration::from_millis(100));
-            log::trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
+            log::trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().len(), recv_limit);
         }
     }
     ///
@@ -210,7 +210,7 @@ impl Service for EmulatedTcpClientRecv {
                                                 match result {
                                                     OpResult::Ok(point) => {
                                                         log::debug!("{}.run | received: {:?}", self_id, point);
-                                                        received.write().unwrap().push(point.clone());
+                                                        received.write().push(point.clone());
                                                         received_count += 1;
                                                         progress_percent = (received_count as f32) / (recv_limit as f32);
                                                         switch_state.add(progress_percent);
@@ -270,7 +270,7 @@ impl Service for EmulatedTcpClientRecv {
                                             log::trace!("{}.run | received: {:?}", self_id, result);
                                             match result {
                                                 OpResult::Ok(point) => {
-                                                    received.write().unwrap().push(point);
+                                                    received.write().push(point);
                                                 }
                                                 OpResult::Err(err) => {
                                                     log::warn!("{}.run | read socket error: {:?}", self_id, err);

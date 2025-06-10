@@ -56,7 +56,7 @@ mod task {
             "in-queue",
             iterations,
         ));
-        services.wlock(self_id).insert(receiver.clone());      // "TaskTestReceiver",
+        services.insert(receiver.clone());      // "TaskTestReceiver",
         let test_data = RandomTestValues::new(
             self_id,
             vec![
@@ -99,7 +99,7 @@ mod task {
         receiver.wait().unwrap();
         producer.exit();
         task.exit();
-        services.rlock(self_id).exit();
+        services.exit();
         task.wait().unwrap();
         producer.wait().unwrap();
         services.wait().unwrap();
@@ -182,11 +182,11 @@ mod task {
         log::trace!("task runing - ok");
         producer.wait().unwrap();
         receiver.wait().unwrap();
-        services.rlock(self_id).exit();
+        services.exit();
         services.wait().unwrap();
-        let producer_sent = producer.read().sent();
+        let producer_sent = producer.sent();
         let sent = producer_sent.read();
-        let receiver_received = receiver.read().received();
+        let receiver_received = receiver.received();
         let mut received = receiver_received.write();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent.len());

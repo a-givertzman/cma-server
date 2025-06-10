@@ -105,7 +105,7 @@ mod cma_recorder {
             "in-queue",
             total_count * 1000,
         ));
-        services.wlock(self_id).insert(receiver.clone());
+        services.insert(receiver.clone());
         let test_data: Vec<(String, Value)> = test_data.into_iter().map(|(_, name, value)| {
             (name, value)
         }).collect();
