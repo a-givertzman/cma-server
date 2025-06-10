@@ -7,10 +7,10 @@ use sal_sync::{
         Service,
     },
 };
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc, Arc, Mutex}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc, Arc}, thread::{self, JoinHandle}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    core_::net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, 
+    core_::{net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, Mutex}, 
     tcp::steam_read::StreamRead,
 };
 ///
@@ -50,11 +50,6 @@ impl EmulatedTcpClientSend {
             is_finished: Arc::new(AtomicBool::new(false)),
             exit: Arc::new(AtomicBool::new(false)),
         }
-    }
-    ///
-    /// Returns self id
-    pub fn id(&self) -> String {
-        self.dbg.to_string()
     }
     ///
     /// 
@@ -177,7 +172,7 @@ impl Service for EmulatedTcpClientSend {
                                     Ok(bytes) => {
                                         match &tcp_stream.write(&bytes) {
                                             Ok(_) => {
-                                                sent.lock().unwrap().push(point);
+                                                sent.lock().push(point);
                                                 sent_count += 1;
                                                 progress_percent = (sent_count as f32) / (total_count as f32);
                                                 switch_state.add(progress_percent);

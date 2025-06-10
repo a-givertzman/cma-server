@@ -1,13 +1,12 @@
 #[cfg(test)]
 mod api_client {
-        use sal_sync::services::{entity::ToPoint, Service};
-    use std::{sync::{Once, Arc, Mutex}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
+    use sal_sync::services::{entity::ToPoint, Service};
+    use std::{sync::{Once, Arc}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use api_tools::api::reply::api_reply::ApiReply;
     use crate::{
-        conf::api_client_config::ApiClientConfig,
-        services::api_cient::api_client::ApiClient,
+        conf::api_client_config::ApiClientConfig, core_::Mutex, services::api_cient::api_client::ApiClient
     };
     ///
     static INIT: Once = Once::new();
@@ -79,7 +78,7 @@ mod api_client {
         let received_ref = received.clone();
         let mut buf = [0; 1024 * 4];
         let receiver_handle = thread::spawn(move || {
-            let mut received = received_ref.lock().unwrap();
+            let mut received = received_ref.lock();
             log::info!("TCP server | Preparing test server...");
             match TcpListener::bind(addr) {
                 Ok(listener) => {
@@ -176,7 +175,7 @@ mod api_client {
         println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", count);
         println!("sent events: {:?}", sent.len());
-        let mut received = received.lock().unwrap();
+        let mut received = received.lock();
         println!("recv events: {:?}", received.len());
         assert!(sent.len() == count, "sent: {:?}\ntarget: {:?}", sent.len(), count);
         assert!(received.len() == count, "received: {:?}\ntarget: {:?}", received.len(), count);

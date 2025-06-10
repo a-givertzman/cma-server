@@ -1,11 +1,11 @@
-#![allow(non_snake_case)]
-
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc, Mutex}, thread};
+    use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}, thread};
     use std::{sync::Once, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+
+    use crate::core_::Mutex;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     // use super::*;
@@ -118,10 +118,10 @@ mod tests {
             };
             match ConnectState::from( self.state.load(Ordering::Relaxed) ) {
                 ConnectState::Connected => {
-                    let stream = self.stream.lock().unwrap().pop().unwrap();
-                    let streamClone= stream.clone();
-                    self.stream.lock().unwrap().push(stream);
-                    Ok(streamClone)
+                    let stream = self.stream.lock().pop().unwrap();
+                    let stream_clone= stream.clone();
+                    self.stream.lock().push(stream);
+                    Ok(stream_clone)
                 }
                 _ => Err(String::from(format!("{:?}", ConnectState::from( self.state.load(Ordering::Relaxed) )))),
             }
@@ -138,7 +138,7 @@ mod tests {
                     match rnd.random_bool(0.7) {
                         true => {
                             println!("TestConnect | connecting - ok");
-                            stream.lock().unwrap().push(format!("Stream"));
+                            stream.lock().push(format!("Stream"));
                             state.store(ConnectState::Connected.value(), Ordering::SeqCst)
                         }
                         false => {

@@ -1,7 +1,7 @@
-use std::{net::TcpStream, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, thread::{self, JoinHandle}, time::Duration};
+use std::{net::TcpStream, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use sal_sync::services::ServiceCycle;
 use crate::{
-    core_::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::{OpResult, TcpStreamWrite} 
+    core_::{net::connection_status::ConnectionStatus, Mutex}, tcp::tcp_stream_write::{OpResult, TcpStreamWrite} 
 };
 ///
 /// Transfering points from Channel Sender<PointType> to the JdsStream (socket)
@@ -39,7 +39,7 @@ impl TcpWriteAlive {
         let exit_pair = self.exit_pair.clone();
         let mut cycle = self.cycle.map(|cycle| ServiceCycle::new(&self_id, cycle));
         let stream_write = self.stream_write.clone();
-        let mut stream = stream_write.lock().unwrap().take().unwrap();
+        let mut stream = stream_write.lock().take().unwrap();
         log::info!("{}.run | Preparing thread...", self.id);
         let handle = thread::Builder::new().name(format!("{} - Write", self_id.clone())).spawn(move || {
             log::info!("{}.run | Preparing thread - ok", self_id);
@@ -70,7 +70,7 @@ impl TcpWriteAlive {
                     break 'main;
                 }
             }
-            stream_write.lock().unwrap().replace(stream);
+            stream_write.lock().replace(stream);
             log::info!("{}.run | Exit", self_id);
         }).unwrap();
         log::info!("{}.run | started", self.id);

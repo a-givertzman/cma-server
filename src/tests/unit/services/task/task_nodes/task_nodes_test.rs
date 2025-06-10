@@ -4,13 +4,12 @@ mod task_nodes {
     use coco::Stack;
     use sal_core::error::Error;
     use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services};
-    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once}, thread::{self, JoinHandle}};
+    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Once}, thread::{self, JoinHandle}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig,
-        services::task::{nested_function::{
+        conf::task_config::TaskConfig, core_::Mutex, services::task::{nested_function::{
             comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric,
-        }, task_nodes::TaskNodes},
+        }, task_nodes::TaskNodes}
     };
     ///
     ///
@@ -211,7 +210,7 @@ mod task_nodes {
             log::info!("{}.run | Starting...", self.dbg);
             let self_id = self.dbg.clone();
             let exit = self.exit.clone();
-            let rx_recv = self.rx_recv.lock().unwrap().take().unwrap();
+            let rx_recv = self.rx_recv.lock().take().unwrap();
             let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
                 loop {
                     match rx_recv.recv() {
