@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::{
-    conf::ConfTree, entity::Name, multi_queue::{MultiQueue, MultiQueueConf},
+    conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf,
     Service, Services,
 };
 use std::{path::Path, process::exit, sync::Arc, thread, time::Duration};

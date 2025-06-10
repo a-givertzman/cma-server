@@ -8,7 +8,7 @@ use sal_sync::{
     services::{
         entity::{Cot, {Point, PointHlr}, Status},
         ServiceCycle, Services,
-        subscription::SubscriptionCriteria,
+        SubscriptionCriteria,
     },
 };
 use crate::{

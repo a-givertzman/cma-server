@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, Services, subscription::SubscriptionCriteria};
+use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, Services, SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     core_::{

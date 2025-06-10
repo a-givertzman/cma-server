@@ -8,7 +8,7 @@ mod jds_routes {
             {Point, PointConfig, PointHlr, PointTxId},
             Status,
         },
-        multi_queue::{MultiQueue, MultiQueueConf},
+        MultiQueue, MultiQueueConf,
         LinkName, Service, Services,
     };
     use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};

@@ -2,7 +2,7 @@
 
 mod cma_recorder {
     use regex::Regex;
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services};
+    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, MultiQueue, MultiQueueConf, Service, Services};
     use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};

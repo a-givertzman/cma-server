@@ -3,7 +3,7 @@
 mod fn_export {
     use sal_sync::services::{
         conf::{ConfTree, ServicesConf}, entity::Name,
-        multi_queue::{MultiQueue, MultiQueueConf},
+        MultiQueue, MultiQueueConf,
         Service, Services,
     };
     use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};

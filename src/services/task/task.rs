@@ -1,7 +1,7 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{
-    entity::{Name, Object, {Point, PointConfig, PointTxId}}, Service, ServiceCycle, Services, subscription::SubscriptionCriteria
+    entity::{Name, Object, {Point, PointConfig, PointTxId}}, Service, ServiceCycle, Services, SubscriptionCriteria
 };
 use std::{
     collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration,

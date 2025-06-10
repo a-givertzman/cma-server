@@ -196,21 +196,21 @@ impl Service for TcpClient {
     }
     //
     //
-    fn subscribe(&self, receiver_id: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
+    fn subscribe(&self, receiver_id: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
         let _ = receiver_id;
         let _ = points;
         std::panic!("{}.subscribe | Does not supported", self.dbg)
     }
     //
     //
-    fn extend_subscription(&self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
+    fn extend_subscription(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.extend_subscription | Does not supported", self.dbg)
     }
     //
     //
-    fn unsubscribe(&self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Result<(), Error> {
+    fn unsubscribe(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Result<(), Error> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.unsubscribe | Does not supported", self.dbg)
@@ -222,7 +222,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::subscription::SubscriptionCriteria]) -> Receiver<Point> {
+    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Receiver<Point> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.gi | Does not supported", self.dbg)

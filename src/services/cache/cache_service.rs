@@ -26,7 +26,7 @@ use sal_sync::{
     collections::FxIndexMap, services::{
         entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status},
         Service,
-        Services, subscription::SubscriptionCriteria, types::Bool,
+        Services, SubscriptionCriteria, types::Bool,
     }
 };
 use serde::Serialize;

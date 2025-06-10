@@ -5,7 +5,7 @@ mod profinet_client {
     use std::{sync::{Arc, Once}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, multi_queue::{MultiQueue, MultiQueueConf}, Service, Services}};
+    use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, MultiQueue, MultiQueueConf, Service, Services}};
     use crate::{conf::profinet_client_config::profinet_client_config::ProfinetClientConfig, services::profinet_client::profinet_client::ProfinetClient};
     ///
     ///

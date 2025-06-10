@@ -13,7 +13,7 @@ use sal_sync::{
     services::{
         conf::DiagKeywd, entity::{Cot, Name, Object, Point, PointConfig, PointHlr, PointTxId, Status},
         Service, ServiceCycle,
-        Services, subscription::SubscriptionCriteria,
+        Services, SubscriptionCriteria,
     },
 };
 use crate::{

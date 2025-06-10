@@ -4,7 +4,7 @@ use std::{
 use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Cot, Name, Object, Point}, Service, Services, subscription::SubscriptionCriteria};
+use sal_sync::services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
