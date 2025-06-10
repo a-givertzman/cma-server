@@ -37,6 +37,7 @@ pub struct MockUdpServer {
     dbg: Dbg,
     name: Name,
     conf: MockUdpServerConfig,
+    #[allow(unused)]
     services: Arc<Services>,
     test_data: Vec<i16>,
     handle: Stack<JoinHandle<()>>,
