@@ -78,6 +78,7 @@ impl TcpWriteAlive {
     }
     ///
     /// 
+    #[allow(unused)]
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
     }

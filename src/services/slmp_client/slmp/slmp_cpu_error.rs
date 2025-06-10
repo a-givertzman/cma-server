@@ -26,6 +26,7 @@ pub enum SlmpCpuError {
     PasswordErrorCountIs9OrLess                  = 0xC810,
     PasswordErrorCountIs10                       = 0xC815,
     AuthenticationIsLocked                       = 0xC816,
+    #[allow(unused)]
     Inner(String),
 }
 //

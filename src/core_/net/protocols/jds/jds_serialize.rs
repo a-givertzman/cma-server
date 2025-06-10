@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use sal_sync::services::entity::{Name, Object, Point};
 use crate::{
-    core_::{constants::constants::RECV_TIMEOUT, failure::recv_error::RecvError}, tcp::steam_read::StreamRead
+    core_::{constants::constants::RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
 };
 ///
 /// Converts PointType into the squence of bytes

@@ -19,7 +19,7 @@ use sal_sync::{
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
     core_::{
-        constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit, Mutex,
+        constants::constants::RECV_TIMEOUT, failure::ErrorLimit, Mutex,
     },
     services::{
         diagnosis::diag_point::DiagPoint,

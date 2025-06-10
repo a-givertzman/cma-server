@@ -6,7 +6,7 @@ mod tcp_stream {
     use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
     use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::core_::{constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit};
+    use crate::core_::{constants::constants::RECV_TIMEOUT, failure::ErrorLimit};
     ///
     ///
     static INIT: Once = Once::new();

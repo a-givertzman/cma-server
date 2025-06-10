@@ -1,7 +1,5 @@
-pub mod error_string;
+mod recv_error;
+mod errors_limit;
 
-pub mod failure;
-
-pub mod recv_error;
-
-pub mod errors_limit;
+pub use recv_error::*;
+pub use errors_limit::*;

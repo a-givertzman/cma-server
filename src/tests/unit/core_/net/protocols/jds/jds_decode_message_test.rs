@@ -8,7 +8,7 @@ mod jds_decode_message {
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::{
-        failure::errors_limit::ErrorLimit, net::{connection_status::ConnectionStatus, protocols::jds::jds_decode_message::JdsDecodeMessage},
+        failure::ErrorLimit, net::{connection_status::ConnectionStatus, protocols::jds::jds_decode_message::JdsDecodeMessage},
     }, tcp::tcp_stream_write::OpResult};
     ///
     ///

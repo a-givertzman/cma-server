@@ -39,7 +39,7 @@ use sal_sync::{
 };
 use crate::{
     conf::udp_client_config::udp_client_config::UdpClientConfig,
-    core_::{failure::errors_limit::ErrorLimit, RwLock},
+    core_::{failure::ErrorLimit, RwLock},
 };
 use super::udp_client_db::UdpClientDb;
 ///
@@ -256,7 +256,7 @@ impl Service for UdpClient {
         *SELF_ID.write() = dbg.clone();
         let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
             let dbg = &dbg;
-            let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
+            let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
                 (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
                 (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
                 (NotifyState::UdpBindError,   Box::new(|message| log::error!("{}", message))),
