@@ -82,8 +82,8 @@ impl JdsConnection {
     /// - parent - id of the parent
     /// - path - path of the parent
     pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
-        let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
-        let name = Name::new(parent, "JdsConnection");
+        let dbg = Dbg::new(parent_id, format!("Jds/{}", connection_id));
+        let name = Name::new(parent, "Jds");
         log::debug!("{}.new | name: {:#?}", dbg, name);
         let action_recv_stack = Stack::new();
         action_recv_stack.push(action_recv);
