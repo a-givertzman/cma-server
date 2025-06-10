@@ -89,7 +89,7 @@ impl ProfinetClientConfig {
         let slot = conf.get("slot").unwrap();
         log::debug!("{}.new | slot: {:?}", dbg, slot);
         let diagnosis = conf.get_diagnosis(&self_name);
-        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis);
+        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis.iter().map(|(k, v)| format!("{}: {}", k, v.name)).collect::<Vec<_>>());
         let mut dbs = IndexMap::new();
         for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "protocol", "description", "ip", "rack", "slot", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();

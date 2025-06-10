@@ -69,7 +69,7 @@ impl SlmpClientConfig {
         let port = conf.get("port").unwrap();
         log::debug!("{}.new | port: {:?}", dbg, ip);
         let diagnosis = conf.get_diagnosis(&self_name);
-        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis);
+        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis.iter().map(|(k, v)| format!("{}: {}", k, v.name)).collect::<Vec<_>>());
         let mut dbs = IndexMap::new();
         for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "description", "ip", "port", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();
