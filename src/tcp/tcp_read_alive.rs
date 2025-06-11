@@ -1,8 +1,8 @@
 use log::LevelFilter;
-use sal_sync::services::{entity::Point, ServiceCycle};
+use sal_sync::{services::{entity::Point, ServiceCycle}, sync::channel::Sender};
 use std::{
     io::BufReader, net::TcpStream, 
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc},
+    sync::{atomic::{AtomicBool, Ordering}, Arc},
     thread::{self, JoinHandle}, time::Duration,
 };
 use crate::{core_::{net::connection_status::ConnectionStatus, Mutex}, tcp::tcp_stream_write::OpResult};

@@ -1,12 +1,11 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{
-    entity::{Name, Object, Point},
-    Service, Services,
-};
+use sal_sync::{services::{
+    entity::{Name, Object, Point}, future::Future, Service, Services
+}, sync::channel::{self, Receiver, Sender}};
 use std::{
     collections::HashMap, fmt::Debug,
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc},
+    sync::{atomic::{AtomicBool, Ordering}, Arc},
     thread::{self, JoinHandle}, time::Duration,
 };
 use crate::{
@@ -43,7 +42,7 @@ impl TcpClient {
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
     pub fn new(conf: TcpClientConfig, services: Arc<Services>) -> Self {
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
@@ -222,7 +221,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Receiver<Point> {
+    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Future<Vec<Point>> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.gi | Does not supported", self.dbg)

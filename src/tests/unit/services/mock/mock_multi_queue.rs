@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use sal_sync::services::{
     entity::{Name, Object, {Point, PointTxId}},
     service::{LinkName, Service},
@@ -27,7 +27,7 @@ impl MockMultiQueue {
     /// - [parent] - the ID if the parent entity
     pub fn new(parent: impl Into<String>, tx_queues: Vec<String>, rx_queue: impl Into<String>, services: Arc<Services>) -> Self {
         let name = Name::new(parent, format!("MockMultiQueue{}", COUNT.fetch_add(1, Ordering::Relaxed)));
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         Self {
             id: name.join(),
             name: name.clone(),
@@ -74,7 +74,7 @@ impl Service for MockMultiQueue {
     //
     //
     fn subscribe(&mut self, receiver_id: &str, points: &[SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         let receiver_id = PointTxId::from_str(receiver_id);
         if points.is_empty() {
             self.subscriptions.add_broadcast(receiver_id, send.clone());

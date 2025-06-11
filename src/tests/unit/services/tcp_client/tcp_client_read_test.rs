@@ -1,9 +1,9 @@
 #[cfg(test)]
 
 mod tcp_client {
-    use sal_sync::services::{
-        conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, Service, Services
-    };
+    use sal_sync::{services::{
+        conf::{ConfTree, ServicesConf}, entity::{Object, Point, ToPoint}, Service, Services
+    }, sync::channel};
     use std::{io::Write, net::TcpListener, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -137,7 +137,7 @@ mod tcp_client {
     fn mock_tcp_server(addr: String, count: usize, test_data: Vec<Value>, sent: Arc<RwLock<Vec<Point>>>, multiqueue: Arc<MockMultiQueue>) {
         thread::spawn(move || {
             log::info!("TCP server | Preparing test server...");
-            let (send, recv) = std::sync::mpsc::channel();
+            let (send, recv) = channel::unbounded();
             let mut jds = JdsEncodeMessage::new(
                 "test",
                 JdsSerialize::new(

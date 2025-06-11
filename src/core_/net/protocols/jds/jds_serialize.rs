@@ -1,5 +1,4 @@
-use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use sal_sync::services::entity::{Name, Object, Point};
+use sal_sync::{services::entity::{Name, Object, Point}, sync::channel::{Receiver, RecvTimeoutError}};
 use crate::{
     core_::{constants::constants::RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
 };
@@ -50,7 +49,7 @@ impl StreamRead<serde_json::Value, RecvError> for JdsSerialize {
             Err(err) => {
                 match err {
                     RecvTimeoutError::Timeout => Err(RecvError::Timeout),
-                    RecvTimeoutError::Disconnected => Err(RecvError::Disconnected),
+                    _ => Err(RecvError::Disconnected),
                 }
             }
         }

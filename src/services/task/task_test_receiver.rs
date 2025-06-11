@@ -1,7 +1,7 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, Point}, Service};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::channel::{self, Receiver, RecvTimeoutError, Sender}};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use crate::core_::{Mutex, RwLock};
 ///
 /// 
@@ -26,7 +26,7 @@ impl TaskTestReceiver {
     /// - `iterations` - count down with each received Point, when zero TaskTestReceiver exits
     #[allow(unused)]
     pub fn new(parent: &str, index: impl Into<String>, recv_queue: &str, iterations: usize) -> Self {
-        let (send, recv): (Sender<Point>, Receiver<Point>) = mpsc::channel();
+        let (send, recv): (Sender<Point>, Receiver<Point>) = channel::unbounded();
         let name = Name::new(parent, format!("TaskTestReceiver{}", index.into()));
         Self {
             dbg: Dbg::new(name.parent(), name.me()),
@@ -122,8 +122,8 @@ impl Service for TaskTestReceiver {
                     }
                     Err(err) => {
                         match err {
-                            mpsc::RecvTimeoutError::Timeout => {},
-                            mpsc::RecvTimeoutError::Disconnected => log::error!("{}.run | Error receiving from queue: {:?}", dbg, err),
+                            RecvTimeoutError::Timeout => {},
+                            _ => log::error!("{}.run | Error receiving from queue: {:?}", dbg, err),
                         }
                         // error_count += 1;
                         // if errorCount > 10 {

@@ -1,10 +1,10 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{
-    entity::{Name, Object, {Point, PointConfig, PointTxId}}, Service, ServiceCycle, Services, SubscriptionCriteria
-};
+use sal_sync::{services::{
+    entity::{Name, Object, Point, PointConfig, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
+}, sync::channel::{self, Receiver, RecvTimeoutError, Sender}};
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration,
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration,
 };
 use concat_string::concat_string;
 use crate::{
@@ -33,7 +33,7 @@ impl Task {
     /// Creates new instance of [Task]
     /// - [parent] - the ID if the parent entity
     pub fn new(conf: TaskConfig, services: Arc<Services>) -> Task {
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         Task {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
@@ -169,8 +169,8 @@ impl Service for Task {
                         Err(err) => {
                             match err {
                                 RecvTimeoutError::Timeout => log::trace!("{}.run | Receive error: {:?}", dbg, err),
-                                RecvTimeoutError::Disconnected => {
-                                    log::error!("{}.run | Error receiving from queue: {:?}", dbg, err);
+                                _ => {
+                                    log::trace!("{}.run | Error receiving from queue: {:?}", dbg, err);
                                     break 'main;
                                 }
                             }

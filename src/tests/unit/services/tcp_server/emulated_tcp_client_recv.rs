@@ -5,7 +5,7 @@ use sal_sync::{
     services::{
         entity::{Name, Object, Point},
         Service,
-    },
+    }, sync::channel::Sender,
 };
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use testing::entities::test_value::Value;
@@ -165,7 +165,7 @@ impl Debug for EmulatedTcpClientRecv {
 impl Service for EmulatedTcpClientRecv {
     //
     //
-    fn get_link(&self, _name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, _name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support static producer", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),

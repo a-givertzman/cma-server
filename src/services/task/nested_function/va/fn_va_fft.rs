@@ -2,14 +2,14 @@ use chrono::Utc;
 use concat_in_place::strcat;
 use derivative::Derivative;
 use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
-use sal_sync::services::{
+use sal_sync::{services::{
     entity::{
         Cot, Name,
         Point, PointConfig, PointConfigFilter, PointConfigType, PointHlr, PointTxId,
         Status,
-    }, LinkName, Services, task::functions::{FnConfKind, FnConfig}, types::Bool
-};
-use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender, Arc}};
+    }, task::functions::{FnConfKind, FnConfig}, types::Bool, LinkName, Services
+}, sync::channel::Sender};
+use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
     core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, FnInOutRef},
     services::task::nested_function::{

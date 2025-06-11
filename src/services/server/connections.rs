@@ -1,7 +1,7 @@
-use std::{net::TcpStream, sync::{mpsc::{SendError, Sender}, Arc}};
+use std::{net::TcpStream, sync::Arc};
 use dashmap::DashMap;
 use sal_core::error::Error;
-use sal_sync::services::Service;
+use sal_sync::{services::Service, sync::channel::Sender};
 ///
 /// 
 pub enum Action {
@@ -28,8 +28,8 @@ impl Connection {
     }
     ///
     /// 
-    pub fn send(&self, action: Action) -> Result<(), SendError<Action>> {
-        self.send.send(action)
+    pub fn send(&self, action: Action) -> Result<(), Error> {
+        self.send.send(action).map_err(|e| Error::new("Connection", "send").pass(e.to_string()))
     }
     ///
     /// 

@@ -1,10 +1,10 @@
 use coco::Stack;
 use sal_core::error::Error;
-use sal_sync::services::{
+use sal_sync::{services::{
     entity::{Name, Object, Point},
     Service,
-};
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc}, thread::{self, JoinHandle}};
+}, sync::channel::{self, Receiver, Sender}};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}};
 use crate::core_::{Mutex, RwLock};
 ///
 /// 
@@ -22,7 +22,7 @@ pub struct MockMultiQueue {
 impl MockMultiQueue {
     pub fn new(parent: &str, index: impl Into<String>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockMultiQueue{}", index.into()));
-        let (send, recv) = std::sync::mpsc::channel();
+        let (send, recv) = channel::unbounded();
         Self {
             dbg: name.join(),
             name,

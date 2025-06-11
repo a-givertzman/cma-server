@@ -1,8 +1,8 @@
-use std::{fs, io::{BufReader, Read, Write}, net::TcpStream, sync::mpsc::Sender};
+use std::{fs, io::{BufReader, Read, Write}, net::TcpStream};
 use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use sal_sync::services::entity::{Name, Point, PointConfig, PointConfigFilter, PointConfigType, Status};
+use sal_sync::{services::entity::{Name, Point, PointConfig, PointConfigFilter, PointConfigType, Status}, sync::channel::Sender};
 use crate::{
     conf::slmp_client_config::slmp_db_config::SlmpDbConfig,
     core_::{

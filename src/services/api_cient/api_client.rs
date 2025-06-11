@@ -1,8 +1,8 @@
 use coco::Stack;
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, Point}, Service, ServiceCycle};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle}, sync::channel::{self, Receiver, Sender}};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::api_client_config::ApiClientConfig, 
@@ -30,7 +30,7 @@ impl ApiClient {
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
     pub fn new(conf: ApiClientConfig) -> Self {
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
@@ -46,12 +46,19 @@ impl ApiClient {
     /// Reads all avalible at the moment items from the in-queue
     fn read_queue(dbg: &Dbg, recv: &Receiver<Point>, buffer: &mut RetainBuffer<Point>) {
         let max_read_at_once = 1000;
-        for (index, point) in recv.try_iter().enumerate() {   
-            log::debug!("{}.read_queue | point: {:?}", dbg, &point);
-            buffer.push(point);
-            if index > max_read_at_once {
-                break;
-            }                 
+        if !recv.is_empty() {
+            for _ in 0..max_read_at_once {
+                match recv.try_recv() {
+                    Ok(point) => match point {
+                        Some(point) => {
+                            log::trace!("{}.read_queue | point: {:?}", dbg, &point);
+                            buffer.push(point);
+                        }
+                        None => return,
+                    }
+                    Err(_) => return,
+                }
+            }
         }
     }
     ///

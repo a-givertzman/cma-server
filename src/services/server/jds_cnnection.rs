@@ -1,10 +1,10 @@
 use std::{
-    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc}, thread::{self, JoinHandle}, time::Instant 
+    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Instant 
 };
 use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria};
+use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::channel::{Receiver, RecvTimeoutError, Sender}};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -253,9 +253,7 @@ impl Service for JdsConnection {
                     Err(err) => {
                         match err {
                             RecvTimeoutError::Timeout => {}
-                            RecvTimeoutError::Disconnected => {
-                                break;
-                            }
+                            _ => break,
                         }
                     }
                 }

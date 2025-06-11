@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, thread, time::Duration};
+use std::{collections::HashMap, sync::Arc, thread};
 use sal_core::dbg::Dbg;
 use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, Services, SubscriptionCriteria};
 use serde_json::json;
@@ -212,28 +212,30 @@ impl JdsRequest {
     fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<Services>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
         match services.get(cache_service) {
             Some(cache) => {
-                let recv = cache.gi(receiver_name, points);
-                match shared.req_reply_send.pop() {
-                    Some(send) => {
-                        shared.req_reply_send.push(send.clone());
-                        let dbg_clone = dbg.to_owned();
-                        thread::spawn(move || {
-                            thread::sleep(Duration::from_millis(32));
-                            for point in recv.iter() {
-                                if let Err(err) =  send.send(point) {
-                                    log::error!("{}.handle.Subscribe | Send error: {:#?}", dbg_clone, err);
-                                }
+                match cache.gi(receiver_name, points).wait() {
+                    Ok(gi) => {
+                        match shared.req_reply_send.pop() {
+                            Some(send) => {
+                                shared.req_reply_send.push(send.clone());
+                                let dbg_clone = dbg.to_owned();
+                                thread::spawn(move || {
+                                    for point in gi {
+                                        if let Err(err) =  send.send(point) {
+                                            log::error!("{}.yield_gi | Send error: {:#?}", dbg_clone, err);
+                                        }
+                                    }
+                                });
                             }
-                        });
+                            None => {
+                                log::error!("{}.yield_gi | Cant get req_reply_send", dbg)
+                            }
+                        }
                     }
-                    None => {
-                        log::error!("{}.handle.Subscribe | Cant get req_reply_send", dbg)
-                    }
+                    Err(err) => log::warn!("{}.yield_gi | Future closed: {:?}", dbg, err),
                 }
+
             }
-            None => {
-                log::warn!("{}.handle.Subscribe | Cache service '{}' - not found", dbg, cache_service)
-            }
+            None => log::warn!("{}.yield_gi | Cache service '{}' - not found", dbg, cache_service),
         }
         // match cache.slock() {}
     }

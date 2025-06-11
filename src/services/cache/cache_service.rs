@@ -12,8 +12,7 @@
 //!         /App/MultiQueue: []
 //! ```
 use std::{
-    env, fmt::Debug, fs, hash::BuildHasherDefault, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering},
-    mpsc::{self, Receiver, RecvTimeoutError}, Arc},
+    env, fmt::Debug, fs, hash::BuildHasherDefault, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc},
     thread::{self, JoinHandle},
 };
 use chrono::Utc;
@@ -24,10 +23,8 @@ use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{
-        entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status},
-        Service,
-        Services, SubscriptionCriteria, types::Bool,
-    }
+        entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status}, future::Future, types::Bool, Service, Services, SubscriptionCriteria
+    }, sync::channel::RecvTimeoutError,
 };
 use serde::Serialize;
 use serde_json::json;
@@ -349,10 +346,8 @@ impl Service for CacheService {
                     }
                     Err(err) => {
                         match err {
-                            RecvTimeoutError::Timeout => {
-                                log::trace!("{}.run | Receive error: {:?}", dbg, err);
-                            }
-                            RecvTimeoutError::Disconnected => {
+                            RecvTimeoutError::Timeout => {}
+                            _ => {
                                 log::error!("{}.run | Error receiving from queue: {:?}", dbg, err);
                                 break 'main;
                             }
@@ -386,32 +381,23 @@ impl Service for CacheService {
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Receiver<Point> {
+    fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Future<Vec<Point>> {
         let self_id = self.dbg.clone();
         log::info!("{}.gi | Gi requested from: {}", self_id, receiver_name);
-        let (send, recv) = mpsc::channel();
+        let (result, sink) = Future::new();
         let cache = Arc::new(self.cache.clone());
         let points = points.to_owned();
         thread::spawn(move || {
+            let mut gi = vec![];
             if points.is_empty() {
                 for point in cache.iter().map(|r| r.value().clone()) {
-                    match send.send(point.clone()) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            log::error!("{}.gi | Send error: {:#?}", self_id, err);
-                        }
-                    }
+                    gi.push(point.clone());
                 }
             } else {
                 for point in points {
                     match cache.get(&point.destination()) {
                         Some(point) => {
-                            match send.send(point.clone()) {
-                                Ok(_) => {}
-                                Err(err) => {
-                                    log::error!("{}.gi | Send error: {:#?}", self_id, err);
-                                }
-                            }
+                            gi.push(point.clone())
                         }
                         None => {
                             log::error!("{}.gi | Error, requested point '{}' - not found", self_id, point.destination());
@@ -419,9 +405,10 @@ impl Service for CacheService {
                     }
                 }
             }
+            sink.add(gi);
         });
         // self.handle.push(handle);
-        recv
+        result
     }
     //
     //

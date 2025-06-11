@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug, hash::BuildHasherDefault,
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Sender}, Arc},
+    sync::{atomic::{AtomicBool, Ordering}, Arc},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -15,6 +15,7 @@ use sal_sync::{
         Service, ServiceCycle,
         Services, SubscriptionCriteria,
     },
+    sync::channel::{RecvTimeoutError, Sender},
 };
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
@@ -286,8 +287,8 @@ impl ProfinetClient {
                                 }
                                 Err(err) => {
                                     match err {
-                                        mpsc::RecvTimeoutError::Timeout => {}
-                                        mpsc::RecvTimeoutError::Disconnected => {
+                                        RecvTimeoutError::Timeout => {}
+                                        _ => {
                                             log::error!("{}.write | Error receiving from queue: {:?}", dbg, err);
                                             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
                                             break 'main;

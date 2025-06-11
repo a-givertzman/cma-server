@@ -1,8 +1,8 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}};
+use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}, sync::channel};
 use std::{
-    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc}, thread::{self, JoinHandle}, time::Duration
+    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration
 };
 use crate::{
     conf::tcp_server_config::TcpServerConfig,
@@ -76,7 +76,7 @@ impl TcpServer {
             Err(err) => {
                 log::info!("{}.setup_connection | {}", con_info.dbg, err);
                 log::info!("{}.setup_connection | New connection: '{}'", con_info.dbg, con_info.connection_id);
-                let (send, recv) = mpsc::channel();
+                let (send, recv) = channel::unbounded();
                 let connection = JdsConnection::new(
                     con_info.dbg,
                     &Name::from(con_info.self_name.parent()),

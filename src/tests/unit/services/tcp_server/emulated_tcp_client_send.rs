@@ -3,11 +3,11 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged},
     services::{
-        entity::{Name, Object, {{Point, ToPoint}, PointTxId}},
+        entity::{Name, Object, Point, PointTxId, ToPoint},
         Service,
-    },
+    }, sync::channel,
 };
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc, Arc}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
     core_::{net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, Mutex}, 
@@ -146,7 +146,7 @@ impl Service for EmulatedTcpClientSend {
                         log::info!("{}.run | connected on: {:?}", dbg, addr);
                         thread::sleep(Duration::from_millis(100));
                         if !test_data.is_empty() {
-                            let (send, recv) = mpsc::channel();
+                            let (send, recv) = channel::unbounded();
                             let mut jds_message = JdsEncodeMessage::new(
                                 &dbg,
                                 JdsSerialize::new(&dbg, recv)

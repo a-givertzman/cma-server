@@ -1,7 +1,7 @@
 use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, {Point, ToPoint}}, LinkName, Service, Services};
+use sal_sync::{services::{entity::{Name, Object, Point, ToPoint}, LinkName, Service, Services}, sync::channel::Sender};
 use testing::entities::test_value::Value;
 
 use crate::core_::RwLock;
@@ -70,7 +70,7 @@ impl Debug for MockSendService {
 impl Service for MockSendService {
     //
     //
-    fn get_link(&self, _name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, _name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),

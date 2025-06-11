@@ -3,7 +3,8 @@
 #[cfg(test)]
 mod tests {
     use hashers::fx_hash::FxHasher;
-    use std::{collections::HashMap, hash::BuildHasherDefault, sync::{mpsc, Arc, Once}, thread, time::{Duration, Instant}};
+    use sal_sync::sync::channel;
+    use std::{collections::HashMap, hash::BuildHasherDefault, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::core_::{Mutex, RwLock};
@@ -41,7 +42,7 @@ mod tests {
         let map = Arc::new(
             RwLock::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
         );
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
             map.write().insert(key, send.clone());
         }
@@ -118,7 +119,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let mut map = HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
             map.insert(key, send.clone());
         }
@@ -197,7 +198,7 @@ mod tests {
         let map = Arc::new(
             Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
         );
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
             map.lock().insert(key, send.clone());
         }
@@ -276,7 +277,7 @@ mod tests {
         let map = Arc::new(
             Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
         );
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
             map.lock().insert(key, send.clone());
         }

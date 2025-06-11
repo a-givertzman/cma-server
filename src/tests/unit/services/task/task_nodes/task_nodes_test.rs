@@ -3,8 +3,8 @@
 mod task_nodes {
     use coco::Stack;
     use sal_core::error::Error;
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services};
-    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Once}, thread::{self, JoinHandle}};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services}, sync::channel::{self, Receiver, Sender}};
+    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Once}, thread::{self, JoinHandle}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig, core_::Mutex, services::task::{nested_function::{
@@ -161,7 +161,7 @@ mod task_nodes {
     //
     impl MockService {
         fn new(parent: &str, link_name: &str) -> Self {
-            let (send, recv) = mpsc::channel();
+            let (send, recv) = channel::unbounded();
             let name = Name::new(parent, format!("MockService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
             Self {
                 dbg: name.join(),

@@ -1,6 +1,6 @@
 use std::{
     hash::BuildHasherDefault, net::TcpStream,
-    sync::{atomic::{AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex},
+    sync::{atomic::{AtomicU32, Ordering}, Arc},
     thread::{self, JoinHandle}, time::Duration,
 };
 use hashers::fx_hash::FxHasher;
@@ -8,11 +8,11 @@ use indexmap::IndexMap;
 use sal_sync::{
     collections::FxIndexMap,
     kernel::state::{ChangeNotify, ExitNotify},
-    services::{entity::{Point, Status}, ServiceCycle},
+    services::{entity::{Point, Status}, ServiceCycle}, sync::channel::Sender,
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::failure::ErrorLimit,
+    core_::{failure::ErrorLimit, Mutex},
     services::slmp_client::slmp_db::SlmpDb
 };
 ///
@@ -106,7 +106,7 @@ impl SlmpRead {
                         ],
                     );
                     let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
-                    let mut dbs = dbs.lock().unwrap();
+                    let mut dbs = dbs.lock();
                     let mut error_limit = ErrorLimit::new(3);
                     'main: while !exit.get() {
                         is_connected.add(true, format!("{}.read | Connection established", self_id));
@@ -151,7 +151,7 @@ impl SlmpRead {
                         thread::sleep(Duration::from_millis(64));
                     }
                     if status.load(Ordering::SeqCst) != u32::from(Status::Ok) {
-                        let mut dbs = dbs.lock().unwrap();
+                        let mut dbs = dbs.lock();
                         Self::yield_status(&self_id, Status::Invalid, &mut dbs, &dest);
                     }
                     log::info!("{}.read | Exit", self_id);

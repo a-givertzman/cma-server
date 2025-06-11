@@ -1,4 +1,4 @@
-use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
@@ -6,7 +6,7 @@ use sal_sync::{
         conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
         Service,
         Services,
-    }
+    }, sync::channel::Sender
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,

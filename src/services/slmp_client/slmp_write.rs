@@ -1,15 +1,15 @@
 use std::{
-    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, mpsc::{self, Sender}, Arc},
+    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, Arc},
     thread::{self, JoinHandle}, time::Duration,
 };
 use sal_sync::{
     collections::FxIndexMap,
     kernel::state::{ChangeNotify, ExitNotify},
     services::{
-        entity::{Cot, {Point, PointHlr}, Status},
+        entity::{Cot, Point, PointHlr, Status},
         ServiceCycle, Services,
         SubscriptionCriteria,
-    },
+    }, sync::channel::{RecvTimeoutError, Sender},
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
@@ -146,8 +146,8 @@ impl SlmpWrite {
                             }
                             Err(err) => {
                                 match err {
-                                    mpsc::RecvTimeoutError::Timeout => {}
-                                    mpsc::RecvTimeoutError::Disconnected => {
+                                    RecvTimeoutError::Timeout => {}
+                                    _ => {
                                         log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
                                         break 'main;
                                     }

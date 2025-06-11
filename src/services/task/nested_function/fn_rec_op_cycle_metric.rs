@@ -1,5 +1,5 @@
-use sal_sync::services::{entity::{Cot, {Point, PointHlr, PointTxId}, Status}, types::Bool};
-use std::sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender};
+use sal_sync::{services::{entity::{Cot, Point, PointHlr, PointTxId, Status}, types::Bool}, sync::channel::Sender};
+use std::sync::{atomic::{AtomicUsize, Ordering}};
 use chrono::Utc;
 use indexmap::IndexMap;
 use crate::core_::FnInOutRef;
