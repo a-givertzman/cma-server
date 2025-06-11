@@ -2,7 +2,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point}, future::Future, Service, Services
-}, sync::channel::{self, Receiver, Sender}};
+}, sync::channel::{self, Receiver, Sender}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug,
     sync::{atomic::{AtomicBool, Ordering}, Arc},
@@ -41,7 +41,7 @@ impl TcpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TcpClientConfig, services: Arc<Services>) -> Self {
+    pub fn new(conf: TcpClientConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
         let (send, recv) = channel::unbounded();
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),

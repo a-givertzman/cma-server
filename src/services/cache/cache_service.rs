@@ -24,7 +24,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{
         entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status}, future::Future, types::Bool, Service, Services, SubscriptionCriteria
-    }, sync::channel::RecvTimeoutError,
+    }, sync::channel::RecvTimeoutError, thread_pool::Scheduler,
 };
 use serde::Serialize;
 use serde_json::json;
@@ -52,7 +52,7 @@ pub struct CacheService {
 impl CacheService {
     ///
     /// Creates new instance of the CacheService
-    pub fn new(conf: CacheServiceConfig, services: Arc<Services>) -> Self {
+    pub fn new(conf: CacheServiceConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),

@@ -5,16 +5,13 @@ use concat_string::concat_string;
 use indexmap::IndexMap;
 use rand::Rng;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{
+use sal_sync::{services::{
     entity::{
         Cot, Name, Object,
-        {
-            Point, PointConfig, PointConfigHistory,
-            PointConfigType, PointHlr, PointTxId,
-        },
+        Point, PointConfig, PointConfigHistory, PointConfigType, PointHlr, PointTxId,
         Status,
-    }, Service, ServiceCycle, Services, types::Bool
-};
+    }, types::Bool, Service, ServiceCycle, Services
+}, thread_pool::Scheduler};
 use serde_json::json;
 use testing::entities::test_value::Value;
 use super::producer_service_config::ProducerServiceConfig;
@@ -33,7 +30,7 @@ pub struct ProducerService {
 //
 // 
 impl ProducerService {
-    pub fn new(conf: ProducerServiceConfig, services: Arc<Services>) -> Self {
+    pub fn new(conf: ProducerServiceConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
         Self {
             dbg: Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me())),
             name: conf.name.clone(),

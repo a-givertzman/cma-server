@@ -2,7 +2,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point, PointConfig, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
-}, sync::channel::{self, Receiver, RecvTimeoutError, Sender}};
+}, sync::channel::{self, Receiver, RecvTimeoutError, Sender}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration,
 };
@@ -32,7 +32,7 @@ impl Task {
     ///
     /// Creates new instance of [Task]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TaskConfig, services: Arc<Services>) -> Task {
+    pub fn new(conf: TaskConfig, services: Arc<Services>, schrduler: Scheduler) -> Task {
         let (send, recv) = channel::unbounded();
         Task {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),

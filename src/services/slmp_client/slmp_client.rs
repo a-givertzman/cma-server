@@ -6,7 +6,7 @@ use sal_sync::{
         conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
         Service,
         Services,
-    }, sync::channel::Sender
+    }, sync::channel::Sender, thread_pool::Scheduler
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
@@ -39,7 +39,7 @@ impl SlmpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: SlmpClientConfig, services: Arc<Services>) -> Self {
+    pub fn new(conf: SlmpClientConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))

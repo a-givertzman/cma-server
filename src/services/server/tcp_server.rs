@@ -1,6 +1,6 @@
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}, sync::channel};
+use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}, sync::channel, thread_pool::Scheduler};
 use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration
 };
@@ -52,7 +52,7 @@ impl TcpServer {
     /// - filter - all trafic from server to client will be filtered by some criterias, until Subscribe request confirmed:
     ///    - cot - [Cot] - bit mask wich will be passed
     ///    - name - exact name wich passed
-    pub fn new(conf: TcpServerConfig, services: Arc<Services>, ) -> Self {
+    pub fn new(conf: TcpServerConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
         Self {
             dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
