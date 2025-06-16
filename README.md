@@ -24,9 +24,9 @@ Handling data on fly
 - [x] `Plot` - Displaying values of the `Task` service on the Y(t) diagram, useful in the testing
 
   To activate fn `Plot` use:
+
   - `cargo test --features=plot` or 
   - `cargo run --features=plot`
-
 
 ## Additional functions (built on basic)
 
