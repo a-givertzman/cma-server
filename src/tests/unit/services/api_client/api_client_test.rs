@@ -37,8 +37,8 @@ mod api_client {
         // let addr = conf.address.clone();
         let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
         conf.address = addr.parse().unwrap();
-        let thread_pool = ThreadPool::new(dbg, None);
-        let api_client = ApiClient::new(conf, thread_pool.scheduler());
+        let tp = ThreadPool::new(dbg, Some(4));
+        let api_client = ApiClient::new(conf, tp.scheduler());
         // let test_duration = Duration::from_secs(10);
         let count = 10;
         let mut state = 0;
@@ -173,6 +173,7 @@ mod api_client {
             println!("sent: {:?}", point);
         }
         receiver_handle.join().unwrap();
+        api_client.exit();
         println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", count);
         println!("sent events: {:?}", sent.len());
@@ -187,6 +188,7 @@ mod api_client {
             log::debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
             assert!(result == &target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
+        api_client.wait().unwrap();
         test_duration.exit();
     }
 }

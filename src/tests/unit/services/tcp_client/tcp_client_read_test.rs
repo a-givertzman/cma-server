@@ -110,7 +110,9 @@ mod tcp_client {
         thread::sleep(Duration::from_micros(100));
         let timer = Instant::now();
         log::debug!("Test - setup - ok");
+        tcp_client.exit();
         services.exit();
+        tcp_client.wait().unwrap();
         multi_queue.wait().unwrap();
         services.wait().unwrap();
         let mut sent = sent.write();

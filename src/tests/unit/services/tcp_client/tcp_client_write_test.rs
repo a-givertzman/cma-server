@@ -111,7 +111,9 @@ mod tcp_client {
             send.send(point.clone()).unwrap();
             sent.push(point);
         }
+        tcp_client.exit();
         services.exit();
+        tcp_client.wait().unwrap();
         handle.join().unwrap();
         services.wait().unwrap();
         // let waitDuration = Duration::from_millis(10);

@@ -408,12 +408,16 @@ impl Service for ProfinetClient {
             }
             (Ok(_), Err(err)) => {
                 self.exit();
-                self.handles.wait();
+                if let Err(err) = self.handles.wait() {
+                    log::error!("{}.run | Error: {:?}", self.dbg, err);
+                }
                 Err(error.pass_with("Error starting inner thread 'read'", err.to_string()))
             }
             (Err(err), Ok(_)) => {
                 self.exit();
-                self.handles.wait().unwrap();
+                if let Err(err) = self.handles.wait() {
+                    log::error!("{}.run | Error: {:?}", self.dbg, err);
+                }
                 Err(error.pass_with("Error starting inner thread 'write'", err.to_string()))
             }
             (Err(read_err), Err(write_err)) => {
