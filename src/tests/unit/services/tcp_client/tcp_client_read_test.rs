@@ -38,7 +38,7 @@ mod tcp_client {
         println!("\n{}", dbg);
         let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
-        let thread_pool = ThreadPool::new(dbg, Some(8));
+        let tp = ThreadPool::new(dbg, Some(8));
         let conf = serde_yaml::from_str(&format!(r#"
             service TcpClient:
                 cycle: 1 ms
@@ -90,9 +90,9 @@ mod tcp_client {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(thread_pool.scheduler())));
+        ), Some(tp.scheduler())));
         let multi_queue = Arc::new(MockMultiQueue::new(dbg, "", Some(total_count)));
-        let tcp_client = Arc::new(TcpClient::new(conf, services.clone(), thread_pool.scheduler()));
+        let tcp_client = Arc::new(TcpClient::new(conf, services.clone(), tp.scheduler()));
         let multi_queue_service_id = multi_queue.name().join();
         let tcp_client_service_id = tcp_client.name().join();
         services.insert(tcp_client.clone());
@@ -111,6 +111,7 @@ mod tcp_client {
         let timer = Instant::now();
         log::debug!("Test - setup - ok");
         tcp_client.exit();
+        multi_queue.exit();
         services.exit();
         tcp_client.wait().unwrap();
         multi_queue.wait().unwrap();

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tcp_client {
-    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Object, Point, ToPoint}, Services}, thread_pool::ThreadPool};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Object, Point, ToPoint}, Service, Services}, thread_pool::ThreadPool};
     use std::{io::BufReader, net::TcpListener, sync::{Arc, Once}, thread::{self, JoinHandle}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -112,6 +112,7 @@ mod tcp_client {
             sent.push(point);
         }
         tcp_client.exit();
+        multi_queue.exit();
         services.exit();
         tcp_client.wait().unwrap();
         handle.join().unwrap();
