@@ -25,7 +25,7 @@ Handling data on fly
 
   To activate fn `Plot` use:
 
-  - `cargo test --features=plot` or 
+  - `cargo test --features=plot` or
   - `cargo run --features=plot`
 
 ## Additional functions (built on basic)
