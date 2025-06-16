@@ -1,13 +1,12 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged},
     services::{
         entity::{Name, Object, Point, PointTxId, ToPoint},
         Service,
-    }, sync::channel,
+    }, sync::{channel, Handles},
 };
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
     core_::{net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, Mutex}, 
@@ -36,8 +35,8 @@ pub struct EmulatedTcpClientSend {
 impl EmulatedTcpClientSend {
     pub fn new(parent: impl Into<String>, point_path: impl Into<String>, addr: &str, test_data: Vec<Value>, disconnect: Vec<i8>, wait_on_finish: bool) -> Self {
         let name = Name::new(parent, format!("EmulatedTcpClientSend{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: Dbg::new(name.parent(), name.me()),
             name,
             addr: addr.parse().unwrap(),
             point_path: point_path.into(),
@@ -46,6 +45,7 @@ impl EmulatedTcpClientSend {
             disconnect,
             wait_on_finish,
             handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -240,7 +240,7 @@ impl Service for EmulatedTcpClientSend {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -268,7 +268,7 @@ impl Service for EmulatedTcpClientSend {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handle.wait()
+        self.handles.wait()
     }
     //
     //

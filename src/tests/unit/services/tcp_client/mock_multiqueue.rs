@@ -1,15 +1,14 @@
-use coco::Stack;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point},
     Service,
-}, sync::channel::{self, Receiver, Sender}};
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}};
+}, sync::{channel::{self, Receiver, Sender}, Handles}};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}};
 use crate::core_::{Mutex, RwLock};
 ///
 /// 
 pub struct MockMultiQueue {
-    dbg: String,
+    dbg: Dbg,
     name: Name,
     send: Sender<Point>,
     recv: Mutex<Option<Receiver<Point>>>,
@@ -21,15 +20,16 @@ pub struct MockMultiQueue {
 impl MockMultiQueue {
     pub fn new(parent: &str, index: impl Into<String>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockMultiQueue{}", index.into()));
+        let dbg = Dbg::new(name.parent(), name.me());
         let (send, recv) = channel::unbounded();
         Self {
-            dbg: name.join(),
             name,
             send,
             recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -111,13 +111,13 @@ impl Service for MockMultiQueue {
             }
         });
         log::info!("{}.run | Starting - ok", self.dbg);
-        self.handle.push(handle);
+        self.handles.push(handle);
         Ok(())
     }
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handle.wait()
+        self.handles.wait()
     }
     //
     //

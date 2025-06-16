@@ -1,7 +1,6 @@
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
-use coco::Stack;
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point, ToPoint}, LinkName, Service, Services}, sync::channel::Sender};
+use sal_sync::{services::{entity::{Name, Object, Point, ToPoint}, LinkName, Service, Services}, sync::{channel::Sender, Handles}};
 use testing::entities::test_value::Value;
 
 use crate::core_::RwLock;
@@ -23,8 +22,8 @@ pub struct MockSendService {
 impl MockSendService {
     pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, delay: Option<Duration>) -> Self {
         let name = Name::new(parent, format!("MockSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: Dbg::new(name.parent(), name.me()),
             name,
             send_to: LinkName::from_str(send_to).unwrap(),
             services,
@@ -32,6 +31,7 @@ impl MockSendService {
             sent: Arc::new(RwLock::new(vec![])),
             delay,
             handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -114,7 +114,7 @@ impl Service for MockSendService {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -127,7 +127,7 @@ impl Service for MockSendService {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handle.wait()
+        self.handles.wait()
     }
     //
     //

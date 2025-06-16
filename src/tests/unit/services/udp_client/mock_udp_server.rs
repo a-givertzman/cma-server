@@ -6,13 +6,12 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
-use coco::Stack;
+use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
     services::{entity::{Name, Object, Point},
-    Service, ServiceCycle, Services}, sync::channel::Sender
+    Service, ServiceCycle, Services}, sync::{channel::Sender, Handles}
 };
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
@@ -49,13 +48,14 @@ impl MockUdpServer {
     //
     /// Crteates new instance of the MockUdpServer 
     pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<Services>, test_data: &[i16]) -> Self {
+        let dbg = Dbg::new(parent, format!("MockUdpServer({})", conf.name));
         Self {
-            dbg: Dbg::new(parent, format!("MockUdpServer({})", conf.name)),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             test_data: test_data.into(),
             handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -218,7 +218,7 @@ impl Service for MockUdpServer {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -231,7 +231,7 @@ impl Service for MockUdpServer {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handle.wait()
+        self.handles.wait()
     }
     //
     //

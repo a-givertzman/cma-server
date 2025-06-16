@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod api_client {
-    use sal_sync::services::{entity::ToPoint, Service};
+    use sal_sync::{services::{entity::ToPoint, Service}, thread_pool::ThreadPool};
     use std::{sync::{Once, Arc}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -28,21 +28,22 @@ mod api_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "test ApiClient";
-        println!("\n{}", self_id);
+        let dbg = "test ApiClient";
+        println!("\n{}", dbg);
         let path = "./src/tests/unit/services/api_client/api_client.yaml";
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
-        let mut conf = ApiClientConfig::read(self_id, path);
+        let mut conf = ApiClientConfig::read(dbg, path);
         // let addr = conf.address.clone();
         let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
         conf.address = addr.parse().unwrap();
-        let api_client = ApiClient::new(conf);
+        let thread_pool = ThreadPool::new(dbg, None);
+        let api_client = ApiClient::new(conf, thread_pool.scheduler());
         // let test_duration = Duration::from_secs(10);
         let count = 10;
         let mut state = 0;
         let test_data = RandomTestValues::new(
-            self_id,
+            dbg,
             vec![
                 Value::Int(i64::MIN),
                 Value::Int(i64::MAX),

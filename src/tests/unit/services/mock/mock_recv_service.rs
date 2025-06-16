@@ -1,7 +1,6 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}};
-use coco::Stack;
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::channel::{self, Receiver, Sender}};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles}};
 use crate::core_::{constants::constants::RECV_TIMEOUT, Mutex, RwLock};
 ///
 /// Global static counter of FnOut instances
@@ -24,14 +23,15 @@ impl MockRecvService {
     pub fn new(parent: impl Into<String>, rx_queue: &str, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: Dbg::new(name.parent(), name.me()),
             name,
             rx_send: HashMap::from([(rx_queue.to_string(), send)]),
             rx_recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -124,7 +124,7 @@ impl Service for MockRecvService {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -137,7 +137,7 @@ impl Service for MockRecvService {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handle.wait()
+        self.handles.wait()
     }
     //
     //

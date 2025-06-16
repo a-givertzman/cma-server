@@ -38,11 +38,11 @@ impl TcpReadAlive {
         scheduler: Option<Scheduler>,
     ) -> Self {
         let dbg = Dbg::new(parent, "TcpReadAlive");
-        let stream_read_stack = Stack::new();
+        let stream_read_stack = Arc::new(Stack::new());
         stream_read_stack.push(stream_read);
         Self {
             dbg: dbg.clone(),
-            stream_read: Arc::new(stream_read_stack),
+            stream_read: stream_read_stack,
             send: dest,
             cycle,
             scheduler,
@@ -112,7 +112,6 @@ impl TcpReadAlive {
         let stream_read = self.stream_read.clone();
         let exit = self.exit.clone();
         let exit_pair = self.exit_pair.clone();
-        log::info!("{}.run | Preparing thread...", self.dbg);
         match &self.scheduler {
             Some(scheduler) => {
                 let handle = scheduler.spawn(move || {

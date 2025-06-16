@@ -1,13 +1,12 @@
-use coco::Stack;
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged},
     services::{
         entity::{Name, Object, Point},
         Service,
-    }, sync::channel::Sender,
+    }, sync::{channel::Sender, Handles},
 };
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
     core_::{net::{
@@ -25,7 +24,7 @@ use crate::{
 /// - if [recvLimit] is some then thread exit when riched recvLimit
 /// - [disconnect] - contains percentage (0..100) of test_data / iterations, where socket will be disconnected and connected again
 pub struct EmulatedTcpClientRecv {
-    dbg: String,
+    dbg: Dbg,
     name: Name,
     addr: SocketAddr,
     received: Arc<RwLock<Vec<Point>>>,
@@ -41,8 +40,8 @@ pub struct EmulatedTcpClientRecv {
 impl EmulatedTcpClientRecv {
     pub fn new(parent: impl Into<String>, addr: &str, recv_limit: Option<usize>, must_received: Option<Value>, disconnect: Vec<i8>) -> Self {
         let name = Name::new(parent, format!("EmulatedTcpClientRecv{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: name.join(),
             name,
             addr: addr.parse().unwrap(),
             received: Arc::new(RwLock::new(vec![])),
@@ -51,13 +50,14 @@ impl EmulatedTcpClientRecv {
             disconnect,
             marker_received: Arc::new(AtomicBool::new(false)),
             handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     ///
     pub fn id(&self) -> String {
-        self.dbg.clone()
+        self.name.join()
     }
     ///
     ///
@@ -302,7 +302,7 @@ impl Service for EmulatedTcpClientRecv {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -315,7 +315,7 @@ impl Service for EmulatedTcpClientRecv {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handle.wait()
+        self.handles.wait()
     }
     //
     //
