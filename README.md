@@ -10,22 +10,22 @@ Handling data on fly
 ## Basic functions (embedded)
 
 - [ ] receives data points from the connected devices:
-    - [x] `ProfinetClient` - connectivity with the Siemens devices via profinet
+  - [x] `ProfinetClient` - connectivity with the Siemens devices via profinet
 - [X] `MultiQueue` service - destribute data points to the intrnal serveces suscribed on
 - [ ] destribute data points to the external clients:
-    - [x] `TcpServer` - released
-    - [ ] `UdpServer`
-    - [ ] Additional protocols...
-        - [x] `ProfinetClient`
-        - [x] `SlmpClient`
-        - [ ] `ModbusTcp`
+  - [x] `TcpServer` - released
+  - [ ] `UdpServer`
+  - [ ] Additional protocols...
+    - [x] `ProfinetClient`
+    - [x] `SlmpClient`
+    - [ ] `ModbusTcp`
 - [x] [Task](#1-task-service) service - configurable computation
 - [x] `ApiClient` service - stores some data into the database
 - [x] `Plot` - Displaying values of the `Task` service on the Y(t) diagram, useful in the testing
 
-    To activate fn `Plot` use:
-    - `cargo test --features=plot` or 
-    - `cargo run --features=plot`
+  To activate fn `Plot` use:
+  - `cargo test --features=plot` or 
+  - `cargo run --features=plot`
 
 
 ## Additional functions (built on basic)
