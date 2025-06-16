@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod cma_recorder {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -31,23 +31,24 @@ mod cma_recorder {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "App";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let dbg = "App";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
                     path: assets/testing/retain/
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -77,45 +78,45 @@ mod cma_recorder {
         );
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(Task::new(config, services.clone()));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         log::debug!("Task points: {:#?}", task.points());
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
         let test_data = vec![
-            (format!("/{}/Load", self_id), Value::Real(-7.035),  None),
-            (format!("/{}/Load", self_id), Value::Real(-2.5),    None),
-            (format!("/{}/Load", self_id), Value::Real(-5.5),    None),
-            (format!("/{}/Load", self_id), Value::Real(-1.5),    None),
-            (format!("/{}/Load", self_id), Value::Real(-1.0),    None),
-            (format!("/{}/Load", self_id), Value::Real(-0.1),    None),
-            (format!("/{}/Load", self_id), Value::Real(0.1),     None),
-            (format!("/{}/Load", self_id), Value::Real(1.0),     None),
-            (format!("/{}/Load", self_id), Value::Real(1.5),     Some(1.5)),
-            (format!("/{}/Load", self_id), Value::Real(5.5),     Some(5.5)),
-            (format!("/{}/Load", self_id), Value::Real(2.5),     Some(2.5)),
-            (format!("/{}/Load", self_id), Value::Real(7.035),   Some(7.035)),
+            (format!("/{}/Load", dbg), Value::Real(-7.035),  None),
+            (format!("/{}/Load", dbg), Value::Real(-2.5),    None),
+            (format!("/{}/Load", dbg), Value::Real(-5.5),    None),
+            (format!("/{}/Load", dbg), Value::Real(-1.5),    None),
+            (format!("/{}/Load", dbg), Value::Real(-1.0),    None),
+            (format!("/{}/Load", dbg), Value::Real(-0.1),    None),
+            (format!("/{}/Load", dbg), Value::Real(0.1),     None),
+            (format!("/{}/Load", dbg), Value::Real(1.0),     None),
+            (format!("/{}/Load", dbg), Value::Real(1.5),     Some(1.5)),
+            (format!("/{}/Load", dbg), Value::Real(5.5),     Some(5.5)),
+            (format!("/{}/Load", dbg), Value::Real(2.5),     Some(2.5)),
+            (format!("/{}/Load", dbg), Value::Real(7.035),   Some(7.035)),
         ];
         let mut target_data = test_data.iter().filter(|(_, _, target)| target.is_some());
         let total_count = test_data.len();
         let target_count = target_data.clone().count();
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             target_count,
         ));
         services.insert(receiver.clone());
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/MultiQueue.in-queue", self_id),
+            dbg,
+            &format!("/{}/MultiQueue.in-queue", dbg),
             Duration::from_millis(10),
             services.clone(),
             &test_data.iter().cloned().map(|(name, value, _)| (name, value)).collect::<Vec<(String, Value)>>(),

@@ -58,7 +58,7 @@ impl TcpReadAlive {
         cycle: Option<Duration>,
         tcp_stream: TcpStream,
         send: Sender<Point>,
-        stream_read: Arc<Stack<Box<dyn TcpStreamRead + 'static>>>,
+        stream_read: Arc<Stack<Box<dyn TcpStreamRead>>>,
         exit: Arc<AtomicBool>,
         exit_pair: Arc<AtomicBool>,
     ) {
@@ -135,16 +135,17 @@ impl TcpReadAlive {
     /// Waits for main loop being finished
     /// 
     /// call `exit()` to finish main loop
-    fn wait(&self) -> Result<(), Error> {
+    pub fn wait(&self) -> Result<(), Error> {
         self.handles.wait()
     }
     ///
     /// Returns `true` if main loop has been finished
-    fn is_finished(&self) -> bool {
+    #[allow(unused)]
+    pub fn is_finished(&self) -> bool {
         self.handles.is_finished()
     }
     ///
-    /// Sends exit event into the main loop
+    /// Sends exit signal to [TcpReadAlive]
     #[allow(unused)]
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);

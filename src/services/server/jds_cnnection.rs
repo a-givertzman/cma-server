@@ -134,10 +134,11 @@ impl Service for JdsConnection {
                 req_reply_send: vec![],
         }));
         let rx_max_length = conf.rx_max_len;
-        let exit = self.exit.clone();
-        let exit_pair = Arc::new(AtomicBool::new(false));
         let action_recv = self.action_recv.pop().unwrap();
         let services = self.services.clone();
+        let scheduler = self.scheduler.clone();
+        let exit = self.exit.clone();
+        let exit_pair = Arc::new(AtomicBool::new(false));
         log::info!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
@@ -168,7 +169,7 @@ impl Service for JdsConnection {
             let (req_reply_send, recv) = services.subscribe(&subscribe, &receiver_name, &points);
             shared_options.write().req_reply_send = vec![req_reply_send.clone()];
             let buffered = rx_max_length > 0;
-            let mut tcp_read_alive = TcpReadAlive::new(
+            let tcp_read_alive = TcpReadAlive::new(
                 &dbg,
                 Box::new(JdsRoutes::new(
                     &dbg,
@@ -181,14 +182,14 @@ impl Service for JdsConnection {
                         ),
                     ),
                     req_reply_send,
-                    |parent_id, parent_name, point, services, shared| {
+                    |parent_id, parent_name, point, services, shared, scheduler| {
                         let parent_id: Dbg = parent_id;
                         let parent: Name = parent_name;
                         let point: Point = point;
                         log::debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
                         log::trace!("{}.run | point from socket: \n\t{:?}", parent, point);
                         match point.cot() {
-                            Cot::Req => JdsRequest::handle(&parent_id, &parent, 0, point, services, shared),
+                            Cot::Req => JdsRequest::handle(&parent_id, &parent, 0, point, services, shared, scheduler),
                             _        => {
                                 match shared.read().jds_state {
                                     JdsState::Unknown => {
@@ -204,13 +205,15 @@ impl Service for JdsConnection {
                         }
                     },
                     shared_options,
+                    scheduler.clone(),
                 )),
                 send,
                 None,
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
+                Some(scheduler.clone()),
             );
-            let mut tcp_write_alive = TcpWriteAlive::new(
+            let tcp_write_alive = TcpWriteAlive::new(
                 &dbg,
                 None,
                 TcpStreamWrite::new(
@@ -227,6 +230,7 @@ impl Service for JdsConnection {
                 ),
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
+                Some(scheduler.clone()),
             );
             let keep_timeout = conf.keep_timeout;
             let mut duration = Instant::now();
@@ -237,10 +241,20 @@ impl Service for JdsConnection {
                         match action {
                             Action::Continue(tcp_stream) => {
                                 log::info!("{}.run | Action - Continue received", dbg);
-                                let h_read = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
-                                let h_write = tcp_write_alive.run(tcp_stream);
-                                h_read.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpReadAlive thread, probable exit with errors", dbg));
-                                h_write.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpWriteAlive thread, probable exit with errors", dbg));
+                                let read = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
+                                let write = tcp_write_alive.run(tcp_stream);
+                                match (read, write) {
+                                    (Ok(_), Ok(_)) => {}
+                                    (Ok(_), Err(err)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                                    (Err(err), Ok(_)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                                    (Err(err1), Err(err2)) => log::error!("{}.run | Errors: \n\t{:?},\n\t{:?}", dbg, err1, err2),
+                                }
+                                if let Err(err) = tcp_read_alive.wait() {
+                                    log::error!("{}.run | Error wait for TcpReadAlive: {:?}", dbg, err);
+                                }
+                                if let Err(err) = tcp_write_alive.wait() {
+                                    log::error!("{}.run | Error wait for TcpWriteAlive: {:?}", dbg, err);
+                                }
                                 log::info!("{}.run | Finished", dbg);
                                 duration = Instant::now();
                             }

@@ -86,7 +86,7 @@ impl Service for TcpClient {
     //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
-        let self_id = self.dbg.clone();
+        let dbg = self.dbg.clone();
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let exit_pair = Arc::new(AtomicBool::new(false));
@@ -101,18 +101,18 @@ impl Service for TcpClient {
         // };
         let reconnect = conf.reconnect_cycle.unwrap_or(Duration::from_secs(3));
         let mut tcp_client_connect = TcpClientConnect::new(
-            self_id.clone(), 
+            dbg.clone(), 
             conf.address, 
             reconnect,
             Some(exit.clone())
         );
-        let mut tcp_read_alive = TcpReadAlive::new(
-            &self_id,
+        let tcp_read_alive = TcpReadAlive::new(
+            &dbg,
             Box::new(
                 JdsDeserialize::new(
-                    self_id.clone(),
+                    dbg.clone(),
                     JdsDecodeMessage::new(
-                        &self_id,
+                        &dbg,
                     ),
                 ),
             ),
@@ -120,41 +120,53 @@ impl Service for TcpClient {
             Some(Duration::from_millis(10)),
             Some(exit.clone()),
             Some(exit_pair.clone()),
+            Some(self.scheduler.clone()),
         );
-        let mut tcp_write_alive = TcpWriteAlive::new(
-            &self_id,
+        let tcp_write_alive = TcpWriteAlive::new(
+            &dbg,
             None,
             TcpStreamWrite::new(
-                &self_id,
+                &dbg,
                 buffered,
                 Some(conf.rx_max_len as usize),
                 Box::new(JdsEncodeMessage::new(
-                    &self_id,
+                    &dbg,
                     JdsSerialize::new(
-                        &self_id,
+                        &dbg,
                         in_recv,
                     ),
                 )),
             ),
             Some(exit.clone()),
             Some(exit_pair.clone()),
+            Some(self.scheduler.clone()),
         );
-        log::info!("{}.run | Preparing thread...", self_id);
+        log::info!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
-            log::info!("{}.run | Preparing thread - ok", self_id);
+            log::info!("{}.run | Preparing thread - ok", dbg);
             loop {
                 exit_pair.store(false, Ordering::SeqCst);
                 if let Some(tcp_stream) = tcp_client_connect.connect() {
-                    let h_r = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
-                    let h_w = tcp_write_alive.run(tcp_stream);
-                    h_r.join().unwrap();
-                    h_w.join().unwrap();
+                    let read = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
+                    let write = tcp_write_alive.run(tcp_stream);
+                    match (read, write) {
+                        (Ok(_), Ok(_)) => {}
+                        (Ok(_), Err(err)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                        (Err(err), Ok(_)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                        (Err(err1), Err(err2)) => log::error!("{}.run | Errors: \n\t{:?},\n\t{:?}", dbg, err1, err2),
+                    }
+                    if let Err(err) = tcp_read_alive.wait() {
+                        log::error!("{}.run | Error wait for TcpReadAlive: {:?}", dbg, err);
+                    }
+                    if let Err(err) = tcp_write_alive.wait() {
+                        log::error!("{}.run | Error wait for TcpWriteAlive: {:?}", dbg, err);
+                    }
                 };
                 if exit.load(Ordering::SeqCst) {
                     break;
                 }
             }
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", dbg);
             Ok(())
         });
         match handle {

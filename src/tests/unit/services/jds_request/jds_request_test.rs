@@ -1,16 +1,13 @@
 #[cfg(test)]
 
 mod jds_routes {
-    use sal_sync::services::{
-        conf::{ConfTree, ServicesConf},
-        entity::{
+    use sal_sync::{services::{
+        conf::{ConfTree, ServicesConf}, entity::{
             Cot, Name, Object,
-            {Point, PointConfig, PointHlr, PointTxId},
+            Point, PointConfig, PointHlr, PointTxId,
             Status,
-        },
-        MultiQueue, MultiQueueConf,
-        LinkName, Service, Services,
-    };
+        }, LinkName, MultiQueue, MultiQueueConf, Service, Services
+    }, thread_pool::ThreadPool};
     use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once}, thread, time::Duration};
@@ -145,6 +142,7 @@ mod jds_routes {
         let test_items_count = test_data.len();        
         //
         // Configuring Services
+        let tp = ThreadPool::new(self_id, Some(8));
         let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
@@ -153,7 +151,7 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         //
         // Configuring Receiver
         let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count)));
@@ -169,7 +167,7 @@ mod jds_routes {
                     - {}.in-queue
         "#, receiver.name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -188,7 +186,7 @@ mod jds_routes {
         "#, tcp_server_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -246,6 +244,7 @@ mod jds_routes {
         test_duration.run().unwrap();
         //
         // Configuring MultiQueue service
+        let tp = ThreadPool::new(self_id, Some(8));
         let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
@@ -254,7 +253,7 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         //
         // Configuring Receiver
         let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", None));
@@ -268,7 +267,7 @@ mod jds_routes {
                     - {}.in-queue
         "#, receiver.name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -288,7 +287,7 @@ mod jds_routes {
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -402,6 +401,7 @@ mod jds_routes {
         let test_items_count = test_data.len();
         //
         // Configuring MultiQueue service
+        let tp = ThreadPool::new(self_id, Some(8));
         let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
@@ -410,7 +410,7 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ),Some(tp.scheduler())));
         //
         // Configuring Receiver
         let receiver = Arc::new(MockRecvService::new(self_id, "in-queue", Some(test_items_count * 2)));
@@ -424,7 +424,7 @@ mod jds_routes {
                     - {}.in-queue
         "#, receiver.name().join())).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -444,7 +444,7 @@ mod jds_routes {
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //
@@ -541,6 +541,7 @@ mod jds_routes {
         test_duration.run().unwrap();
         //
         // Configuring MultiQueue service
+        let tp = ThreadPool::new(self_id, Some(8));
         let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
@@ -549,7 +550,7 @@ mod jds_routes {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let conf = serde_yaml::from_str(&format!(r#"
             service MultiQueue:
                 in queue in-queue:
@@ -558,7 +559,7 @@ mod jds_routes {
                     - {}/MockRecvService0.in-queue
         "#, self_id)).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         //
         // Configuring TcpServer service
@@ -576,7 +577,7 @@ mod jds_routes {
         "#, tcp_addr, self_id);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(self_name, &conf);
-        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
         //

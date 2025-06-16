@@ -5,9 +5,9 @@ mod fn_va_fft {
     use std::{cell::RefCell, f64::consts::PI, rc::Rc, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use concat_in_place::strcat;
     use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
-    use sal_sync::services::{
-            conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfigFilter, PointTxId, ToPoint}, Service, Services, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}
-        };
+    use sal_sync::{services::{
+        conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfigFilter, PointTxId, ToPoint}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, Service, Services
+    }, thread_pool::ThreadPool};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -48,11 +48,11 @@ mod fn_va_fft {
         init_once();
         // init_each();
         log::debug!("");
-        let self_id = "test";
-        let self_name = Name::new("", self_id);
-        let tx_id = PointTxId::from_str(&self_id);
-        log::debug!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
+        let dbg = "test";
+        let self_name = Name::new("", dbg);
+        let tx_id = PointTxId::from_str(&dbg);
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(30));
         test_duration.run().unwrap();
         let test_data = [
             // sampl_freq   fft_size    ffts    target
@@ -64,24 +64,25 @@ mod fn_va_fft {
             ( 30_000,        30_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
             (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
+        let tp = ThreadPool::new(dbg, Some(12));
         for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
-            let services = Arc::new(Services::new(self_id, ServicesConf::new(
-                self_id, 
+            let services = Arc::new(Services::new(dbg, ServicesConf::new(
+                dbg, 
                 ConfTree::new_root(serde_yaml::from_str(r#"
                     retain:
                         path: assets/testing/retain/
                         point:
                             path: point/id.json
                 "#).unwrap()),
-            )));
+            ), Some(tp.scheduler())));
             let receiver = Arc::new(TaskTestReceiver::new(
-                self_id,
+                dbg,
                 "",
                 "in-queue",
                 usize::MAX,
             ));
             let receiver_name = receiver.name().join();
-            log::debug!("{} | receiver: '{}'", self_id, receiver_name);
+            log::debug!("{} | receiver: '{}'", dbg, receiver_name);
             services.insert(receiver.clone());
             //
             // Configuring FnVaFft
@@ -98,18 +99,18 @@ mod fn_va_fft {
                     freq: {}                        # Sampling freq
                     len: {}                         # Length of the                         
             "#, receiver_name, export_point_name, sampl_freq, fft_size)).unwrap();
-            let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
+            let conf = match FnConfig::from_yaml(dbg, &self_name, &conf, &mut vec![]) {
                 FnConfKind::Fn(conf) => conf,
-                _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
+                _ => panic!("{} | Wrong VaFft config: {:#?}", dbg, conf),
             };
-            let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
+            let mut fn_va_fft = FnVaFft::new(dbg, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
 
             //
             // Runing all services
             services.run().unwrap();
             receiver.run().unwrap();
             thread::sleep(Duration::from_millis(50));
-            log::debug!("{} | All services started", self_id);
+            log::debug!("{} | All services started", dbg);
     
             let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
             let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
@@ -121,8 +122,8 @@ mod fn_va_fft {
             let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
             let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
                 let freq_name = match fft_freqs.get(i) {
-                    Some(freq) => strcat!(self_id export_point_name "." freq),
-                    None => panic!("{}.out | Freq index {} out of the fft_size {}", self_id, i, fft_size),
+                    Some(freq) => strcat!(dbg export_point_name "." freq),
+                    None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
                 };
                 (freq_name, filter(None))
             }).collect();
@@ -224,11 +225,11 @@ mod fn_va_fft {
         init_once();
         // init_each();
         log::debug!("");
-        let self_id = "test";
-        let self_name = Name::new("", self_id);
-        let tx_id = PointTxId::from_str(&self_id);
-        log::debug!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(30));
+        let dbg = "test";
+        let self_name = Name::new("", dbg);
+        let tx_id = PointTxId::from_str(&dbg);
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(30));
         test_duration.run().unwrap();
         let test_data = [
             //sampl_freq  fft_size  ffts  threshold  target
@@ -240,24 +241,25 @@ mod fn_va_fft {
             ( 30_000,     30_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
             (300_000,    300_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
+        let tp = ThreadPool::new(dbg, Some(8));
         for (sampl_freq, fft_size, target_ffts, threshold, target_freqs) in test_data {
-            let services = Arc::new(Services::new(self_id, ServicesConf::new(
-                self_id, 
+            let services = Arc::new(Services::new(dbg, ServicesConf::new(
+                dbg, 
                 ConfTree::new_root(serde_yaml::from_str(r#"
                     retain:
                         path: assets/testing/retain/
                         point:
                             path: point/id.json
                 "#).unwrap()),
-            )));
+            ), Some(tp.scheduler())));
             let receiver = Arc::new(TaskTestReceiver::new(
-                self_id,
+                dbg,
                 "",
                 "in-queue",
                 usize::MAX,
             ));
             let receiver_name = receiver.name().join();
-            log::debug!("{} | receiver: '{}'", self_id, receiver_name);
+            log::debug!("{} | receiver: '{}'", dbg, receiver_name);
             services.insert(receiver.clone());
             //
             // Configuring FnVaFft
@@ -276,18 +278,18 @@ mod fn_va_fft {
                     filter:
                         threshold: {:?}
             "#, receiver_name, export_point_name, sampl_freq, fft_size, threshold)).unwrap();
-            let conf = match FnConfig::from_yaml(self_id, &self_name, &conf, &mut vec![]) {
+            let conf = match FnConfig::from_yaml(dbg, &self_name, &conf, &mut vec![]) {
                 FnConfKind::Fn(conf) => conf,
-                _ => panic!("{} | Wrong VaFft config: {:#?}", self_id, conf),
+                _ => panic!("{} | Wrong VaFft config: {:#?}", dbg, conf),
             };
-            let mut fn_va_fft = FnVaFft::new(self_id, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
+            let mut fn_va_fft = FnVaFft::new(dbg, Some(enable), fn_va_fft_input.clone(), conf, services.clone());
 
             //
             // Runing all services
             services.run().unwrap();
             receiver.run().unwrap();
             thread::sleep(Duration::from_millis(50));
-            log::debug!("{} | All services started", self_id);
+            log::debug!("{} | All services started", dbg);
     
             let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
             let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
@@ -299,8 +301,8 @@ mod fn_va_fft {
             let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
             let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
                 let freq_name = match fft_freqs.get(i) {
-                    Some(freq) => strcat!(self_id export_point_name "." freq),
-                    None => panic!("{}.out | Freq index {} out of the fft_size {}", self_id, i, fft_size),
+                    Some(freq) => strcat!(dbg export_point_name "." freq),
+                    None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
                 };
                 (freq_name, filter(Some(PointConfigFilter { threshold: threshold, factor: None })))
             }).collect();

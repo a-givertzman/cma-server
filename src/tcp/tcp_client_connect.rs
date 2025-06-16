@@ -1,4 +1,3 @@
-use coco::Stack;
 use sal_sync::services::{ServiceCycle};
 use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use log::LevelFilter;
@@ -8,7 +7,6 @@ use log::LevelFilter;
 pub struct TcpClientConnect {
     dbg: String,
     addr: SocketAddr,
-    stream: Arc<Stack<TcpStream>>,
     reconnect: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -30,7 +28,6 @@ impl TcpClientConnect {
         Self {
             dbg: format!("{}/TcpClientConnect", parent.into()),
             addr,
-            stream: Arc::new(Stack::new()),
             reconnect,
             exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
         }

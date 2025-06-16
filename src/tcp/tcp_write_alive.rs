@@ -113,7 +113,20 @@ impl TcpWriteAlive {
         Ok(())
     }
     ///
+    /// Waits for main loop being finished
     /// 
+    /// call `exit()` to finish main loop
+    pub fn wait(&self) -> Result<(), Error> {
+        self.handles.wait()
+    }
+    ///
+    /// Returns `true` if main loop has been finished
+    #[allow(unused)]
+    pub fn is_finished(&self) -> bool {
+        self.handles.is_finished()
+    }
+    ///
+    /// Sends exit signal to [TcpWriteAlive]
     #[allow(unused)]
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);

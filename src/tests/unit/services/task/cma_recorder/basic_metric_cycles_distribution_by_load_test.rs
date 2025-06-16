@@ -2,7 +2,7 @@
 
 mod cma_recorder {
         use regex::Regex;
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -35,23 +35,24 @@ mod cma_recorder {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "AppTest";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(60));
+        let dbg = "AppTest";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(60));
         test_duration.run().unwrap();
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
                     path: assets/testing/retain/
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let mut tasks = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/basic-metric-cycles-distribution-by-load.yaml";
         match fs::read_to_string(path) {
@@ -63,27 +64,27 @@ mod cma_recorder {
                             let mut conf = serde_yaml::Mapping::new();
                             conf.insert(key.clone(), config.clone());
                             let config = TaskConfig::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
-                            let task = Arc::new(Task::new(config, services.clone()));
+                            let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
                             services.insert(task.clone());
                             tasks.push(task);
                         }
                     }
-                    Err(err) => panic!("{}.read | Error in config: {:?}\n\terror: {:?}", self_id, yaml_string, err),
+                    Err(err) => panic!("{}.read | Error in config: {:?}\n\terror: {:?}", dbg, yaml_string, err),
                 }
             }
-            Err(err) => panic!("{}.read | File {} reading error: {:?}", self_id, path, err),
+            Err(err) => panic!("{}.read | File {} reading error: {:?}", dbg, path, err),
         }
         let conf = MultiQueueConf::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
         let conf = ApiClientConfig::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service ApiClient:
                 cycle: 100 ms
                 reconnect: 1 s  # default 3 s
@@ -95,12 +96,12 @@ mod cma_recorder {
                 debug: true
             ").unwrap(),
         );
-        let api_client = Arc::new(ApiClient::new(conf));
+        let api_client = Arc::new(ApiClient::new(conf, tp.scheduler()));
         services.insert(api_client.clone());
-        let test_data = test_data(self_id);
+        let test_data = test_data(dbg);
         let total_count = test_data.len();
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             total_count * 1000,
@@ -110,8 +111,8 @@ mod cma_recorder {
             (name, value)
         }).collect();
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/MultiQueue.in-queue", self_id),
+            dbg,
+            &format!("/{}/MultiQueue.in-queue", dbg),
             Duration::from_millis(10),
             services.clone(),
             &test_data,

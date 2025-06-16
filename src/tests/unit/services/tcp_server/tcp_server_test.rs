@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tcp_server {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use std::{sync::{Arc, Once}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues}, session::test_session::TestSession};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -34,14 +34,14 @@ mod tcp_server {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "tcp_server_test_send";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let dbg = "tcp_server_test_send";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         let iterations = 100;
         let test_data = IncTestValues::new(
-            self_id,
+            dbg,
             0,
             iterations,
         );
@@ -49,12 +49,13 @@ mod tcp_server {
         let total_count = test_data.len();
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -69,9 +70,8 @@ mod tcp_server {
         "#, tcp_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
-
         let mq_conf = r#"
             service MultiQueue:
                 in queue in-queue:
@@ -80,18 +80,18 @@ mod tcp_server {
         "#;
         let mq_conf = serde_yaml::from_str(mq_conf).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(self_name, &mq_conf);
-        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &Name::new(self_id, "MultiQueue.in-queue").join(),
+            dbg,
+            &Name::new(dbg, "MultiQueue.in-queue").join(),
             Duration::ZERO,
             services.clone(),
             test_data.clone(),
         ));
         services.insert(producer.clone());
         let emulated_tcp_client = Arc::new(EmulatedTcpClientRecv::new(
-            self_id,
+            dbg,
             &tcp_addr,
             Some(iterations),
             None,
@@ -135,13 +135,13 @@ mod tcp_server {
         init_each();
         let self_id = "tcp_server_test_teceive";
         println!("\n{}", self_id);
-        let self_id = "test";
-        let self_name = Name::from(self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
+        let dbg = "test";
+        let self_name = Name::from(dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
         let iterations = 100;
         let test_data = IncTestValues::new(
-            self_id,
+            dbg,
             0,
             iterations,
         );
@@ -149,12 +149,13 @@ mod tcp_server {
         let total_count = test_data.len();
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -167,7 +168,7 @@ mod tcp_server {
         "#, tcp_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
         let conf = TcpServerConfig::from_yaml(&self_name, &conf);
-        let tcp_server = Arc::new(TcpServer::new(conf, services.clone()));
+        let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         let mq_conf = format!(r#"
             service MultiQueue:
@@ -178,17 +179,17 @@ mod tcp_server {
         "#, self_name);
         let mq_conf = serde_yaml::from_str(&mq_conf).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(self_name, &mq_conf);
-        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "queue",
             iterations,
         ));
         services.insert(receiver.clone());
         let emulated_tcp_client = Arc::new(EmulatedTcpClientSend::new(
-            self_id,
+            dbg,
             "/test/Jds/",
             &tcp_addr,
             test_data.clone(),

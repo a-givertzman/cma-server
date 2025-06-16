@@ -1,9 +1,9 @@
 #[cfg(test)]
 
 mod task {
-    use sal_sync::services::{
+    use sal_sync::{services::{
         conf::{ConfTree, ServicesConf}, entity::Name, Service, Services
-    };
+    }, thread_pool::ThreadPool};
     use std::{env, sync::{Arc, Once}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -32,10 +32,10 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "task_test";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(3));
+        let dbg = "task_test";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(3));
         test_duration.run().unwrap();
         //
         // can be changed
@@ -44,21 +44,22 @@ mod task {
         let path = "./src/tests/unit/services/task/task_test_struct.yaml";
         let config = TaskConfig::read(&self_name, path);
         log::trace!("config: {:?}", &config);
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             iterations,
         ));
         services.insert(receiver.clone());      // "TaskTestReceiver",
         let test_data = RandomTestValues::new(
-            self_id,
+            dbg,
             vec![
                 Value::Real(-7.035),
                 Value::Real(-2.5),
@@ -79,13 +80,13 @@ mod task {
         let total_count = test_data.len();
         assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/Task1.in-queue", self_id),
+            dbg,
+            &format!("/{}/Task1.in-queue", dbg),
             Duration::ZERO,
             services.clone(),
             test_data,
         ));
-        let task = Arc::new(Task::new(config, services.clone()));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         services.insert(task.clone());
         services.run().unwrap();
         receiver.run().unwrap();
@@ -121,8 +122,8 @@ mod task {
         init_once();
         init_each();
         log::info!("test");
-        let self_id = "test";
-        let self_name = Name::new("", self_id);
+        let dbg = "test";
+        let self_name = Name::new("", dbg);
         //
         // Can be changed
         let iterations = 10;
@@ -131,21 +132,22 @@ mod task {
         // let path = "./src/tests/unit/task/task_test.yaml";
         let config = TaskConfig::read(&self_name, path);
         log::trace!("config: {:?}", &config);
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             iterations,
         ));
         services.insert(receiver.clone());      // "TaskTestReceiver",
         let test_data = RandomTestValues::new(
-            self_id,
+            dbg,
             vec![
                 Value::Real(f32::MAX),
                 Value::Real(f32::MIN),
@@ -165,13 +167,13 @@ mod task {
         let test_data: Vec<Value> = test_data.collect();
         // let totalCount = test_data.len();
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
+            dbg,
             "Task.in-queue",
             Duration::ZERO,
             services.clone(),
             test_data,
         ));
-        let task = Arc::new(Task::new(config, services.clone()));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         services.insert(task.clone());
         services.run().unwrap();
         receiver.run().unwrap();
