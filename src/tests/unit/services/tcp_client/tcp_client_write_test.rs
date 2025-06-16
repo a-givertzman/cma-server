@@ -111,11 +111,12 @@ mod tcp_client {
             send.send(point.clone()).unwrap();
             sent.push(point);
         }
-        tcp_client.exit();
-        multi_queue.exit();
-        services.exit();
-        tcp_client.wait().unwrap();
         handle.join().unwrap();
+        tcp_client.exit();
+        services.exit();
+        multi_queue.wait().unwrap();
+        tcp_client.wait().unwrap();
+        multi_queue.exit();
         services.wait().unwrap();
         // let waitDuration = Duration::from_millis(10);
         // let mut waitAttempts = test_duration.as_micros() / waitDuration.as_micros();

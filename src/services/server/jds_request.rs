@@ -218,7 +218,8 @@ impl JdsRequest {
                             Some(send) => {
                                 shared.req_reply_send.push(send.clone());
                                 let dbg_clone = dbg.to_owned();
-                                scheduler.spawn(move || {
+                                // TODO: Store Handles, join on wait
+                                let _ = scheduler.spawn(move || {
                                     for point in gi {
                                         if let Err(err) =  send.send(point) {
                                             log::error!("{}.yield_gi | Send error: {:#?}", dbg_clone, err);
