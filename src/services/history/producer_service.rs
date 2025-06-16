@@ -1,6 +1,5 @@
-use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use chrono::{DateTime, Utc};
-use coco::Stack;
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use rand::Rng;
@@ -11,7 +10,7 @@ use sal_sync::{services::{
         Point, PointConfig, PointConfigHistory, PointConfigType, PointHlr, PointTxId,
         Status,
     }, types::Bool, Service, ServiceCycle, Services
-}, thread_pool::Scheduler};
+}, sync::Handles, thread_pool::Scheduler};
 use serde_json::json;
 use testing::entities::test_value::Value;
 use super::producer_service_config::ProducerServiceConfig;
@@ -23,21 +22,22 @@ pub struct ProducerService {
     name: Name,
     conf: ProducerServiceConfig,
     services: Arc<Services>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
 // 
 impl ProducerService {
-    pub fn new(conf: ProducerServiceConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
+    pub fn new(conf: ProducerServiceConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+        let dbg = Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me()));
         Self {
-            dbg: Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me())),
             name: conf.name.clone(),
             conf,
             services,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -122,7 +122,7 @@ impl Service for ProducerService {
             panic!("{}.run | services.get_link error: {:#?}", dbg, err);
         });
         let mut gen_points = Self::build_gen_points(self_name.join(), tx_id, self.conf.points());
-        let handle = thread::Builder::new().name(self_name.join()).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             'main: loop {
                 log::trace!("{}.run | Step...", dbg);
                 for (_, gen_point) in &mut gen_points {
@@ -147,11 +147,12 @@ impl Service for ProducerService {
                 }
             }
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Started", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -169,21 +170,12 @@ impl Service for ProducerService {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

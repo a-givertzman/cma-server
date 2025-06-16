@@ -1,12 +1,11 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point}, future::Future, Service, Services
-}, sync::channel::{self, Receiver, Sender}, thread_pool::Scheduler};
+}, sync::{channel::{self, Receiver, Sender}, Handles}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug,
     sync::{atomic::{AtomicBool, Ordering}, Arc},
-    thread::{self, JoinHandle}, time::Duration,
+    time::Duration,
 };
 use crate::{
     conf::tcp_client_config::TcpClientConfig,
@@ -31,8 +30,8 @@ pub struct TcpClient {
     in_recv: Mutex<Option<Receiver<Point>>>,
     conf: TcpClientConfig,
     services: Arc<Services>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -41,17 +40,18 @@ impl TcpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TcpClientConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
+    pub fn new(conf: TcpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             in_recv: Mutex::new(Some(recv)),
             in_send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             services,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -140,7 +140,7 @@ impl Service for TcpClient {
             Some(exit_pair.clone()),
         );
         log::info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", self_id);
             loop {
                 exit_pair.store(false, Ordering::SeqCst);
@@ -155,11 +155,12 @@ impl Service for TcpClient {
                 }
             }
             log::info!("{}.run | Exit", self_id);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -172,21 +173,12 @@ impl Service for TcpClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

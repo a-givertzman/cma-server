@@ -1,7 +1,6 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::channel::{self, Receiver, RecvTimeoutError, Sender}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles}};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
 use crate::core_::{Mutex, RwLock};
 ///
 /// 
@@ -12,8 +11,7 @@ pub struct TaskTestReceiver {
     in_send: HashMap<String, Sender<Point>>,
     in_recv: Mutex<Option<Receiver<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -28,15 +26,15 @@ impl TaskTestReceiver {
     pub fn new(parent: &str, index: impl Into<String>, recv_queue: &str, iterations: usize) -> Self {
         let (send, recv): (Sender<Point>, Receiver<Point>) = channel::unbounded();
         let name = Name::new(parent, format!("TaskTestReceiver{}", index.into()));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: Dbg::new(name.parent(), name.me()),
             name,
             iterations,
             in_send: HashMap::from([(recv_queue.to_string(), send)]),
             in_recv: Mutex::new(Some(recv)),
             received: Arc::new(RwLock::new(vec![])),
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -143,7 +141,7 @@ impl Service for TaskTestReceiver {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
                         }
             Err(err) => {
@@ -156,21 +154,12 @@ impl Service for TaskTestReceiver {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

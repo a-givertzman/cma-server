@@ -1,12 +1,11 @@
-use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
-use coco::Stack;
+use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, Arc}, thread::{self}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ExitNotify, services::{
         conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
         Service,
         Services,
-    }, sync::channel::Sender, thread_pool::Scheduler
+    }, sync::{channel::Sender, Handles}, thread_pool::Scheduler
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
@@ -29,8 +28,8 @@ pub struct SlmpClient {
     conf: SlmpClientConfig,
     services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -39,20 +38,21 @@ impl SlmpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: SlmpClientConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
+    pub fn new(conf: SlmpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))
         }).collect()));
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             tx_id,
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             diagnosis,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -130,6 +130,7 @@ impl Service for SlmpClient {
         let services = self.services.clone();
         let diagnosis = self.diagnosis.clone();
         let status = Arc::new(AtomicU32::new(Status::Ok.into()));
+        let scheduler = self.scheduler.clone();
         let exit = Arc::new(ExitNotify::new(&dbg, Some(self.exit.clone()), None));
         let tx_send = self.services.get_link(&conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
@@ -141,7 +142,7 @@ impl Service for SlmpClient {
             Some(self.exit.clone()),
         );
         log::info!("{}.run | Preparing thread...", dbg);
-        let handle = thread::Builder::new().name(format!("{}.run", dbg.clone())).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             let mut slmp_read = SlmpRead::new(
                 &dbg,
@@ -151,6 +152,7 @@ impl Service for SlmpClient {
                 tx_send.clone(),
                 // diagnosis.clone(),
                 status.clone(),
+                scheduler.clone(),
                 exit.clone(),
             );
             let mut slmp_write = SlmpWrite::new(
@@ -162,6 +164,7 @@ impl Service for SlmpClient {
                 // diagnosis.clone(),
                 services.clone(),
                 status,
+                scheduler.clone(),
                 exit.clone(),
             );
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
@@ -174,7 +177,7 @@ impl Service for SlmpClient {
                         Self::set_stream_timout(
                             &dbg,
                             &tcp_stream,
-                            conf.cycle.map_or(RECV_TIMEOUT, |cycle| cycle),
+                            conf.cycle,
                             Some(RECV_TIMEOUT),
                         );
                         Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
@@ -215,11 +218,12 @@ impl Service for SlmpClient {
                 log::warn!("{}.run | TcpClient connection failed - trying to reconnect...", dbg);
             }
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -237,21 +241,12 @@ impl Service for SlmpClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

@@ -15,7 +15,7 @@ use crate::conf::profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_conf
 ///    in queue in-queue:
 ///        max-length: 10000
 ///    send-to: MultiQueue.in-queue
-///    cycle: 1 ms                         # operating cycle time of the device
+///    cycle: 1 ms                         # operating cycle time of the device, default 100 ms
 ///    reconnect: 1000 ms                  # reconnect timeout when connection is lost
 ///    protocol: 'profinet'
 ///    description: 'S7-IED-01.01'
@@ -43,7 +43,7 @@ use crate::conf::profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_conf
 #[derive(Debug, PartialEq, Clone)]
 pub struct ProfinetClientConfig {
     pub(crate) name: Name,
-    pub(crate) cycle: Option<Duration>,
+    pub(crate) cycle: Duration,
     pub(crate) reconnect_cycle: Duration,
     pub(crate) subscribe: String,
     pub(crate) send_to: LinkName,
@@ -66,7 +66,7 @@ impl ProfinetClientConfig {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let self_name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, self_name);
-        let cycle = conf.get_duration("cycle").ok();
+        let cycle = conf.get_duration("cycle").unwrap_or(Duration::from_millis(100));
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
         log::debug!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
@@ -111,8 +111,6 @@ impl ProfinetClientConfig {
             name: self_name,
             cycle,
             reconnect_cycle,
-            // rx,
-            // rx_max_len,
             subscribe,
             send_to,
             protocol,

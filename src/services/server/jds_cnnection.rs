@@ -1,10 +1,10 @@
 use std::{
-    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Instant 
+    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Instant 
 };
 use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::channel::{Receiver, RecvTimeoutError, Sender}};
+use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -70,8 +70,8 @@ pub struct JdsConnection {
     action_recv: Stack<Receiver<Action>>, 
     services: Arc<Services>,
     conf: TcpServerConfig,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -81,21 +81,21 @@ impl JdsConnection {
     /// Creates new instance of the [JdsConnection]
     /// - parent - id of the parent
     /// - path - path of the parent
-    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
+    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConfig, scheduler: Scheduler, exit: Arc<AtomicBool>) -> Self {
         let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
         let name = Name::new(parent, "Jds");
         log::debug!("{}.new | name: {:#?}", dbg, name);
         let action_recv_stack = Stack::new();
         action_recv_stack.push(action_recv);
         Self {
-            dbg,
             name,
             connection_id: connection_id.into(),
             action_recv: action_recv_stack,
             services,
             conf,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit,
         }
     }
@@ -139,7 +139,7 @@ impl Service for JdsConnection {
         let action_recv = self.action_recv.pop().unwrap();
         let services = self.services.clone();
         log::info!("{}.run | Preparing thread...", dbg);
-        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             let receivers = Arc::new(RwLock::new(
                 HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
@@ -270,11 +270,12 @@ impl Service for JdsConnection {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -287,21 +288,12 @@ impl Service for JdsConnection {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

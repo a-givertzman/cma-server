@@ -8,7 +8,7 @@ use crate::conf::slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::Slmp
 /// service ProfinetClient Ied01:          # device will be executed in the independent thread, must have unique name
 ///    subscribe: Multiqueue
 ///    send-to: MultiQueue.in-queue
-///    cycle: 1 ms                     # operating cycle time of the device
+///    cycle: 1 ms                     # operating cycle time of the device, default 100 ms
 ///    description: 'S7-IED-01.01'
 ///    ip: '192.168.100.243'
 ///    diagnosis:                          # internal diagnosis
@@ -32,7 +32,7 @@ use crate::conf::slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::Slmp
 #[derive(Debug, PartialEq, Clone)]
 pub struct SlmpClientConfig {
     pub(crate) name: Name,
-    pub(crate) cycle: Option<Duration>,
+    pub(crate) cycle: Duration,
     pub(crate) reconnect_cycle: Duration,
     pub(crate) subscribe: String,
     pub(crate) send_to: LinkName,
@@ -53,7 +53,7 @@ impl SlmpClientConfig {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let self_name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, self_name);
-        let cycle = conf.get_duration("cycle").ok();
+        let cycle = conf.get_duration("cycle").unwrap_or(Duration::from_millis(100));
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(1), |reconnect| reconnect);
         log::debug!("{}.new | reconnect: {:?}", dbg, reconnect_cycle);

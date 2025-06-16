@@ -1,10 +1,8 @@
 use std::{
     fmt::Debug, hash::BuildHasherDefault,
     sync::{atomic::{AtomicBool, Ordering}, Arc},
-    thread::{self, JoinHandle},
-    time::Duration,
+    thread::{self},
 };
-use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
@@ -15,7 +13,7 @@ use sal_sync::{
         Service, ServiceCycle,
         Services, SubscriptionCriteria,
     },
-    sync::channel::{RecvTimeoutError, Sender}, thread_pool::Scheduler,
+    sync::{channel::{RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler,
 };
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
@@ -37,8 +35,8 @@ pub struct ProfinetClient {
     conf: ProfinetClientConfig,
     services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
-    handle: Stack<(String, JoinHandle<()>)>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -46,20 +44,21 @@ pub struct ProfinetClient {
 impl ProfinetClient {
     ///
     /// Creates new instance of the ProfinetClient
-    pub fn new(conf: ProfinetClientConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
+    pub fn new(conf: ProfinetClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))
         }).collect()));
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             tx_id,
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             diagnosis,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -99,100 +98,94 @@ impl ProfinetClient {
     }
     ///
     /// Reads data slice from the S7 device,
-    fn read(&self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn read(&self, tx_send: Sender<Point>) -> Result<(), Error> {
         log::info!("{}.read | starting...", self.dbg);
         let dbg = self.dbg.clone();
         let tx_id = self.tx_id;
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let diagnosis = self.diagnosis.clone();
-        match conf.cycle {
-            Some(cycle_interval) => {
-                if cycle_interval > Duration::ZERO {
-                    log::info!("{}.read | Preparing thread...", dbg);
-                    let handle = thread::Builder::new().name(format!("{}.read", dbg)).spawn(move || {
-                        let mut is_connected = ChangeNotify::new(
-                            &dbg,
-                            false,
-                            vec![
-                                (true,  Box::new(|message| log::info!("{}", message))),
-                                (false, Box::new(|message| log::warn!("{}", message))),
-                            ],
-                        );
-                        let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
-                        for (db_name, db_conf) in conf.dbs {
-                            log::info!("{}.read | configuring DB: {:?}...", dbg, db_name);
-                            let db = ProfinetDb::new(&dbg, tx_id, &db_conf);
-                            dbs.insert(db_name.clone(), db);
-                            log::info!("{}.read | configuring DB: {:?} - ok", dbg, db_name);
-                        }
-                        let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
-                        let mut client = S7Client::new(dbg.clone(), conf.ip.clone());
-                        'main: while !exit.load(Ordering::SeqCst) {
-                            let mut error_limit = ErrorLimit::new(3);
-                            let mut status;
-                            match client.connect() {
-                                Ok(_) => {
-                                    status = Status::Ok;
-                                    is_connected.add(true, format!("{}.read | Connection established", dbg));
-                                    Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
-                                    'read: while !exit.load(Ordering::SeqCst) {
-                                        cycle.start();
-                                        for (db_name, db) in &mut dbs {
-                                            log::trace!("{}.read | DB '{}' - reading...", dbg, db_name);
-                                            match db.read(&client, &tx_send) {
-                                                Ok(_) => {
-                                                    error_limit.reset();
-                                                    log::trace!("{}.read | DB '{}' - reading - ok", dbg, db_name);
-                                                }
-                                                Err(err) => {
-                                                    log::error!("{}.read | DB '{}' - reading - error: {:?}", dbg, db_name, err);
-                                                    if error_limit.add().is_err() {
-                                                        log::error!("{}.read | DB '{}' - exceeded reading errors limit, trying to reconnect...", dbg, db_name);
-                                                        status = Status::Invalid;
-                                                        Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
-                                                        if let Err(err) = client.close() {
-                                                            log::error!("{}.read | {:?}", dbg, err);
-                                                        };
-                                                        break 'read;
-                                                    }
-                                                }
-                                            }
-                                            if exit.load(Ordering::SeqCst) {
-                                                break 'main;
-                                            }
-                                        }
-                                        cycle.wait();
+        log::info!("{}.read | Preparing thread...", dbg);
+        let handle = self.scheduler.spawn(move || {
+            let mut is_connected = ChangeNotify::new(
+                &dbg,
+                false,
+                vec![
+                    (true,  Box::new(|message| log::info!("{}", message))),
+                    (false, Box::new(|message| log::warn!("{}", message))),
+                ],
+            );
+            let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
+            for (db_name, db_conf) in conf.dbs {
+                log::info!("{}.read | configuring DB: {:?}...", dbg, db_name);
+                let db = ProfinetDb::new(&dbg, tx_id, &db_conf);
+                dbs.insert(db_name.clone(), db);
+                log::info!("{}.read | configuring DB: {:?} - ok", dbg, db_name);
+            }
+            let mut cycle = ServiceCycle::new(&dbg, conf.cycle);
+            let mut client = S7Client::new(dbg.clone(), conf.ip.clone());
+            'main: while !exit.load(Ordering::SeqCst) {
+                let mut error_limit = ErrorLimit::new(3);
+                let mut status;
+                match client.connect() {
+                    Ok(_) => {
+                        status = Status::Ok;
+                        is_connected.add(true, format!("{}.read | Connection established", dbg));
+                        Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
+                        'read: while !exit.load(Ordering::SeqCst) {
+                            cycle.start();
+                            for (db_name, db) in &mut dbs {
+                                log::trace!("{}.read | DB '{}' - reading...", dbg, db_name);
+                                match db.read(&client, &tx_send) {
+                                    Ok(_) => {
+                                        error_limit.reset();
+                                        log::trace!("{}.read | DB '{}' - reading - ok", dbg, db_name);
                                     }
-                                    if status != Status::Ok {
-                                        Self::yield_status(&dbg, &mut dbs, &tx_send);
+                                    Err(err) => {
+                                        log::error!("{}.read | DB '{}' - reading - error: {:?}", dbg, db_name, err);
+                                        if error_limit.add().is_err() {
+                                            log::error!("{}.read | DB '{}' - exceeded reading errors limit, trying to reconnect...", dbg, db_name);
+                                            status = Status::Invalid;
+                                            Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
+                                            if let Err(err) = client.close() {
+                                                log::error!("{}.read | {:?}", dbg, err);
+                                            };
+                                            break 'read;
+                                        }
                                     }
                                 }
-                                Err(err) => {
-                                    is_connected.add(false, format!("{}.read | Connection lost: {:?}", dbg, err));
-                                    log::trace!("{}.read | Connection error: {:?}", dbg, err);
+                                if exit.load(Ordering::SeqCst) {
+                                    break 'main;
                                 }
                             }
-                            thread::sleep(conf.reconnect_cycle);
+                            cycle.wait();
                         }
-                        log::info!("{}.read | Exit", dbg);
-                    });
-                    log::info!("{}.read | Started", self.dbg);
-                    handle
-                } else {
-                    log::info!("{}.read | Disabled", self.dbg);
-                    thread::Builder::new().name(format!("{}.read", dbg)).spawn(move || {})
+                        if status != Status::Ok {
+                            Self::yield_status(&dbg, &mut dbs, &tx_send);
+                        }
+                    }
+                    Err(err) => {
+                        is_connected.add(false, format!("{}.read | Connection lost: {:?}", dbg, err));
+                        log::trace!("{}.read | Connection error: {:?}", dbg, err);
+                    }
                 }
+                thread::sleep(conf.reconnect_cycle);
             }
-            None => {
-                log::info!("{}.read | Disabled", self.dbg);
-                thread::Builder::new().name(format!("{}.read", dbg)).spawn(move || {})
+            log::info!("{}.read | Exit", dbg);
+            Ok(())
+        });
+        match handle {
+            Ok(handle) => {
+                log::info!("{}.read | Started", self.dbg);
+                self.handles.push(handle);
+                Ok(())
             }
+            Err(err) => Err(Error::new(&self.dbg, "read").pass_with("Start failed", err)),
         }
     }
     ///
     /// Writes Point to the protocol (PROFINET device) specific address
-    fn write(&self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn write(&self, tx_send: Sender<Point>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let self_name = self.name.clone();
         let tx_id = self.tx_id;
@@ -201,7 +194,7 @@ impl ProfinetClient {
         let services = self.services.clone();
         let diagnosis = self.diagnosis.clone();
         log::info!("{}.write | Preparing thread...", dbg);
-        let handle = thread::Builder::new().name(format!("{}.write", dbg.clone())).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let mut is_connected = ChangeNotify::new(
                 &dbg,
                 false,
@@ -308,9 +301,17 @@ impl ProfinetClient {
                 }
             }
             log::info!("{}.write | Exit", dbg);
+            Ok(())
         });
         log::info!("{}.write | Started", self.dbg);
-        handle
+        match handle {
+            Ok(handle) => {
+                log::info!("{}.read | Started", self.dbg);
+                self.handles.push(handle);
+                Ok(())
+            }
+            Err(err) => Err(Error::new(&self.dbg, "read").pass_with("Start failed", err)),
+        }
     }
     ///
     /// Creates confirmation reply point with the same value & Cot::ActCon
@@ -402,19 +403,17 @@ impl Service for ProfinetClient {
         log::info!("{}.run | started", self.dbg);
         let error = Error::new(&self.dbg, "run");
         match (handle_read, handle_write) {
-            (Ok(handle_read), Ok(handle_write)) => {
-                self.handle.push((format!("{}/read", self.dbg), handle_read));
-                self.handle.push((format!("{}/write", self.dbg), handle_write));
+            (Ok(_), Ok(_)) => {
                 Ok(())
             }
-            (Ok(handle_read), Err(err)) => {
+            (Ok(_), Err(err)) => {
                 self.exit();
-                handle_read.join().unwrap();
+                self.handles.wait();
                 Err(error.pass_with("Error starting inner thread 'read'", err.to_string()))
             }
-            (Err(err), Ok(handle_write)) => {
+            (Err(err), Ok(_)) => {
                 self.exit();
-                handle_write.join().unwrap();
+                self.handles.wait().unwrap();
                 Err(error.pass_with("Error starting inner thread 'write'", err.to_string()))
             }
             (Err(read_err), Err(write_err)) => {
@@ -433,21 +432,12 @@ impl Service for ProfinetClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some((name, handle)) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error join '{name}': {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

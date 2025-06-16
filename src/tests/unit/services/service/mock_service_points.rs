@@ -24,7 +24,6 @@ impl MockServicePoints {
             id: name.join(),
             name,
             points,
-            is_finished: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -72,7 +71,7 @@ impl Service for MockServicePoints {
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     // 

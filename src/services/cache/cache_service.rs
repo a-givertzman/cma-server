@@ -13,10 +13,8 @@
 //! ```
 use std::{
     env, fmt::Debug, fs, hash::BuildHasherDefault, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc},
-    thread::{self, JoinHandle},
 };
 use chrono::Utc;
-use coco::Stack;
 use concat_string::concat_string;
 use dashmap::DashMap;
 use hashers::fx_hash::FxHasher;
@@ -24,7 +22,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{
         entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status}, future::Future, types::Bool, Service, Services, SubscriptionCriteria
-    }, sync::channel::RecvTimeoutError, thread_pool::Scheduler,
+    }, sync::{channel::RecvTimeoutError, Handles}, thread_pool::Scheduler,
 };
 use serde::Serialize;
 use serde_json::json;
@@ -43,8 +41,8 @@ pub struct CacheService {
     conf: CacheServiceConfig,
     services: Arc<Services>,
     cache: FxDashMap<String, Point>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -52,15 +50,16 @@ pub struct CacheService {
 impl CacheService {
     ///
     /// Creates new instance of the CacheService
-    pub fn new(conf: CacheServiceConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
+    pub fn new(conf: CacheServiceConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             cache: DashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -331,7 +330,7 @@ impl Service for CacheService {
         );
         let mut dely_store = DelyStore::new(conf.retain_delay);
         log::info!("{}.run | Preparing thread...", dbg);
-        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let initial_status = Status::Invalid;
             let retain_status = Status::Invalid;
             Self::initial(&dbg, tx_id, &cache, &point_configs, initial_status);
@@ -365,11 +364,12 @@ impl Service for CacheService {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -382,12 +382,12 @@ impl Service for CacheService {
     //
     //
     fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Future<Vec<Point>> {
-        let self_id = self.dbg.clone();
-        log::info!("{}.gi | Gi requested from: {}", self_id, receiver_name);
+        let dbg = self.dbg.clone();
+        log::info!("{}.gi | Gi requested from: {}", dbg, receiver_name);
         let (result, sink) = Future::new();
         let cache = Arc::new(self.cache.clone());
         let points = points.to_owned();
-        thread::spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let mut gi = vec![];
             if points.is_empty() {
                 for point in cache.iter().map(|r| r.value().clone()) {
@@ -400,34 +400,29 @@ impl Service for CacheService {
                             gi.push(point.clone())
                         }
                         None => {
-                            log::error!("{}.gi | Error, requested point '{}' - not found", self_id, point.destination());
+                            log::error!("{}.gi | Error, requested point '{}' - not found", dbg, point.destination());
                         }
                     }
                 }
             }
             sink.add(gi);
+            Ok(())
         });
+        if let Err(err) = handle {
+            log::error!("{}.gi | Error schedule task: {:?}", self.dbg, err);
+        }
         // self.handle.push(handle);
         result
     }
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

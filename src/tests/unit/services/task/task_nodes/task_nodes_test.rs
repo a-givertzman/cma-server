@@ -170,9 +170,8 @@ mod task_nodes {
                     (link_name.to_string(), send),
                 ]),
                 rx_recv: Mutex::new(Some(recv)),
-                handle: Stack::new(),
-                is_finished: Arc::new(AtomicBool::new(false)),
-                exit: Arc::new(AtomicBool::new(false)),
+                handles: Handles::new(&dbg),
+                    exit: Arc::new(AtomicBool::new(false)),
             }
         }
     }

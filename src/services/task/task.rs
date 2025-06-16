@@ -1,10 +1,9 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point, PointConfig, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
-}, sync::channel::{self, Receiver, RecvTimeoutError, Sender}, thread_pool::Scheduler};
+}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler};
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration,
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration,
 };
 use concat_string::concat_string;
 use crate::{
@@ -22,8 +21,8 @@ pub struct Task {
     rx_recv: Mutex<Option<Receiver<Point>>>,
     services: Arc<Services>,
     conf: TaskConfig,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -32,18 +31,18 @@ impl Task {
     ///
     /// Creates new instance of [Task]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TaskConfig, services: Arc<Services>, schrduler: Scheduler) -> Task {
+    pub fn new(conf: TaskConfig, services: Arc<Services>, scheduler: Scheduler) -> Task {
         let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Task {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
-            // in_send: HashMap::from([(conf.rx.clone(), send)]),
             in_send: HashMap::from([("in-send".to_owned(), send)]),
             rx_recv: Mutex::new(Some(recv)),
             services,
             conf,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -150,7 +149,7 @@ impl Service for Task {
         };
         let subscriptions = self.subscriptions_(&conf, &services);
         let rx_recv = self.subscribe_(&subscriptions, &services);
-        let handle = thread::Builder::new().name(format!("{} - main", dbg)).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
             let mut task_nodes = TaskNodes::new(&dbg);
             task_nodes.build_nodes(&self_name, conf, services.clone());
@@ -199,11 +198,12 @@ impl Service for Task {
                 }
             }
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -221,21 +221,12 @@ impl Service for Task {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

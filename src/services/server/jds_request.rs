@@ -1,6 +1,6 @@
-use std::{collections::HashMap, sync::Arc, thread};
+use std::{collections::HashMap, sync::Arc};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, Services, SubscriptionCriteria};
+use sal_sync::{services::{entity::{Cot, Name, Point, PointConfig, PointHlr, Status}, Services, SubscriptionCriteria}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     core_::{
@@ -15,7 +15,7 @@ impl JdsRequest {
     ///
     /// Detecting kind of the request stored as json string in the incoming point.
     /// Performs the action depending on the Request kind.
-    pub fn handle(parent_id: &Dbg, parent: &Name, tx_id: usize, request: Point, services: Arc<Services>, shared: Arc<RwLock<Shared>>) -> RouterReply {
+    pub fn handle(parent_id: &Dbg, parent: &Name, tx_id: usize, request: Point, services: Arc<Services>, shared: Arc<RwLock<Shared>>, scheduler: Scheduler) -> RouterReply {
         let mut shared = shared.write();
         let dbg = Dbg::new(parent_id, "JdsRequest");
         let requester_name = &parent.join();
@@ -183,7 +183,7 @@ impl JdsRequest {
                 };
                 match shared.cache.clone() {
                     // TODO add named subscription
-                    Some(cache_service) => Self::yield_gi(&dbg, &receiver_name, services, &cache_service, &[], &mut shared),
+                    Some(cache_service) => Self::yield_gi(&dbg, &receiver_name, services, &cache_service, &[], &mut shared, scheduler),
                     None => log::warn!("{}.handle.Subscribe | Gi skipped, cache service not configured", dbg),
                 }
                 let reply = RouterReply::new(
@@ -209,7 +209,7 @@ impl JdsRequest {
     }
     ///
     ///
-    fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<Services>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
+    fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<Services>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared, scheduler: Scheduler,) {
         match services.get(cache_service) {
             Some(cache) => {
                 match cache.gi(receiver_name, points).wait() {
@@ -218,12 +218,13 @@ impl JdsRequest {
                             Some(send) => {
                                 shared.req_reply_send.push(send.clone());
                                 let dbg_clone = dbg.to_owned();
-                                thread::spawn(move || {
+                                scheduler.spawn(move || {
                                     for point in gi {
                                         if let Err(err) =  send.send(point) {
                                             log::error!("{}.yield_gi | Send error: {:#?}", dbg_clone, err);
                                         }
                                     }
+                                    Ok(())
                                 });
                             }
                             None => {

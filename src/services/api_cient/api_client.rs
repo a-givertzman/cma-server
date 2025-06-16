@@ -1,8 +1,7 @@
-use coco::Stack;
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle}, sync::channel::{self, Receiver, Sender}, thread_pool::Scheduler};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle}, sync::{channel::{self, Receiver, Sender}, Handles}, thread_pool::Scheduler};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::api_client_config::ApiClientConfig, 
@@ -19,8 +18,8 @@ pub struct ApiClient {
     recv: Mutex<Option<Receiver<Point>>>,
     send: HashMap<String, Sender<Point>>,
     conf: ApiClientConfig,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -29,16 +28,17 @@ impl ApiClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: ApiClientConfig, schrduler: Scheduler) -> Self {
+    pub fn new(conf: ApiClientConfig, scheduler: Scheduler) -> Self {
         let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             recv: Mutex::new(Some(recv)),
             send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -128,7 +128,6 @@ impl Service for ApiClient {
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
-        let is_finished = self.is_finished.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let recv = self.recv.lock().take().unwrap();
@@ -138,7 +137,7 @@ impl Service for ApiClient {
         };
         // let reconnect = if conf.reconnectCycle.is_some() {conf.reconnectCycle.unwrap()} else {Duration::from_secs(3)};
         let _queue_max_length = conf.rx_max_len;
-        let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let mut buffer = RetainBuffer::new(&dbg, "", Some(conf.rx_max_len as usize));
             let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
             // let mut connect = TcpClientConnect::new(self_id.clone() + "/TcpSocketClientConnect", conf.address, reconnect);
@@ -198,13 +197,13 @@ impl Service for ApiClient {
                     cycle.wait();
                 }
             };
-            is_finished.store(true, Ordering::SeqCst);
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -217,21 +216,12 @@ impl Service for ApiClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     // 

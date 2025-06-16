@@ -1,8 +1,7 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}, sync::channel, thread_pool::Scheduler};
+use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}, sync::{channel, Handles}, thread_pool::Scheduler};
 use std::{
-    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration
+    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration
 };
 use crate::{
     conf::tcp_server_config::TcpServerConfig,
@@ -39,8 +38,8 @@ pub struct TcpServer {
     conf: TcpServerConfig,
     connections: Arc<TcpServerConnections>,
     services: Arc<Services>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -52,21 +51,22 @@ impl TcpServer {
     /// - filter - all trafic from server to client will be filtered by some criterias, until Subscribe request confirmed:
     ///    - cot - [Cot] - bit mask wich will be passed
     ///    - name - exact name wich passed
-    pub fn new(conf: TcpServerConfig, services: Arc<Services>, schrduler: Scheduler) -> Self {
+    pub fn new(conf: TcpServerConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             connections: Arc::new(TcpServerConnections::new(conf.name)),
             services,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     ///                 self_id: &str, self_name: &Name, connection_id: &str
-    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<TcpServerConnections>) {
+    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<TcpServerConnections>, scheduler: Scheduler) {
         log::info!("{}.setup_connection | Trying to repair Connection '{}'...", con_info.dbg, con_info.connection_id);
         let repair_result = connections.repair(con_info.connection_id, stream.try_clone().unwrap());
         match repair_result {
@@ -83,6 +83,7 @@ impl TcpServer {
                     con_info.connection_id,
                     recv, services.clone(),
                     conf.clone(),
+                    scheduler,
                     exit.clone()
                 );
                 match connection.run() {
@@ -170,8 +171,9 @@ impl Service for TcpServer {
         let connections = self.connections.clone();
         let services = self.services.clone();
         let reconnect_cycle = conf.reconnect_cycle.unwrap_or(Duration::ZERO);
+        let scheduler = self.scheduler.clone();
         log::info!("{}.run | Preparing thread...", dbg);
-        let handle = thread::Builder::new().name(format!("{}.run", dbg.clone())).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             let mut cycle = ServiceCycle::new(&dbg, reconnect_cycle);
             'main: loop {
@@ -198,6 +200,7 @@ impl Service for TcpServer {
                                         conf.clone(),
                                         exit.clone(),
                                         connections.clone(),
+                                        scheduler.clone(),
                                     );
                                 }
                                 Err(err) => {
@@ -219,14 +222,14 @@ impl Service for TcpServer {
                 }
             }
             log::info!("{}.run | Exit...", dbg);
-            // Self::waitConnections(&self_id, connections);
             connections.wait();
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -239,21 +242,12 @@ impl Service for TcpServer {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     // 
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //
