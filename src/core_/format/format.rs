@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use regex::RegexBuilder;
-use sal_sync::services::entity::point::point::Point;
+use sal_sync::services::entity::Point;
 ///
 /// Replaces input markers {marker name} with the concrete values
 ///

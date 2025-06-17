@@ -1,7 +1,6 @@
-use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use sal_sync::services::entity::{name::Name, object::Object, point::point::Point};
+use sal_sync::{services::entity::{Name, Object, Point}, sync::channel::{Receiver, RecvTimeoutError}};
 use crate::{
-    core_::{constants::constants::RECV_TIMEOUT, failure::recv_error::RecvError}, tcp::steam_read::StreamRead
+    core_::{constants::constants::RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
 };
 ///
 /// Converts PointType into the squence of bytes
@@ -29,9 +28,6 @@ impl JdsSerialize {
 //
 // 
 impl Object for JdsSerialize {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -53,7 +49,7 @@ impl StreamRead<serde_json::Value, RecvError> for JdsSerialize {
             Err(err) => {
                 match err {
                     RecvTimeoutError::Timeout => Err(RecvError::Timeout),
-                    RecvTimeoutError::Disconnected => Err(RecvError::Disconnected),
+                    _ => Err(RecvError::Disconnected),
                 }
             }
         }

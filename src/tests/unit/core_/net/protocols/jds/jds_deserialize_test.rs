@@ -3,7 +3,7 @@
 mod jds_deserialize {
     use chrono::{DateTime, Utc};
         use rand::Rng;
-    use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
+    use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
@@ -186,7 +186,7 @@ mod jds_deserialize {
         let test_data = test_data.to_owned().clone();
         thread::spawn(move || {
             log::info!("TCP server | Preparing test server...");
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             match TcpListener::bind(addr) {
                 Ok(listener) => {
                     log::info!("TCP server | Preparing test server - ok");
@@ -200,7 +200,7 @@ mod jds_deserialize {
                                 let eot = [4];
                                 for _ in 0..count {
                                     for (msg, _) in &test_data {
-                                        let pos: usize = rng.gen_range(5..(msg.len() - 5));
+                                        let pos: usize = rng.random_range(5..(msg.len() - 5));
                                         let (msg1, msg2) = msg.split_at(pos);
                                         let bytes1 = msg1.as_bytes();
                                         let bytes2 = msg2.as_bytes();

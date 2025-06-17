@@ -1,12 +1,11 @@
 #[cfg(test)]
 mod fn_rising_edge {
-        use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
     use testing::entities::test_value::Value;
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::fn_config::FnConfig, 
-        core_::types::fn_in_out_ref::FnInOutRef,
+        core_::FnInOutRef,
         services::task::nested_function::{
             edge_detection::fn_rising_edge::FnRisingEdge, fn_::FnOut, fn_input::FnInput,
         }

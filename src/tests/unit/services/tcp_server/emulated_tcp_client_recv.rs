@@ -1,18 +1,18 @@
-use sal_core::error::Error;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    kernel::state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged},
+    kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged},
     services::{
-        entity::{name::Name, object::Object, point::point::Point},
-        service::{service::Service, service_handles::ServiceHandles},
-    },
+        entity::{Name, Object, Point},
+        Service,
+    }, sync::{channel::Sender, Handles},
 };
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    core_::net::{
+    core_::{net::{
         connection_status::ConnectionStatus,
         protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize},
-    },
+    }, RwLock},
     tcp::tcp_stream_write::OpResult
 };
 
@@ -24,7 +24,7 @@ use crate::{
 /// - if [recvLimit] is some then thread exit when riched recvLimit
 /// - [disconnect] - contains percentage (0..100) of test_data / iterations, where socket will be disconnected and connected again
 pub struct EmulatedTcpClientRecv {
-    id: String,
+    dbg: Dbg,
     name: Name,
     addr: SocketAddr,
     received: Arc<RwLock<Vec<Point>>>,
@@ -32,6 +32,7 @@ pub struct EmulatedTcpClientRecv {
     must_received: Option<Value>,
     disconnect: Vec<i8>,
     marker_received: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -39,8 +40,8 @@ pub struct EmulatedTcpClientRecv {
 impl EmulatedTcpClientRecv {
     pub fn new(parent: impl Into<String>, addr: &str, recv_limit: Option<usize>, must_received: Option<Value>, disconnect: Vec<i8>) -> Self {
         let name = Name::new(parent, format!("EmulatedTcpClientRecv{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            id: name.join(),
             name,
             addr: addr.parse().unwrap(),
             received: Arc::new(RwLock::new(vec![])),
@@ -48,13 +49,15 @@ impl EmulatedTcpClientRecv {
             must_received,
             disconnect,
             marker_received: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     ///
     pub fn id(&self) -> String {
-        self.id.clone()
+        self.name.join()
     }
     ///
     ///
@@ -111,13 +114,13 @@ impl EmulatedTcpClientRecv {
     ///
     pub fn wait_all_received(&self) {
         let recv_limit = self.recv_limit.unwrap_or(0);
-        log::info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
+        log::info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().len(), recv_limit);
         loop {
-            if self.received.read().unwrap().len() >= recv_limit {
+            if self.received.read().len() >= recv_limit {
                 break;
             }
             thread::sleep(Duration::from_millis(100));
-            log::trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
+            log::trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().len(), recv_limit);
         }
     }
     ///
@@ -125,13 +128,13 @@ impl EmulatedTcpClientRecv {
     pub fn wait_marker_received(&self) {
         match &self.must_received {
             Some(must_received) => {
-                log::info!("{}.waitMarkerReceived | Wait for {:?} marker beeng received", self.id, must_received);
+                log::info!("{}.waitMarkerReceived | Wait for {:?} marker beeng received", self.dbg, must_received);
                 loop {
                     if self.marker_received.load(Ordering::SeqCst) {
                         break;
                     }
                     thread::sleep(Duration::from_millis(100));
-                    log::trace!("{}.waitMarkerReceived | wait for {:?} marker beeng received", self.id, self.must_received);
+                    log::trace!("{}.waitMarkerReceived | wait for {:?} marker beeng received", self.dbg, self.must_received);
                 }
             }
             None => {}
@@ -141,9 +144,6 @@ impl EmulatedTcpClientRecv {
 //
 //
 impl Object for EmulatedTcpClientRecv {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -154,7 +154,7 @@ impl Debug for EmulatedTcpClientRecv {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("EmulatedTcpClientRecv")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -163,7 +163,7 @@ impl Debug for EmulatedTcpClientRecv {
 impl Service for EmulatedTcpClientRecv {
     //
     //
-    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, _name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support static producer", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -172,9 +172,9 @@ impl Service for EmulatedTcpClientRecv {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+    fn run(&self) -> Result<(), Error> {
+        log::info!("{}.run | Starting...", self.dbg);
+        let self_id = self.dbg.clone();
         let exit = self.exit.clone();
         let marker_received = self.marker_received.clone();
         let addr = self.addr.clone();
@@ -208,7 +208,7 @@ impl Service for EmulatedTcpClientRecv {
                                                 match result {
                                                     OpResult::Ok(point) => {
                                                         log::debug!("{}.run | received: {:?}", self_id, point);
-                                                        received.write().unwrap().push(point.clone());
+                                                        received.write().push(point.clone());
                                                         received_count += 1;
                                                         progress_percent = (received_count as f32) / (recv_limit as f32);
                                                         switch_state.add(progress_percent);
@@ -268,7 +268,7 @@ impl Service for EmulatedTcpClientRecv {
                                             log::trace!("{}.run | received: {:?}", self_id, result);
                                             match result {
                                                 OpResult::Ok(point) => {
-                                                    received.write().unwrap().push(point);
+                                                    received.write().push(point);
                                                 }
                                                 OpResult::Err(err) => {
                                                     log::warn!("{}.run | read socket error: {:?}", self_id, err);
@@ -301,15 +301,26 @@ impl Service for EmulatedTcpClientRecv {
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                log::info!("{}.run | Starting - ok", self.dbg);
+                self.handles.push(handle);
+                Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> Result<(), Error> {
+        self.handles.wait()
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.handles.is_finished()
     }
     //
     //

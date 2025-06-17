@@ -1,7 +1,6 @@
 use concat_string::concat_string;
-use sal_sync::services::{entity::{point::{point::{Point, ToPoint}, point_hlr::PointHlr}, status::status::Status}, task::functions::conf::fn_conf_keywd::FnConfPointType, types::bool::Bool};
+use sal_sync::services::{entity::{Point, PointHlr, Status, ToPoint}, task::functions::{FnConfPointType, FnConfig}, types::Bool};
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-use crate::conf::fn_::fn_config::FnConfig;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// 

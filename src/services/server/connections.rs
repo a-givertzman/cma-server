@@ -1,5 +1,7 @@
-use std::{any::Any, collections::HashMap, net::TcpStream, sync::mpsc::{SendError, Sender}, thread::JoinHandle};
-use testing::stuff::wait::WaitTread;
+use std::{net::TcpStream, sync::Arc};
+use dashmap::DashMap;
+use sal_core::error::Error;
+use sal_sync::{services::Service, sync::channel::Sender};
 ///
 /// 
 pub enum Action {
@@ -12,37 +14,37 @@ pub enum Action {
 /// - Sender<Action>
 #[derive(Debug)]
 struct Connection {
-    handle: JoinHandle<()>,
+    service: Arc<Box<dyn Service>>,
     send: Sender<Action>,
 }
 //
 // 
 impl Connection {
-    pub fn new(handle: JoinHandle<()>, send: Sender<Action>,) -> Self {
+    pub fn new(service: Arc<Box<dyn Service>>, send: Sender<Action>,) -> Self {
         Self {
-            handle,
+            service,
             send,
         }
     }
     ///
     /// 
-    pub fn send(&self, action: Action) -> Result<(), SendError<Action>> {
-        self.send.send(action)
+    pub fn send(&self, action: Action) -> Result<(), Error> {
+        self.send.send(action).map_err(|e| Error::new("Connection", "send").pass(e.to_string()))
     }
     ///
     /// 
-    pub fn wait(self) -> Result<(), Box<dyn Any + Send>> {
-        self.handle.wait()
+    pub fn wait(self) -> Result<(), Error> {
+        self.service.wait()
     }
     ///
     /// 
     pub fn is_active(&self) -> bool {
-        !self.handle.is_finished()
+        !self.service.is_finished()
     }
     ///
     /// 
     pub fn is_finished(&self) -> bool {
-        self.handle.is_finished()
+        self.service.is_finished()
     }
 }
 
@@ -53,7 +55,7 @@ impl Connection {
 #[derive(Debug)]
 pub struct TcpServerConnections {
     id: String,
-    connections: HashMap<String, Connection>,
+    connections: DashMap<String, Connection>,
 }
 //
 // 
@@ -63,17 +65,17 @@ impl TcpServerConnections {
     pub fn new(parent: impl Into<String>) -> Self {
         Self { 
             id: format!("{}/TcpServerConnections", parent.into()),
-            connections: HashMap::new(),
+            connections: DashMap::new(),
         }
     }
     ///
     /// Inserts a new connection, if connection_id olready exists, connection will be updated
-    pub fn insert(&mut self, connection_id: &str, handle: JoinHandle<()>, send: Sender<Action>) {
+    pub fn insert(&self, connection_id: &str, service: Arc<Box<dyn Service>>, send: Sender<Action>) {
         log::info!("{}.insert | connection: '{}'", self.id, connection_id);
         self.connections.insert(
             connection_id.to_string(),
             Connection::new(
-                handle,
+                service,
                 send,
             )
         );
@@ -104,16 +106,16 @@ impl TcpServerConnections {
     }    
     ///
     /// Waits for all connections handles being finished
-    pub fn wait(&mut self) {
+    pub fn wait(&self) {
         while !self.connections.is_empty() {
-            let keys: Vec<String> = self.connections.keys().map(|k| {k.to_string()}).collect();
+            let keys: Vec<String> = self.connections.iter().map(|r| r.key().to_string()).collect();
             log::info!("{}.run | Wait for connections:", self.id);
             for key in &keys {
                 log::info!("{}.run | \tconnection: {:?}\t isActive: {}", self.id, key, self.connections.get(key).unwrap().is_active());
             }
             match keys.first() {
                 Some(key) => {
-                    let connection = self.connections.remove(key).unwrap();
+                    let (_, connection) = self.connections.remove(key).unwrap();
                     connection.send(Action::Exit).unwrap_or_else(|_| {
                         log::info!("{}.run | Connection '{}' - already finished", self.id, key)
                     });
@@ -128,20 +130,27 @@ impl TcpServerConnections {
     ///
     /// Chech if finished connection threads are present in the self.connection
     /// - removes finished connections
-    pub fn clean(&mut self) {
-        let mut to_remove = vec![];
+    pub fn clean(&self) {
+        // let mut to_remove = vec![];
         log::info!("{}.clean | Cleaning connections...", self.id);
-        for (name, connection) in &self.connections {
-            log::info!("{}.clean | Checking connection '{}' \t '{}' - finished: {}", self.id, name, connection.handle.thread().name().unwrap_or("unnamed"), connection.is_finished());
-            if connection.is_finished() {
-                to_remove.push(name.clone());
-            }
-        }
+        let to_remove: Vec<String> = self.connections
+            .iter()
+            .filter(|r| {
+                let c = r.value();
+                c.is_finished()
+            })
+            .map(|r| r.key().clone()).collect();
+        // for (name, connection) in self.connections.iter().map(|r| (r.key().clone(), r.value().clone())) {
+        //     log::info!("{}.clean | Checking connection '{}' \t '{}' - finished: {}", self.id, name, connection.service.name(), connection.is_finished());
+        //     if connection.is_finished() {
+        //         to_remove.push(name.clone());
+        //     }
+        // }
         log::info!("{}.clean | Finished connections found: {:#?}", self.id, to_remove);
         for name in to_remove {
             match self.connections.remove(&name) {
-                Some(connection) => {
-                    match connection.handle.wait() {
+                Some((_, connection)) => {
+                    match connection.service.wait() {
                         Ok(_) => log::info!("{}.clean | Connection '{}' removed successful", self.id, name),
                         Err(err) => log::error!("{}.clean | Connection '{}' wait error: {:#?}", self.id, name, err),
                     }

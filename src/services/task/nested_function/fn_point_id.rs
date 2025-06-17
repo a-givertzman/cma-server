@@ -1,10 +1,10 @@
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::services::entity::point::{point::Point, point_config::PointConfig, point_hlr::PointHlr};
+use sal_sync::services::entity::{Point, PointConfig, PointHlr};
 use std::{hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use concat_string::concat_string;
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef, 
+    core_::FnInOutRef, 
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,

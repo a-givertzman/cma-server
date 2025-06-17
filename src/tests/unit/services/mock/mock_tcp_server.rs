@@ -1,7 +1,7 @@
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread};
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use sal_sync::services::{
-    entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}},
-    service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
+    entity::{Name, Object, {{Point, ToPoint}, PointTxId}},
+    service::{LinkName, Service},
 };
 use testing::entities::test_value::Value;
 use crate::{core_::constants::constants::RECV_TIMEOUT, services::safe_lock::rwlock::SafeLock};
@@ -11,7 +11,7 @@ pub struct MockTcpServer {
     id: String,
     name: Name,
     multi_queue: LinkName,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
@@ -21,7 +21,7 @@ pub struct MockTcpServer {
 //
 // 
 impl MockTcpServer {
-    pub fn new(parent: impl Into<String>, multi_queue: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, recv_limit: Option<usize>) -> Self {
+    pub fn new(parent: impl Into<String>, multi_queue: &str, services: Arc<Services>, test_data: Vec<Value>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockTcpServer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             id: name.join(),
@@ -71,14 +71,14 @@ impl Debug for MockTcpServer {
 impl Service for MockTcpServer {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
         let mq_service_name = self.multi_queue.service();
         log::debug!("{}.run | Lock services...", self_id);
-        let (_, rx_recv) = self.services.wlock(&self_id).subscribe(&mq_service_name, &self_id, &vec![]);
-        let tx_send = self.services.rlock(&self_id).get_link(&self.multi_queue).unwrap_or_else(|err| {
+        let (_, rx_recv) = self.services.subscribe(&mq_service_name, &self_id, &vec![]);
+        let tx_send = self.services.get_link(&self.multi_queue).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self_id, err);
         });
         log::debug!("{}.run | Lock services - ok", self_id);

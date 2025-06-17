@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::{FnConfKeywd, FnConfKindName}};
 use std::{str::FromStr, time::Duration};
 use crate::services::slmp_client::slmp::device_code::DeviceCode;
 ///

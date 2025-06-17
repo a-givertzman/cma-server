@@ -1,18 +1,18 @@
 use std::{
     hash::BuildHasherDefault, net::TcpStream,
-    sync::{atomic::{AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex},
-    thread::{self, JoinHandle}, time::Duration,
+    sync::{atomic::{AtomicU32, Ordering}, Arc},
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
+use sal_core::error::Error;
 use sal_sync::{
-    collections::map::FxIndexMap,
-    kernel::state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
-    services::{entity::{point::point::Point, status::status::Status}, service::service_cycle::ServiceCycle},
+    collections::FxIndexMap,
+    kernel::state::{ChangeNotify, ExitNotify},
+    services::{entity::{Point, Status}, ServiceCycle}, sync::channel::Sender, thread_pool::{JoinHandle, Scheduler},
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::failure::errors_limit::ErrorLimit,
+    core_::{failure::ErrorLimit, Mutex},
     services::slmp_client::slmp_db::SlmpDb
 };
 ///
@@ -21,13 +21,14 @@ use crate::{
 /// - exit_pair - exit signal from / to notify 'Write' partner to exit the thread
 pub struct SlmpRead {
     // tx_id: usize,
-    id: String,
+    dbg: String,
     // name: Name,
     conf: SlmpClientConfig,
     dest: Sender<Point>,
     dbs: Arc<Mutex<FxIndexMap<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     status: Arc<AtomicU32>,
+    scheduler: Scheduler,
     exit: Arc<ExitNotify>,
 }
 impl SlmpRead {
@@ -41,19 +42,21 @@ impl SlmpRead {
         dest: Sender<Point>,
         // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         status: Arc<AtomicU32>,
+        scheduler: Scheduler,
         exit: Arc<ExitNotify>,
     ) -> Self {
-        let self_id = format!("{}/SlmpRead", parent.into());
-        let dbs = Self::build_dbs(&self_id, tx_id, &conf);
+        let dbg = format!("{}/SlmpRead", parent.into());
+        let dbs = Self::build_dbs(&dbg, tx_id, &conf);
         Self {
             // tx_id,
-            id: self_id.clone(),
+            dbg: dbg.clone(),
             // name,
             conf,
             dest,
             dbs: Arc::new(Mutex::new(dbs)),
             // diagnosis,
             status,
+            scheduler,
             exit,
         }
     }
@@ -84,79 +87,61 @@ impl SlmpRead {
     }
     ///
     /// Cyclicaly reads data slice from the device,
-    pub fn run(&mut self, mut tcp_stream: TcpStream) -> Result<JoinHandle<()>, std::io::Error> {
-        log::info!("{}.read | starting...", self.id);
-        let self_id = self.id.clone();
+    pub fn run(&mut self, mut tcp_stream: TcpStream) -> Result<JoinHandle<()>, Error> {
+        log::info!("{}.read | starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let status = self.status.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let dbs = self.dbs.clone();
         let dest = self.dest.clone();
-        let cycle = conf.cycle.map_or(None, |cycle| if cycle != Duration::ZERO {Some(cycle)} else {None});
-        match cycle {
-            Some(cycle_interval) => {
-                log::info!("{}.read | Preparing thread...", self_id);
-                let handle = thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {
-                    let mut is_connected = ChangeNotify::new(
-                        &self_id,
-                        false,
-                        vec![
-                            (true,  Box::new(|message| log::info!("{}", message))),
-                            (false, Box::new(|message| log::warn!("{}", message))),
-                        ],
-                    );
-                    let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
-                    let mut dbs = dbs.lock().unwrap();
-                    let mut error_limit = ErrorLimit::new(3);
-                    'main: while !exit.get() {
-                        is_connected.add(true, format!("{}.read | Connection established", self_id));
-                        cycle.start();
-                        for (db_name, db) in dbs.iter_mut() {
-                            log::trace!("{}.read | SlmpDb '{}' - reading...", self_id, db_name);
-                            match db.read(&mut tcp_stream, &dest) {
-                                Ok(_) => {
-                                    error_limit.reset();
-                                    log::trace!("{}.read | SlmpDb '{}' - reading - ok", self_id, db_name);
-                                }
-                                Err(err) => {
-                                    log::warn!("{}.read | SlmpDb '{}' - reading - error: {:?}", self_id, db_name, err);
-                                    if error_limit.add().is_err() {
-                                        log::error!("{}.read | SlmpDb '{}' - exceeded reading errors limit, trying to reconnect...", self_id, db_name);
-                                        status.store(Status::Invalid.into(), Ordering::SeqCst);
-                                        exit.exit_pair();
-                                        break 'main;
-                                    }
-                                }
-                            }
-                            if exit.get() {
+        let cycle = conf.cycle.clone();
+        log::info!("{}.read | Preparing thread...", dbg);
+        let handle = self.scheduler.spawn(move || {
+            let mut is_connected = ChangeNotify::new(
+                &dbg,
+                false,
+                vec![
+                    (true,  Box::new(|message| log::info!("{}", message))),
+                    (false, Box::new(|message| log::warn!("{}", message))),
+                ],
+            );
+            let mut cycle = ServiceCycle::new(&dbg, cycle);
+            let mut dbs = dbs.lock();
+            let mut error_limit = ErrorLimit::new(3);
+            'main: while !exit.get() {
+                is_connected.add(true, format!("{}.read | Connection established", dbg));
+                cycle.start();
+                for (db_name, db) in dbs.iter_mut() {
+                    log::trace!("{}.read | SlmpDb '{}' - reading...", dbg, db_name);
+                    match db.read(&mut tcp_stream, &dest) {
+                        Ok(_) => {
+                            error_limit.reset();
+                            log::trace!("{}.read | SlmpDb '{}' - reading - ok", dbg, db_name);
+                        }
+                        Err(err) => {
+                            log::warn!("{}.read | SlmpDb '{}' - reading - error: {:?}", dbg, db_name, err);
+                            if error_limit.add().is_err() {
+                                log::error!("{}.read | SlmpDb '{}' - exceeded reading errors limit, trying to reconnect...", dbg, db_name);
+                                status.store(Status::Invalid.into(), Ordering::SeqCst);
+                                exit.exit_pair();
                                 break 'main;
                             }
                         }
-                        cycle.wait();
                     }
-                    if status.load(Ordering::SeqCst) != u32::from(Status::Ok) {
-                        Self::yield_status(&self_id, Status::Invalid, &mut dbs, &dest);
+                    if exit.get() {
+                        break 'main;
                     }
-                    log::info!("{}.read | Exit", self_id);
-                });
-                log::info!("{}.read | Started", self.id);
-                handle
+                }
+                cycle.wait();
             }
-            None => {
-                log::info!("{}.read | Disabled", self.id);
-                let exit = self.exit.clone();
-                thread::Builder::new().name(format!("{}.read", self_id)).spawn(move || {
-                    log::info!("{}.read | Started disabled", self_id);
-                    while !exit.get() {
-                        thread::sleep(Duration::from_millis(64));
-                    }
-                    if status.load(Ordering::SeqCst) != u32::from(Status::Ok) {
-                        let mut dbs = dbs.lock().unwrap();
-                        Self::yield_status(&self_id, Status::Invalid, &mut dbs, &dest);
-                    }
-                    log::info!("{}.read | Exit", self_id);
-                })
+            if status.load(Ordering::SeqCst) != u32::from(Status::Ok) {
+                Self::yield_status(&dbg, Status::Invalid, &mut dbs, &dest);
             }
-        }
+            log::info!("{}.read | Exit", dbg);
+            Ok(())
+        });
+        log::info!("{}.read | Started", self.dbg);
+        handle.map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))
     }
 }

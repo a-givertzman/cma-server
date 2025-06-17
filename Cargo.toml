@@ -1,7 +1,8 @@
 [package]
 name = "cma-server"
 version = "0.1.3"
-edition = "2021"
+edition = "2024"
+
 build = "build.rs"
 
 [features]
@@ -10,69 +11,83 @@ build = "build.rs"
 plot = ["dep:winit"]
 
 [dependencies]
-log = "^0.4"
-env_logger = "^0.11"
-
+log = "~0.4"
+env_logger = "~0.11"
+#
 # date & time
-chrono = "^0.4"
-
+chrono = "~0.4"
+#
+# Internal
 testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.0.6" }
-sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
+sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
 # sal-sync = { path = "../sal-sync" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.0.4" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
+#
+# Serde
+serde = { version = "~1.0", features = ["derive"] }
+serde_yaml = "~0.9"
+serde_json = "~1.0"
 
-serde = { version = "^1.0", features = ["derive"] }
-serde_yaml = "^0.9"
-serde_json = "^1.0"
+regex = "~1.11"
 
-regex = "^1.10"
-
+#
 # Math
-rand = "^0.9"
-rustfft = "^6.2"
+rand = "~0.9"
+rustfft = "~6.3"
 
+#
+# Tread safe
+parking_lot = "~0.12"
+once_cell = "~1.21"
+lazy_static = "~1.5"
+kanal = "~0.1"
+dashmap = "~6.1"
+coco = "~0.3"
+
+#
 # Collections
-linked-hash-map = "^0.5"
-indexmap = "^2.6"
-hashers = "^1.0"
-circular-buffer = "^1.1"
+linked-hash-map = "~0.5"
+indexmap = "~2.9"
+hashers = "~1.0"
+circular-buffer = "~1.1"
 
+#
 # CPP integrations
-# snap7 = "^0.0"
-snap7-sys = "^0.1"
-libc = "^0.2"
-libloading = "^0.8"
+# snap7 = "~0.0"
+snap7-sys = "~0.1"
+libc = "~0.2"
+libloading = "~0.8"
 
-once_cell = "^1.20"
-lazy_static = "^1.5"
-
+#
 # fast string concatinations
-concat-string = "^1.0"
-concat-in-place = "^1.1"
+concat-string = "~1.0"
+concat-in-place = "~1.1"
 
-signal-hook = "^0.3"
+signal-hook = "~0.3"
 
-strum = "^0.27"
-strum_macros = "^0.27"
+strum = "~0.27"
+strum_macros = "~0.27"
 
+#
 # CLI
-clap = { version = "^4.5", features = ["derive"] }
+clap = { version = "~4.5", features = ["derive"] }
 
+#
 # UI
-egui = "^0.31"
-egui_plot = "^0.31"
-egui_extras = "^0.31"
-eframe = "^0.31"
-hsl = "^0.1"
-winit = { version = "^0.30", optional = true }
+egui = "~0.31"
+egui_plot = "~0.32"
+egui_extras = "~0.31"
+eframe = "~0.31"
+hsl = "~0.1"
+winit = { version = "~0.30", optional = true }
 
-uid = "^0.1"
+uid = "~0.1"
 
-derivative = "^2.2"
+derivative = "~2.2"
 
-plotters = "^0.3"
+plotters = "~0.3"
 
 [build-dependencies]
-cc = "^1.1"
+cc = "~1.2"

@@ -2,7 +2,7 @@ use crate::services::slmp_client::slmp::c_slmp_const::{ProcessorNumber, SlmpComm
 use super::{c_slmp_const::FrameType, c_slmp_info::CSlmpInfo, device_code::DeviceCode};
 //
 //
-extern "C" {
+unsafe extern "C" {
     ///
     /// A Function for making packet stream from the SLMP_Info structure */
     pub fn SLMP_MakePacketStream (
@@ -12,24 +12,24 @@ extern "C" {
     ) -> std::ffi::c_int;
 }
 ///
-///        Initialize and create SLMPPacket structure.
-///        Load C functions from .so file.
-///        From SLMPInfoC structure is created packet with create_stream method.
+/// Initialize and create SLMPPacket structure.
+/// Load C functions from .so file.
+/// From SLMPInfoC structure is created packet with create_stream method.
 ///
-///        :param ulFrameType: ASCII/BIN + REQUEST/RESPONSE + ST/MT
-///        :param usSerialNumber: used only with MT(multiple transmission) frame types,
-///                               marks request and response with this number
-///        :param usNetNumber: network number(1 to 239), can be fined in parameters of target device (e.g. SLMPNWNO)
-///        :param usNodeNumber: station number (1 to 120), can be fined in parameters of target device (e.g. SLMPNDID)
-///        :param usProcNumber: destination unit I/O number
-///        :param usDataLength: length of data from usTimer to end of pucData, use function get_data_length
-///        :param usTimer: monitoring timer
-///        :param usCommand: SLMP command (e.g. SLMP_COMMAND_DEVICE_READ, SLMP_COMMAND_SELF_TEST)
-///        :param usSubCommand: Sub command -> 0x0001/0x0003 = per bit,
-///                                            0x0000/0x0002 = per word,
-///                                            0x0080/0x0082 = per word on CPU
-///        :param usEndCode: used mostly in response
-///        :param pucData: data which obtains device number, number of devices, its like arguments of used command
+///     :param ulFrameType: ASCII/BIN + REQUEST/RESPONSE + ST/MT
+///     :param usSerialNumber: used only with MT(multiple transmission) frame types,
+///                            marks request and response with this number
+///     :param usNetNumber: network number(1 to 239), can be fined in parameters of target device (e.g. SLMPNWNO)
+///     :param usNodeNumber: station number (1 to 120), can be fined in parameters of target device (e.g. SLMPNDID)
+///     :param usProcNumber: destination unit I/O number
+///     :param usDataLength: length of data from usTimer to end of pucData, use function get_data_length
+///     :param usTimer: monitoring timer
+///     :param usCommand: SLMP command (e.g. SLMP_COMMAND_DEVICE_READ, SLMP_COMMAND_SELF_TEST)
+///     :param usSubCommand: Sub command -> 0x0001/0x0003 = per bit,
+///                                         0x0000/0x0002 = per word,
+///                                         0x0080/0x0082 = per word on CPU
+///     :param usEndCode: used mostly in response
+///     :param pucData: data which obtains device number, number of devices, its like arguments of used command
 pub struct SlmpPacket {
     id: String,
     device_code: DeviceCode,

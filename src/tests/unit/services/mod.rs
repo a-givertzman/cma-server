@@ -6,8 +6,6 @@ mod jds_request;
 mod mock;
 mod profinet_client;
 mod retain_point_id;
-mod service;
-mod services;
 mod slmp_client;
 mod task;
 mod tcp_client;

@@ -1,4 +1,4 @@
-use sal_sync::services::entity::{object::Object, point::point::Point};
+use sal_sync::services::entity::{Object, Point};
 use std::{fmt::Debug, io::BufReader, net::TcpStream};
 use crate::core_::net::connection_status::ConnectionStatus;
 use super::tcp_stream_write::OpResult;

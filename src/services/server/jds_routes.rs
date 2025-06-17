@@ -1,7 +1,8 @@
-use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc, RwLock}};
-use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, services::Services};
+use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::Arc};
+use sal_core::dbg::Dbg;
+use sal_sync::{services::{entity::{Name, Object, Point}, Services}, sync::channel::Sender, thread_pool::Scheduler};
 use crate::{
-    core_::net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, 
+    core_::{net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, RwLock}, 
     services::server::jds_cnnection::Shared,
     tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult},
 };
@@ -29,14 +30,15 @@ impl RouterReply {
 ///     - pass - Point to be transmitted to the MultiQueue - returned from read method
 ///     - reply - Point to be sent back to the Client, contains reply in the value
 pub struct JdsRoutes<F> {
-    parent_id: String,
-    id: String,
+    parent_id: Dbg,
+    id: Dbg,
     name: Name,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     jds_deserialize: JdsDeserialize,
     req_reply_send: Sender<Point>,
     rautes: F,
     shared: Arc<RwLock<Shared>>,
+    scheduler: Scheduler,
 }
 //
 // 
@@ -44,23 +46,25 @@ impl<F> JdsRoutes<F> {
     ///
     /// 
     pub fn new(
-        parent_id: &str,
+        parent_id: &Dbg,
         parent: &Name, 
-        services: Arc<RwLock<Services>>, 
+        services: Arc<Services>, 
         jds_deserialize: JdsDeserialize, 
         req_reply_send: Sender<Point>, 
         rautes: F, 
         shared: Arc<RwLock<Shared>>,
+        scheduler: Scheduler,
     ) -> Self {
         Self {
             parent_id: parent_id.to_owned(),
-            id: format!("{}/JdsRoutes", parent_id), 
+            id: Dbg::new(parent_id, "JdsRoutes"), 
             name: parent.clone(),
             services,
             jds_deserialize,
             req_reply_send,
             rautes,
             shared,
+            scheduler,
         }
     }
 }
@@ -74,9 +78,6 @@ impl<F> Debug for JdsRoutes<F> {
 //
 // 
 impl<F> Object for JdsRoutes<F> {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -85,7 +86,7 @@ impl<F> Object for JdsRoutes<F> {
 // 
 impl<F> TcpStreamRead for JdsRoutes<F> where
     //    parent_id, name
-    F: Fn(String, Name, Point, Arc<RwLock<Services>>, Arc<RwLock<Shared>>) -> RouterReply,
+    F: Fn(Dbg, Name, Point, Arc<Services>, Arc<RwLock<Shared>>, Scheduler) -> RouterReply,
     F: Send {
     ///
     /// Reads single point from source
@@ -94,7 +95,14 @@ impl<F> TcpStreamRead for JdsRoutes<F> where
             ConnectionStatus::Active(point) => {
                 match point {
                     OpResult::Ok(point) => {
-                        let result = (self.rautes)(self.parent_id.clone(), self.name.clone(), point, self.services.clone(), self.shared.clone());
+                        let result = (self.rautes)(
+                            self.parent_id.clone(),
+                            self.name.clone(),
+                            point,
+                            self.services.clone(),
+                            self.shared.clone(),
+                            self.scheduler.clone(),
+                        );
                         if let Some(point) = result.retply {
                             if let Err(err) = self.req_reply_send.send(point) {
                                 log::error!("{}.read | Send reply error: {:?}", self.id, err)

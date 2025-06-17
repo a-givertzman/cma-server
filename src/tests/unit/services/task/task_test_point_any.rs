@@ -1,9 +1,9 @@
 #[cfg(test)]
 
 mod task {
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
-    use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
+    use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
+    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
@@ -30,10 +30,10 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "task_test_point_any";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(3));
+        let dbg = "task_test_point_any";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(3));
         test_duration.run().unwrap();
         //
         // can be changed
@@ -53,21 +53,22 @@ mod task {
         "#, self_name)).unwrap();
         let config = TaskConfig::from_yaml(&self_name, &conf);
         log::trace!("config: {:?}", &config);
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ))));
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
+        ), Some(tp.scheduler())));
+        let receiver = Arc::new(TaskTestReceiver::new(
             &self_name.join(),
             "",
             "in-queue",
             iterations,
-        )));
-        services.wlock(self_id).insert(receiver.clone());
+        ));
+        services.insert(receiver.clone());
         let test_data = RandomTestValues::new(
-            self_id,
+            dbg,
             vec![
                 Value::Real(-7.035),
                 Value::Real(-2.5),
@@ -87,33 +88,33 @@ mod task {
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
         assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
+        let producer = Arc::new(TaskTestProducer::new(
             &self_name.join(),
             &Name::new(self_name, "TaskAny.in-queue").join(),
             Duration::ZERO,
             services.clone(),
             test_data,
-        )));
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-        services.wlock(self_id).insert(task.clone());
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        ));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
+        services.insert(task.clone());
+        services.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
-        let task_handle = task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver_handle.wait().unwrap();
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        services.rlock(self_id).exit();
-        task_handle.wait().unwrap();
-        producer_handle.wait().unwrap();
-        services_handle.wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        receiver.wait().unwrap();
+        producer.exit();
+        task.exit();
+        services.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);

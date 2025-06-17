@@ -1,9 +1,6 @@
 use sal_sync::services::{
-    entity::{
-        cot::Cot, point::{point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, point_hlr::PointHlr},
-        status::status::Status
-    },
-    types::bool::Bool,
+    entity::{Cot, Point, PointConfig, PointConfigAddress, PointHlr, Status},
+    types::Bool,
 };
 use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};

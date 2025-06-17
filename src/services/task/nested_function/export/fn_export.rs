@@ -1,7 +1,7 @@
-use sal_sync::services::{entity::point::{point::Point, point_config::PointConfig, point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId}, types::bool::Bool};
-use std::sync::{mpsc::Sender, atomic::{AtomicUsize, Ordering}};
+use sal_sync::{services::{entity::{Point, PointConfig, PointConfigType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
+use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef, 
+    core_::FnInOutRef, 
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///

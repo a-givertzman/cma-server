@@ -4,11 +4,11 @@ use concat_string::concat_string;
 use log::LevelFilter;
 use sal_sync::services::{
     entity::{
-        cot::Cot, name::Name, object::Object, 
-        point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId},
-        status::status::Status,
+        Cot, Name, Object, 
+        {Point, PointHlr, PointTxId},
+        Status,
     }, 
-    types::bool::Bool
+    types::Bool
 };
 use crate::{
     core_::net::connection_status::ConnectionStatus, tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult}
@@ -207,9 +207,6 @@ impl JdsDeserialize {
 //
 // 
 impl Object for JdsDeserialize {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }

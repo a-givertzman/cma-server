@@ -1,9 +1,9 @@
 use chrono::Utc;
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
-use std::{sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender}, thread};
+use sal_sync::{services::{entity::{Cot, Point, PointHlr, PointTxId, Status}, types::Bool}, sync::channel::Sender};
+use std::{sync::{atomic::{AtomicUsize, Ordering}}, thread};
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef,
+    core_::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -154,7 +154,8 @@ lazy_static! {
 }
 #[cfg(feature = "plot")]
 fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
-    let (send, recv) = std::sync::mpsc::channel();
+    use sal_sync::sync::channel;
+    let (send, recv) = channel::unbounded();
     thread::spawn(|| {
         let event_loop_builder: Option<eframe::EventLoopBuilderHook> = Some(Box::new(|event_loop_builder| {
             // event_loop_builder.build().unwrap();
@@ -183,18 +184,18 @@ fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
 }
 #[cfg(not(feature = "plot"))]
 fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
-    let (send, recv) = std::sync::mpsc::channel();
+    use sal_sync::sync::channel;
+    let (send, recv) = channel::unbounded();
     println!(
         "fn_plot.ui_plot | To activate fn Plot use: \n\t`cargo test --features=plot` or \n\t`cargo run --features=plot`",
     );
     thread::spawn(move || {
         loop {
-            if let Err(err) = recv.recv_timeout(sal_sync::services::service::RECV_TIMEOUT) {
+            if let Err(err) = recv.recv_timeout(sal_sync::services::RECV_TIMEOUT) {
+                use sal_sync::sync::channel::RecvTimeoutError;
                 match err {
-                    std::sync::mpsc::RecvTimeoutError::Timeout => {},
-                    std::sync::mpsc::RecvTimeoutError::Disconnected => {
-                        break;
-                    },
+                    RecvTimeoutError::Timeout => {},
+                    _ => break,
                 }
             }
         }

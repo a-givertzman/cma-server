@@ -1,9 +1,5 @@
 use chrono::Utc;
-use sal_sync::services::entity::{
-    cot::Cot,
-    point::{point_hlr::PointHlr, point::Point, point_config::PointConfig,},
-    status::status::Status,
-};
+use sal_sync::services::entity::{Cot, PointHlr, Point, PointConfig, Status};
 ///
 /// Provides the state for diagnosis Point's
 pub struct DiagPoint {

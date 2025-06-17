@@ -1,6 +1,6 @@
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::{collections::map::FxIndexMap, services::{conf::{conf_tree::{ConfTree, ConfTreeGet}, diag_keywd::DiagKeywd}, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName, subscription::conf_subscribe::ConfSubscribe}};
+use sal_sync::{collections::FxIndexMap, services::{conf::{ConfTree, ConfTreeGet, DiagKeywd}, entity::{Name, PointConfig}, LinkName, ConfSubscribe}};
 use std::{fs, hash::BuildHasherDefault, str::FromStr, time::Duration};
 use crate::conf::udp_client_config::keywd::{self, Keywd};
 use super::udp_client_db_config::UdpClientDbConfig;

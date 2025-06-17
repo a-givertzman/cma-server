@@ -1,19 +1,16 @@
-use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use rand::Rng;
-use sal_core::error::Error;
-use sal_sync::services::{
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::{services::{
     entity::{
-        cot::Cot, name::Name, object::Object,
-        point::{
-            point::Point, point_config::PointConfig, point_config_history::PointConfigHistory,
-            point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId,
-        },
-        status::status::Status,
-    }, safe_lock::rwlock::SafeLock, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services, types::bool::Bool
-};
+        Cot, Name, Object,
+        Point, PointConfig, PointConfigType, PointHlr, PointTxId,
+        Status,
+    }, types::Bool, Service, ServiceCycle, Services
+}, sync::Handles, thread_pool::Scheduler};
 use serde_json::json;
 use testing::entities::test_value::Value;
 use super::producer_service_config::ProducerServiceConfig;
@@ -21,47 +18,53 @@ use super::producer_service_config::ProducerServiceConfig;
 /// Service for debuging / testing purposes
 ///  - prodices Point's into the configured service's queue
 pub struct ProducerService {
-    id: String,
+    dbg: Dbg,
     name: Name,
     conf: ProducerServiceConfig,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
 // 
 impl ProducerService {
-    pub fn new(conf: ProducerServiceConfig, services: Arc<RwLock<Services>>) -> Self {
+    pub fn new(conf: ProducerServiceConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+        let dbg = Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me()));
         Self {
-            id: format!("{}(ProducerService)", conf.name),
             name: conf.name.clone(),
             conf,
             services,
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// Returns map of the ParsePoint built from the provided PointConfig's
-    fn build_gen_points(parent_id: &str, tx_id: usize, points: Vec<PointConfig>) -> IndexMap<String, Box<impl ParsePoint<Value>>> {
+    fn build_gen_points(parent: impl Into<String>, tx_id: usize, points: Vec<PointConfig>) -> IndexMap<String, Box<impl ParsePoint<Value>>> {
+        let parent = parent.into();
         let mut gen_points = IndexMap::new();
         for point_conf in points {
             match point_conf.type_ {
                 PointConfigType::Bool => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Int => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Real => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Double => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::String => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfigType::Json => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
                 }
             }
         }
@@ -69,7 +72,7 @@ impl ProducerService {
     }
     ///
     /// Writes Point into the log file ./logs/parent/points.log
-    fn log(self_id: &str, parent: &Name, point: &Point) {
+    fn log(dbg: &Dbg, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -77,7 +80,7 @@ impl ProducerService {
             }
             Err(err) => {
                 if log::max_level() >= log::LevelFilter::Trace {
-                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
+                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", dbg, path, err)
                 }
             }
         }
@@ -86,9 +89,6 @@ impl ProducerService {
 //
 //
 impl Object for ProducerService {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -99,7 +99,7 @@ impl Debug for ProducerService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("ProducerService")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -108,33 +108,33 @@ impl Debug for ProducerService {
 impl Service for ProducerService {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+    fn run(&self) -> Result<(), Error> {
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let self_name = self.name.clone();
-        let tx_id = PointTxId::from_str(&self_id);
+        let tx_id = PointTxId::from_str(&self_name.join());
         let exit = self.exit.clone();
         let debug = self.conf.debug;
         let interval = self.conf.cycle.unwrap_or(Duration::ZERO);
         let delayed = !interval.is_zero();
-        let mut cycle = ServiceCycle::new(&self.id, interval);
-        let send = self.services.rlock(&self_id).get_link(&self.conf.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.id, err);
+        let mut cycle = ServiceCycle::new(&dbg, interval);
+        let send = self.services.get_link(&self.conf.send_to).unwrap_or_else(|err| {
+            panic!("{}.run | services.get_link error: {:#?}", dbg, err);
         });
-        let mut gen_points = Self::build_gen_points(&self.id, tx_id, self.conf.points());
-        let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
+        let mut gen_points = Self::build_gen_points(self_name.join(), tx_id, self.conf.points());
+        let handle = self.scheduler.spawn(move || {
             'main: loop {
-                log::trace!("{}.run | Step...", self_id);
+                log::trace!("{}.run | Step...", dbg);
                 for (_, gen_point) in &mut gen_points {
                     cycle.start();
                     if let Some(point) = gen_point.next(&Value::Bool(false), Utc::now()) {
                         match send.send(point.clone()) {
                             Ok(_) => {
                                 // if debug {debug!("{}.run | sent point: {:?}", self_id, point);}
-                                if debug {Self::log(&self_id, &self_name, &point);}
+                                if debug {Self::log(&dbg, &self_name, &point);}
                             }
                             Err(err) => {
-                                log::warn!("{}.run | Send error: {:?}", self_id, err);
+                                log::warn!("{}.run | Send error: {:?}", dbg, err);
                             }
                         }
                     };
@@ -146,15 +146,17 @@ impl Service for ProducerService {
                     }
                 }
             }
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Started", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                log::info!("{}.run | Started", self.dbg);
+                self.handles.push(handle);
+                Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
@@ -167,6 +169,16 @@ impl Service for ProducerService {
     }
     //
     //
+    fn wait(&self) -> Result<(), Error> {
+        self.handles.wait()
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.handles.is_finished()
+    }
+    //
+    //
     fn exit(&self) {
         self.exit.store(true, Ordering::Relaxed);
     }
@@ -175,14 +187,14 @@ impl Service for ProducerService {
 /// Creates new Point's on call method 'next'
 #[derive(Debug, Clone)]
 pub struct PointGen {
-    id: String,
+    dbg: Dbg,
     pub tx_id: usize,
     _type: PointConfigType,
     pub name: String,
     pub value: Value,
     pub status: Status,
-    pub history: PointConfigHistory,
-    pub alarm: Option<u8>,
+    // pub history: PointConfigHistory,
+    // pub alarm: Option<u8>,
     pub timestamp: DateTime<Utc>,
     is_changed: bool,
 }
@@ -192,22 +204,22 @@ impl PointGen {
     ///
     /// Creates new instance of the PointGen
     pub fn new(
-        parent_id: &str,
+        parent: impl Into<String>,
         tx_id: usize,
         name: String,
         config: &PointConfig,
         // filter: Filter<T>,
     ) -> PointGen {
         PointGen {
-            id: format!("{}/PointGen({})", parent_id, name),
+            dbg: Dbg::new(parent, format!("PointGen({name})")),
             tx_id,
             _type: config.type_.clone(),
             name,
             value: Value::Bool(false),
             status: Status::Invalid,
             is_changed: false,
-            history: config.history.clone(),
-            alarm: config.alarm,
+            // history: config.history.clone(),
+            // alarm: config.alarm,
             timestamp: Utc::now(),
         }
     }
@@ -215,7 +227,7 @@ impl PointGen {
     /// Returns Point
     fn to_point(&self) -> Option<Point> {
         if self.is_changed {
-            log::trace!("{}.to_point | generating point type '{:?}'...", self.id, self._type);
+            log::trace!("{}.to_point | generating point type '{:?}'...", self.dbg, self._type);
             match &self._type {
                 PointConfigType::Bool => {
                     Some(Point::Bool(PointHlr::new(
@@ -330,9 +342,11 @@ pub trait ParsePoint<T> {
     fn next(&mut self, input: &T, timestamp: DateTime<Utc>) -> Option<Point>;
     ///
     /// Returns new point (prevously parsed) with the given [status]
+    #[allow(unused)]
     fn next_status(&mut self, status: Status) -> Option<Point>;
     ///
     /// Returns true if value or status was updated since last call [addRaw()]
+    #[allow(unused)]
     fn is_changed(&self) -> bool;
 }
 

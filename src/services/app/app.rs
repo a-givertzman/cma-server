@@ -1,14 +1,14 @@
-use linked_hash_map::LinkedHashMap;
-use sal_sync::services::{
-    conf::conf_tree::ConfTree, entity::{name::Name, object::Object}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services
-};
-use std::{path::Path, process::exit, sync::{Arc, RwLock}, thread, time::Duration};
+use sal_core::dbg::Dbg;
+use sal_sync::{services::{
+    conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf,
+    Service, Services,
+}, thread_pool::{Scheduler, ThreadPool}};
+use std::{path::Path, process::exit, sync::Arc, thread, time::Duration};
 use libc::{
     SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
     // SIGFPE, SIGILL, SIGSEGV, 
 };
 use signal_hook::iterator::Signals;
-use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
         api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig,
@@ -25,8 +25,8 @@ use crate::{
 };
 
 pub struct App {
-    id: String,
-    handles: LinkedHashMap<String, ServiceHandles<()>>,
+    dbg: Dbg,
+    name: Name,
     conf: AppConfig,
 }
 //
@@ -36,126 +36,110 @@ impl App {
     /// Creates new instance of the ReatinBuffer
     ///     - path - path to the application configuration
     pub fn new(path: Vec<impl AsRef<Path>>) -> Self {
-        let self_id = "App".to_owned();
         path.iter().for_each(|p| {
-            log::info!("{}.run | Configuration path: '{}'", self_id, p.as_ref().display());
+            log::info!("App.run | Configuration path: '{}'", p.as_ref().display());
         });
         let conf: AppConfig = AppConfig::read(path);
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            id: self_id,
-            handles: LinkedHashMap::new(),
+            dbg,
+            name: conf.name.clone(),
             conf,
         }
     }
     ///
     /// Executes all services
     pub fn run(self) -> Result<(), String>  {
-        let self_id = self.id.clone();
-        log::info!("{}.run | Starting application...", self_id);
+        let dbg = self.dbg.clone();
+        log::info!("{}.run | Starting application...", dbg);
         let conf = self.conf.clone();
-        let self_name = Name::new("", conf.name);
-        let app = Arc::new(RwLock::new(self));
-        let services = Arc::new(RwLock::new(Services::new(&self_id, conf.services.clone())));
-        log::info!("{}.run |     Configuring services...", self_id);
+        let self_name = conf.name.clone();
+        let thread_pool = ThreadPool::new(&dbg, conf.tread_pool);
+        let services = Arc::new(Services::new(&dbg, conf.services.clone(), Some(thread_pool.scheduler())));
+        log::info!("{}.run |     Configuring services...", dbg);
         for (node_keywd, node_conf) in conf.nodes {
             let node_name = node_keywd.name();
             let node_sufix = node_keywd.sufix();
-            log::info!("{}.run |         Configuring service: {}({})...", self_id, node_name, node_sufix);
-            log::trace!("{}.run |         Config: {:#?}", self_id, node_conf);
-            services.wlock(&self_id).insert(
-                Self::build_service(&self_id, &self_name, &node_name, &node_sufix, node_conf, services.clone()),
+            log::info!("{}.run |         Configuring service: {}({})...", dbg, node_name, node_sufix);
+            log::trace!("{}.run |         Config: {:#?}", dbg, node_conf);
+            services.insert(
+                Self::build_service(&dbg, &self_name, &node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler()),
             );
-            log::info!("{}.run |         Configuring service: {}({}) - ok\n", self_id, node_name, node_sufix);
+            log::info!("{}.run |         Configuring service: {}({}) - ok\n", dbg, node_name, node_sufix);
         }
-        log::info!("{}.run |     All services configured\n", self_id);
+        log::info!("{}.run |     All services configured\n", dbg);
         thread::sleep(Duration::from_millis(100));
-        let handles = services.wlock(&self_id).run().unwrap();
-        let name = services.rlock(&self_id).id().to_owned();
-        app.write().unwrap().insert_handles(&name, handles);
+        services.run().unwrap();
+        // let name = services.name().join();
+        // app.write().unwrap().insert_handles(&name, handles);
         thread::sleep(Duration::from_millis(100));
-        log::info!("{}.run |     Starting services...", self_id);
-        let services_iter = services.rlock(&self_id).all();
+        log::info!("{}.run |     Starting services...", dbg);
+        let services_iter = services.all();
         for (name, service) in services_iter {
-            log::info!("{}.run |         Starting service: {}...", self_id, name);
-            let handles = service.wlock(&self_id).run();
-            match handles {
-                Ok(handles) => {
-                    app.write().unwrap().insert_handles(&name, handles);
-                    log::info!("{}.run |         Starting service: {} - ok", self_id, name);
+            log::info!("{}.run |         Starting service: {}...", dbg, name);
+            match service.run() {
+                Ok(_) => {
+                    // app.write().unwrap().insert_handles(&name, handles);
+                    log::info!("{}.run |         Starting service: {} - ok", dbg, name);
                 }
                 Err(err) => {
-                    log::error!("{}.run |         Error starting service '{}': {:#?}", self_id, name, err);
+                    log::error!("{}.run |         Error starting service '{}': {:#?}", dbg, name, err);
                 }
             };
             thread::sleep(Duration::from_millis(100));
         }
-        log::info!("{}.run |     All services started\n", self_id);
-        log::info!("{}.run | Application started\n", self_id);
-        Self::listen_sys_signals(self_id.clone(), services.clone());
-        loop {
-            let servece_ids: Vec<String> = app.read().unwrap().handles.keys().cloned().collect();
-            match servece_ids.first() {
-                Some(service_name) => {
-                    log::info!("{}.run | Waiting for service '{}' being finished...", self_id, service_name);
-                    let handles = app.write().unwrap().handles.remove(service_name).unwrap();
-                    handles.wait().unwrap();
-                    log::info!("{}.run | Waiting for service '{}' being finished - Ok", self_id, service_name);
-                }
-                None => {
-                    break;
-                }
+        log::info!("{}.run |     All services started\n", dbg);
+        log::info!("{}.run | Application started\n", dbg);
+        Self::listen_sys_signals(dbg.clone(), services.clone(), thread_pool.scheduler());
+        for (service_name, service) in services.all() {
+            log::info!("{}.run | Waiting for service '{}' being finished...", dbg, service_name);
+            match service.wait() {
+                Ok(_) => log::info!("{}.run | Waiting for service '{}' being finished - Ok", dbg, service_name),
+                Err(err) => log::info!("{}.run | Waiting for service '{}' being finished - Error: \n\t{:?}", dbg, service_name, err),
             }
         }
-        log::info!("{}.run | Application exit - Ok\n", self_id);
+        log::info!("{}.run | Application exit - Ok\n", dbg);
         Ok(())
     }    
     ///
     /// Returns service by it's name
-    fn build_service(self_id: &str, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<RwLock<Services>>) -> Arc<RwLock<dyn Service>> {
+    fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<Services>, scheduler: Scheduler) -> Arc<dyn Service> {
         match node_name {
-            Services::API_CLIENT => Arc::new(RwLock::new(
-                ApiClient::new(ApiClientConfig::new(parent, node_conf))
-            )),
-            Services::MULTI_QUEUE => Arc::new(RwLock::new(
-                MultiQueue::new(MultiQueueConf::new(parent, node_conf), services)
-            )),
-            Services::PROFINET_CLIENT => Arc::new(RwLock::new(
-                ProfinetClient::new(ProfinetClientConfig::new(parent, node_conf), services)
-            )),
-            Services::TASK => Arc::new(RwLock::new(
-                Task::new(TaskConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::TCP_CLIENT => Arc::new(RwLock::new(
-                TcpClient::new(TcpClientConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::TCP_SERVER => Arc::new(RwLock::new(
-                TcpServer::new(TcpServerConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::PRODUCER_SERVICE => Arc::new(RwLock::new(
-                ProducerService::new(ProducerServiceConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::CACHE_SERVICE => Arc::new(RwLock::new(
-                CacheService::new(CacheServiceConfig::new(parent, node_conf), services.clone())
-            )),
-            Services::SLMP_CLIENT => Arc::new(RwLock::new(
-                SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services)
-            )),
+            Services::API_CLIENT => Arc::new(
+                ApiClient::new(ApiClientConfig::new(parent, node_conf), scheduler.clone())
+            ),
+            Services::MULTI_QUEUE => Arc::new(
+                MultiQueue::new(MultiQueueConf::new(parent, node_conf), services, Some(scheduler.clone()))
+            ),
+            Services::PROFINET_CLIENT => Arc::new(
+                ProfinetClient::new(ProfinetClientConfig::new(parent, node_conf), services, scheduler.clone())
+            ),
+            Services::TASK => Arc::new(
+                Task::new(TaskConfig::new(parent, node_conf), services.clone(), scheduler.clone())
+            ),
+            Services::TCP_CLIENT => Arc::new(
+                TcpClient::new(TcpClientConfig::new(parent, node_conf), services.clone(), scheduler.clone())
+            ),
+            Services::TCP_SERVER => Arc::new(
+                TcpServer::new(TcpServerConfig::new(parent, node_conf), services.clone(), scheduler.clone())
+            ),
+            Services::PRODUCER_SERVICE => Arc::new(
+                ProducerService::new(ProducerServiceConfig::new(parent, node_conf), services.clone(), scheduler.clone())
+            ),
+            Services::CACHE_SERVICE => Arc::new(
+                CacheService::new(CacheServiceConfig::new(parent, node_conf), services.clone(), scheduler.clone())
+            ),
+            Services::SLMP_CLIENT => Arc::new(
+                SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services, scheduler.clone())
+            ),
             _ => {
-                panic!("{}.run | Unknown service: {}({})", self_id, node_name, node_sufix);
+                panic!("{}.build_service | Unknown service: {}({})", dbg, node_name, node_sufix);
             }
         }
     }
     ///
-    /// Inserts new pair service_id & service_join_handle
-    fn insert_handles(&mut self, id:&str, handles: ServiceHandles<()>) {
-        if self.handles.contains_key(id) {
-            panic!("{}.insert | Duplicated service name '{:?}'", self.id, id);
-        }
-        self.handles.insert(id.to_string(), handles);
-    }
-    ///
     /// Listening for signals from the operating system
-    fn listen_sys_signals(self_id: String, services: Arc<RwLock<Services>>) {
+    fn listen_sys_signals(dbg: Dbg, services: Arc<Services>, scheduler: Scheduler) {
         let signals = Signals::new([
             SIGHUP,     // code: 1	This signal is sent to a process when its controlling terminal is closed or disconnected
             SIGINT,     // code: 2	This signal is sent to a process when the user presses Control+C to interrupt its execution
@@ -171,41 +155,43 @@ impl App {
         ]);
         match signals {
             Ok(mut signals) => {
-                thread::spawn(move || {
+                scheduler.clone().spawn(move || {
                     let signals_handle = signals.handle();
-                    let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
+                    let dbg_ = dbg.clone();
+                    let handle = scheduler.spawn(move || {
+                        let dbg = dbg_;
                         for signal in signals.forever() {
-                            println!("{}.run Received signal {:?}", self_id, signal);
+                            println!("{}.run Received signal {:?}", dbg, signal);
                             match signal {
                                 SIGINT | SIGQUIT | SIGTERM => {
-                                    println!("{}.run Received signal {:?}", self_id, signal);
-                                    println!("{}.run Application exit...", self_id);
-                                    let services_iter = services.rlock(&self_id).all();
-                                    for (_id, service) in services_iter {
-                                        println!("{}.run Stopping service '{}'...", self_id, _id);
-                                        service.rlock(&self_id).exit();
-                                        println!("{}.run Stopping service '{}' - Ok", self_id, _id);
+                                    println!("{}.run Received signal {:?}", dbg, signal);
+                                    println!("{}.run Application exit...", dbg);
+                                    let services_iter = services.all();
+                                    for (id, service) in services_iter {
+                                        println!("{}.run Stopping service '{}'...", dbg, id);
+                                        service.exit();
+                                        println!("{}.run Stopping service '{}' - Ok", dbg, id);
                                     }
-                                    services.rlock(&self_id).exit();
+                                    services.exit();
                                     break;
                                 }
                                 SIGKILL => {
-                                    println!("{}.run Received signal {:?}", self_id, signal);
-                                    println!("{}.run Application halt...", self_id);
+                                    println!("{}.run Received signal {:?}", dbg, signal);
+                                    println!("{}.run Application halt...", dbg);
                                     exit(0);
                                 }
-                                _ => {
-                                    println!("{}.run Received unknown signal {:?}", self_id, signal);
-                                }
+                                _ => println!("{}.run Received unknown signal {:?}", dbg, signal)
                             }
                         }
+                        Ok(())
                     }).unwrap();
-                    handle.wait().unwrap();
+                    handle.join().unwrap();
                     signals_handle.close();
-                });
+                    Ok(())
+                }).unwrap();
             }
             Err(err) => {
-                panic!("{}.run | Application hook system signals error; {:#?}", self_id, err);
+                panic!("{}.run | Application hook system signals error; {:#?}", dbg, err);
             }
         }
     }

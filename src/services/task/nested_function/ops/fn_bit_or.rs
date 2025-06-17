@@ -1,11 +1,11 @@
 use sal_sync::services::{
-    entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status},
-    types::bool::Bool,
+    entity::{Cot, {Point, PointHlr, PointTxId}, Status},
+    types::Bool,
 };
 use std::sync::atomic::{AtomicUsize, Ordering};
 use chrono::Utc;
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef,
+    core_::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     },

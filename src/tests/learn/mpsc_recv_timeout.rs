@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-        use testing::stuff::wait::WaitTread;
-    use std::{sync::{Once, mpsc::{self, RecvTimeoutError}}, time::Duration, thread::{self}};
+    use std::{sync::Once, time::Duration, thread::{self}};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use sal_sync::sync::channel::{self, RecvTimeoutError};
     use crate::core_::constants::constants::RECV_TIMEOUT;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -34,7 +34,7 @@ mod tests {
         init_each();
         println!("test mpsc::Receiver");
         let self_id = "test";
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         let iterations = 3;
         let _h = thread::Builder::new().name(self_id.to_string()).spawn(move || {
             for value in 0..=iterations {
@@ -55,7 +55,7 @@ mod tests {
                         RecvTimeoutError::Timeout => {
                             log::error!("debug: {}", err);
                         }
-                        RecvTimeoutError::Disconnected => {
+                        _ => {
                             log::error!("error: {}", err);
                             thread::sleep(Duration::from_millis(1000));
                             exit = true;
@@ -65,7 +65,7 @@ mod tests {
             };
             // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        _h.wait().unwrap();
+        _h.join().unwrap();
     }
 
 }

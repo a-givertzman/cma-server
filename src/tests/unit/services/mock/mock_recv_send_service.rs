@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
-use sal_sync::services::{entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_tx_id::PointTxId}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, RwLock}, thread};
+use sal_sync::services::{entity::{Name, Object, {{Point, ToPoint}, PointTxId}}, service::{LinkName, Service}};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use testing::entities::test_value::Value;
 use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::rwlock::SafeLock}};
 ///
@@ -9,9 +9,9 @@ pub struct MockRecvSendService {
     id: String,
     name: Name,
     rxSend: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     send_to: LinkName,
-    services: Arc<RwLock<Services>>,
+    services: Arc<Services>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     received: Arc<RwLock<Vec<Point>>>,
@@ -21,14 +21,14 @@ pub struct MockRecvSendService {
 //
 // 
 impl MockRecvSendService {
-    pub fn new(parent: impl Into<String>, rxQueue: &str, send_to: &str, services: Arc<RwLock<Services>>, test_data: Vec<Value>, recvLimit: Option<usize>) -> Self {
+    pub fn new(parent: impl Into<String>, rxQueue: &str, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, recvLimit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = mpsc::channel::<Point>();
         Self {
             id: name.join(),
             name,
             rxSend: HashMap::from([(rxQueue.to_string(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             send_to: LinkName::from_str(send_to).unwrap(),
             services,
             test_data,
@@ -74,7 +74,7 @@ impl Debug for MockRecvSendService {
 impl Service for MockRecvSendService {
     //
     //
-    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, name: &str) -> std::sync::mpsc::Sender<Point> {
         match self.rxSend.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -82,7 +82,7 @@ impl Service for MockRecvSendService {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
+    fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
@@ -129,7 +129,7 @@ impl Service for MockRecvSendService {
         });
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let txSend = self.services.rlock(&self_id).get_link(&self.send_to).unwrap_or_else(|err| {
+        let txSend = self.services.get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });
         let test_data = self.test_data.clone();

@@ -1,9 +1,9 @@
 use indexmap::IndexMap;
-use sal_sync::services::{entity::point::{point::Point, point_config_type::PointConfigType, point_hlr::PointHlr}, types::type_of::TypeOf};
+use sal_sync::services::{entity::{Point, PointConfigType, PointHlr}, types::TypeOf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef,
+    core_::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,

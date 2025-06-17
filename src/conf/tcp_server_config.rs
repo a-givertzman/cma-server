@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::{conf_kind::ConfKind, conf_tree::{ConfTree, ConfTreeGet}}, entity::name::Name, service::link_name::LinkName};
+use sal_sync::services::{conf::{ConfKind, ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use std::{fs, net::SocketAddr, str::FromStr, time::Duration};
 use crate::services::server::jds_auth::TcpServerAuth;
 

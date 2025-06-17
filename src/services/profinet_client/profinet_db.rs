@@ -1,8 +1,9 @@
-use std::{fs, io::Write, sync::mpsc::Sender};
+use std::{fs, io::Write};
 use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use sal_sync::services::entity::{name::Name, point::{point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType}, status::status::Status};
+use sal_core::error::Error;
+use sal_sync::{services::entity::{Name, Point, PointConfig, PointConfigFilter, PointConfigType, Status}, sync::channel::Sender};
 use crate::{
     conf::profinet_client_config::profinet_db_config::ProfinetDbConfig,
     core_::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
@@ -19,7 +20,7 @@ use crate::{
 ///
 /// Represents PROFINET DB - a collection of the PROFINET addresses
 pub struct ProfinetDb {
-    id: String,
+    dbg: String,
     // pub name: Name,
     // pub description: String,
     pub number: u32,
@@ -38,7 +39,7 @@ impl ProfinetDb {
     pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &ProfinetDbConfig) -> Self {
         let self_id = format!("{}/ProfinetDb({})", parent_id.into(), conf.name);
         Self {
-            id: self_id.clone(),
+            dbg: self_id.clone(),
             // name: conf.name.clone(),
             // description: conf.description.clone(),
             number: conf.number as u32,
@@ -113,14 +114,15 @@ impl ProfinetDb {
     ///     - reads data slice from the S7 device,
     ///     - parses raw data into the configured points
     ///     - returns only points with updated value or status
-    pub fn read(&mut self, client: &S7Client, tx_send: &Sender<Point>) -> Result<(), String> {
+    pub fn read(&mut self, client: &S7Client, tx_send: &Sender<Point>) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "read");
         match client.is_connected() {
             Ok(is_connected) => {
                 if is_connected {
-                    log::trace!("{}.read | reading DB: {:?}, offset: {:?}, size: {:?}", self.id, self.number, self.offset, self.size);
+                    log::trace!("{}.read | reading DB: {:?}, offset: {:?}, size: {:?}", self.dbg, self.number, self.offset, self.size);
                     match client.read(self.number, self.offset, self.size) {
                         Ok(bytes) => {
-                            log::trace!("{}.read | bytes: {:?}", self.id, bytes);
+                            log::trace!("{}.read | bytes: {:?}", self.dbg, bytes);
                             let mut message = String::new();
                             for (_, parse_point) in &mut self.points {
                                 if let Some(point) = parse_point.next(&bytes, Utc::now()) {
@@ -128,7 +130,7 @@ impl ProfinetDb {
                                     match tx_send.send(point) {
                                         Ok(_) => {}
                                         Err(err) => {
-                                            message = format!("{}.read | send error: {}", self.id, err);
+                                            message = format!("{}.read | send error: {}", self.dbg, err);
                                             log::warn!("{}", message);
                                         }
                                     }
@@ -136,38 +138,38 @@ impl ProfinetDb {
                             }
                                 match message.is_empty() {
                                     true => Ok(()),
-                                    false => Err(message),
+                                    false => Err(error.err(message)),
                                 }
                         }
                         Err(err) => {
-                            let message = format!("{}.read | read error: {}", self.id, err);
-                            log::warn!("{}", message);
-                            Err(message)
+                            let err = error.pass_with("read error", err);
+                            log::warn!("{}", err);
+                            Err(err)
                         }
                     }
                 } else {
-                    let message = format!("{}.read | read error: Is not connected", self.id);
-                    log::warn!("{}", message);
-                    Err(message)
+                    let err = error.err("read error: Is not connected");
+                    log::warn!("{}", err);
+                    Err(err)
                 }
             }
             Err(err) => {
-                let message = format!("{}.read | read error: {}", self.id, err);
-                log::warn!("{}", message);
-                Err(message)
+                let err = error.pass_with("read error", err);
+                log::warn!("{}", err);
+                Err(err)
             }
         }
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    pub fn yield_status(&mut self, status: Status, tx_send: &Sender<Point>) -> Result<(), String> {
+    pub(super) fn yield_status(&mut self, status: Status, tx_send: &Sender<Point>) -> Result<(), Error> {
         let mut message = String::new();
         for (_key, parse_point) in &mut self.points {
             if let Some(point) = parse_point.next_status(status) {
                 match tx_send.send(point) {
                     Ok(_) => {}
                     Err(err) => {
-                        message = format!("{}.yield_status | send error: {}", self.id, err);
+                        message = format!("{}.yield_status | send error: {}", self.dbg, err);
                         log::warn!("{}", message);
                     }
                 }
@@ -176,7 +178,7 @@ impl ProfinetDb {
         if message.is_empty() {
             return Ok(())
         }
-        Err(message)
+        Err(Error::new(&self.dbg, "yield_status").err(message))
     }
     ///
     /// Writes point to the current DB
@@ -193,7 +195,7 @@ impl ProfinetDb {
                         // let index = address.offset.unwrap() as usize;
                         // buf[index] = point.value.0 as u8;
                         // client.write(self.number, address.offset.unwrap(), 2, &mut buf)
-                        message = format!("{}.write | Write 'Bool' to the S7 Device - not implemented, point: {:?}", self.id, point.name);
+                        message = format!("{}.write | Write 'Bool' to the S7 Device - not implemented, point: {:?}", self.dbg, point.name);
                         Err(message)
                     }
                     Point::Int(point) => {
@@ -206,7 +208,7 @@ impl ProfinetDb {
                         client.write(self.number, address.offset.unwrap(), 4, &mut (point.value as f32).to_be_bytes())
                     }
                     Point::String(point) => {
-                        message = format!("{}.write | Write 'String' to the S7 Device - not implemented, point: {:?}", self.id, point.name);
+                        message = format!("{}.write | Write 'String' to the S7 Device - not implemented, point: {:?}", self.dbg, point.name);
                         Err(message)
                     }
                 }

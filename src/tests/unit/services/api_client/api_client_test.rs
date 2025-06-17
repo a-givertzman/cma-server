@@ -1,13 +1,12 @@
 #[cfg(test)]
 mod api_client {
-        use sal_sync::services::{entity::point::point::ToPoint, service::service::Service};
-    use std::{sync::{Once, Arc, Mutex}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
+    use sal_sync::{services::{entity::ToPoint, Service}, thread_pool::ThreadPool};
+    use std::{sync::{Once, Arc}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use api_tools::api::reply::api_reply::ApiReply;
     use crate::{
-        conf::api_client_config::ApiClientConfig,
-        services::api_cient::api_client::ApiClient,
+        conf::api_client_config::ApiClientConfig, core_::Mutex, services::api_cient::api_client::ApiClient
     };
     ///
     static INIT: Once = Once::new();
@@ -29,21 +28,22 @@ mod api_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "test ApiClient";
-        println!("\n{}", self_id);
+        let dbg = "test ApiClient";
+        println!("\n{}", dbg);
         let path = "./src/tests/unit/services/api_client/api_client.yaml";
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
-        let mut conf = ApiClientConfig::read(self_id, path);
+        let mut conf = ApiClientConfig::read(dbg, path);
         // let addr = conf.address.clone();
         let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
         conf.address = addr.parse().unwrap();
-        let mut api_client = ApiClient::new(conf);
+        let tp = ThreadPool::new(dbg, Some(4));
+        let api_client = ApiClient::new(conf, tp.scheduler());
         // let test_duration = Duration::from_secs(10);
         let count = 10;
         let mut state = 0;
         let test_data = RandomTestValues::new(
-            self_id,
+            dbg,
             vec![
                 Value::Int(i64::MIN),
                 Value::Int(i64::MAX),
@@ -79,7 +79,7 @@ mod api_client {
         let received_ref = received.clone();
         let mut buf = [0; 1024 * 4];
         let receiver_handle = thread::spawn(move || {
-            let mut received = received_ref.lock().unwrap();
+            let mut received = received_ref.lock();
             log::info!("TCP server | Preparing test server...");
             match TcpListener::bind(addr) {
                 Ok(listener) => {
@@ -173,10 +173,11 @@ mod api_client {
             println!("sent: {:?}", point);
         }
         receiver_handle.join().unwrap();
+        api_client.exit();
         println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", count);
         println!("sent events: {:?}", sent.len());
-        let mut received = received.lock().unwrap();
+        let mut received = received.lock();
         println!("recv events: {:?}", received.len());
         assert!(sent.len() == count, "sent: {:?}\ntarget: {:?}", sent.len(), count);
         assert!(received.len() == count, "received: {:?}\ntarget: {:?}", received.len(), count);
@@ -187,6 +188,7 @@ mod api_client {
             log::debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
             assert!(result == &target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
+        api_client.wait().unwrap();
         test_duration.exit();
     }
 }

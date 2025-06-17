@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, Utc};
-    use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}, status::status::Status}, types::bool::Bool};
-    use std::sync::{Once, mpsc};
+    use sal_sync::{services::{entity::{Cot, Point, PointHlr, Status}, types::Bool}, sync::channel};
+    use std::sync::Once;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::net::protocols::jds::jds_serialize::JdsSerialize, tcp::steam_read::StreamRead};
     ///
@@ -91,7 +91,7 @@ mod tests {
                 name, ts_str(ts)), Point::String(PointHlr::new(tx_id, name, "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::default(), ts))
             ),
         ];
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         let mut jds_serialize = JdsSerialize::new("test", recv);
         for (target, point) in test_data {
             send.send(point).unwrap();

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use sal_sync::services::types::type_of::TypeOf;
+use sal_sync::services::types::TypeOf;
 ///
 /// 
 trait Debug3: Debug {

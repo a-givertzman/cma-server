@@ -3,9 +3,11 @@
 #[cfg(test)]
 mod tests {
     use hashers::fx_hash::FxHasher;
-        use std::{collections::HashMap, hash::BuildHasherDefault, sync::{mpsc, Arc, Mutex, Once, RwLock}, thread, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues, wait::WaitTread}};
+    use sal_sync::sync::channel;
+    use std::{collections::HashMap, hash::BuildHasherDefault, sync::{Arc, Once}, thread, time::{Duration, Instant}};
+    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use crate::core_::{Mutex, RwLock};
 
     ///
     static INIT: Once = Once::new();
@@ -40,9 +42,9 @@ mod tests {
         let map = Arc::new(
             RwLock::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
         );
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
-            map.write().unwrap().insert(key, send.clone());
+            map.write().insert(key, send.clone());
         }
         let received = Arc::new(RwLock::new(vec![]));
         let received_clone = received.clone();
@@ -60,7 +62,7 @@ mod tests {
                     }
                 }
             }
-            *received_clone.write().unwrap() = received_local;
+            *received_clone.write() = received_local;
         }).unwrap();
         let sent = Arc::new(RwLock::new(0));
         let sent_clone = sent.clone();
@@ -71,7 +73,7 @@ mod tests {
             let mut key_iter = KEYS.iter().cycle();
             for value in test_data {
                 key = key_iter.next().unwrap();
-                match map.read().unwrap().get(key) {
+                match map.read().get(key) {
                     Some(send) => {
                         match send.send(value) {
                             Ok(_) => {
@@ -87,18 +89,18 @@ mod tests {
                     }
                 }
             }
-            *sent_clone.write().unwrap() = sent_local;
+            *sent_clone.write() = sent_local;
         }).unwrap();
 
-        receiver_handle.wait().unwrap();
-        sender_handle.wait().unwrap();
+        receiver_handle.join().unwrap();
+        sender_handle.join().unwrap();
 
         println!("\n{}", self_id);
         println!("Elapsed: {:?}", timer.elapsed());
         println!("Elapsed per event: {:?}", timer.elapsed().div_f32(test_data_len as f32));
         println!("Total test events: {:?}", test_data_len);
-        println!("Sent events: {:?}", sent.read().unwrap());
-        println!("Received events: {:?}", received.read().unwrap().len());
+        println!("Sent events: {:?}", sent.read());
+        println!("Received events: {:?}", received.read().len());
 
         test_duration.exit();
     }
@@ -117,7 +119,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let mut map = HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
             map.insert(key, send.clone());
         }
@@ -137,7 +139,7 @@ mod tests {
                     }
                 }
             }
-            *received_clone.write().unwrap() = received_local;
+            *received_clone.write() = received_local;
         }).unwrap();
         let sent = Arc::new(RwLock::new(0));
         let sent_clone = sent.clone();
@@ -164,18 +166,18 @@ mod tests {
                     }
                 }
             }
-            *sent_clone.write().unwrap() = sent_local;
+            *sent_clone.write() = sent_local;
         }).unwrap();
 
-        receiver_handle.wait().unwrap();
-        sender_handle.wait().unwrap();
+        receiver_handle.join().unwrap();
+        sender_handle.join().unwrap();
 
         println!("\n{}", self_id);
         println!("Elapsed: {:?}", timer.elapsed());
         println!("Elapsed per event: {:?}", timer.elapsed().div_f32(test_data_len as f32));
         println!("Total test events: {:?}", test_data_len);
-        println!("Sent events: {:?}", sent.read().unwrap());
-        println!("Received events: {:?}", received.read().unwrap().len());
+        println!("Sent events: {:?}", sent.read());
+        println!("Received events: {:?}", received.read().len());
 
         test_duration.exit();
     }
@@ -196,9 +198,9 @@ mod tests {
         let map = Arc::new(
             Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
         );
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
-            map.lock().unwrap().insert(key, send.clone());
+            map.lock().insert(key, send.clone());
         }
         let received = Arc::new(RwLock::new(vec![]));
         let received_clone = received.clone();
@@ -216,7 +218,7 @@ mod tests {
                     }
                 }
             }
-            *received_clone.write().unwrap() = received_local;
+            *received_clone.write() = received_local;
         }).unwrap();
         let sent = Arc::new(RwLock::new(0));
         let sent_clone = sent.clone();
@@ -227,7 +229,7 @@ mod tests {
             let mut key_iter = KEYS.iter().cycle();
             for value in test_data {
                 key = key_iter.next().unwrap();
-                match map.lock().unwrap().get(key) {
+                match map.lock().get(key) {
                     Some(send) => {
                         match send.send(value) {
                             Ok(_) => {
@@ -243,18 +245,18 @@ mod tests {
                     }
                 }
             }
-            *sent_clone.write().unwrap() = sent_local;
+            *sent_clone.write() = sent_local;
         }).unwrap();
 
-        receiver_handle.wait().unwrap();
-        sender_handle.wait().unwrap();
+        receiver_handle.join().unwrap();
+        sender_handle.join().unwrap();
 
         println!("\n{}", self_id);
         println!("Elapsed: {:?}", timer.elapsed());
         println!("Elapsed per event: {:?}", timer.elapsed().div_f32(test_data_len as f32));
         println!("Total test events: {:?}", test_data_len);
-        println!("Sent events: {:?}", sent.read().unwrap());
-        println!("Received events: {:?}", received.read().unwrap().len());
+        println!("Sent events: {:?}", sent.read());
+        println!("Received events: {:?}", received.read().len());
 
         test_duration.exit();
     }
@@ -275,9 +277,9 @@ mod tests {
         let map = Arc::new(
             Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
         );
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         for key in KEYS {
-            map.lock().unwrap().insert(key, send.clone());
+            map.lock().insert(key, send.clone());
         }
         let received = Arc::new(RwLock::new(vec![]));
         let received_clone = received.clone();
@@ -295,7 +297,7 @@ mod tests {
                     }
                 }
             }
-            *received_clone.write().unwrap() = received_local;
+            *received_clone.write() = received_local;
         }).unwrap();
         let sent = Arc::new(RwLock::new(0));
         let sent_clone = sent.clone();
@@ -400,18 +402,18 @@ mod tests {
                     _ => panic!("Unknown key '{}'", key),
                 }
             }
-            *sent_clone.write().unwrap() = sent_local;
+            *sent_clone.write() = sent_local;
         }).unwrap();
 
-        receiver_handle.wait().unwrap();
-        sender_handle.wait().unwrap();
+        receiver_handle.join().unwrap();
+        sender_handle.join().unwrap();
 
         println!("\n{}", self_id);
         println!("Elapsed: {:?}", timer.elapsed());
         println!("Elapsed per event: {:?}", timer.elapsed().div_f32(test_data_len as f32));
         println!("Total test events: {:?}", test_data_len);
-        println!("Sent events: {:?}", sent.read().unwrap());
-        println!("Received events: {:?}", received.read().unwrap().len());
+        println!("Sent events: {:?}", sent.read());
+        println!("Received events: {:?}", received.read().len());
 
         test_duration.exit();
     }

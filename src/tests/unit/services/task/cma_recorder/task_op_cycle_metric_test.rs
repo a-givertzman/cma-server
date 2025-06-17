@@ -1,9 +1,9 @@
 #[cfg(test)]
 
 mod cma_recorder {
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, point::point::Point}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
-    use std::{env, sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
+    use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
+    use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig,
@@ -31,23 +31,24 @@ mod cma_recorder {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "AppTest";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let dbg = "AppTest";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
                     path: assets/testing/retain/
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        ), Some(tp.scheduler())));
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -127,86 +128,86 @@ mod cma_recorder {
         );
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(RwLock::new(Task::new(config, services.clone())));
-        log::debug!("Task points: {:#?}", task.read().unwrap().points());
-        services.wlock(self_id).insert(task.clone());
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
+        log::debug!("Task points: {:#?}", task.points());
+        services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
                 send-to:
             ").unwrap(),
         );
-        let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        services.wlock(self_id).insert(multi_queue.clone());
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
+        services.insert(multi_queue.clone());
         let test_data = vec![
         //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth
-            (00,    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            (01,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.0),
-            (02,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.0),
-            (03,    format!("/{}/Load", self_id),       Value::Real(  3.30),       0,       00.0000,                0.4125),
-            (04,    format!("/{}/Load", self_id),       Value::Real(  0.10),       0,       00.0000,                0.3734375),
-            (05,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.3267578125),
-            (06,    format!("/{}/Load", self_id),       Value::Real(  1.60),       0,       00.0000,                0.4859130859375),
-            (07,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.425173950195313),
-            (08,    format!("/{}/Load", self_id),       Value::Real(  7.20),       0,       00.0000,                1.2720272064209),
-            (09,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.11302380561829),
-            (10,    format!("/{}/Load", self_id),       Value::Real(  0.30),       0,       00.0000,                1.011395829916),
-            (11,    format!("/{}/Load", self_id),       Value::Real(  2.20),       0,       00.0000,                1.1599713511765),
-            (12,    format!("/{}/Load", self_id),       Value::Real(  8.10),       0,       00.0000,                2.02747493227944),
-            (13,    format!("/{}/Load", self_id),       Value::Real(  1.90),       0,       00.0000,                2.01154056574451),
-            (14,    format!("/{}/Load", self_id),       Value::Real(  0.10),       0,       00.0000,                1.77259799502644),
-            (15,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.55102324564814),
-            (16,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.35714533994212),
-            (17,    format!("/{}/Load", self_id),       Value::Real(  5.00),       0,       00.0000,                1.81250217244936),
-            (18,    format!("/{}/Load", self_id),       Value::Real(  2.00),       0,       00.0000,                1.83593940089319),
-            (19,    format!("/{}/Load", self_id),       Value::Real(  1.00),       0,       00.0000,                1.73144697578154),
-            (20,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.51501610380885),
-            (21,    format!("/{}/Load", self_id),       Value::Real(  2.00),       0,       00.0000,                1.57563909083274),
-            (22,    format!("/{}/Load", self_id),       Value::Real(  4.00),       0,       00.0000,                1.87868420447865),
-            (23,    format!("/{}/Load", self_id),       Value::Real(  6.00),       0,       00.0000,                2.39384867891882),
-            (24,    format!("/{}/Load", self_id),       Value::Real( 12.00),       0,       00.0000,                3.59461759405396),
-            (25,    format!("/{}/Load", self_id),       Value::Real( 64.00),       1,       11.1452903947972,       11.1452903947972),
-            (26,    format!("/{}/Load", self_id),       Value::Real(128.00),       1,       25.7521290954476,       25.7521290954476),
-            (27,    format!("/{}/Load", self_id),       Value::Real(120.00),       1,       37.5331129585166,       37.5331129585166),
-            (28,    format!("/{}/Load", self_id),       Value::Real(133.00),       1,       49.466473838702,       49.466473838702),
-            (29,    format!("/{}/Load", self_id),       Value::Real(121.00),       1,       58.4081646088643,       58.4081646088643),
-            (30,    format!("/{}/Load", self_id),       Value::Real(130.00),       1,       67.3571440327563,       67.3571440327563),
-            (31,    format!("/{}/Load", self_id),       Value::Real(127.00),       1,       67.3571440327563,       74.8125010286617),
-            (32,    format!("/{}/Load", self_id),       Value::Real(123.00),       1,       80.835938400079,       80.835938400079),
-            (33,    format!("/{}/Load", self_id),       Value::Real(122.00),       1,       80.835938400079,       85.9814461000691),
-            (34,    format!("/{}/Load", self_id),       Value::Real(120.00),       1,       90.2337653375605,       90.2337653375605),
-            (35,    format!("/{}/Load", self_id),       Value::Real( 64.00),       1,       90.2337653375605,       86.9545446703654),
-            (36,    format!("/{}/Load", self_id),       Value::Real( 32.00),       1,       80.0852265865698,       80.0852265865698),
-            (37,    format!("/{}/Load", self_id),       Value::Real( 24.00),       1,       80.0852265865698,       73.0745732632485),
-            (38,    format!("/{}/Load", self_id),       Value::Real( 12.00),       1,       65.4402516053425,       65.4402516053425),
-            (39,    format!("/{}/Load", self_id),       Value::Real(  8.00),       1,       65.4402516053425,       58.2602201546747),
-            (40,    format!("/{}/Load", self_id),       Value::Real( 17.00),       1,       53.1026926353403,       53.1026926353403),
-            (41,    format!("/{}/Load", self_id),       Value::Real( 10.00),       1,       53.1026926353403,       47.7148560559228),
-            (42,    format!("/{}/Load", self_id),       Value::Real(  7.00),       1,       42.6254990489324,       42.6254990489324),
-            (43,    format!("/{}/Load", self_id),       Value::Real(  3.00),       1,       42.6254990489324,       37.6723116678159),
-            (44,    format!("/{}/Load", self_id),       Value::Real(  6.00),       1,       33.7132727093389,       33.7132727093389),
-            (45,    format!("/{}/Load", self_id),       Value::Real(  4.00),       1,       33.7132727093389,       29.9991136206715),
-            (46,    format!("/{}/Load", self_id),       Value::Real(  2.00),       1,       33.7132727093389,       26.4992244180876),
-            (47,    format!("/{}/Load", self_id),       Value::Real(  0.00),       1,       23.1868213658266,       23.1868213658266),
-            (48,    format!("/{}/Load", self_id),       Value::Real(  4.00),       1,       23.1868213658266,       20.7884686950983),
-            (49,    format!("/{}/Load", self_id),       Value::Real(  2.00),       1,       23.1868213658266,       18.439910108211),
-            (50,    format!("/{}/Load", self_id),       Value::Real(  1.00),       1,       23.1868213658266,       16.2599213446847),
-            (51,    format!("/{}/Load", self_id),       Value::Real(  3.00),       1,       14.6024311765991,       14.6024311765991),
-            (52,    format!("/{}/Load", self_id),       Value::Real(  0.00),       1,       14.6024311765991,       12.7771272795242),
-            (53,    format!("/{}/Load", self_id),       Value::Real(  2.00),       1,       14.6024311765991,       11.4299863695837),
-            (54,    format!("/{}/Load", self_id),       Value::Real(  1.00),       1,       14.6024311765991,       10.1262380733857),
-            (55,    format!("/{}/Load", self_id),       Value::Real(  0.70),       1,       14.6024311765991,       8.94795831421249),
-            (56,    format!("/{}/Load", self_id),       Value::Real(  0.80),       1,       14.6024311765991,       7.92946352493593),
-            (57,    format!("/{}/Load", self_id),       Value::Real(  0.40),       0,       6.98828058431894,       6.98828058431894),
-            (58,    format!("/{}/Load", self_id),       Value::Real(  0.30),       0,       6.98828058431894,       6.15224551127907),
-            (59,    format!("/{}/Load", self_id),       Value::Real(  0.20),       0,       6.98828058431894,       5.40821482236919),
-            (60,    format!("/{}/Load", self_id),       Value::Real(  0.10),       0,       6.98828058431894,       4.74468796957304),
-            (61,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       4.15160197337641),
-            (62,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       3.63265172670436),
-            (63,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       3.17857026086631),
-            (64,    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       2.78124897825802),
+            (00,    format!("/{}/Load.Nom", dbg),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            (01,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.0),
+            (02,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.0),
+            (03,    format!("/{}/Load", dbg),       Value::Real(  3.30),       0,       00.0000,                0.4125),
+            (04,    format!("/{}/Load", dbg),       Value::Real(  0.10),       0,       00.0000,                0.3734375),
+            (05,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.3267578125),
+            (06,    format!("/{}/Load", dbg),       Value::Real(  1.60),       0,       00.0000,                0.4859130859375),
+            (07,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.425173950195313),
+            (08,    format!("/{}/Load", dbg),       Value::Real(  7.20),       0,       00.0000,                1.2720272064209),
+            (09,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.11302380561829),
+            (10,    format!("/{}/Load", dbg),       Value::Real(  0.30),       0,       00.0000,                1.011395829916),
+            (11,    format!("/{}/Load", dbg),       Value::Real(  2.20),       0,       00.0000,                1.1599713511765),
+            (12,    format!("/{}/Load", dbg),       Value::Real(  8.10),       0,       00.0000,                2.02747493227944),
+            (13,    format!("/{}/Load", dbg),       Value::Real(  1.90),       0,       00.0000,                2.01154056574451),
+            (14,    format!("/{}/Load", dbg),       Value::Real(  0.10),       0,       00.0000,                1.77259799502644),
+            (15,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.55102324564814),
+            (16,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.35714533994212),
+            (17,    format!("/{}/Load", dbg),       Value::Real(  5.00),       0,       00.0000,                1.81250217244936),
+            (18,    format!("/{}/Load", dbg),       Value::Real(  2.00),       0,       00.0000,                1.83593940089319),
+            (19,    format!("/{}/Load", dbg),       Value::Real(  1.00),       0,       00.0000,                1.73144697578154),
+            (20,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.51501610380885),
+            (21,    format!("/{}/Load", dbg),       Value::Real(  2.00),       0,       00.0000,                1.57563909083274),
+            (22,    format!("/{}/Load", dbg),       Value::Real(  4.00),       0,       00.0000,                1.87868420447865),
+            (23,    format!("/{}/Load", dbg),       Value::Real(  6.00),       0,       00.0000,                2.39384867891882),
+            (24,    format!("/{}/Load", dbg),       Value::Real( 12.00),       0,       00.0000,                3.59461759405396),
+            (25,    format!("/{}/Load", dbg),       Value::Real( 64.00),       1,       11.1452903947972,       11.1452903947972),
+            (26,    format!("/{}/Load", dbg),       Value::Real(128.00),       1,       25.7521290954476,       25.7521290954476),
+            (27,    format!("/{}/Load", dbg),       Value::Real(120.00),       1,       37.5331129585166,       37.5331129585166),
+            (28,    format!("/{}/Load", dbg),       Value::Real(133.00),       1,       49.466473838702,       49.466473838702),
+            (29,    format!("/{}/Load", dbg),       Value::Real(121.00),       1,       58.4081646088643,       58.4081646088643),
+            (30,    format!("/{}/Load", dbg),       Value::Real(130.00),       1,       67.3571440327563,       67.3571440327563),
+            (31,    format!("/{}/Load", dbg),       Value::Real(127.00),       1,       67.3571440327563,       74.8125010286617),
+            (32,    format!("/{}/Load", dbg),       Value::Real(123.00),       1,       80.835938400079,       80.835938400079),
+            (33,    format!("/{}/Load", dbg),       Value::Real(122.00),       1,       80.835938400079,       85.9814461000691),
+            (34,    format!("/{}/Load", dbg),       Value::Real(120.00),       1,       90.2337653375605,       90.2337653375605),
+            (35,    format!("/{}/Load", dbg),       Value::Real( 64.00),       1,       90.2337653375605,       86.9545446703654),
+            (36,    format!("/{}/Load", dbg),       Value::Real( 32.00),       1,       80.0852265865698,       80.0852265865698),
+            (37,    format!("/{}/Load", dbg),       Value::Real( 24.00),       1,       80.0852265865698,       73.0745732632485),
+            (38,    format!("/{}/Load", dbg),       Value::Real( 12.00),       1,       65.4402516053425,       65.4402516053425),
+            (39,    format!("/{}/Load", dbg),       Value::Real(  8.00),       1,       65.4402516053425,       58.2602201546747),
+            (40,    format!("/{}/Load", dbg),       Value::Real( 17.00),       1,       53.1026926353403,       53.1026926353403),
+            (41,    format!("/{}/Load", dbg),       Value::Real( 10.00),       1,       53.1026926353403,       47.7148560559228),
+            (42,    format!("/{}/Load", dbg),       Value::Real(  7.00),       1,       42.6254990489324,       42.6254990489324),
+            (43,    format!("/{}/Load", dbg),       Value::Real(  3.00),       1,       42.6254990489324,       37.6723116678159),
+            (44,    format!("/{}/Load", dbg),       Value::Real(  6.00),       1,       33.7132727093389,       33.7132727093389),
+            (45,    format!("/{}/Load", dbg),       Value::Real(  4.00),       1,       33.7132727093389,       29.9991136206715),
+            (46,    format!("/{}/Load", dbg),       Value::Real(  2.00),       1,       33.7132727093389,       26.4992244180876),
+            (47,    format!("/{}/Load", dbg),       Value::Real(  0.00),       1,       23.1868213658266,       23.1868213658266),
+            (48,    format!("/{}/Load", dbg),       Value::Real(  4.00),       1,       23.1868213658266,       20.7884686950983),
+            (49,    format!("/{}/Load", dbg),       Value::Real(  2.00),       1,       23.1868213658266,       18.439910108211),
+            (50,    format!("/{}/Load", dbg),       Value::Real(  1.00),       1,       23.1868213658266,       16.2599213446847),
+            (51,    format!("/{}/Load", dbg),       Value::Real(  3.00),       1,       14.6024311765991,       14.6024311765991),
+            (52,    format!("/{}/Load", dbg),       Value::Real(  0.00),       1,       14.6024311765991,       12.7771272795242),
+            (53,    format!("/{}/Load", dbg),       Value::Real(  2.00),       1,       14.6024311765991,       11.4299863695837),
+            (54,    format!("/{}/Load", dbg),       Value::Real(  1.00),       1,       14.6024311765991,       10.1262380733857),
+            (55,    format!("/{}/Load", dbg),       Value::Real(  0.70),       1,       14.6024311765991,       8.94795831421249),
+            (56,    format!("/{}/Load", dbg),       Value::Real(  0.80),       1,       14.6024311765991,       7.92946352493593),
+            (57,    format!("/{}/Load", dbg),       Value::Real(  0.40),       0,       6.98828058431894,       6.98828058431894),
+            (58,    format!("/{}/Load", dbg),       Value::Real(  0.30),       0,       6.98828058431894,       6.15224551127907),
+            (59,    format!("/{}/Load", dbg),       Value::Real(  0.20),       0,       6.98828058431894,       5.40821482236919),
+            (60,    format!("/{}/Load", dbg),       Value::Real(  0.10),       0,       6.98828058431894,       4.74468796957304),
+            (61,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       4.15160197337641),
+            (62,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       3.63265172670436),
+            (63,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       3.17857026086631),
+            (64,    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       2.78124897825802),
         ];
         let total_count = test_data.len();
         let total_count_load = test_data.iter().filter(|(step, _, _, _, _, _)| *step != 00).count();
@@ -234,76 +235,76 @@ mod cma_recorder {
         }).collect();
         let target_thrd_count = target_thrd.len();
         let target_smooth_count = target_smooth.len();
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(
-            self_id,
+        let receiver = Arc::new(TaskTestReceiver::new(
+            dbg,
             "",
             "in-queue",
             total_count_load,
-        )));
-        services.wlock(self_id).insert(receiver.clone());
+        ));
+        services.insert(receiver.clone());
         let test_data: Vec<(String, Value)> = test_data.into_iter().map(|(_, name, value, _, _, _)| {
             (name, value)
         }).collect();
-        let producer = Arc::new(RwLock::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/MultiQueue.in-queue", self_id),
+        let producer = Arc::new(TaskTestProducer::new(
+            dbg,
+            &format!("/{}/MultiQueue.in-queue", dbg),
             Duration::ZERO,
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(producer.clone());
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
+        ));
+        services.insert(producer.clone());
+        services.run().unwrap();
+        multi_queue.run().unwrap();
+        receiver.run().unwrap();
         log::info!("receiver runing - ok");
-        let task_handle = task.write().unwrap().run().unwrap();
+        task.run().unwrap();
         log::info!("task runing - ok");
         thread::sleep(Duration::from_millis(100));
-        let producer_handle = producer.write().unwrap().run().unwrap();
+        producer.run().unwrap();
         log::info!("producer runing - ok");
         let time = Instant::now();
-        receiver_handle.wait().unwrap();
-        producer.read().unwrap().exit();
-        task.read().unwrap().exit();
-        task_handle.wait().unwrap();
-        producer_handle.wait().unwrap();
-        multi_queue.read().unwrap().exit();
-        multi_queue_handle.wait().unwrap();
-        services.rlock(self_id).exit();
-        services_handle.wait().unwrap();
-        let sent = producer.read().unwrap().sent().read().unwrap().len();
-        let result = receiver.read().unwrap().received().read().unwrap().len();
+        receiver.wait().unwrap();
+        producer.exit();
+        task.exit();
+        task.wait().unwrap();
+        producer.wait().unwrap();
+        multi_queue.exit();
+        multi_queue.wait().unwrap();
+        services.exit();
+        services.wait().unwrap();
+        let sent = producer.sent().read().len();
+        let result = receiver.received().read().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         println!("target smooth   : {:?}", target_smooth_count);
         println!("target threshold: {:?}", target_thrd_count);
-        for (i, result) in receiver.read().unwrap().received().read().unwrap().iter().enumerate() {
+        for (i, result) in receiver.received().read().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
             // assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
         };
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == total_count_load, "\nresult: {:?}\ntarget: {:?}", result, total_count);
-        let smooth: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/Smooth", self_id)
+        let smooth: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+            point.name() == format!("/{}/RecorderTask/Smooth", dbg)
         }).collect();
         for (i, result) in smooth.iter().enumerate() {
             println!("smooth: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let thrd: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/Threshold", self_id)
+        let thrd: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+            point.name() == format!("/{}/RecorderTask/Threshold", dbg)
         }).collect();
         for (i, result) in thrd.iter().enumerate() {
             println!("threshold: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/OpCycle", self_id)
+        let op_cycle: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+            point.name() == format!("/{}/RecorderTask/OpCycle", dbg)
         }).collect();
         for (i, result) in op_cycle.iter().enumerate() {
             println!("op cycle: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle_sql: Vec<Point> = receiver.read().unwrap().received().read().unwrap().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/OpCycleSql", self_id)
+        let op_cycle_sql: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+            point.name() == format!("/{}/RecorderTask/OpCycleSql", dbg)
         }).collect();
         for (i, result) in op_cycle_sql.iter().enumerate() {
             println!("op cycle SQL: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());

@@ -1,28 +1,28 @@
-use sal_core::error::Error;
-use sal_sync::services::{entity::{name::Name, object::Object}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services};
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::{services::{entity::{Name, Object}, Service, ServiceCycle, Services}, sync::{channel, Handles}, thread_pool::Scheduler};
 use std::{
-    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, mpsc, Arc, RwLock}, thread, time::Duration
+    fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration
 };
 use crate::{
     conf::tcp_server_config::TcpServerConfig,
-    core_::constants::constants::RECV_TIMEOUT,
-    services::{safe_lock::rwlock::SafeLock, server::{
+    core_::{constants::constants::RECV_TIMEOUT},
+    services::server::{
         connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection
-    }},
+    },
 };
 ///
 /// 
 struct ConnectionInfo<'a> {
-    self_id: &'a str,
+    dbg: &'a Dbg,
     self_name: &'a Name,
     connection_id: &'a str,
 }
 //
 // 
 impl<'a> ConnectionInfo<'a> {
-    pub fn new(self_id: &'a str, self_name: &'a Name, connection_id: &'a str) -> Self {
+    pub fn new(dbg: &'a Dbg, self_name: &'a Name, connection_id: &'a str) -> Self {
         Self {
-            self_id,
+            dbg,
             self_name,
             connection_id,
         }
@@ -33,11 +33,13 @@ impl<'a> ConnectionInfo<'a> {
 /// Listening socket for incoming connections
 /// Verified incoming connections handles in the separate thread
 pub struct TcpServer {
-    id: String,
+    dbg: Dbg,
     name: Name,
     conf: TcpServerConfig,
-    connections: Arc<RwLock<TcpServerConnections>>,
-    services: Arc<RwLock<Services>>,
+    connections: Arc<TcpServerConnections>,
+    services: Arc<Services>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -49,83 +51,83 @@ impl TcpServer {
     /// - filter - all trafic from server to client will be filtered by some criterias, until Subscribe request confirmed:
     ///    - cot - [Cot] - bit mask wich will be passed
     ///    - name - exact name wich passed
-    pub fn new(conf: TcpServerConfig, services: Arc<RwLock<Services>>, ) -> Self {
+    pub fn new(conf: TcpServerConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            id: conf.name.join(),
             name: conf.name.clone(),
             conf: conf.clone(),
-            connections: Arc::new(RwLock::new(TcpServerConnections::new(conf.name))),
+            connections: Arc::new(TcpServerConnections::new(conf.name)),
             services,
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     ///                 self_id: &str, self_name: &Name, connection_id: &str
-    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<RwLock<Services>>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<RwLock<TcpServerConnections>>) {
-        log::info!("{}.setup_connection | Trying to repair Connection '{}'...", con_info.self_id, con_info.connection_id);
-        let repair_result = connections.rlock(con_info.self_id).repair(con_info.connection_id, stream.try_clone().unwrap());
+    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<TcpServerConnections>, scheduler: Scheduler) {
+        log::info!("{}.setup_connection | Trying to repair Connection '{}'...", con_info.dbg, con_info.connection_id);
+        let repair_result = connections.repair(con_info.connection_id, stream.try_clone().unwrap());
         match repair_result {
             Ok(_) => {
-                log::info!("{}.setup_connection | Connection '{}' - reparied", con_info.self_id, con_info.connection_id);
+                log::info!("{}.setup_connection | Connection '{}' - reparied", con_info.dbg, con_info.connection_id);
             }
             Err(err) => {
-                log::info!("{}.setup_connection | {}", con_info.self_id, err);
-                log::info!("{}.setup_connection | New connection: '{}'", con_info.self_id, con_info.connection_id);
-                let (send, recv) = mpsc::channel();
-                let mut connection = JdsConnection::new(
-                    con_info.self_id,
+                log::info!("{}.setup_connection | {}", con_info.dbg, err);
+                log::info!("{}.setup_connection | New connection: '{}'", con_info.dbg, con_info.connection_id);
+                let (send, recv) = channel::unbounded();
+                let connection = JdsConnection::new(
+                    con_info.dbg,
                     &Name::from(con_info.self_name.parent()),
                     con_info.connection_id,
                     recv, services.clone(),
                     conf.clone(),
+                    scheduler,
                     exit.clone()
                 );
                 match connection.run() {
-                    Ok(handles) => {
-                        if handles.len() != 1 {
-                            panic!("{}.setup_connection | TcpServerConnection.run must return single handle, but returns {}", con_info.self_id, handles.len())
-                        }
-                        let (_, handle) = handles.into_iter().next().unwrap();
+                    Ok(_) => {
                         match send.send(Action::Continue(stream)) {
                             Ok(_) => {}
                             Err(err) => {
-                                log::warn!("{}.setup_connection | Send tcpStream error {:?}", con_info.self_id, err);
+                                log::warn!("{}.setup_connection | Send tcpStream error {:?}", con_info.dbg, err);
                             }
                         }
-                        log::info!("{}.setup_connection | connections.lock...", con_info.self_id);
-                        connections.wlock(con_info.self_id).insert(
+                        log::info!("{}.setup_connection | connections.lock...", con_info.dbg);
+                        connections.insert(
                             con_info.connection_id,
-                            handle,
+                            Arc::new(Box::new(connection)),
                             send,
                         );
-                        log::info!("{}.setup_connection | connections.lock - ok", con_info.self_id);
+                        log::info!("{}.setup_connection | connections.lock - ok", con_info.dbg);
                     }
                     Err(err) => {
-                        log::warn!("{}.setup_connection | error: {:?}", con_info.self_id, err);
+                        log::warn!("{}.setup_connection | error: {:?}", con_info.dbg, err);
                     }
                 };
-                log::info!("{}.setup_connection | Connection '{}' - created new", con_info.self_id, con_info.connection_id);
+                log::info!("{}.setup_connection | Connection '{}' - created new", con_info.dbg, con_info.connection_id);
             }
         }
     }
     ///
     ///
-    fn set_stream_timout(self_id: &str, stream: &TcpStream, raad_timeout: Duration, write_timeout: Option<Duration>) {
+    fn set_stream_timout(dbg: &Dbg, stream: &TcpStream, raad_timeout: Duration, write_timeout: Option<Duration>) {
         match stream.set_read_timeout(Some(raad_timeout)) {
             Ok(_) => {
-                log::info!("{}.set_stream_timout | Socket set read timeout {:?} - ok", self_id, raad_timeout);
+                log::info!("{}.set_stream_timout | Socket set read timeout {:?} - ok", dbg, raad_timeout);
             }
             Err(err) => {
-                log::warn!("{}.set_stream_timout | Socket set read timeout error {:?}", self_id, err);
+                log::warn!("{}.set_stream_timout | Socket set read timeout error {:?}", dbg, err);
             }
         }
         if let Some(timeout) = write_timeout {
             match stream.set_write_timeout(Some(timeout)) {
                 Ok(_) => {
-                    log::info!("{}.set_stream_timout | Socket set write timeout {:?} - ok", self_id, timeout);
+                    log::info!("{}.set_stream_timout | Socket set write timeout {:?} - ok", dbg, timeout);
                 }
                 Err(err) => {
-                    log::warn!("{}.set_stream_timout | Socket set write timeout error {:?}", self_id, err);
+                    log::warn!("{}.set_stream_timout | Socket set write timeout error {:?}", dbg, err);
                 }
             }
         }
@@ -133,24 +135,14 @@ impl TcpServer {
     ///
     /// Chech if finished connection threads are present in the self.connection
     /// - removes finished connections
-    fn clean(self_id: &str, connections: &Arc<RwLock<TcpServerConnections>>) {
-        match connections.write() {
-            Ok(mut connections) => {
-                connections.clean()
-            }
-            Err(err) => {
-                log::warn!("{}.clean | Connections lock error {:?}", self_id, err);
-            }
-        }
+    fn clean(_dbg: &Dbg, connections: &Arc<TcpServerConnections>) {
+        connections.clean();
     }
     
 }
 //
 //
 impl Object for TcpServer {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -161,7 +153,7 @@ impl Debug for TcpServer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("TcpServer")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -170,53 +162,55 @@ impl Debug for TcpServer {
 impl Service for TcpServer {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+    fn run(&self) -> Result<(), Error> {
+        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let self_name = self.name.clone();
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let connections = self.connections.clone();
         let services = self.services.clone();
         let reconnect_cycle = conf.reconnect_cycle.unwrap_or(Duration::ZERO);
-        log::info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
-            log::info!("{}.run | Preparing thread - ok", self_id);
-            let mut cycle = ServiceCycle::new(&self_id, reconnect_cycle);
+        let scheduler = self.scheduler.clone();
+        log::info!("{}.run | Preparing thread...", dbg);
+        let handle = self.scheduler.spawn(move || {
+            log::info!("{}.run | Preparing thread - ok", dbg);
+            let mut cycle = ServiceCycle::new(&dbg, reconnect_cycle);
             'main: loop {
                 cycle.start();
-                log::info!("{}.run | Open socket {}...", self_id, conf.address);
+                log::info!("{}.run | Open socket {}...", dbg, conf.address);
                 match TcpListener::bind(conf.address) {
                     Ok(listener) => {
-                        log::info!("{}.run | Open socket {} - ok", self_id, conf.address);
+                        log::info!("{}.run | Open socket {} - ok", dbg, conf.address);
                         for stream in listener.incoming() {
-                            Self::clean(&self_id, &connections);
+                            Self::clean(&dbg, &connections);
                             if exit.load(Ordering::SeqCst) {
-                                log::debug!("{}.run | Detected exit", self_id);
+                                log::debug!("{}.run | Detected exit", dbg);
                                 break;
                             }
                             match stream {
                                 Ok(stream) => {
                                     let connection_id = stream.peer_addr().map_or("Unknown remote IP".to_string(), |a| {a.ip().to_string()});
-                                    Self::set_stream_timout(&self_id, &stream, RECV_TIMEOUT, None);
-                                    log::info!("{}.run | Setting up Connection '{}'...", self_id, connection_id);
+                                    Self::set_stream_timout(&dbg, &stream, RECV_TIMEOUT, None);
+                                    log::info!("{}.run | Setting up Connection '{}'...", dbg, connection_id);
                                     Self::setup_connection(
-                                        ConnectionInfo::new(&self_id, &self_name, &connection_id),
+                                        ConnectionInfo::new(&dbg, &self_name, &connection_id),
                                         stream,
                                         services.clone(),
                                         conf.clone(),
                                         exit.clone(),
                                         connections.clone(),
+                                        scheduler.clone(),
                                     );
                                 }
                                 Err(err) => {
-                                    log::warn!("{}.run | error: {:?}", self_id, err);
+                                    log::warn!("{}.run | error: {:?}", dbg, err);
                                 }
                             }
                         }
                     }
                     Err(err) => {
-                        log::warn!("{}.run | error: {:?}", self_id, err);
+                        log::warn!("{}.run | error: {:?}", dbg, err);
                     }
                 };
                 if exit.load(Ordering::SeqCst) {
@@ -227,36 +221,47 @@ impl Service for TcpServer {
                     break 'main;
                 }
             }
-            log::info!("{}.run | Exit...", self_id);
-            // Self::waitConnections(&self_id, connections);
-            connections.wlock(&self_id).wait();
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit...", dbg);
+            connections.wait();
+            log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                log::info!("{}.run | Starting - ok", self.dbg);
+                self.handles.push(handle);
+                Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
         }
     }
-    ///
-    ///
+    //
+    //
+    fn wait(&self) -> Result<(), Error> {
+        self.handles.wait()
+    }
+    //
+    // 
+    fn is_finished(&self) -> bool {
+        self.handles.is_finished()
+    }
+    //
+    //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
         thread::sleep(Duration::from_millis(10));
-        log::info!("{}.exit | Final connection...", self.id);
+        log::info!("{}.exit | Final connection...", self.dbg);
         match TcpStream::connect_timeout(&self.conf.address, Duration::from_millis(100)) {
             Ok(stream) => {
-                log::info!("{}.exit | Final connection - ok", self.id);
+                log::info!("{}.exit | Final connection - ok", self.dbg);
                 stream.shutdown(Shutdown::Both).unwrap();
             }
             Err(err) => {
-                log::info!("{}.exit | Final connection error: {:?}", self.id, err);
+                log::info!("{}.exit | Final connection error: {:?}", self.dbg, err);
             }
         };
     }

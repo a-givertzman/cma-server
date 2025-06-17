@@ -1,12 +1,12 @@
-use sal_sync::services::entity::{name::Name, object::Object};
+use sal_sync::services::entity::{Name, Object};
 use crate::{
-    core_::failure::recv_error::RecvError,
+    core_::failure::RecvError,
     tcp::steam_read::StreamRead,
 };
 #[cfg(test)]
 mod tcp_stream_write {
     use crate::{
-        core_::net::connection_status::ConnectionStatus,
+        core_::{net::connection_status::ConnectionStatus, Mutex},
         tcp::tcp_stream_write::{OpResult, TcpStreamWrite},
         tests::unit::tcp::tcp_stream_write_test::MockStreamRead,
     };
@@ -17,7 +17,7 @@ mod tcp_stream_write {
         net::{TcpListener, TcpStream},
         sync::{
             atomic::{AtomicUsize, Ordering},
-            Arc, Mutex, Once,
+            Arc, Once,
         },
         thread,
         time::{Duration, Instant},
@@ -41,11 +41,11 @@ mod tcp_stream_write {
     static INDEX: AtomicUsize = AtomicUsize::new(0);
     ///
     fn random_bytes(len: usize) -> Vec<u8> {
-        let mut rnd = rand::thread_rng();
+        let mut rnd = rand::rng();
         let mut bytes = vec![];
         let ix = INDEX.load(Ordering::SeqCst);
         for _ in ix..ix + len {
-            let b = rnd.gen_range(0..255);
+            let b = rnd.random_range(0..255);
             bytes.push(b);
         }
         INDEX.fetch_add(10, Ordering::SeqCst);
@@ -126,7 +126,7 @@ mod tcp_stream_write {
             assert!(
                 timer.elapsed() < test_duration,
                 "Transfering {}/{} messages taks too mach time {:?} of {:?}",
-                received.lock().unwrap().len(),
+                received.lock().len(),
                 count,
                 timer.elapsed(),
                 test_duration,
@@ -136,10 +136,10 @@ mod tcp_stream_write {
         }
         let wait_duration = Duration::from_millis(10);
         let mut wait_attempts = test_duration.as_micros() / wait_duration.as_micros();
-        while received.lock().unwrap().len() < count {
+        while received.lock().len() < count {
             log::debug!(
                 "waiting while all data beeng received {}/{}...",
-                received.lock().unwrap().len(),
+                received.lock().len(),
                 count,
             );
             thread::sleep(wait_duration);
@@ -147,7 +147,7 @@ mod tcp_stream_write {
             assert!(
                 wait_attempts > 0,
                 "Transfering {}/{} messages taks too mach time {:?} of {:?}",
-                received.lock().unwrap().len(),
+                received.lock().len(),
                 count,
                 timer.elapsed(),
                 test_duration,
@@ -156,7 +156,7 @@ mod tcp_stream_write {
         println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", count);
         println!("sent events: {:?}", sent);
-        let mut received = received.lock().unwrap();
+        let mut received = received.lock();
         println!("recv events: {:?}", received.len());
         assert!(
             sent.load(Ordering::SeqCst) == count,
@@ -209,7 +209,7 @@ mod tcp_stream_write {
                             Ok((mut _socket, addr)) => {
                                 log::info!("TCP server | accept connection - ok\n\t{:?}", addr);
                                 let mut buffer = Vec::new();
-                                while received.lock().unwrap().len() < count {
+                                while received.lock().len() < count {
                                     let mut bytes = vec![0u8; message_len];
                                     match _socket.read(&mut bytes) {
                                         Ok(_) => {
@@ -217,7 +217,7 @@ mod tcp_stream_write {
                                             if buffer.len() >= message_len {
                                                 let v = buffer.drain(0..message_len).collect();
                                                 log::debug!("TCP server | received: {:?}", v);
-                                                received.lock().unwrap().push(v);
+                                                received.lock().push(v);
                                             }
                                         }
                                         Err(err) => {
@@ -227,7 +227,7 @@ mod tcp_stream_write {
                                 }
                                 log::info!(
                                     "TCP server | all received: {:?}",
-                                    received.lock().unwrap().len(),
+                                    received.lock().len(),
                                 );
                             }
                             Err(err) => {
@@ -249,7 +249,6 @@ mod tcp_stream_write {
 ///
 #[derive(Debug)]
 struct MockStreamRead<T> {
-    id: String,
     name: Name,
     buffer: Vec<T>,
 }
@@ -259,7 +258,6 @@ impl<T> MockStreamRead<T> {
     pub fn new(parent: &str, buffer: Vec<T>) -> Self {
         let name = Name::new(parent, "MockStreamRead");
         Self {
-            id: name.join(),
             name,
             buffer,
         }
@@ -268,9 +266,6 @@ impl<T> MockStreamRead<T> {
 //
 //
 impl<T> Object for MockStreamRead<T> {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }

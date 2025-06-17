@@ -1,16 +1,14 @@
 #[cfg(test)]
 
 mod task_nodes {
-    use sal_core::error::Error;
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, safe_lock::rwlock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services};
-    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
+    use sal_core::{dbg::Dbg, error::Error};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
+    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Once}, thread::{self}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig,
-        services::task::{nested_function::{
+        conf::task_config::TaskConfig, services::task::{nested_function::{
             comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric,
-            // sql_metric
-        }, task_nodes::TaskNodes},
+        }, task_nodes::TaskNodes}
     };
     ///
     ///
@@ -44,14 +42,14 @@ mod task_nodes {
         let mut task_nodes = TaskNodes::new(self_id);
         let conf = TaskConfig::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ))));
-        let mock_service = Arc::new(RwLock::new(MockService::new(self_id, "queue")));
-        services.wlock(self_id).insert(mock_service.clone());
+        ), None));
+        let mock_service = Arc::new(MockService::new(self_id, "queue"));
+        services.insert(mock_service.clone());
         let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);
         let fn_count_count = fn_count::COUNT.load(Ordering::SeqCst);
         let fn_ge_count = fn_ge::COUNT.load(Ordering::SeqCst);
@@ -105,7 +103,7 @@ mod task_nodes {
 
             ),
         ];
-        mock_service.write().unwrap().run().unwrap();
+        mock_service.run().unwrap();
         for (name, value, target_value) in test_data {
             let point = value.to_point(0, name);
             // let inputName = &point.name();
@@ -145,30 +143,33 @@ mod task_nodes {
                 None => panic!("input {:?} - not found in the current taskStuff", &name)
             };
         }
-        mock_service.read().unwrap().exit();
+        mock_service.exit();
     }
     ///
     ///
     struct MockService {
-        id: String,
+        dbg: Dbg,
         name: Name,
         links: HashMap<String, Sender<Point>>,
-        rx_recv: Mutex<Option<Receiver<Point>>>,
+        rx_recv: Owner<Receiver<Point>>,
+        handles: Handles<()>,
         exit: Arc<AtomicBool>,
     }
     //
     //
     impl MockService {
         fn new(parent: &str, link_name: &str) -> Self {
-            let (send, recv) = mpsc::channel();
+            let (send, recv) = channel::unbounded();
             let name = Name::new(parent, format!("MockService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+            let dbg = Dbg::new(name.parent(), name.me());
             Self {
-                id: name.join(),
                 name,
                 links: HashMap::from([
                     (link_name.to_string(), send),
                 ]),
-                rx_recv: Mutex::new(Some(recv)),
+                rx_recv: Owner::new(recv),
+                handles: Handles::new(&dbg),
+                dbg,
                 exit: Arc::new(AtomicBool::new(false)),
             }
         }
@@ -176,9 +177,6 @@ mod task_nodes {
     //
     //
     impl Object for MockService {
-        fn id(&self) -> &str {
-            &self.id
-        }
         fn name(&self) -> Name {
             self.name.clone()
         }
@@ -189,7 +187,7 @@ mod task_nodes {
         fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             formatter
                 .debug_struct("MockService")
-                .field("id", &self.id)
+                .field("id", &self.dbg)
                 .finish()
         }
     }
@@ -198,19 +196,19 @@ mod task_nodes {
     impl Service for MockService {
         //
         //
-        fn get_link(&mut self, name: &str) -> Sender<Point> {
+        fn get_link(&self, name: &str) -> Sender<Point> {
             match self.links.get(name) {
                 Some(send) => send.clone(),
-                None => panic!("{}.run | link '{:?}' - not found", self.id, name),
+                None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
             }
         }
         //
         //
-        fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
-            log::info!("{}.run | Starting...", self.id);
-            let self_id = self.id.clone();
+        fn run(&self) -> Result<(), Error> {
+            log::info!("{}.run | Starting...", self.dbg);
+            let self_id = self.dbg.clone();
             let exit = self.exit.clone();
-            let rx_recv = self.rx_recv.lock().unwrap().take().unwrap();
+            let rx_recv = self.rx_recv.take().unwrap();
             let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
                 loop {
                     match rx_recv.recv() {
@@ -228,15 +226,26 @@ mod task_nodes {
             });
             match handle {
                 Ok(handle) => {
-                    log::info!("{}.run | Starting - ok", self.id);
-                    Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                    log::info!("{}.run | Starting - ok", self.dbg);
+                    self.handles.push(handle);
+                    Ok(())
                 }
                 Err(err) => {
-                    let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                    let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                     log::warn!("{}", err);
                     Err(err)
                 }
             }
+        }
+        //
+        //
+        fn wait(&self) -> Result<(), Error> {
+            self.handles.wait()
+        }
+        //
+        //
+        fn is_finished(&self) -> bool {
+            self.handles.is_finished()
         }
         //
         //

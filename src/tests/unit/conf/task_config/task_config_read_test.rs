@@ -2,11 +2,11 @@
 
 mod task_config_read {
     use indexmap::IndexMap;
-        use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name, subscription::conf_subscribe::ConfSubscribe, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{conf::ConfTree, entity::Name, ConfSubscribe, task::functions::{FnConfKind, FnConfig, FnConfPointType, FnConfOptions}};
     use std::{sync::Once, env, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::{
-        fn_::{fn_conf_kind::FnConfKind, fn_config::FnConfig}, task_config::TaskConfig
+        task_config::TaskConfig
     };
     ///
     ///

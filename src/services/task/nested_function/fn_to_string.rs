@@ -1,8 +1,8 @@
-use sal_sync::services::entity::point::{point::Point, point_hlr::PointHlr};
+use sal_sync::services::entity::{Point, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::types::fn_in_out_ref::FnInOutRef,
+    core_::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,

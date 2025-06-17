@@ -1,13 +1,12 @@
 #[cfg(test)]
 
 mod fn_point_id {
-        use sal_sync::services::{entity::{name::Name, point::{point::ToPoint, point_config::PointConfig}}, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+        use sal_sync::services::{entity::{Name, PointConfig, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
     use testing::entities::test_value::Value;
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_config::FnConfig,
-        core_::types::fn_in_out_ref::FnInOutRef,
+         core_::FnInOutRef,
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_point_id::FnPointId},
     };
     ///

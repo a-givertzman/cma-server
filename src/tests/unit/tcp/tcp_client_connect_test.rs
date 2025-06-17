@@ -1,12 +1,12 @@
 #[cfg(test)]
 
 mod tcp_client_connect {
-    use crate::tcp::tcp_client_connect::TcpClientConnect;
+    use crate::{core_::Mutex, tcp::tcp_client_connect::TcpClientConnect};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
         use std::{
         net::TcpListener,
         sync::{
-            atomic::{AtomicBool, Ordering}, Arc, Mutex, Once
+            atomic::{AtomicBool, Ordering}, Arc, Once
         },
         thread,
         time::Duration,
@@ -85,7 +85,7 @@ mod tcp_client_connect {
         });
         log::info!("Connecting...");
         for _ in 0..10 {
-            match connect.lock().unwrap().connect() {
+            match connect.lock().connect() {
                 Some(tcp_stream) => {
                     ok.store(true, Ordering::SeqCst);
                     log::info!("connected: {:?}", tcp_stream);

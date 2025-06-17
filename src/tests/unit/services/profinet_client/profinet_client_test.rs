@@ -2,11 +2,11 @@
 
 mod profinet_client {
     use chrono::Utc;
-        use std::{sync::{Arc, Once, RwLock}, thread, time::Duration};
-    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, wait::WaitTread}};
+    use std::{sync::{Arc, Once}, thread, time::Duration};
+    use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::{cot::Cot, name::Name, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, multi_queue::{multi_queue::MultiQueue, multi_queue_conf::MultiQueueConf}, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
-    use crate::{conf::profinet_client_config::profinet_client_config::ProfinetClientConfig, core_::aprox_eq::aprox_eq::AproxEq, services::profinet_client::profinet_client::ProfinetClient};
+    use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
+    use crate::{conf::profinet_client_config::profinet_client_config::ProfinetClientConfig, services::profinet_client::profinet_client::ProfinetClient};
     ///
     ///
     static INIT: Once = Once::new();
@@ -34,10 +34,11 @@ mod profinet_client {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
+        let tp = ThreadPool::new(self_id, Some(8));
+        let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#""#).unwrap()),
-        ))));
+        ), Some(tp.scheduler())));
         let conf = r#"
             service MultiQueue:
                 in queue in-queue:
@@ -46,17 +47,17 @@ mod profinet_client {
         "#.to_string();
         let conf = serde_yaml::from_str(&conf).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(RwLock::new(MultiQueue::new(mq_conf, services.clone())));
-        services.wlock(self_id).insert(mq_service.clone());
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
+        services.insert(mq_service.clone());
         let path = "./src/tests/unit/services/profinet_client/profinet_client.yaml";
         let conf = ProfinetClientConfig::read(self_name, path);
         log::debug!("config: {:?}", &conf);
         log::debug!("config points:");
-        let client = Arc::new(RwLock::new(ProfinetClient::new(conf, services.clone())));
-        services.wlock(self_id).insert(client.clone());
-        let services_handle = services.wlock(self_id).run().unwrap();
-        let mq_service_handle = mq_service.write().unwrap().run().unwrap();
-        let client_handle = client.write().unwrap().run().unwrap();
+        let client = Arc::new(ProfinetClient::new(conf, services.clone(), tp.scheduler()));
+        services.insert(client.clone());
+        services.run().unwrap();
+        mq_service.run().unwrap();
+        client.run().unwrap();
         thread::sleep(Duration::from_millis(2000));
         let tx_id = PointTxId::from_str(self_id);
         let test_data = [
@@ -72,8 +73,8 @@ mod profinet_client {
             Value::Double(0.10201),
             Value::Double(9.10201),
         ];
-        let send = mq_service.write().unwrap().get_link("in-queue");
-        let (_, recv) = mq_service.write().unwrap().subscribe(self_id, &[]);
+        let send = mq_service.get_link("in-queue");
+        let (_, recv) = mq_service.subscribe(self_id, &[]);
         for value in test_data {
             let point = match value {
                 Value::Bool(value) => panic!("{} | Bool does not supported: {:?}", self_id, value),
@@ -125,12 +126,12 @@ mod profinet_client {
             }
         }
         // thread::sleep(Duration::from_millis(3000));
-        client.read().unwrap().exit();
-        mq_service.read().unwrap().exit();
-        services.rlock(self_id).exit();
-        client_handle.wait().unwrap();
-        mq_service_handle.wait().unwrap();
+        client.exit();
+        mq_service.exit();
+        services.exit();
+        client.wait().unwrap();
+        mq_service.wait().unwrap();
+        services.wait().unwrap();
         test_duration.exit();
-        services_handle.wait().unwrap();
     }
 }

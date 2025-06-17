@@ -1,12 +1,11 @@
 #[cfg(test)]
 
 mod fn_trip {
-        use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
+    use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::fn_config::FnConfig,
-        core_::types::fn_in_out_ref::FnInOutRef,
+        core_::FnInOutRef,
         services::task::nested_function::{comp::fn_ge::FnGe, fn_::FnOut, fn_input::FnInput},
     };
     ///

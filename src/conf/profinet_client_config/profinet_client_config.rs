@@ -1,5 +1,10 @@
 use indexmap::IndexMap;
-use sal_sync::{collections::map::FxIndexMap, services::{conf::{conf_kind::ConfKind, conf_tree::{ConfTree, ConfTreeGet}, diag_keywd::DiagKeywd}, entity::{name::Name, point::point_config::PointConfig}, service::link_name::LinkName}};
+use sal_sync::{
+    collections::FxIndexMap, 
+    services::{conf::{ConfKind, ConfTree, ConfTreeGet, DiagKeywd},
+        entity::{Name, PointConfig}, LinkName
+    },
+};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_config::ProfinetDbConfig};
 ///
@@ -10,7 +15,7 @@ use crate::conf::profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_conf
 ///    in queue in-queue:
 ///        max-length: 10000
 ///    send-to: MultiQueue.in-queue
-///    cycle: 1 ms                         # operating cycle time of the device
+///    cycle: 1 ms                         # operating cycle time of the device, default 100 ms
 ///    reconnect: 1000 ms                  # reconnect timeout when connection is lost
 ///    protocol: 'profinet'
 ///    description: 'S7-IED-01.01'
@@ -38,7 +43,7 @@ use crate::conf::profinet_client_config::{keywd::{Keywd, Kind}, profinet_db_conf
 #[derive(Debug, PartialEq, Clone)]
 pub struct ProfinetClientConfig {
     pub(crate) name: Name,
-    pub(crate) cycle: Option<Duration>,
+    pub(crate) cycle: Duration,
     pub(crate) reconnect_cycle: Duration,
     pub(crate) subscribe: String,
     pub(crate) send_to: LinkName,
@@ -61,7 +66,7 @@ impl ProfinetClientConfig {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let self_name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, self_name);
-        let cycle = conf.get_duration("cycle").ok();
+        let cycle = conf.get_duration("cycle").unwrap_or(Duration::from_millis(100));
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
         log::debug!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
@@ -84,7 +89,7 @@ impl ProfinetClientConfig {
         let slot = conf.get("slot").unwrap();
         log::debug!("{}.new | slot: {:?}", dbg, slot);
         let diagnosis = conf.get_diagnosis(&self_name);
-        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis);
+        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis.iter().map(|(k, v)| format!("{}: {}", k, v.name)).collect::<Vec<_>>());
         let mut dbs = IndexMap::new();
         for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "protocol", "description", "ip", "rack", "slot", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();
@@ -106,8 +111,6 @@ impl ProfinetClientConfig {
             name: self_name,
             cycle,
             reconnect_cycle,
-            // rx,
-            // rx_max_len,
             subscribe,
             send_to,
             protocol,

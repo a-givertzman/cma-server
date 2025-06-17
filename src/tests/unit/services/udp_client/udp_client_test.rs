@@ -1,10 +1,10 @@
 #[cfg(test)]
 
 mod udp_client {
-    use std::{sync::{Arc, Once, RwLock}, thread, time::{Duration, Instant}};
+    use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use rand::Rng;
-    use sal_sync::services::{conf::{conf_tree::ConfTree, services_conf::ServicesConf}, entity::name::Name, safe_lock::rwlock::SafeLock, service::service::Service, services::Services};
-    use testing::stuff::{max_test_duration::TestDuration, wait::WaitTread};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
+    use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::udp_client_config::udp_client_config::UdpClientConfig,
@@ -33,9 +33,9 @@ mod udp_client {
         init_once();
         init_each();
         log::debug!("");
-        let self_id = "test";
-        log::debug!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(100));
+        let dbg = "test";
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(100));
         test_duration.run().unwrap();
         let mut rng = rand::rng();
         let rng = &mut rng;
@@ -53,20 +53,21 @@ mod udp_client {
         let messages_per_sec = freq / (message_length as f64);
         let test_data: Vec<i16> = (0..count).map(|_| rng.random_range(-2048..2048) as i16).collect();
         // let test_data: Vec<i16> = (0..count).collect();
-        log::info!("{}.random_i16 | test data len: {}", self_id, test_data.len());
-        let services = Arc::new(RwLock::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        log::info!("{}.random_i16 | test data len: {}", dbg, test_data.len());
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
                     path: assets/testing/retain/
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ))));
+        ), Some(tp.scheduler())));
         let path = "./src/tests/unit/services/udp_client/udp-client.yaml";
-        let conf = UdpClientConfig::read(self_id, path);
-        let udp_client = Arc::new(RwLock::new(UdpClient::new(conf, services.clone())));
-        services.wlock(self_id).insert(udp_client.clone());
+        let conf = UdpClientConfig::read(dbg, path);
+        let udp_client = Arc::new(UdpClient::new(conf, services.clone(), tp.scheduler()));
+        services.insert(udp_client.clone());
         // let conf = MultiQueueConf::from_yaml(
         //     self_id,
         //     &serde_yaml::from_str(r"service MultiQueue:
@@ -74,14 +75,14 @@ mod udp_client {
         //             max-length: 10000
         //     ").unwrap(),
         // );
-        // let multi_queue = Arc::new(RwLock::new(MultiQueue::new(conf, services.clone())));
-        // services.wlock(self_id).insert(multi_queue.clone());
-        let receiver = Arc::new(RwLock::new(TaskTestReceiver::new(&self_id, "", "in-queue", test_data.len())));
-        services.wlock(self_id).insert(receiver.clone());
-        let udp_server = Arc::new(RwLock::new(MockUdpServer::new(
-            self_id,
+        // let multi_queue = Arc::new(MultiQueue::new(conf, services.clone())));
+        // services.insert(multi_queue.clone());
+        let receiver = Arc::new(TaskTestReceiver::new(&dbg, "", "in-queue", test_data.len()));
+        services.insert(receiver.clone());
+        let udp_server = Arc::new(MockUdpServer::new(
+            dbg,
             MockUdpServerConfig {
-                name: Name::new(self_id, "MockUdpServer"),
+                name: Name::new(dbg, "MockUdpServer"),
                 local_addr: "127.0.0.1:15180".to_owned(),
                 channel: 0,
                 count: 512,
@@ -90,39 +91,39 @@ mod udp_client {
             },
             services.clone(),
             &test_data,
-        )));
-        services.wlock(self_id).insert(udp_server.clone());
+        ));
+        services.insert(udp_server.clone());
         let time = Instant::now();
-        let services_handle = services.wlock(self_id).run().unwrap();
+        services.run().unwrap();
         thread::sleep(Duration::from_millis(10));
-        let receiver_handle = receiver.write().unwrap().run().unwrap();
-        // let multi_queue_handle = multi_queue.write().unwrap().run().unwrap();
-        let udp_client_handle = udp_client.write().unwrap().run().unwrap();
+        receiver.run().unwrap();
+        // let multi_queue_handle = multi_queue.run().unwrap();
+        udp_client.run().unwrap();
         thread::sleep(Duration::from_millis(10));
-        let udp_server_handle = udp_server.write().unwrap().run().unwrap();
+        udp_server.run().unwrap();
         
         let mut received = 0;
         let timeout = Duration::from_secs(3);
         let wait_time = Instant::now();
         while received < test_data.len() {
             thread::sleep(Duration::from_millis(500));
-            let r = receiver.try_read().unwrap().received();
-            received = r.read().unwrap().len();
-            log::debug!("{} | receiver {}/{} ...", self_id, received, test_data.len());
+            let r = receiver.received();
+            received = r.read().len();
+            log::debug!("{} | receiver {}/{} ...", dbg, received, test_data.len());
             if wait_time.elapsed() > timeout {
                 break;
             }
         }
-        receiver.read().unwrap().exit();
-        receiver_handle.wait().unwrap();
+        receiver.exit();
+        receiver.wait().unwrap();
         let elapsed = time.elapsed();
-        log::debug!("{} | wait for receiver - finished", self_id);
-        log::debug!("{} | get received...", self_id);
-        let received = receiver.try_read().unwrap().received();
-        log::debug!("{} | get received - ok", self_id);
-        log::debug!("{} | get received points...", self_id);
-        let received = received.read().unwrap();
-        log::debug!("{} | get received points - ok", self_id);
+        log::debug!("{} | wait for receiver - finished", dbg);
+        log::debug!("{} | get received...", dbg);
+        let received = receiver.received();
+        log::debug!("{} | get received - ok", dbg);
+        log::debug!("{} | get received points...", dbg);
+        let received = received.read();
+        log::debug!("{} | get received points - ok", dbg);
         log::info!("Sampling freq: {}", freq);
         log::info!("Messages sent per second: {}", messages_per_sec);
         log::info!("Total test values: {}", test_data.len());
@@ -147,14 +148,14 @@ mod udp_client {
             let target = test_data_iter.next().unwrap();
             assert!(result == *target as i64, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
-        udp_client.write().unwrap().exit();
-        udp_client_handle.wait().unwrap();
-        udp_server.read().unwrap().exit();
-        // multi_queue.read().unwrap().exit();
-        services.read().unwrap().exit();
-        udp_server_handle.wait().unwrap();
+        udp_client.exit();
+        udp_client.wait().unwrap();
+        udp_server.exit();
+        // multi_queue.exit();
+        services.exit();
+        udp_server.wait().unwrap();
         // multi_queue_handle.wait().unwrap();
-        services_handle.wait().unwrap();
+        services.wait().unwrap();
         test_duration.exit();
-    }
+}
 }

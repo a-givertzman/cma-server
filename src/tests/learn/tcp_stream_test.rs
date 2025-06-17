@@ -1,12 +1,12 @@
 #[cfg(test)]
 
 mod tcp_stream {
-        use sal_core::error::Error;
-        use sal_sync::services::service::service_handles::ServiceHandles;
+    use sal_core::error::Error;
+    use sal_sync::sync::Handles;
     use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
-    use testing::{session::test_session::TestSession, stuff::{wait::WaitTread, max_test_duration::TestDuration}};
+    use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::core_::{constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit};
+    use crate::core_::{constants::constants::RECV_TIMEOUT, failure::ErrorLimit};
     ///
     ///
     static INIT: Once = Once::new();
@@ -117,7 +117,7 @@ mod tcp_stream {
     }
     ///
     ///
-    fn server(addr: &str, mut send_bytes: Vec<u8>) -> Result<ServiceHandles<()>, Error> {
+    fn server(addr: &str, mut send_bytes: Vec<u8>) -> Result<Handles<()>, Error> {
         let self_id = "Emuleted TcpServer";
         let addr = addr.to_string();
         log::info!("{}.run | Preparing thread...", self_id);
@@ -186,7 +186,7 @@ mod tcp_stream {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self_id);
-                Ok(ServiceHandles::new(vec![(self_id.to_owned(), handle)]))
+                Ok(Handles::from_vec(self_id, vec![handle]))
             }
             Err(err) => {
                 let err = Error::new(self_id, "run").pass_with("Start failed", err.to_string());

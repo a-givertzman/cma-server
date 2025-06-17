@@ -15,7 +15,6 @@ pub mod cache;
 pub mod diagnosis;
 pub mod history;
 pub mod profinet_client;
-pub mod safe_lock;
 pub mod server;
 pub mod slmp_client;
 pub mod task;

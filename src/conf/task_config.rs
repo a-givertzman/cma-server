@@ -1,10 +1,6 @@
 use indexmap::IndexMap;
-use sal_sync::services::{conf::conf_tree::{ConfTree, ConfTreeGet}, entity::{name::Name, point::point_config::PointConfig}, subscription::conf_subscribe::ConfSubscribe};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, ConfSubscribe, task::functions::{FnConfKind, FnConfig}};
 use std::{fs, time::Duration};
-use crate::conf::fn_::{
-        fn_config::FnConfig,
-        fn_conf_kind::FnConfKind,
-    };
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml

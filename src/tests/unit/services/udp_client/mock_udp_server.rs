@@ -6,16 +6,16 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc, RwLock}, thread, time::Duration};
-use sal_core::error::Error;
+use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    kernel::state::change_notify::ChangeNotify,
-    services::{entity::{name::Name, object::Object, point::point::Point},
-    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, services::Services}
+    kernel::state::ChangeNotify,
+    services::{entity::{Name, Object, Point},
+    Service, ServiceCycle, Services}, sync::{channel::Sender, Handles}
 };
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
-    core_::failure::errors_limit::ErrorLimit, services::udp_client::udp_client::UdpClient 
+    core_::failure::ErrorLimit, services::udp_client::udp_client::UdpClient 
 };
 ///
 /// 
@@ -33,11 +33,13 @@ pub struct MockUdpServerConfig {
 ///
 /// Do something ...
 pub struct MockUdpServer {
-    id: String,
+    dbg: Dbg,
     name: Name,
     conf: MockUdpServerConfig,
-    services: Arc<RwLock<Services>>,
+    #[allow(unused)]
+    services: Arc<Services>,
     test_data: Vec<i16>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -45,13 +47,15 @@ pub struct MockUdpServer {
 impl MockUdpServer {
     //
     /// Crteates new instance of the MockUdpServer 
-    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<RwLock<Services>>, test_data: &[i16]) -> Self {
+    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<Services>, test_data: &[i16]) -> Self {
+        let dbg = Dbg::new(parent, format!("MockUdpServer({})", conf.name));
         Self {
-            id: format!("{}/MockUdpServer({})", parent.into(), conf.name),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             test_data: test_data.into(),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -59,9 +63,6 @@ impl MockUdpServer {
 //
 //
 impl Object for MockUdpServer {
-    fn id(&self) -> &str {
-        &self.id
-    }
     fn name(&self) -> Name {
         self.name.clone()
     }
@@ -72,7 +73,7 @@ impl std::fmt::Debug for MockUdpServer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("MockUdpServer")
-            .field("id", &self.id)
+            .field("id", &self.dbg)
             .finish()
     }
 }
@@ -93,8 +94,8 @@ enum State {
 impl Service for MockUdpServer {
     //
     // 
-    fn get_link(&mut self, _name: &str) -> Sender<Point> {
-        panic!("{}.get_link | Does not support get_link", self.id())
+    fn get_link(&self, _name: &str) -> Sender<Point> {
+        panic!("{}.get_link | Does not support get_link", self.name())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
         //     None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -102,9 +103,9 @@ impl Service for MockUdpServer {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles<()>, Error> {
-        log::info!("{}.run | Starting...", self.id);
-        let self_id = self.id.clone();
+    fn run(&self) -> Result<(), Error> {
+        log::info!("{}.run | Starting...", self.dbg);
+        let self_id = self.dbg.clone();
         let conf = self.conf.clone();
         let mut cycle = ServiceCycle::new(&self_id, conf.cycle);
         let test_data = self.test_data.clone();
@@ -216,15 +217,26 @@ impl Service for MockUdpServer {
         });
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.id);
-                Ok(ServiceHandles::new(vec![(self.id.clone(), handle)]))
+                log::info!("{}.run | Starting - ok", self.dbg);
+                self.handles.push(handle);
+                Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.id, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
         }
+    }
+    //
+    //
+    fn wait(&self) -> Result<(), Error> {
+        self.handles.wait()
+    }
+    //
+    //
+    fn is_finished(&self) -> bool {
+        self.handles.is_finished()
     }
     //
     //
