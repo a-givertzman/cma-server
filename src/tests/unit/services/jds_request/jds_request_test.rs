@@ -13,9 +13,9 @@ mod jds_routes {
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once}, thread, time::Duration};
     use crate::{
         conf::tcp_server_config::TcpServerConfig,
-        core_::{net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}},
+        core_::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
         services::server::tcp_server::TcpServer,
-        tests::unit::services::{mock::mock_recv_service::MockRecvService, service::mock_service_points::MockServicePoints},
+        tests::unit::services::{jds_request::mock_service_points::MockServicePoints, mock::mock_recv_service::MockRecvService},
     };
     ///
     static INIT: Once = Once::new();
