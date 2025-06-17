@@ -1,13 +1,13 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point, PointConfig, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
-}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler};
+}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration,
 };
 use concat_string::concat_string;
 use crate::{
-    conf::task_config::TaskConfig, core_::{constants::constants::RECV_TIMEOUT, Mutex}, services::task::task_nodes::TaskNodes
+    conf::task_config::TaskConfig, core_::constants::constants::RECV_TIMEOUT, services::task::task_nodes::TaskNodes,
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations
@@ -18,7 +18,7 @@ pub struct Task {
     dbg: Dbg,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     services: Arc<Services>,
     conf: TaskConfig,
     scheduler: Scheduler,
@@ -37,7 +37,7 @@ impl Task {
         Task {
             name: conf.name.clone(),
             in_send: HashMap::from([("in-send".to_owned(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             services,
             conf,
             scheduler,
@@ -100,7 +100,7 @@ impl Task {
                 );
                 rx_recv
             }
-            None => self.rx_recv.lock().take().unwrap(),
+            None => self.rx_recv.take().unwrap(),
         }
     }
 }

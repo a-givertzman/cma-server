@@ -7,7 +7,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{
         Cot, Name, Object,
-        Point, PointConfig, PointConfigHistory, PointConfigType, PointHlr, PointTxId,
+        Point, PointConfig, PointConfigType, PointHlr, PointTxId,
         Status,
     }, types::Bool, Service, ServiceCycle, Services
 }, sync::Handles, thread_pool::Scheduler};
@@ -193,8 +193,8 @@ pub struct PointGen {
     pub name: String,
     pub value: Value,
     pub status: Status,
-    pub history: PointConfigHistory,
-    pub alarm: Option<u8>,
+    // pub history: PointConfigHistory,
+    // pub alarm: Option<u8>,
     pub timestamp: DateTime<Utc>,
     is_changed: bool,
 }
@@ -218,8 +218,8 @@ impl PointGen {
             value: Value::Bool(false),
             status: Status::Invalid,
             is_changed: false,
-            history: config.history.clone(),
-            alarm: config.alarm,
+            // history: config.history.clone(),
+            // alarm: config.alarm,
             timestamp: Utc::now(),
         }
     }
@@ -342,9 +342,11 @@ pub trait ParsePoint<T> {
     fn next(&mut self, input: &T, timestamp: DateTime<Utc>) -> Option<Point>;
     ///
     /// Returns new point (prevously parsed) with the given [status]
+    #[allow(unused)]
     fn next_status(&mut self, status: Status) -> Option<Point>;
     ///
     /// Returns true if value or status was updated since last call [addRaw()]
+    #[allow(unused)]
     fn is_changed(&self) -> bool;
 }
 

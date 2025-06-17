@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use sal_sync::services::{
     entity::{Name, Object, {Point, PointTxId}},
@@ -15,7 +14,7 @@ pub struct MockMultiQueueMatch {
     name: Name,
     subscriptions: Arc<RwLock<Subscriptions>>,
     rxSend: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     sendQueues: Vec<String>,
     services: Arc<Services>,
     exit: Arc<AtomicBool>,
@@ -34,7 +33,7 @@ impl MockMultiQueueMatch {
             name: name.clone(),
             subscriptions: Arc::new(RwLock::new(Subscriptions::new(name))),
             rxSend: HashMap::from([(rxQueue.into(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             sendQueues: txQueues,
             services,
             exit: Arc::new(AtomicBool::new(false)),

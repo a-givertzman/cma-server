@@ -12,7 +12,6 @@ pub struct TaskTestProducer {
     name: Name,
     send_to: LinkName, 
     cycle: Duration,
-    // rxSend: HashMap<String, Sender<PointType>>,
     services: Arc<Services>,
     test_data: Vec<(String, Value)>,
     sent: Arc<RwLock<Vec<Point>>>,

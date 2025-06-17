@@ -2,11 +2,11 @@
 
 mod task_nodes {
     use sal_core::{dbg::Dbg, error::Error};
-    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services}, sync::{channel::{self, Receiver, Sender}, Handles}};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
     use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Once}, thread::{self}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig, core_::Mutex, services::task::{nested_function::{
+        conf::task_config::TaskConfig, services::task::{nested_function::{
             comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric,
         }, task_nodes::TaskNodes}
     };
@@ -151,7 +151,7 @@ mod task_nodes {
         dbg: Dbg,
         name: Name,
         links: HashMap<String, Sender<Point>>,
-        rx_recv: Mutex<Option<Receiver<Point>>>,
+        rx_recv: Owner<Receiver<Point>>,
         handles: Handles<()>,
         exit: Arc<AtomicBool>,
     }
@@ -167,7 +167,7 @@ mod task_nodes {
                 links: HashMap::from([
                     (link_name.to_string(), send),
                 ]),
-                rx_recv: Mutex::new(Some(recv)),
+                rx_recv: Owner::new(recv),
                 handles: Handles::new(&dbg),
                 dbg,
                 exit: Arc::new(AtomicBool::new(false)),
@@ -208,7 +208,7 @@ mod task_nodes {
             log::info!("{}.run | Starting...", self.dbg);
             let self_id = self.dbg.clone();
             let exit = self.exit.clone();
-            let rx_recv = self.rx_recv.lock().take().unwrap();
+            let rx_recv = self.rx_recv.take().unwrap();
             let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
                 loop {
                     match rx_recv.recv() {

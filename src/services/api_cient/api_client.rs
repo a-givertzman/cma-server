@@ -1,11 +1,11 @@
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle}, sync::{channel::{self, Receiver, Sender}, Handles}, thread_pool::Scheduler};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::api_client_config::ApiClientConfig, 
-    core_::{retain_buffer::retain_buffer::RetainBuffer, Mutex},
+    core_::retain_buffer::retain_buffer::RetainBuffer,
 };
 ///
 /// - Holding single input queue
@@ -15,7 +15,7 @@ use crate::{
 pub struct ApiClient {
     dbg: Dbg,
     name: Name,
-    recv: Mutex<Option<Receiver<Point>>>,
+    recv: Owner<Receiver<Point>>,
     send: HashMap<String, Sender<Point>>,
     conf: ApiClientConfig,
     scheduler: Scheduler,
@@ -33,7 +33,7 @@ impl ApiClient {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
-            recv: Mutex::new(Some(recv)),
+            recv: Owner::new(recv),
             send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             scheduler,
@@ -130,7 +130,7 @@ impl Service for ApiClient {
         let dbg = self.dbg.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
-        let recv = self.recv.lock().take().unwrap();
+        let recv = self.recv.take().unwrap();
         let (cyclic, cycle_interval) = match conf.cycle {
             Some(interval) => (interval > Duration::ZERO, interval),
             None => (false, Duration::ZERO),

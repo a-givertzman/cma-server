@@ -1,7 +1,7 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point}, future::Future, Service, Services
-}, sync::{channel::{self, Receiver, Sender}, Handles}, thread_pool::Scheduler};
+}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug,
     sync::{atomic::{AtomicBool, Ordering}, Arc},
@@ -9,10 +9,10 @@ use std::{
 };
 use crate::{
     conf::tcp_client_config::TcpClientConfig,
-    core_::{net::protocols::jds::{
+    core_::net::protocols::jds::{
         jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize,
         jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize,
-    }, Mutex},
+    },
     tcp::{
         tcp_client_connect::TcpClientConnect, tcp_read_alive::TcpReadAlive,
         tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive,
@@ -27,7 +27,7 @@ pub struct TcpClient {
     dbg: Dbg,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
-    in_recv: Mutex<Option<Receiver<Point>>>,
+    in_recv: Owner<Receiver<Point>>,
     conf: TcpClientConfig,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -45,7 +45,7 @@ impl TcpClient {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
-            in_recv: Mutex::new(Some(recv)),
+            in_recv: Owner::new(recv),
             in_send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             services,
@@ -94,7 +94,7 @@ impl Service for TcpClient {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let buffered = conf.rx_buffered; // TODO Read this from config
-        let in_recv = self.in_recv.lock().take().unwrap();
+        let in_recv = self.in_recv.take().unwrap();
         // let (cyclic, cycleInterval) = match conf.cycle {
         //     Some(interval) => (interval > Duration::ZERO, interval),
         //     None => (false, Duration::ZERO),

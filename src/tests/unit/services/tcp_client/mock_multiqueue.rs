@@ -2,16 +2,16 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{Name, Object, Point},
     Service,
-}, sync::{channel::{self, Receiver, Sender}, Handles}};
+}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}};
-use crate::core_::{Mutex, RwLock};
+use crate::core_::RwLock;
 ///
 /// 
 pub struct MockMultiQueue {
     dbg: Dbg,
     name: Name,
     send: Sender<Point>,
-    recv: Mutex<Option<Receiver<Point>>>,
+    recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     handles: Handles<()>,
@@ -25,7 +25,7 @@ impl MockMultiQueue {
         Self {
             name,
             send,
-            recv: Mutex::new(Some(recv)),
+            recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             handles: Handles::new(&dbg),
@@ -68,7 +68,7 @@ impl Service for MockMultiQueue {
     fn run(&self) -> Result<(), Error> {
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
-        let recv = self.recv.lock().take().unwrap();
+        let recv = self.recv.take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::spawn(move || {

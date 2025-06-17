@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles}};
-use crate::core_::{constants::constants::RECV_TIMEOUT, Mutex, RwLock};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
+use crate::core_::{constants::constants::RECV_TIMEOUT, RwLock};
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -11,7 +11,7 @@ pub struct MockRecvService {
     dbg: Dbg,
     name: Name,
     rx_send: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     handles: Handles<()>,
@@ -27,7 +27,7 @@ impl MockRecvService {
         Self {
             name,
             rx_send: HashMap::from([(rx_queue.to_string(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             handles: Handles::new(&dbg),
@@ -80,7 +80,7 @@ impl Service for MockRecvService {
         log::info!("{}.run | Starting...", self.dbg);
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
-        let in_recv = self.rx_recv.lock().take().unwrap();
+        let in_recv = self.rx_recv.take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {

@@ -1,10 +1,9 @@
 use std::{
     collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Instant 
 };
-use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler};
+use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -56,7 +55,6 @@ pub struct Shared {
     pub subscribe_receiver: String,
     pub jds_state: JdsState,
     pub auth: TcpServerAuth,
-    // pub connection_id: String,
     pub cache: Option<String>,
     pub req_reply_send: Vec<Sender<Point>>,
 }
@@ -67,7 +65,7 @@ pub struct JdsConnection {
     dbg: Dbg,
     name: Name,
     connection_id: String,
-    action_recv: Stack<Receiver<Action>>, 
+    action_recv: Owner<Receiver<Action>>, 
     services: Arc<Services>,
     conf: TcpServerConfig,
     scheduler: Scheduler,
@@ -85,12 +83,10 @@ impl JdsConnection {
         let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
         let name = Name::new(parent, "Jds");
         log::debug!("{}.new | name: {:#?}", dbg, name);
-        let action_recv_stack = Stack::new();
-        action_recv_stack.push(action_recv);
         Self {
             name,
             connection_id: connection_id.into(),
-            action_recv: action_recv_stack,
+            action_recv: Owner::new(action_recv),
             services,
             conf,
             scheduler,
@@ -134,7 +130,7 @@ impl Service for JdsConnection {
                 req_reply_send: vec![],
         }));
         let rx_max_length = conf.rx_max_len;
-        let action_recv = self.action_recv.pop().unwrap();
+        let action_recv = self.action_recv.take().unwrap();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let exit = self.exit.clone();

@@ -2,7 +2,6 @@ use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{Atomic
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point, PointConfig, PointTxId, ToPoint}, LinkName, Service, Services}, sync::Handles};
 use testing::entities::test_value::Value;
-
 use crate::core_::RwLock;
 
 ///
@@ -12,7 +11,6 @@ pub struct TaskTestProducer {
     name: Name,
     send_to: LinkName, 
     cycle: Duration,
-    // rxSend: HashMap<String, Sender<PointType>>,
     services: Arc<Services>,
     test_data: Vec<(String, Value)>,
     sent: Arc<RwLock<Vec<Point>>>,
@@ -29,7 +27,6 @@ impl TaskTestProducer {
             name,
             send_to: LinkName::from_str(send_to).unwrap(),
             cycle,
-            // rxSend: HashMap::new(),
             services,
             test_data: test_data.to_vec(),
             sent: Arc::new(RwLock::new(vec![])),

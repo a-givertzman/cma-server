@@ -1,7 +1,7 @@
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles}};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
-use crate::core_::{Mutex, RwLock};
+use crate::core_::RwLock;
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -9,7 +9,7 @@ pub struct TaskTestReceiver {
     name: Name,
     iterations: usize, 
     in_send: HashMap<String, Sender<Point>>,
-    in_recv: Mutex<Option<Receiver<Point>>>,
+    in_recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
@@ -31,7 +31,7 @@ impl TaskTestReceiver {
             name,
             iterations,
             in_send: HashMap::from([(recv_queue.to_string(), send)]),
-            in_recv: Mutex::new(Some(recv)),
+            in_recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
             handles: Handles::new(&dbg),
             dbg,
@@ -88,7 +88,7 @@ impl Service for TaskTestReceiver {
         let received = self.received.clone();
         let mut count = 0;
         // let mut error_count = 0;
-        let in_recv = self.in_recv.lock().take().unwrap();
+        let in_recv = self.in_recv.take().unwrap();
         let iterations = self.iterations;
         let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
             // log::info!("Task({}).run | prepared", name);
