@@ -1,37 +1,35 @@
-use coco::Stack;
-use sal_core::error::Error;
-use sal_sync::services::{
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::{services::{
     entity::{Name, Object, Point},
     Service,
-};
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, Sender}, Arc}, thread::{self, JoinHandle}};
-use crate::core_::{Mutex, RwLock};
+}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}};
+use crate::core_::RwLock;
 ///
 /// 
 pub struct MockMultiQueue {
-    dbg: String,
+    dbg: Dbg,
     name: Name,
     send: Sender<Point>,
-    recv: Mutex<Option<Receiver<Point>>>,
+    recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 impl MockMultiQueue {
     pub fn new(parent: &str, index: impl Into<String>, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockMultiQueue{}", index.into()));
-        let (send, recv) = std::sync::mpsc::channel();
+        let dbg = Dbg::new(name.parent(), name.me());
+        let (send, recv) = channel::unbounded();
         Self {
-            dbg: name.join(),
             name,
             send,
-            recv: Mutex::new(Some(recv)),
+            recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -70,7 +68,7 @@ impl Service for MockMultiQueue {
     fn run(&self) -> Result<(), Error> {
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
-        let recv = self.recv.lock().take().unwrap();
+        let recv = self.recv.take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::spawn(move || {
@@ -113,27 +111,18 @@ impl Service for MockMultiQueue {
             }
         });
         log::info!("{}.run | Starting - ok", self.dbg);
-        self.handle.push(handle);
+        self.handles.push(handle);
         Ok(())
     }
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     // 

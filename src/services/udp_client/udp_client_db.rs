@@ -1,4 +1,4 @@
-use std::{fs, io::Write, net::UdpSocket, sync::mpsc::Sender};
+use std::{fs, io::Write, net::UdpSocket};
 use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use indexmap::IndexMap;
@@ -6,9 +6,9 @@ use sal_sync::{
     kernel::state::ChangeNotify,
     services::entity::{
         Name, 
-        {Point, PointConfig, PointConfigType},
+        Point, PointConfig, PointConfigType,
         Status,
-    }
+    }, sync::channel::Sender
 };
 use crate::conf::udp_client_config::udp_client_db_config::UdpClientDbConfig;
 use super::{parse_point::ParsePoint, udp_client::UdpClient, udpc_parse_i16::UdpcParseI16};

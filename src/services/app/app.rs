@@ -1,8 +1,8 @@
 use sal_core::dbg::Dbg;
-use sal_sync::services::{
+use sal_sync::{services::{
     conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf,
     Service, Services,
-};
+}, thread_pool::{Scheduler, ThreadPool}};
 use std::{path::Path, process::exit, sync::Arc, thread, time::Duration};
 use libc::{
     SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
@@ -27,7 +27,6 @@ use crate::{
 pub struct App {
     dbg: Dbg,
     name: Name,
-    // handles: LinkedHashMap<String, ServiceHandles<()>>,
     conf: AppConfig,
 }
 //
@@ -45,7 +44,6 @@ impl App {
         Self {
             dbg,
             name: conf.name.clone(),
-            // handles: LinkedHashMap::new(),
             conf,
         }
     }
@@ -56,7 +54,8 @@ impl App {
         log::info!("{}.run | Starting application...", dbg);
         let conf = self.conf.clone();
         let self_name = conf.name.clone();
-        let services = Arc::new(Services::new(&dbg, conf.services.clone()));
+        let thread_pool = ThreadPool::new(&dbg, conf.tread_pool);
+        let services = Arc::new(Services::new(&dbg, conf.services.clone(), Some(thread_pool.scheduler())));
         log::info!("{}.run |     Configuring services...", dbg);
         for (node_keywd, node_conf) in conf.nodes {
             let node_name = node_keywd.name();
@@ -64,7 +63,7 @@ impl App {
             log::info!("{}.run |         Configuring service: {}({})...", dbg, node_name, node_sufix);
             log::trace!("{}.run |         Config: {:#?}", dbg, node_conf);
             services.insert(
-                Self::build_service(&dbg, &self_name, &node_name, &node_sufix, node_conf, services.clone()),
+                Self::build_service(&dbg, &self_name, &node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler()),
             );
             log::info!("{}.run |         Configuring service: {}({}) - ok\n", dbg, node_name, node_sufix);
         }
@@ -91,13 +90,12 @@ impl App {
         }
         log::info!("{}.run |     All services started\n", dbg);
         log::info!("{}.run | Application started\n", dbg);
-        Self::listen_sys_signals(dbg.clone(), services.clone());
+        Self::listen_sys_signals(dbg.clone(), services.clone(), thread_pool.scheduler());
         for (service_name, service) in services.all() {
             log::info!("{}.run | Waiting for service '{}' being finished...", dbg, service_name);
             match service.wait() {
                 Ok(_) => log::info!("{}.run | Waiting for service '{}' being finished - Ok", dbg, service_name),
                 Err(err) => log::info!("{}.run | Waiting for service '{}' being finished - Error: \n\t{:?}", dbg, service_name, err),
-
             }
         }
         log::info!("{}.run | Application exit - Ok\n", dbg);
@@ -105,34 +103,34 @@ impl App {
     }    
     ///
     /// Returns service by it's name
-    fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<Services>) -> Arc<dyn Service> {
+    fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<Services>, scheduler: Scheduler) -> Arc<dyn Service> {
         match node_name {
             Services::API_CLIENT => Arc::new(
-                ApiClient::new(ApiClientConfig::new(parent, node_conf))
+                ApiClient::new(ApiClientConfig::new(parent, node_conf), scheduler.clone())
             ),
             Services::MULTI_QUEUE => Arc::new(
-                MultiQueue::new(MultiQueueConf::new(parent, node_conf), services)
+                MultiQueue::new(MultiQueueConf::new(parent, node_conf), services, Some(scheduler.clone()))
             ),
             Services::PROFINET_CLIENT => Arc::new(
-                ProfinetClient::new(ProfinetClientConfig::new(parent, node_conf), services)
+                ProfinetClient::new(ProfinetClientConfig::new(parent, node_conf), services, scheduler.clone())
             ),
             Services::TASK => Arc::new(
-                Task::new(TaskConfig::new(parent, node_conf), services.clone())
+                Task::new(TaskConfig::new(parent, node_conf), services.clone(), scheduler.clone())
             ),
             Services::TCP_CLIENT => Arc::new(
-                TcpClient::new(TcpClientConfig::new(parent, node_conf), services.clone())
+                TcpClient::new(TcpClientConfig::new(parent, node_conf), services.clone(), scheduler.clone())
             ),
             Services::TCP_SERVER => Arc::new(
-                TcpServer::new(TcpServerConfig::new(parent, node_conf), services.clone())
+                TcpServer::new(TcpServerConfig::new(parent, node_conf), services.clone(), scheduler.clone())
             ),
             Services::PRODUCER_SERVICE => Arc::new(
-                ProducerService::new(ProducerServiceConfig::new(parent, node_conf), services.clone())
+                ProducerService::new(ProducerServiceConfig::new(parent, node_conf), services.clone(), scheduler.clone())
             ),
             Services::CACHE_SERVICE => Arc::new(
-                CacheService::new(CacheServiceConfig::new(parent, node_conf), services.clone())
+                CacheService::new(CacheServiceConfig::new(parent, node_conf), services.clone(), scheduler.clone())
             ),
             Services::SLMP_CLIENT => Arc::new(
-                SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services)
+                SlmpClient::new(SlmpClientConfig::new(parent, node_conf), services, scheduler.clone())
             ),
             _ => {
                 panic!("{}.build_service | Unknown service: {}({})", dbg, node_name, node_sufix);
@@ -141,7 +139,7 @@ impl App {
     }
     ///
     /// Listening for signals from the operating system
-    fn listen_sys_signals(dbg: Dbg, services: Arc<Services>) {
+    fn listen_sys_signals(dbg: Dbg, services: Arc<Services>, scheduler: Scheduler) {
         let signals = Signals::new([
             SIGHUP,     // code: 1	This signal is sent to a process when its controlling terminal is closed or disconnected
             SIGINT,     // code: 2	This signal is sent to a process when the user presses Control+C to interrupt its execution
@@ -157,10 +155,10 @@ impl App {
         ]);
         match signals {
             Ok(mut signals) => {
-                thread::spawn(move || {
+                scheduler.clone().spawn(move || {
                     let signals_handle = signals.handle();
                     let dbg_ = dbg.clone();
-                    let handle = thread::Builder::new().name(format!("{}.listen_sys_signals", dbg)).spawn(move || {
+                    let handle = scheduler.spawn(move || {
                         let dbg = dbg_;
                         for signal in signals.forever() {
                             println!("{}.run Received signal {:?}", dbg, signal);
@@ -185,10 +183,12 @@ impl App {
                                 _ => println!("{}.run Received unknown signal {:?}", dbg, signal)
                             }
                         }
+                        Ok(())
                     }).unwrap();
                     handle.join().unwrap();
                     signals_handle.close();
-                });
+                    Ok(())
+                }).unwrap();
             }
             Err(err) => {
                 panic!("{}.run | Application hook system signals error; {:#?}", dbg, err);

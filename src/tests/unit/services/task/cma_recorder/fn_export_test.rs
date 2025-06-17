@@ -1,11 +1,11 @@
 #[cfg(test)]
 
 mod fn_export {
-    use sal_sync::services::{
+    use sal_sync::{services::{
         conf::{ConfTree, ServicesConf}, entity::Name,
         MultiQueue, MultiQueueConf,
         Service, Services,
-    };
+    }, thread_pool::{Scheduler, ThreadPool}};
     use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -27,7 +27,7 @@ mod fn_export {
     ///
     /// returns:
     ///  - ...
-    fn init_each(dbg: &str) -> Arc<Services> {
+    fn init_each(dbg: &str, scheduler: Scheduler) -> Arc<Services> {
         let services = Arc::new(Services::new(dbg, ServicesConf::new(
             dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
@@ -36,7 +36,7 @@ mod fn_export {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(scheduler)));
         services
     }
     ///
@@ -45,15 +45,16 @@ mod fn_export {
     fn export_point_with_enable() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        let self_id = "App";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let dbg = "App";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = init_each(self_id);
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = init_each(dbg, tp.scheduler());
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -82,43 +83,43 @@ mod fn_export {
         );
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
-        let task = Arc::new(Task::new(config, services.clone()));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         log::debug!("Task points: {:#?}", task.points());
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
         let test_data = vec![
-            (format!("/{}/Enable", self_id), Value::Bool(false)),
-            (format!("/{}/Load", self_id), Value::Real(-7.035)),
-            (format!("/{}/Load", self_id), Value::Real(-2.5)),
-            (format!("/{}/Enable", self_id), Value::Bool(true)),
-            (format!("/{}/Load", self_id), Value::Real(-5.5)),
-            (format!("/{}/Load", self_id), Value::Real(-1.5)),
-            (format!("/{}/Load", self_id), Value::Real(-1.0)),
-            (format!("/{}/Load", self_id), Value::Real(-0.1)),
-            (format!("/{}/Load", self_id), Value::Real(0.1)),
-            (format!("/{}/Load", self_id), Value::Real(1.0)),
-            (format!("/{}/Load", self_id), Value::Real(1.5)),
-            (format!("/{}/Load", self_id), Value::Real(5.5)),
-            (format!("/{}/Enable", self_id), Value::Bool(false)),
-            (format!("/{}/Load", self_id), Value::Real(2.5)),
-            (format!("/{}/Load", self_id), Value::Real(7.035)),
+            (format!("/{}/Enable", dbg), Value::Bool(false)),
+            (format!("/{}/Load", dbg), Value::Real(-7.035)),
+            (format!("/{}/Load", dbg), Value::Real(-2.5)),
+            (format!("/{}/Enable", dbg), Value::Bool(true)),
+            (format!("/{}/Load", dbg), Value::Real(-5.5)),
+            (format!("/{}/Load", dbg), Value::Real(-1.5)),
+            (format!("/{}/Load", dbg), Value::Real(-1.0)),
+            (format!("/{}/Load", dbg), Value::Real(-0.1)),
+            (format!("/{}/Load", dbg), Value::Real(0.1)),
+            (format!("/{}/Load", dbg), Value::Real(1.0)),
+            (format!("/{}/Load", dbg), Value::Real(1.5)),
+            (format!("/{}/Load", dbg), Value::Real(5.5)),
+            (format!("/{}/Enable", dbg), Value::Bool(false)),
+            (format!("/{}/Load", dbg), Value::Real(2.5)),
+            (format!("/{}/Load", dbg), Value::Real(7.035)),
         ];
         let total_count = test_data.len();
         let mut target_data = vec![];
         let mut enable = false;
         let mut target = (String::new(), Value::Real(0.0));
         for (name, value) in test_data.clone() {
-            if name == format!("/{}/Enable", self_id) {
+            if name == format!("/{}/Enable", dbg) {
                 enable = value.as_bool();
-            } else if name == format!("/{}/Load", self_id) {
+            } else if name == format!("/{}/Load", dbg) {
                 target = (name.clone(), value);
             }
             if enable {
@@ -127,15 +128,15 @@ mod fn_export {
         }
         let target_count = target_data.len();
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             target_count,
         ));
         services.insert(receiver.clone());
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/MultiQueue.in-queue", self_id),
+            dbg,
+            &format!("/{}/MultiQueue.in-queue", dbg),
             Duration::from_millis(10),
             services.clone(),
             &test_data,
@@ -187,15 +188,16 @@ mod fn_export {
     fn export_point_without_enable() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        let self_id = "App";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let dbg = "App";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = init_each(self_id);
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = init_each(dbg, tp.scheduler());
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -224,38 +226,38 @@ mod fn_export {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
 
-        let task = Arc::new(Task::new(config, services.clone()));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         log::debug!("Task points: {:#?}", task.points());
 
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
         let test_data = vec![
-            (format!("/{}/Load", self_id), Value::Real(-7.035)),
-            (format!("/{}/Load", self_id), Value::Real(-2.5)),
-            (format!("/{}/Load", self_id), Value::Real(-5.5)),
-            (format!("/{}/Load", self_id), Value::Real(-1.5)),
-            (format!("/{}/Load", self_id), Value::Real(-1.0)),
-            (format!("/{}/Load", self_id), Value::Real(-0.1)),
-            (format!("/{}/Load", self_id), Value::Real(0.1)),
-            (format!("/{}/Load", self_id), Value::Real(1.0)),
-            (format!("/{}/Load", self_id), Value::Real(1.5)),
-            (format!("/{}/Load", self_id), Value::Real(5.5)),
-            (format!("/{}/Load", self_id), Value::Real(2.5)),
-            (format!("/{}/Load", self_id), Value::Real(7.035)),
+            (format!("/{}/Load", dbg), Value::Real(-7.035)),
+            (format!("/{}/Load", dbg), Value::Real(-2.5)),
+            (format!("/{}/Load", dbg), Value::Real(-5.5)),
+            (format!("/{}/Load", dbg), Value::Real(-1.5)),
+            (format!("/{}/Load", dbg), Value::Real(-1.0)),
+            (format!("/{}/Load", dbg), Value::Real(-0.1)),
+            (format!("/{}/Load", dbg), Value::Real(0.1)),
+            (format!("/{}/Load", dbg), Value::Real(1.0)),
+            (format!("/{}/Load", dbg), Value::Real(1.5)),
+            (format!("/{}/Load", dbg), Value::Real(5.5)),
+            (format!("/{}/Load", dbg), Value::Real(2.5)),
+            (format!("/{}/Load", dbg), Value::Real(7.035)),
         ];
         let total_count = test_data.len();
         let mut target_data = test_data.clone();
         let target_count = target_data.len();
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             target_count,
@@ -263,8 +265,8 @@ mod fn_export {
         services.insert(receiver.clone());      // "TaskTestReceiver",
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/MultiQueue.in-queue", self_id),
+            dbg,
+            &format!("/{}/MultiQueue.in-queue", dbg),
             Duration::ZERO,
             services.clone(),
             &test_data,
@@ -315,15 +317,16 @@ mod fn_export {
     fn export_unconfigured_point() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        let self_id = "App";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let dbg = "App";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = init_each(self_id);
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = init_each(dbg, tp.scheduler());
         let config = TaskConfig::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
@@ -350,38 +353,38 @@ mod fn_export {
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
 
-        let task = Arc::new(Task::new(config, services.clone()));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         log::debug!("Task points: {:#?}", task.points());
 
         services.insert(task.clone());
         let conf = MultiQueueConf::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
         let test_data = vec![
-            (format!("/{}/Load", self_id), Value::Real(-7.035)),
-            (format!("/{}/Load", self_id), Value::Real(-2.5)),
-            (format!("/{}/Load", self_id), Value::Real(-5.5)),
-            (format!("/{}/Load", self_id), Value::Real(-1.5)),
-            (format!("/{}/Load", self_id), Value::Real(-1.0)),
-            (format!("/{}/Load", self_id), Value::Real(-0.1)),
-            (format!("/{}/Load", self_id), Value::Real(0.1)),
-            (format!("/{}/Load", self_id), Value::Real(1.0)),
-            (format!("/{}/Load", self_id), Value::Real(1.5)),
-            (format!("/{}/Load", self_id), Value::Real(5.5)),
-            (format!("/{}/Load", self_id), Value::Real(2.5)),
-            (format!("/{}/Load", self_id), Value::Real(7.035)),
+            (format!("/{}/Load", dbg), Value::Real(-7.035)),
+            (format!("/{}/Load", dbg), Value::Real(-2.5)),
+            (format!("/{}/Load", dbg), Value::Real(-5.5)),
+            (format!("/{}/Load", dbg), Value::Real(-1.5)),
+            (format!("/{}/Load", dbg), Value::Real(-1.0)),
+            (format!("/{}/Load", dbg), Value::Real(-0.1)),
+            (format!("/{}/Load", dbg), Value::Real(0.1)),
+            (format!("/{}/Load", dbg), Value::Real(1.0)),
+            (format!("/{}/Load", dbg), Value::Real(1.5)),
+            (format!("/{}/Load", dbg), Value::Real(5.5)),
+            (format!("/{}/Load", dbg), Value::Real(2.5)),
+            (format!("/{}/Load", dbg), Value::Real(7.035)),
         ];
         let total_count = test_data.len();
         let mut target_data = test_data.clone();
         let target_count = target_data.len();
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             target_count,
@@ -389,8 +392,8 @@ mod fn_export {
         services.insert(receiver.clone());      // "TaskTestReceiver",
         // assert!(total_count == iterations, "\nresult: {:?}\ntarget: {:?}", total_count, iterations);
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/MultiQueue.in-queue", self_id),
+            dbg,
+            &format!("/{}/MultiQueue.in-queue", dbg),
             Duration::ZERO,
             services.clone(),
             &test_data,

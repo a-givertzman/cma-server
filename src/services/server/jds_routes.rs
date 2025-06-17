@@ -1,6 +1,6 @@
-use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::{mpsc::Sender, Arc}};
+use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::Arc};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{entity::{Name, Object, Point}, Services};
+use sal_sync::{services::{entity::{Name, Object, Point}, Services}, sync::channel::Sender, thread_pool::Scheduler};
 use crate::{
     core_::{net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, RwLock}, 
     services::server::jds_cnnection::Shared,
@@ -38,6 +38,7 @@ pub struct JdsRoutes<F> {
     req_reply_send: Sender<Point>,
     rautes: F,
     shared: Arc<RwLock<Shared>>,
+    scheduler: Scheduler,
 }
 //
 // 
@@ -52,6 +53,7 @@ impl<F> JdsRoutes<F> {
         req_reply_send: Sender<Point>, 
         rautes: F, 
         shared: Arc<RwLock<Shared>>,
+        scheduler: Scheduler,
     ) -> Self {
         Self {
             parent_id: parent_id.to_owned(),
@@ -62,6 +64,7 @@ impl<F> JdsRoutes<F> {
             req_reply_send,
             rautes,
             shared,
+            scheduler,
         }
     }
 }
@@ -83,7 +86,7 @@ impl<F> Object for JdsRoutes<F> {
 // 
 impl<F> TcpStreamRead for JdsRoutes<F> where
     //    parent_id, name
-    F: Fn(Dbg, Name, Point, Arc<Services>, Arc<RwLock<Shared>>) -> RouterReply,
+    F: Fn(Dbg, Name, Point, Arc<Services>, Arc<RwLock<Shared>>, Scheduler) -> RouterReply,
     F: Send {
     ///
     /// Reads single point from source
@@ -92,7 +95,14 @@ impl<F> TcpStreamRead for JdsRoutes<F> where
             ConnectionStatus::Active(point) => {
                 match point {
                     OpResult::Ok(point) => {
-                        let result = (self.rautes)(self.parent_id.clone(), self.name.clone(), point, self.services.clone(), self.shared.clone());
+                        let result = (self.rautes)(
+                            self.parent_id.clone(),
+                            self.name.clone(),
+                            point,
+                            self.services.clone(),
+                            self.shared.clone(),
+                            self.scheduler.clone(),
+                        );
                         if let Some(point) = result.retply {
                             if let Err(err) = self.req_reply_send.send(point) {
                                 log::error!("{}.read | Send reply error: {:?}", self.id, err)

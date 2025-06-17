@@ -2,8 +2,8 @@
 
 mod jds_encode_message {
     use chrono::{DateTime, Utc};
-    use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::Bool};
-    use std::sync::{Once, mpsc};
+    use sal_sync::{services::{entity::{Cot, Point, PointHlr, Status}, types::Bool}, sync::channel};
+    use std::sync::Once;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{core_::net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, tcp::steam_read::StreamRead};
     ///
@@ -120,7 +120,7 @@ mod jds_encode_message {
                 &format!("{}11", name), ts_str(ts)), Point::String(PointHlr::new(tx_id, &format!("{}11", name), "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::Inf, ts))
             ),
         ];
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         let mut jds_serialize = JdsEncodeMessage::new(
             "test",
             JdsSerialize::new("test", recv),

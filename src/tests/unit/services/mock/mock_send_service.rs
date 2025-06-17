@@ -1,7 +1,6 @@
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
-use coco::Stack;
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, {Point, ToPoint}}, LinkName, Service, Services};
+use sal_sync::{services::{entity::{Name, Object, Point, ToPoint}, LinkName, Service, Services}, sync::{channel::Sender, Handles}};
 use testing::entities::test_value::Value;
 
 use crate::core_::RwLock;
@@ -15,8 +14,7 @@ pub struct MockSendService {
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     delay: Option<Duration>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -24,16 +22,16 @@ pub struct MockSendService {
 impl MockSendService {
     pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, delay: Option<Duration>) -> Self {
         let name = Name::new(parent, format!("MockSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: Dbg::new(name.parent(), name.me()),
             name,
             send_to: LinkName::from_str(send_to).unwrap(),
             services,
             test_data,
             sent: Arc::new(RwLock::new(vec![])),
             delay,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -70,7 +68,7 @@ impl Debug for MockSendService {
 impl Service for MockSendService {
     //
     //
-    fn get_link(&self, _name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, _name: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -116,7 +114,7 @@ impl Service for MockSendService {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -129,21 +127,12 @@ impl Service for MockSendService {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

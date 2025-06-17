@@ -1,14 +1,12 @@
-use coco::Stack;
 use sal_sync::services::{ServiceCycle};
-use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread, time::Duration};
+use std::{net::{SocketAddr, TcpStream, ToSocketAddrs}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use log::LevelFilter;
 ///
 /// Opens a TCP connection to a remote host
 /// - returns connected Result<TcpStream, Err>
 pub struct TcpClientConnect {
-    id: String,
+    dbg: String,
     addr: SocketAddr,
-    stream: Arc<Stack<TcpStream>>,
     reconnect: Duration,
     exit: Arc<AtomicBool>,
 }
@@ -28,9 +26,8 @@ impl TcpClientConnect {
             Err(err) => panic!("TcpClientConnect({}).connect | Address parsing error: \n\t{:?}", parent.into(), err),
         };
         Self {
-            id: format!("{}/TcpClientConnect", parent.into()),
+            dbg: format!("{}/TcpClientConnect", parent.into()),
             addr,
-            stream: Arc::new(Stack::new()),
             reconnect,
             exit: exit.unwrap_or(Arc::new(AtomicBool::new(false))),
         }
@@ -38,41 +35,37 @@ impl TcpClientConnect {
     ///
     /// Opens a TCP connection to a remote host until succeed.
     pub fn connect(&mut self) -> Option<TcpStream> {
-        let self_id = self.id.clone();
-        log::info!("{}.connect | connecting...", self_id);
-        let id = self.id.clone();
+        let dbg = self.dbg.clone();
+        log::info!("{}.connect | connecting...", dbg);
+        let id = self.dbg.clone();
         let addr = self.addr;
         log::info!("{}.connect | connecting to: {:?}...", id, addr);
         let cycle = self.reconnect;
-        let self_stream = self.stream.clone();
+        let mut result = None;
         let exit = self.exit.clone();
-        let handle = thread::spawn(move || {
-            let mut cycle = ServiceCycle::new(&self_id, cycle);
-            loop {
-                cycle.start();
-                match TcpStream::connect_timeout(&addr, Duration::from_millis(1000)) {
-                    Ok(stream) => {
-                        let stream_name = format!("{:?}", stream);
-                        self_stream.push(stream);
-                        log::info!("{}.connect | connected to: \n\t{:?}", id, stream_name);
-                        break;
-                    }
-                    Err(err) => {
-                        if log::max_level() == LevelFilter::Debug {
-                            log::warn!("{}.connect | connection error: \n\t{:?}", id, err);
-                        }
-                    }
-                };
-                if exit.load(Ordering::SeqCst) {
-                    log::debug!("{}.connect | Exit: 'true'", id);
+        let mut cycle = ServiceCycle::new(&dbg, cycle);
+        loop {
+            cycle.start();
+            match TcpStream::connect_timeout(&addr, Duration::from_millis(1000)) {
+                Ok(stream) => {
+                    let stream_name = format!("{:?}", stream.peer_addr());
+                    result = Some(stream);
+                    log::info!("{}.connect | connected to: \n\t{:?}", id, stream_name);
                     break;
                 }
-                cycle.wait();
+                Err(err) => {
+                    if log::max_level() == LevelFilter::Debug {
+                        log::warn!("{}.connect | connection error: \n\t{:?}", id, err);
+                    }
+                }
+            };
+            if exit.load(Ordering::SeqCst) {
+                log::debug!("{}.connect | Exit: 'true'", id);
+                break;
             }
-            log::debug!("{}.connect | Exit", id);
-        });
-        handle.join().unwrap();
-        self.stream.pop()
+            cycle.wait();
+        }
+        result
     }
     // ///
     // /// Opens a TCP connection to a remote host with a timeout.

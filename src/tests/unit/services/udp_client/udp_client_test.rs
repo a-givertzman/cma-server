@@ -3,7 +3,7 @@
 mod udp_client {
     use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use rand::Rng;
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
@@ -33,9 +33,9 @@ mod udp_client {
         init_once();
         init_each();
         log::debug!("");
-        let self_id = "test";
-        log::debug!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(100));
+        let dbg = "test";
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(100));
         test_duration.run().unwrap();
         let mut rng = rand::rng();
         let rng = &mut rng;
@@ -53,19 +53,20 @@ mod udp_client {
         let messages_per_sec = freq / (message_length as f64);
         let test_data: Vec<i16> = (0..count).map(|_| rng.random_range(-2048..2048) as i16).collect();
         // let test_data: Vec<i16> = (0..count).collect();
-        log::info!("{}.random_i16 | test data len: {}", self_id, test_data.len());
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        log::info!("{}.random_i16 | test data len: {}", dbg, test_data.len());
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
                     path: assets/testing/retain/
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let path = "./src/tests/unit/services/udp_client/udp-client.yaml";
-        let conf = UdpClientConfig::read(self_id, path);
-        let udp_client = Arc::new(UdpClient::new(conf, services.clone()));
+        let conf = UdpClientConfig::read(dbg, path);
+        let udp_client = Arc::new(UdpClient::new(conf, services.clone(), tp.scheduler()));
         services.insert(udp_client.clone());
         // let conf = MultiQueueConf::from_yaml(
         //     self_id,
@@ -76,12 +77,12 @@ mod udp_client {
         // );
         // let multi_queue = Arc::new(MultiQueue::new(conf, services.clone())));
         // services.insert(multi_queue.clone());
-        let receiver = Arc::new(TaskTestReceiver::new(&self_id, "", "in-queue", test_data.len()));
+        let receiver = Arc::new(TaskTestReceiver::new(&dbg, "", "in-queue", test_data.len()));
         services.insert(receiver.clone());
         let udp_server = Arc::new(MockUdpServer::new(
-            self_id,
+            dbg,
             MockUdpServerConfig {
-                name: Name::new(self_id, "MockUdpServer"),
+                name: Name::new(dbg, "MockUdpServer"),
                 local_addr: "127.0.0.1:15180".to_owned(),
                 channel: 0,
                 count: 512,
@@ -108,7 +109,7 @@ mod udp_client {
             thread::sleep(Duration::from_millis(500));
             let r = receiver.received();
             received = r.read().len();
-            log::debug!("{} | receiver {}/{} ...", self_id, received, test_data.len());
+            log::debug!("{} | receiver {}/{} ...", dbg, received, test_data.len());
             if wait_time.elapsed() > timeout {
                 break;
             }
@@ -116,13 +117,13 @@ mod udp_client {
         receiver.exit();
         receiver.wait().unwrap();
         let elapsed = time.elapsed();
-        log::debug!("{} | wait for receiver - finished", self_id);
-        log::debug!("{} | get received...", self_id);
+        log::debug!("{} | wait for receiver - finished", dbg);
+        log::debug!("{} | get received...", dbg);
         let received = receiver.received();
-        log::debug!("{} | get received - ok", self_id);
-        log::debug!("{} | get received points...", self_id);
+        log::debug!("{} | get received - ok", dbg);
+        log::debug!("{} | get received points...", dbg);
         let received = received.read();
-        log::debug!("{} | get received points - ok", self_id);
+        log::debug!("{} | get received points - ok", dbg);
         log::info!("Sampling freq: {}", freq);
         log::info!("Messages sent per second: {}", messages_per_sec);
         log::info!("Total test values: {}", test_data.len());

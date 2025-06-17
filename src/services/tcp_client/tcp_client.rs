@@ -1,20 +1,18 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{
-    entity::{Name, Object, Point},
-    Service, Services,
-};
+use sal_sync::{services::{
+    entity::{Name, Object, Point}, future::Future, Service, Services
+}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug,
-    sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc},
-    thread::{self, JoinHandle}, time::Duration,
+    sync::{atomic::{AtomicBool, Ordering}, Arc},
+    time::Duration,
 };
 use crate::{
     conf::tcp_client_config::TcpClientConfig,
-    core_::{net::protocols::jds::{
+    core_::net::protocols::jds::{
         jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize,
         jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize,
-    }, Mutex},
+    },
     tcp::{
         tcp_client_connect::TcpClientConnect, tcp_read_alive::TcpReadAlive,
         tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive,
@@ -29,11 +27,11 @@ pub struct TcpClient {
     dbg: Dbg,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
-    in_recv: Mutex<Option<Receiver<Point>>>,
+    in_recv: Owner<Receiver<Point>>,
     conf: TcpClientConfig,
     services: Arc<Services>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -42,17 +40,18 @@ impl TcpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TcpClientConfig, services: Arc<Services>) -> Self {
-        let (send, recv) = mpsc::channel();
+    pub fn new(conf: TcpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+        let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
-            in_recv: Mutex::new(Some(recv)),
+            in_recv: Owner::new(recv),
             in_send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
             services,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -87,7 +86,7 @@ impl Service for TcpClient {
     //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
-        let self_id = self.dbg.clone();
+        let dbg = self.dbg.clone();
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let exit_pair = Arc::new(AtomicBool::new(false));
@@ -95,25 +94,25 @@ impl Service for TcpClient {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
         });
         let buffered = conf.rx_buffered; // TODO Read this from config
-        let in_recv = self.in_recv.lock().take().unwrap();
+        let in_recv = self.in_recv.take().unwrap();
         // let (cyclic, cycleInterval) = match conf.cycle {
         //     Some(interval) => (interval > Duration::ZERO, interval),
         //     None => (false, Duration::ZERO),
         // };
         let reconnect = conf.reconnect_cycle.unwrap_or(Duration::from_secs(3));
         let mut tcp_client_connect = TcpClientConnect::new(
-            self_id.clone(), 
+            dbg.clone(), 
             conf.address, 
             reconnect,
             Some(exit.clone())
         );
-        let mut tcp_read_alive = TcpReadAlive::new(
-            &self_id,
+        let tcp_read_alive = TcpReadAlive::new(
+            &dbg,
             Box::new(
                 JdsDeserialize::new(
-                    self_id.clone(),
+                    dbg.clone(),
                     JdsDecodeMessage::new(
-                        &self_id,
+                        &dbg,
                     ),
                 ),
             ),
@@ -121,46 +120,59 @@ impl Service for TcpClient {
             Some(Duration::from_millis(10)),
             Some(exit.clone()),
             Some(exit_pair.clone()),
+            Some(self.scheduler.clone()),
         );
-        let mut tcp_write_alive = TcpWriteAlive::new(
-            &self_id,
+        let tcp_write_alive = TcpWriteAlive::new(
+            &dbg,
             None,
             TcpStreamWrite::new(
-                &self_id,
+                &dbg,
                 buffered,
                 Some(conf.rx_max_len as usize),
                 Box::new(JdsEncodeMessage::new(
-                    &self_id,
+                    &dbg,
                     JdsSerialize::new(
-                        &self_id,
+                        &dbg,
                         in_recv,
                     ),
                 )),
             ),
             Some(exit.clone()),
             Some(exit_pair.clone()),
+            Some(self.scheduler.clone()),
         );
-        log::info!("{}.run | Preparing thread...", self_id);
-        let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
-            log::info!("{}.run | Preparing thread - ok", self_id);
+        log::info!("{}.run | Preparing thread...", dbg);
+        let handle = self.scheduler.spawn(move || {
+            log::info!("{}.run | Preparing thread - ok", dbg);
             loop {
                 exit_pair.store(false, Ordering::SeqCst);
                 if let Some(tcp_stream) = tcp_client_connect.connect() {
-                    let h_r = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
-                    let h_w = tcp_write_alive.run(tcp_stream);
-                    h_r.join().unwrap();
-                    h_w.join().unwrap();
+                    let read = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
+                    let write = tcp_write_alive.run(tcp_stream);
+                    match (read, write) {
+                        (Ok(_), Ok(_)) => {}
+                        (Ok(_), Err(err)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                        (Err(err), Ok(_)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                        (Err(err1), Err(err2)) => log::error!("{}.run | Errors: \n\t{:?},\n\t{:?}", dbg, err1, err2),
+                    }
+                    if let Err(err) = tcp_read_alive.wait() {
+                        log::error!("{}.run | Error wait for TcpReadAlive: {:?}", dbg, err);
+                    }
+                    if let Err(err) = tcp_write_alive.wait() {
+                        log::error!("{}.run | Error wait for TcpWriteAlive: {:?}", dbg, err);
+                    }
                 };
                 if exit.load(Ordering::SeqCst) {
                     break;
                 }
             }
-            log::info!("{}.run | Exit", self_id);
+            log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -173,21 +185,12 @@ impl Service for TcpClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //
@@ -222,7 +225,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Receiver<Point> {
+    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Future<Vec<Point>> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.gi | Does not supported", self.dbg)

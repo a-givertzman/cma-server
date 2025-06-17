@@ -1,8 +1,7 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, Point}, Service};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration};
-use crate::core_::{Mutex, RwLock};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
+use crate::core_::RwLock;
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -10,10 +9,9 @@ pub struct TaskTestReceiver {
     name: Name,
     iterations: usize, 
     in_send: HashMap<String, Sender<Point>>,
-    in_recv: Mutex<Option<Receiver<Point>>>,
+    in_recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -26,17 +24,17 @@ impl TaskTestReceiver {
     /// - `iterations` - count down with each received Point, when zero TaskTestReceiver exits
     #[allow(unused)]
     pub fn new(parent: &str, index: impl Into<String>, recv_queue: &str, iterations: usize) -> Self {
-        let (send, recv): (Sender<Point>, Receiver<Point>) = mpsc::channel();
+        let (send, recv): (Sender<Point>, Receiver<Point>) = channel::unbounded();
         let name = Name::new(parent, format!("TaskTestReceiver{}", index.into()));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: Dbg::new(name.parent(), name.me()),
             name,
             iterations,
             in_send: HashMap::from([(recv_queue.to_string(), send)]),
-            in_recv: Mutex::new(Some(recv)),
+            in_recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -90,7 +88,7 @@ impl Service for TaskTestReceiver {
         let received = self.received.clone();
         let mut count = 0;
         // let mut error_count = 0;
-        let in_recv = self.in_recv.lock().take().unwrap();
+        let in_recv = self.in_recv.take().unwrap();
         let iterations = self.iterations;
         let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
             // log::info!("Task({}).run | prepared", name);
@@ -122,8 +120,8 @@ impl Service for TaskTestReceiver {
                     }
                     Err(err) => {
                         match err {
-                            mpsc::RecvTimeoutError::Timeout => {},
-                            mpsc::RecvTimeoutError::Disconnected => log::error!("{}.run | Error receiving from queue: {:?}", dbg, err),
+                            RecvTimeoutError::Timeout => {},
+                            _ => log::error!("{}.run | Error receiving from queue: {:?}", dbg, err),
                         }
                         // error_count += 1;
                         // if errorCount > 10 {
@@ -143,7 +141,7 @@ impl Service for TaskTestReceiver {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
                         }
             Err(err) => {
@@ -156,21 +154,12 @@ impl Service for TaskTestReceiver {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

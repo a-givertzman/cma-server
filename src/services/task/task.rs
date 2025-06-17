@@ -1,14 +1,13 @@
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{
-    entity::{Name, Object, {Point, PointConfig, PointTxId}}, Service, ServiceCycle, Services, SubscriptionCriteria
-};
+use sal_sync::{services::{
+    entity::{Name, Object, Point, PointConfig, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
+}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration,
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration,
 };
 use concat_string::concat_string;
 use crate::{
-    conf::task_config::TaskConfig, core_::{constants::constants::RECV_TIMEOUT, Mutex}, services::task::task_nodes::TaskNodes
+    conf::task_config::TaskConfig, core_::constants::constants::RECV_TIMEOUT, services::task::task_nodes::TaskNodes,
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations
@@ -19,11 +18,11 @@ pub struct Task {
     dbg: Dbg,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     services: Arc<Services>,
     conf: TaskConfig,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -32,18 +31,18 @@ impl Task {
     ///
     /// Creates new instance of [Task]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TaskConfig, services: Arc<Services>) -> Task {
-        let (send, recv) = mpsc::channel();
+    pub fn new(conf: TaskConfig, services: Arc<Services>, scheduler: Scheduler) -> Task {
+        let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Task {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
-            // in_send: HashMap::from([(conf.rx.clone(), send)]),
             in_send: HashMap::from([("in-send".to_owned(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             services,
             conf,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -101,7 +100,7 @@ impl Task {
                 );
                 rx_recv
             }
-            None => self.rx_recv.lock().take().unwrap(),
+            None => self.rx_recv.take().unwrap(),
         }
     }
 }
@@ -150,7 +149,7 @@ impl Service for Task {
         };
         let subscriptions = self.subscriptions_(&conf, &services);
         let rx_recv = self.subscribe_(&subscriptions, &services);
-        let handle = thread::Builder::new().name(format!("{} - main", dbg)).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
             let mut task_nodes = TaskNodes::new(&dbg);
             task_nodes.build_nodes(&self_name, conf, services.clone());
@@ -169,8 +168,8 @@ impl Service for Task {
                         Err(err) => {
                             match err {
                                 RecvTimeoutError::Timeout => log::trace!("{}.run | Receive error: {:?}", dbg, err),
-                                RecvTimeoutError::Disconnected => {
-                                    log::error!("{}.run | Error receiving from queue: {:?}", dbg, err);
+                                _ => {
+                                    log::trace!("{}.run | Error receiving from queue: {:?}", dbg, err);
                                     break 'main;
                                 }
                             }
@@ -199,11 +198,12 @@ impl Service for Task {
                 }
             }
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -221,21 +221,12 @@ impl Service for Task {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

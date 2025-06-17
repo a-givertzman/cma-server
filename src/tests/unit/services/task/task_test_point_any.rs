@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod task {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
     use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -30,10 +30,10 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "task_test_point_any";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(3));
+        let dbg = "task_test_point_any";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(3));
         test_duration.run().unwrap();
         //
         // can be changed
@@ -53,12 +53,13 @@ mod task {
         "#, self_name)).unwrap();
         let config = TaskConfig::from_yaml(&self_name, &conf);
         log::trace!("config: {:?}", &config);
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let receiver = Arc::new(TaskTestReceiver::new(
             &self_name.join(),
             "",
@@ -67,7 +68,7 @@ mod task {
         ));
         services.insert(receiver.clone());
         let test_data = RandomTestValues::new(
-            self_id,
+            dbg,
             vec![
                 Value::Real(-7.035),
                 Value::Real(-2.5),
@@ -94,7 +95,7 @@ mod task {
             services.clone(),
             test_data,
         ));
-        let task = Arc::new(Task::new(config, services.clone()));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         services.insert(task.clone());
         services.run().unwrap();
         receiver.run().unwrap();

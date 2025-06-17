@@ -5,7 +5,7 @@ mod profinet_client {
     use std::{sync::{Arc, Once}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, MultiQueue, MultiQueueConf, Service, Services}};
+    use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use crate::{conf::profinet_client_config::profinet_client_config::ProfinetClientConfig, services::profinet_client::profinet_client::ProfinetClient};
     ///
     ///
@@ -34,10 +34,11 @@ mod profinet_client {
         println!("\n{}", self_id);
         let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
         test_duration.run().unwrap();
+        let tp = ThreadPool::new(self_id, Some(8));
         let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 
             ConfTree::new_root(serde_yaml::from_str(r#""#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let conf = r#"
             service MultiQueue:
                 in queue in-queue:
@@ -46,13 +47,13 @@ mod profinet_client {
         "#.to_string();
         let conf = serde_yaml::from_str(&conf).unwrap();
         let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
-        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone()));
+        let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         let path = "./src/tests/unit/services/profinet_client/profinet_client.yaml";
         let conf = ProfinetClientConfig::read(self_name, path);
         log::debug!("config: {:?}", &conf);
         log::debug!("config points:");
-        let client = Arc::new(ProfinetClient::new(conf, services.clone()));
+        let client = Arc::new(ProfinetClient::new(conf, services.clone(), tp.scheduler()));
         services.insert(client.clone());
         services.run().unwrap();
         mq_service.run().unwrap();

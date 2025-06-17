@@ -1,15 +1,15 @@
 use std::{
-    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, mpsc::{self, Sender}, Arc},
-    thread::{self, JoinHandle}, time::Duration,
+    net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, Arc},
 };
+use sal_core::error::Error;
 use sal_sync::{
     collections::FxIndexMap,
     kernel::state::{ChangeNotify, ExitNotify},
     services::{
-        entity::{Cot, {Point, PointHlr}, Status},
+        entity::{Cot, Point, PointHlr, Status},
         ServiceCycle, Services,
         SubscriptionCriteria,
-    },
+    }, sync::channel::{RecvTimeoutError, Sender}, thread_pool::{JoinHandle, Scheduler},
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
@@ -24,7 +24,7 @@ use super::slmp_read::SlmpRead;
 /// - exit_pair - exit signal from / to notify 'Write' partner to exit the thread
 pub struct SlmpWrite {
     tx_id: usize,
-    id: String,
+    dbg: String,
     // name: Name,
     conf: SlmpClientConfig,
     dest: Sender<Point>,
@@ -32,6 +32,7 @@ pub struct SlmpWrite {
     // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     services: Arc<Services>,
     status: Arc<AtomicU32>,
+    scheduler: Scheduler,
     exit: Arc<ExitNotify>,
 }
 impl SlmpWrite {
@@ -46,13 +47,14 @@ impl SlmpWrite {
         // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         services: Arc<Services>,
         status: Arc<AtomicU32>,
+        scheduler: Scheduler,
         exit: Arc<ExitNotify>,
     ) -> Self {
-        let self_id = format!("{}/SlmpWrite", parent.into());
-        let dbs = SlmpRead::build_dbs(&self_id, tx_id, &conf);
+        let dbg = format!("{}/SlmpWrite", parent.into());
+        let dbs = SlmpRead::build_dbs(&dbg, tx_id, &conf);
         Self {
             tx_id,
-            id: self_id,
+            dbg,
             // name,
             conf,
             dest,
@@ -60,14 +62,15 @@ impl SlmpWrite {
             // diagnosis,
             services,
             status,
+            scheduler,
             exit,
         }
     }
     ///
     /// Writes point's to the device,
-    pub fn run(&mut self, mut tcp_stream: TcpStream) -> Result<JoinHandle<()>, std::io::Error> {
-        log::info!("{}.run | starting...", self.id);
-        let self_id = self.id.clone();
+    pub fn run(&mut self, mut tcp_stream: TcpStream) -> Result<JoinHandle<()>, Error> {
+        log::info!("{}.run | starting...", self.dbg);
+        let dbg = self.dbg.clone();
         let tx_id = self.tx_id;
         let status = self.status.clone();
         let exit = self.exit.clone();
@@ -76,95 +79,88 @@ impl SlmpWrite {
         // let diagnosis = self.diagnosis.clone();
         let dest = self.dest.clone();
         let services = self.services.clone();
-        let cycle = conf.cycle.map_or(None, |cycle| if cycle != Duration::ZERO {Some(cycle)} else {None});
-        match cycle {
-            Some(cycle_interval) => {
-                log::info!("{}.run | Preparing thread...", self_id);
-                let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
-                    let mut is_connected = ChangeNotify::new(
-                        &self_id,
-                        false,
-                        vec![
-                            (true,  Box::new(|message| log::info!("{}", message))),
-                            (false, Box::new(|message| log::warn!("{}", message))),
-                        ],
-                    );
-                    let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
-                    let points = conf.points().iter().map(|point_conf| {
-                        SubscriptionCriteria::new(&point_conf.name, Cot::Act)
-                    }).collect::<Vec<SubscriptionCriteria>>();
-                    let (_, recv) = services.subscribe(&conf.subscribe, &self_id, &points);
-                    let mut error_limit = ErrorLimit::new(3);
-                    'main: while !exit.get() {
-                        is_connected.add(true, format!("{}.run | Connection established", self_id));
-                        cycle.start();
-                        match recv.recv_timeout(cycle_interval) {
-                            Ok(point) => {
-                                let point_name = point.name();
-                                let point_value = point.value();
-                                let db_name = point_name.split('/').nth(3).unwrap();
-                                log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?})...", self_id, db_name, point_name, point_value);
-                                match dbs.lock().get_mut(db_name) {
-                                    Some(db) => {
-                                        match db.write(&mut tcp_stream, point.clone()) {
-                                            Ok(_) => {
-                                                error_limit.reset();
-                                                log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?}) - ok", self_id, db_name, point_name, point_value);
-                                                let reply = Self::reply_point(tx_id, point);
-                                                match dest.send(reply.clone()) {
-                                                    Ok(_) => log::debug!("{}.run | ProfinetDb '{}' - sent reply: {:#?}", self_id, db_name, reply),
-                                                    Err(err) => log::error!("{}.run | Error sending to queue: {:?}", self_id, err),
-                                                    // break 'main;
-                                                };
-                                            }
-                                            Err(err) => {
-                                                log::warn!("{}.run | SlmpDb '{}' - write - error: {:?}", self_id, db_name, err);
-                                                if error_limit.add().is_err() {
-                                                    log::error!("{}.run | SlmpDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
-                                                    exit.exit_pair();
-                                                    status.store(Status::Invalid.into(), Ordering::SeqCst);
-                                                    if let Err(err) = dest.send(Point::String(PointHlr::new(
-                                                        tx_id,
-                                                        &point_name,
-                                                        format!("Write error: {}", err),
-                                                        Status::Ok,
-                                                        Cot::ActErr,
-                                                        chrono::offset::Utc::now(),
-                                                    ))) {
-                                                        log::error!("{}.run | Error sending to queue: {:?}", self_id, err);
-                                                        // break 'main;
-                                                    };
-                                                    break 'main;
-                                                }
-                                            }
-                                        }
+        let interval = conf.cycle.clone();
+        log::info!("{}.run | Preparing thread...", dbg);
+        let handle = self.scheduler.spawn(move || {
+            let mut is_connected = ChangeNotify::new(
+                &dbg,
+                false,
+                vec![
+                    (true,  Box::new(|message| log::info!("{}", message))),
+                    (false, Box::new(|message| log::warn!("{}", message))),
+                ],
+            );
+            let mut cycle = ServiceCycle::new(&dbg, interval);
+            let points = conf.points().iter().map(|point_conf| {
+                SubscriptionCriteria::new(&point_conf.name, Cot::Act)
+            }).collect::<Vec<SubscriptionCriteria>>();
+            let (_, recv) = services.subscribe(&conf.subscribe, &dbg, &points);
+            let mut error_limit = ErrorLimit::new(3);
+            'main: while !exit.get() {
+                is_connected.add(true, format!("{}.run | Connection established", dbg));
+                cycle.start();
+                match recv.recv_timeout(interval) {
+                    Ok(point) => {
+                        let point_name = point.name();
+                        let point_value = point.value();
+                        let db_name = point_name.split('/').nth(3).unwrap();
+                        log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?})...", dbg, db_name, point_name, point_value);
+                        match dbs.lock().get_mut(db_name) {
+                            Some(db) => {
+                                match db.write(&mut tcp_stream, point.clone()) {
+                                    Ok(_) => {
+                                        error_limit.reset();
+                                        log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?}) - ok", dbg, db_name, point_name, point_value);
+                                        let reply = Self::reply_point(tx_id, point);
+                                        match dest.send(reply.clone()) {
+                                            Ok(_) => log::debug!("{}.run | ProfinetDb '{}' - sent reply: {:#?}", dbg, db_name, reply),
+                                            Err(err) => log::error!("{}.run | Error sending to queue: {:?}", dbg, err),
+                                            // break 'main;
+                                        };
                                     }
-                                    None => {
-                                        log::error!("{}.run | SlmpDb '{}' - not found", self_id, db_name);
+                                    Err(err) => {
+                                        log::warn!("{}.run | SlmpDb '{}' - write - error: {:?}", dbg, db_name, err);
+                                        if error_limit.add().is_err() {
+                                            log::error!("{}.run | SlmpDb '{}' - exceeded writing errors limit, trying to reconnect...", dbg, db_name);
+                                            exit.exit_pair();
+                                            status.store(Status::Invalid.into(), Ordering::SeqCst);
+                                            if let Err(err) = dest.send(Point::String(PointHlr::new(
+                                                tx_id,
+                                                &point_name,
+                                                format!("Write error: {}", err),
+                                                Status::Ok,
+                                                Cot::ActErr,
+                                                chrono::offset::Utc::now(),
+                                            ))) {
+                                                log::error!("{}.run | Error sending to queue: {:?}", dbg, err);
+                                                // break 'main;
+                                            };
+                                            break 'main;
+                                        }
                                     }
                                 }
                             }
-                            Err(err) => {
-                                match err {
-                                    mpsc::RecvTimeoutError::Timeout => {}
-                                    mpsc::RecvTimeoutError::Disconnected => {
-                                        log::error!("{}.run | Error receiving from queue: {:?}", self_id, err);
-                                        break 'main;
-                                    }
-                                }
+                            None => {
+                                log::error!("{}.run | SlmpDb '{}' - not found", dbg, db_name);
                             }
                         }
                     }
-                    log::info!("{}.run | Exit", self_id);
-                });
-                log::info!("{}.run | Started", self.id);
-                handle
+                    Err(err) => {
+                        match err {
+                            RecvTimeoutError::Timeout => {}
+                            _ => {
+                                log::error!("{}.run | Error receiving from queue: {:?}", dbg, err);
+                                break 'main;
+                            }
+                        }
+                    }
+                }
             }
-            None => {
-                log::info!("{}.run | Disabled", self.id);
-                thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {})
-            }
-        }
+            log::info!("{}.run | Exit", dbg);
+            Ok(())
+        });
+        log::info!("{}.run | Started", self.dbg);
+        handle.map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))
     }
     ///
     /// Creates confirmation reply point with the same value & Cot::ActCon

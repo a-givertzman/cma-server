@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod task {
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
     use std::{env, sync::{Arc, Once}, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -30,23 +30,24 @@ mod task {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "test Task.points";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
+        let dbg = "test Task.points";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
         log::trace!("dir: {:?}", env::current_dir());
         let path = "./src/tests/unit/services/task/task_test_points.yaml";
         let config = TaskConfig::read(&self_name, path);
         log::trace!("config: {:?}", &config);
         println!(" config points: {:?}", config.points());
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
-        let task = Arc::new(Task::new(config, services.clone()));
+        ), Some(tp.scheduler())));
+        let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
         services.insert(task.clone());
         let target  = 3;
         let points = task.points();

@@ -1,8 +1,7 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::{self, JoinHandle}};
-use coco::Stack;
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, Point}, Service};
-use crate::core_::{constants::constants::RECV_TIMEOUT, Mutex, RwLock};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
+use crate::core_::{constants::constants::RECV_TIMEOUT, RwLock};
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -12,11 +11,10 @@ pub struct MockRecvService {
     dbg: Dbg,
     name: Name,
     rx_send: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -24,16 +22,16 @@ pub struct MockRecvService {
 impl MockRecvService {
     pub fn new(parent: impl Into<String>, rx_queue: &str, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
-        let (send, recv) = mpsc::channel::<Point>();
+        let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: Dbg::new(name.parent(), name.me()),
             name,
             rx_send: HashMap::from([(rx_queue.to_string(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -70,7 +68,7 @@ impl Debug for MockRecvService {
 impl Service for MockRecvService {
     //
     //
-    fn get_link(&self, name: &str) -> std::sync::mpsc::Sender<Point> {
+    fn get_link(&self, name: &str) -> Sender<Point> {
         match self.rx_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
@@ -82,7 +80,7 @@ impl Service for MockRecvService {
         log::info!("{}.run | Starting...", self.dbg);
         let self_id = self.dbg.clone();
         let exit = self.exit.clone();
-        let in_recv = self.rx_recv.lock().take().unwrap();
+        let in_recv = self.rx_recv.take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
@@ -126,7 +124,7 @@ impl Service for MockRecvService {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -139,21 +137,12 @@ impl Service for MockRecvService {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

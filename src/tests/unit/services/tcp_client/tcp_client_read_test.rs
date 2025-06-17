@@ -1,9 +1,9 @@
 #[cfg(test)]
 
 mod tcp_client {
-    use sal_sync::services::{
-        conf::{ConfTree, ServicesConf}, entity::{Object, {Point, ToPoint}}, Service, Services
-    };
+    use sal_sync::{services::{
+        conf::{ConfTree, ServicesConf}, entity::{Object, Point, ToPoint}, Service, Services
+    }, sync::channel, thread_pool::ThreadPool};
     use std::{io::Write, net::TcpListener, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -34,10 +34,11 @@ mod tcp_client {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "TcpClient-READ";
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
+        let dbg = "TcpClient-READ";
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
         test_duration.run().unwrap();
+        let tp = ThreadPool::new(dbg, Some(8));
         let conf = serde_yaml::from_str(&format!(r#"
             service TcpClient:
                 cycle: 1 ms
@@ -46,13 +47,13 @@ mod tcp_client {
                 in queue link:
                     max-length: 10000
                 send-to: /{}/MockMultiQueue.queue
-        "#, self_id)).unwrap();
-        let mut conf = TcpClientConfig::from_yaml(self_id, &conf);
+        "#, dbg)).unwrap();
+        let mut conf = TcpClientConfig::from_yaml(dbg, &conf);
         let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
         conf.address = addr.parse().unwrap();
         let iterations = 100;
         let test_data = RandomTestValues::new(
-            self_id,
+            dbg,
             vec![
                 Value::Int(i64::MIN),
                 Value::Int(i64::MAX),
@@ -84,14 +85,14 @@ mod tcp_client {
         );
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
-        let multi_queue = Arc::new(MockMultiQueue::new(self_id, "", Some(total_count)));
-        let tcp_client = Arc::new(TcpClient::new(conf, services.clone()));
+        ), Some(tp.scheduler())));
+        let multi_queue = Arc::new(MockMultiQueue::new(dbg, "", Some(total_count)));
+        let tcp_client = Arc::new(TcpClient::new(conf, services.clone(), tp.scheduler()));
         let multi_queue_service_id = multi_queue.name().join();
         let tcp_client_service_id = tcp_client.name().join();
         services.insert(tcp_client.clone());
@@ -109,8 +110,10 @@ mod tcp_client {
         thread::sleep(Duration::from_micros(100));
         let timer = Instant::now();
         log::debug!("Test - setup - ok");
-        services.exit();
         multi_queue.wait().unwrap();
+        tcp_client.exit();
+        services.exit();
+        tcp_client.wait().unwrap();
         services.wait().unwrap();
         let mut sent = sent.write();
         println!("elapsed: {:?}", timer.elapsed());
@@ -137,7 +140,7 @@ mod tcp_client {
     fn mock_tcp_server(addr: String, count: usize, test_data: Vec<Value>, sent: Arc<RwLock<Vec<Point>>>, multiqueue: Arc<MockMultiQueue>) {
         thread::spawn(move || {
             log::info!("TCP server | Preparing test server...");
-            let (send, recv) = std::sync::mpsc::channel();
+            let (send, recv) = channel::unbounded();
             let mut jds = JdsEncodeMessage::new(
                 "test",
                 JdsSerialize::new(

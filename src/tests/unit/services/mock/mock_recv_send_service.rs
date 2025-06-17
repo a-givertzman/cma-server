@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use sal_sync::services::{entity::{Name, Object, {{Point, ToPoint}, PointTxId}}, service::{LinkName, Service}};
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use testing::entities::test_value::Value;
 use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::rwlock::SafeLock}};
 ///
@@ -9,7 +9,7 @@ pub struct MockRecvSendService {
     id: String,
     name: Name,
     rxSend: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     send_to: LinkName,
     services: Arc<Services>,
     test_data: Vec<Value>,
@@ -28,7 +28,7 @@ impl MockRecvSendService {
             id: name.join(),
             name,
             rxSend: HashMap::from([(rxQueue.to_string(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             send_to: LinkName::from_str(send_to).unwrap(),
             services,
             test_data,

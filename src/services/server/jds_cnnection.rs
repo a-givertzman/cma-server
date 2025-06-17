@@ -1,10 +1,9 @@
 use std::{
-    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc}, thread::{self, JoinHandle}, time::Instant 
+    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Instant 
 };
-use coco::Stack;
 use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria};
+use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
@@ -56,7 +55,6 @@ pub struct Shared {
     pub subscribe_receiver: String,
     pub jds_state: JdsState,
     pub auth: TcpServerAuth,
-    // pub connection_id: String,
     pub cache: Option<String>,
     pub req_reply_send: Vec<Sender<Point>>,
 }
@@ -67,11 +65,11 @@ pub struct JdsConnection {
     dbg: Dbg,
     name: Name,
     connection_id: String,
-    action_recv: Stack<Receiver<Action>>, 
+    action_recv: Owner<Receiver<Action>>, 
     services: Arc<Services>,
     conf: TcpServerConfig,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -81,21 +79,19 @@ impl JdsConnection {
     /// Creates new instance of the [JdsConnection]
     /// - parent - id of the parent
     /// - path - path of the parent
-    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>) -> Self {
+    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConfig, scheduler: Scheduler, exit: Arc<AtomicBool>) -> Self {
         let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
         let name = Name::new(parent, "Jds");
         log::debug!("{}.new | name: {:#?}", dbg, name);
-        let action_recv_stack = Stack::new();
-        action_recv_stack.push(action_recv);
         Self {
-            dbg,
             name,
             connection_id: connection_id.into(),
-            action_recv: action_recv_stack,
+            action_recv: Owner::new(action_recv),
             services,
             conf,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit,
         }
     }
@@ -134,12 +130,13 @@ impl Service for JdsConnection {
                 req_reply_send: vec![],
         }));
         let rx_max_length = conf.rx_max_len;
+        let action_recv = self.action_recv.take().unwrap();
+        let services = self.services.clone();
+        let scheduler = self.scheduler.clone();
         let exit = self.exit.clone();
         let exit_pair = Arc::new(AtomicBool::new(false));
-        let action_recv = self.action_recv.pop().unwrap();
-        let services = self.services.clone();
         log::info!("{}.run | Preparing thread...", dbg);
-        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             let receivers = Arc::new(RwLock::new(
                 HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
@@ -168,7 +165,7 @@ impl Service for JdsConnection {
             let (req_reply_send, recv) = services.subscribe(&subscribe, &receiver_name, &points);
             shared_options.write().req_reply_send = vec![req_reply_send.clone()];
             let buffered = rx_max_length > 0;
-            let mut tcp_read_alive = TcpReadAlive::new(
+            let tcp_read_alive = TcpReadAlive::new(
                 &dbg,
                 Box::new(JdsRoutes::new(
                     &dbg,
@@ -181,14 +178,14 @@ impl Service for JdsConnection {
                         ),
                     ),
                     req_reply_send,
-                    |parent_id, parent_name, point, services, shared| {
+                    |parent_id, parent_name, point, services, shared, scheduler| {
                         let parent_id: Dbg = parent_id;
                         let parent: Name = parent_name;
                         let point: Point = point;
                         log::debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
                         log::trace!("{}.run | point from socket: \n\t{:?}", parent, point);
                         match point.cot() {
-                            Cot::Req => JdsRequest::handle(&parent_id, &parent, 0, point, services, shared),
+                            Cot::Req => JdsRequest::handle(&parent_id, &parent, 0, point, services, shared, scheduler),
                             _        => {
                                 match shared.read().jds_state {
                                     JdsState::Unknown => {
@@ -204,13 +201,15 @@ impl Service for JdsConnection {
                         }
                     },
                     shared_options,
+                    scheduler.clone(),
                 )),
                 send,
                 None,
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
+                Some(scheduler.clone()),
             );
-            let mut tcp_write_alive = TcpWriteAlive::new(
+            let tcp_write_alive = TcpWriteAlive::new(
                 &dbg,
                 None,
                 TcpStreamWrite::new(
@@ -227,6 +226,7 @@ impl Service for JdsConnection {
                 ),
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
+                Some(scheduler.clone()),
             );
             let keep_timeout = conf.keep_timeout;
             let mut duration = Instant::now();
@@ -237,10 +237,20 @@ impl Service for JdsConnection {
                         match action {
                             Action::Continue(tcp_stream) => {
                                 log::info!("{}.run | Action - Continue received", dbg);
-                                let h_read = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
-                                let h_write = tcp_write_alive.run(tcp_stream);
-                                h_read.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpReadAlive thread, probable exit with errors", dbg));
-                                h_write.join().unwrap_or_else(|_| panic!("{}.run | Error joining TcpWriteAlive thread, probable exit with errors", dbg));
+                                let read = tcp_read_alive.run(tcp_stream.try_clone().unwrap());
+                                let write = tcp_write_alive.run(tcp_stream);
+                                match (read, write) {
+                                    (Ok(_), Ok(_)) => {}
+                                    (Ok(_), Err(err)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                                    (Err(err), Ok(_)) => log::error!("{}.run | Error: {:?}", dbg, err),
+                                    (Err(err1), Err(err2)) => log::error!("{}.run | Errors: \n\t{:?},\n\t{:?}", dbg, err1, err2),
+                                }
+                                if let Err(err) = tcp_read_alive.wait() {
+                                    log::error!("{}.run | Error wait for TcpReadAlive: {:?}", dbg, err);
+                                }
+                                if let Err(err) = tcp_write_alive.wait() {
+                                    log::error!("{}.run | Error wait for TcpWriteAlive: {:?}", dbg, err);
+                                }
                                 log::info!("{}.run | Finished", dbg);
                                 duration = Instant::now();
                             }
@@ -253,9 +263,7 @@ impl Service for JdsConnection {
                     Err(err) => {
                         match err {
                             RecvTimeoutError::Timeout => {}
-                            RecvTimeoutError::Disconnected => {
-                                break;
-                            }
+                            _ => break,
                         }
                     }
                 }
@@ -272,11 +280,12 @@ impl Service for JdsConnection {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -289,21 +298,12 @@ impl Service for JdsConnection {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

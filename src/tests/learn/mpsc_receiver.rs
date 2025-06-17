@@ -1,8 +1,9 @@
 #![allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
-        use std::sync::{Once, mpsc};
+    use std::sync::Once;
     use debugging ::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use sal_sync::sync::channel;
     use crate::core_::constants::constants::RECV_TIMEOUT; 
     ///    
     static INIT: Once = Once::new();
@@ -26,7 +27,7 @@ mod tests {
         init_once();
         init_each();
         println!("test mpsc::Receiver");
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         let iterations = 10000;
         for value in 0..=iterations {
             send.send(value).unwrap();

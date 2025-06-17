@@ -2,11 +2,11 @@
 
 mod cma_recorder {
         use regex::Regex;
-    use sal_sync::services::{
+    use sal_sync::{services::{
         conf::{ConfTree, ServicesConf}, entity::{Name, Point},
         MultiQueue, MultiQueueConf,
         Service, Services,
-    };
+    }, thread_pool::ThreadPool};
     use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -39,23 +39,24 @@ mod cma_recorder {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        let self_id = "AppTest";
-        let self_name = Name::new("", self_id);
-        println!("\n{}", self_id);
-        let test_duration = TestDuration::new(self_id, Duration::from_secs(20));
+        let dbg = "AppTest";
+        let self_name = Name::new("", dbg);
+        println!("\n{}", dbg);
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
                     path: assets/testing/retain/
                     point:
                         path: point/id.json
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         let mut tasks = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/basic-metric.yaml";
         match fs::read_to_string(path) {
@@ -67,27 +68,27 @@ mod cma_recorder {
                             let mut conf = serde_yaml::Mapping::new();
                             conf.insert(key.clone(), config.clone());
                             let config = TaskConfig::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
-                            let task = Arc::new(Task::new(config, services.clone()));
+                            let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
                             services.insert(task.clone());
                             tasks.push(task);
                         }
                     }
-                    Err(err) => panic!("{}.read | Error in config: {:?}\n\terror: {:?}", self_id, yaml_string, err),
+                    Err(err) => panic!("{}.read | Error in config: {:?}\n\terror: {:?}", dbg, yaml_string, err),
                 }
             }
-            Err(err) => panic!("{}.read | File {} reading error: {:?}", self_id, path, err),
+            Err(err) => panic!("{}.read | File {} reading error: {:?}", dbg, path, err),
         }
         let conf = MultiQueueConf::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service MultiQueue:
                 in queue in-queue:
                     max-length: 10000
             ").unwrap(),
         );
-        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone()));
+        let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
         let conf = ApiClientConfig::from_yaml(
-            self_id,
+            dbg,
             &serde_yaml::from_str(r"service ApiClient:
                 cycle: 100 ms
                 reconnect: 1 s  # default 3 s
@@ -99,86 +100,86 @@ mod cma_recorder {
                 debug: true
             ").unwrap(),
         );
-        let api_client = Arc::new(ApiClient::new(conf));
+        let api_client = Arc::new(ApiClient::new(conf,tp.scheduler()));
         services.insert(api_client.clone());
         let test_data = vec![
         //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth
-            ("00.-4",    format!("/{}/Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            ("00.-3",    format!("/{}/Winch1.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            ("00.-2",    format!("/{}/Winch2.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            ("00.-1",    format!("/{}/Winch3.Load.Nom", self_id),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
-            ("00.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.0),
-            ("01.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.0),
-            ("02.0",    format!("/{}/Load", self_id),       Value::Real(  3.30),       0,       00.0000,                0.4125),
-            ("03.0",    format!("/{}/Load", self_id),       Value::Real(  0.10),       0,       00.0000,                0.3734375),
-            ("04.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.3267578125),
-            ("05.0",    format!("/{}/Load", self_id),       Value::Real(  1.60),       0,       00.0000,                0.4859130859375),
-            ("06.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.425173950195313),
-            ("07.0",    format!("/{}/Load", self_id),       Value::Real(  7.20),       0,       00.0000,                1.2720272064209),
-            ("08.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.11302380561829),
-            ("09.0",    format!("/{}/Load", self_id),       Value::Real(  0.30),       0,       00.0000,                1.011395829916),
-            ("10.0",    format!("/{}/Load", self_id),       Value::Real(  2.20),       0,       00.0000,                1.1599713511765),
-            ("11.0",    format!("/{}/Load", self_id),       Value::Real(  8.10),       0,       00.0000,                2.02747493227944),
-            ("12.0",    format!("/{}/Load", self_id),       Value::Real(  1.90),       0,       00.0000,                2.01154056574451),
-            ("13.0",    format!("/{}/Load", self_id),       Value::Real(  0.10),       0,       00.0000,                1.77259799502644),
-            ("14.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.55102324564814),
-            ("15.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.35714533994212),
-            ("16.0",    format!("/{}/Load", self_id),       Value::Real(  5.00),       0,       00.0000,                1.81250217244936),
-            ("17.0",    format!("/{}/Load", self_id),       Value::Real(  2.00),       0,       00.0000,                1.83593940089319),
-            ("17.1",    format!("/{}/Winch1.Load.Limiter.Trip", self_id),       Value::Bool(true),       0,       00.0000,                1.83593940089319),
-            ("17.2",    format!("/{}/Winch1.Load.Limiter.Trip", self_id),       Value::Bool(false),       0,       00.0000,                1.83593940089319),
-            ("17.3",    format!("/{}/Winch2.Load.Limiter.Trip", self_id),       Value::Bool(true),       0,       00.0000,                1.83593940089319),
-            ("17.4",    format!("/{}/Winch2.Load.Limiter.Trip", self_id),       Value::Bool(false),       0,       00.0000,                1.83593940089319),
-            ("17.5",    format!("/{}/Winch3.Load.Limiter.Trip", self_id),       Value::Bool(true),       0,       00.0000,                1.83593940089319),
-            ("17.6",    format!("/{}/Winch3.Load.Limiter.Trip", self_id),       Value::Bool(false),       0,       00.0000,                1.83593940089319),
-            ("18.0",    format!("/{}/Load", self_id),       Value::Real(  1.00),       0,       00.0000,                1.73144697578154),
-            ("19.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                1.51501610380885),
-            ("20.0",    format!("/{}/Load", self_id),       Value::Real(  2.00),       0,       00.0000,                1.57563909083274),
-            ("21.0",    format!("/{}/Load", self_id),       Value::Real(  4.00),       0,       00.0000,                1.87868420447865),
-            ("22.0",    format!("/{}/Load", self_id),       Value::Real(  6.00),       0,       00.0000,                2.39384867891882),
-            ("23.0",    format!("/{}/Load", self_id),       Value::Real( 12.00),       0,       00.0000,                3.59461759405396),
-            ("24.0",    format!("/{}/Load", self_id),       Value::Real( 64.00),       1,       11.1452903947972,       11.1452903947972),
-            ("25.0",    format!("/{}/Load", self_id),       Value::Real(128.00),       1,       25.7521290954476,       25.7521290954476),
-            ("26.0",    format!("/{}/Load", self_id),       Value::Real(120.00),       1,       37.5331129585166,       37.5331129585166),
-            ("27.0",    format!("/{}/Load", self_id),       Value::Real(133.00),       1,       49.466473838702,       49.466473838702),
-            ("28.0",    format!("/{}/Load", self_id),       Value::Real(121.00),       1,       58.4081646088643,       58.4081646088643),
+            ("00.-4",    format!("/{}/Load.Nom", dbg),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.-3",    format!("/{}/Winch1.Load.Nom", dbg),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.-2",    format!("/{}/Winch2.Load.Nom", dbg),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.-1",    format!("/{}/Winch3.Load.Nom", dbg),   Value::Real(  150.00),     0,       00.0000,                0.0f32),
+            ("00.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.0),
+            ("01.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.0),
+            ("02.0",    format!("/{}/Load", dbg),       Value::Real(  3.30),       0,       00.0000,                0.4125),
+            ("03.0",    format!("/{}/Load", dbg),       Value::Real(  0.10),       0,       00.0000,                0.3734375),
+            ("04.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.3267578125),
+            ("05.0",    format!("/{}/Load", dbg),       Value::Real(  1.60),       0,       00.0000,                0.4859130859375),
+            ("06.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                0.425173950195313),
+            ("07.0",    format!("/{}/Load", dbg),       Value::Real(  7.20),       0,       00.0000,                1.2720272064209),
+            ("08.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.11302380561829),
+            ("09.0",    format!("/{}/Load", dbg),       Value::Real(  0.30),       0,       00.0000,                1.011395829916),
+            ("10.0",    format!("/{}/Load", dbg),       Value::Real(  2.20),       0,       00.0000,                1.1599713511765),
+            ("11.0",    format!("/{}/Load", dbg),       Value::Real(  8.10),       0,       00.0000,                2.02747493227944),
+            ("12.0",    format!("/{}/Load", dbg),       Value::Real(  1.90),       0,       00.0000,                2.01154056574451),
+            ("13.0",    format!("/{}/Load", dbg),       Value::Real(  0.10),       0,       00.0000,                1.77259799502644),
+            ("14.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.55102324564814),
+            ("15.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.35714533994212),
+            ("16.0",    format!("/{}/Load", dbg),       Value::Real(  5.00),       0,       00.0000,                1.81250217244936),
+            ("17.0",    format!("/{}/Load", dbg),       Value::Real(  2.00),       0,       00.0000,                1.83593940089319),
+            ("17.1",    format!("/{}/Winch1.Load.Limiter.Trip", dbg),       Value::Bool(true),       0,       00.0000,                1.83593940089319),
+            ("17.2",    format!("/{}/Winch1.Load.Limiter.Trip", dbg),       Value::Bool(false),       0,       00.0000,                1.83593940089319),
+            ("17.3",    format!("/{}/Winch2.Load.Limiter.Trip", dbg),       Value::Bool(true),       0,       00.0000,                1.83593940089319),
+            ("17.4",    format!("/{}/Winch2.Load.Limiter.Trip", dbg),       Value::Bool(false),       0,       00.0000,                1.83593940089319),
+            ("17.5",    format!("/{}/Winch3.Load.Limiter.Trip", dbg),       Value::Bool(true),       0,       00.0000,                1.83593940089319),
+            ("17.6",    format!("/{}/Winch3.Load.Limiter.Trip", dbg),       Value::Bool(false),       0,       00.0000,                1.83593940089319),
+            ("18.0",    format!("/{}/Load", dbg),       Value::Real(  1.00),       0,       00.0000,                1.73144697578154),
+            ("19.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       00.0000,                1.51501610380885),
+            ("20.0",    format!("/{}/Load", dbg),       Value::Real(  2.00),       0,       00.0000,                1.57563909083274),
+            ("21.0",    format!("/{}/Load", dbg),       Value::Real(  4.00),       0,       00.0000,                1.87868420447865),
+            ("22.0",    format!("/{}/Load", dbg),       Value::Real(  6.00),       0,       00.0000,                2.39384867891882),
+            ("23.0",    format!("/{}/Load", dbg),       Value::Real( 12.00),       0,       00.0000,                3.59461759405396),
+            ("24.0",    format!("/{}/Load", dbg),       Value::Real( 64.00),       1,       11.1452903947972,       11.1452903947972),
+            ("25.0",    format!("/{}/Load", dbg),       Value::Real(128.00),       1,       25.7521290954476,       25.7521290954476),
+            ("26.0",    format!("/{}/Load", dbg),       Value::Real(120.00),       1,       37.5331129585166,       37.5331129585166),
+            ("27.0",    format!("/{}/Load", dbg),       Value::Real(133.00),       1,       49.466473838702,       49.466473838702),
+            ("28.0",    format!("/{}/Load", dbg),       Value::Real(121.00),       1,       58.4081646088643,       58.4081646088643),
             // ("29.0",    format!("/{}/Load", self_id),       Value::Real(330.00),       1,       67.3571440327563,       67.3571440327563),
-            ("29.0",    format!("/{}/Load", self_id),       Value::Real(130.00),       1,       67.3571440327563,       67.3571440327563),
-            ("30.0",    format!("/{}/Load", self_id),       Value::Real(127.00),       1,       67.3571440327563,       74.8125010286617),
-            ("31.0",    format!("/{}/Load", self_id),       Value::Real(123.00),       1,       80.835938400079,       80.835938400079),
-            ("32.0",    format!("/{}/Load", self_id),       Value::Real(122.00),       1,       80.835938400079,       85.9814461000691),
-            ("33.0",    format!("/{}/Load", self_id),       Value::Real(120.00),       1,       90.2337653375605,       90.2337653375605),
-            ("34.0",    format!("/{}/Load", self_id),       Value::Real( 64.00),       1,       90.2337653375605,       86.9545446703654),
-            ("35.0",    format!("/{}/Load", self_id),       Value::Real( 32.00),       1,       80.0852265865698,       80.0852265865698),
-            ("36.0",    format!("/{}/Load", self_id),       Value::Real( 24.00),       1,       80.0852265865698,       73.0745732632485),
-            ("37.0",    format!("/{}/Load", self_id),       Value::Real( 12.00),       1,       65.4402516053425,       65.4402516053425),
-            ("38.0",    format!("/{}/Load", self_id),       Value::Real(  8.00),       1,       65.4402516053425,       58.2602201546747),
-            ("39.0",    format!("/{}/Load", self_id),       Value::Real( 17.00),       1,       53.1026926353403,       53.1026926353403),
-            ("40.0",    format!("/{}/Load", self_id),       Value::Real( 10.00),       1,       53.1026926353403,       47.7148560559228),
-            ("41.0",    format!("/{}/Load", self_id),       Value::Real(  7.00),       1,       42.6254990489324,       42.6254990489324),
-            ("42.0",    format!("/{}/Load", self_id),       Value::Real(  3.00),       1,       42.6254990489324,       37.6723116678159),
-            ("43.0",    format!("/{}/Load", self_id),       Value::Real(  6.00),       1,       33.7132727093389,       33.7132727093389),
-            ("44.0",    format!("/{}/Load", self_id),       Value::Real(  4.00),       1,       33.7132727093389,       29.9991136206715),
-            ("45.0",    format!("/{}/Load", self_id),       Value::Real(  2.00),       1,       33.7132727093389,       26.4992244180876),
-            ("46.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       1,       23.1868213658266,       23.1868213658266),
-            ("47.0",    format!("/{}/Load", self_id),       Value::Real(  4.00),       1,       23.1868213658266,       20.7884686950983),
-            ("47.1",    format!("/{}/Winch1.Load.Limiter.Trip", self_id),       Value::Bool(true),       1,       23.1868213658266,       20.7884686950983),
-            ("48.0",    format!("/{}/Load", self_id),       Value::Real(  2.00),       1,       23.1868213658266,       18.439910108211),
-            ("49.0",    format!("/{}/Load", self_id),       Value::Real(  1.00),       1,       23.1868213658266,       16.2599213446847),
-            ("50.0",    format!("/{}/Load", self_id),       Value::Real(  3.00),       1,       14.6024311765991,       14.6024311765991),
-            ("51.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       1,       14.6024311765991,       12.7771272795242),
-            ("52.0",    format!("/{}/Load", self_id),       Value::Real(  2.00),       1,       14.6024311765991,       11.4299863695837),
-            ("53.0",    format!("/{}/Load", self_id),       Value::Real(  1.00),       1,       14.6024311765991,       10.1262380733857),
-            ("54.0",    format!("/{}/Load", self_id),       Value::Real(  0.70),       1,       14.6024311765991,       8.94795831421249),
-            ("55.0",    format!("/{}/Load", self_id),       Value::Real(  0.80),       1,       14.6024311765991,       7.92946352493593),
-            ("56.0",    format!("/{}/Load", self_id),       Value::Real(  0.40),       0,       6.98828058431894,       6.98828058431894),
-            ("57.0",    format!("/{}/Load", self_id),       Value::Real(  0.30),       0,       6.98828058431894,       6.15224551127907),
-            ("58.0",    format!("/{}/Load", self_id),       Value::Real(  0.20),       0,       6.98828058431894,       5.40821482236919),
-            ("59.0",    format!("/{}/Load", self_id),       Value::Real(  0.10),       0,       6.98828058431894,       4.74468796957304),
-            ("60.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       4.15160197337641),
-            ("61.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       3.63265172670436),
-            ("62.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       3.17857026086631),
-            ("63.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       6.98828058431894,       2.78124897825802),
+            ("29.0",    format!("/{}/Load", dbg),       Value::Real(130.00),       1,       67.3571440327563,       67.3571440327563),
+            ("30.0",    format!("/{}/Load", dbg),       Value::Real(127.00),       1,       67.3571440327563,       74.8125010286617),
+            ("31.0",    format!("/{}/Load", dbg),       Value::Real(123.00),       1,       80.835938400079,       80.835938400079),
+            ("32.0",    format!("/{}/Load", dbg),       Value::Real(122.00),       1,       80.835938400079,       85.9814461000691),
+            ("33.0",    format!("/{}/Load", dbg),       Value::Real(120.00),       1,       90.2337653375605,       90.2337653375605),
+            ("34.0",    format!("/{}/Load", dbg),       Value::Real( 64.00),       1,       90.2337653375605,       86.9545446703654),
+            ("35.0",    format!("/{}/Load", dbg),       Value::Real( 32.00),       1,       80.0852265865698,       80.0852265865698),
+            ("36.0",    format!("/{}/Load", dbg),       Value::Real( 24.00),       1,       80.0852265865698,       73.0745732632485),
+            ("37.0",    format!("/{}/Load", dbg),       Value::Real( 12.00),       1,       65.4402516053425,       65.4402516053425),
+            ("38.0",    format!("/{}/Load", dbg),       Value::Real(  8.00),       1,       65.4402516053425,       58.2602201546747),
+            ("39.0",    format!("/{}/Load", dbg),       Value::Real( 17.00),       1,       53.1026926353403,       53.1026926353403),
+            ("40.0",    format!("/{}/Load", dbg),       Value::Real( 10.00),       1,       53.1026926353403,       47.7148560559228),
+            ("41.0",    format!("/{}/Load", dbg),       Value::Real(  7.00),       1,       42.6254990489324,       42.6254990489324),
+            ("42.0",    format!("/{}/Load", dbg),       Value::Real(  3.00),       1,       42.6254990489324,       37.6723116678159),
+            ("43.0",    format!("/{}/Load", dbg),       Value::Real(  6.00),       1,       33.7132727093389,       33.7132727093389),
+            ("44.0",    format!("/{}/Load", dbg),       Value::Real(  4.00),       1,       33.7132727093389,       29.9991136206715),
+            ("45.0",    format!("/{}/Load", dbg),       Value::Real(  2.00),       1,       33.7132727093389,       26.4992244180876),
+            ("46.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       1,       23.1868213658266,       23.1868213658266),
+            ("47.0",    format!("/{}/Load", dbg),       Value::Real(  4.00),       1,       23.1868213658266,       20.7884686950983),
+            ("47.1",    format!("/{}/Winch1.Load.Limiter.Trip", dbg),       Value::Bool(true),       1,       23.1868213658266,       20.7884686950983),
+            ("48.0",    format!("/{}/Load", dbg),       Value::Real(  2.00),       1,       23.1868213658266,       18.439910108211),
+            ("49.0",    format!("/{}/Load", dbg),       Value::Real(  1.00),       1,       23.1868213658266,       16.2599213446847),
+            ("50.0",    format!("/{}/Load", dbg),       Value::Real(  3.00),       1,       14.6024311765991,       14.6024311765991),
+            ("51.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       1,       14.6024311765991,       12.7771272795242),
+            ("52.0",    format!("/{}/Load", dbg),       Value::Real(  2.00),       1,       14.6024311765991,       11.4299863695837),
+            ("53.0",    format!("/{}/Load", dbg),       Value::Real(  1.00),       1,       14.6024311765991,       10.1262380733857),
+            ("54.0",    format!("/{}/Load", dbg),       Value::Real(  0.70),       1,       14.6024311765991,       8.94795831421249),
+            ("55.0",    format!("/{}/Load", dbg),       Value::Real(  0.80),       1,       14.6024311765991,       7.92946352493593),
+            ("56.0",    format!("/{}/Load", dbg),       Value::Real(  0.40),       0,       6.98828058431894,       6.98828058431894),
+            ("57.0",    format!("/{}/Load", dbg),       Value::Real(  0.30),       0,       6.98828058431894,       6.15224551127907),
+            ("58.0",    format!("/{}/Load", dbg),       Value::Real(  0.20),       0,       6.98828058431894,       5.40821482236919),
+            ("59.0",    format!("/{}/Load", dbg),       Value::Real(  0.10),       0,       6.98828058431894,       4.74468796957304),
+            ("60.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       4.15160197337641),
+            ("61.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       3.63265172670436),
+            ("62.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       3.17857026086631),
+            ("63.0",    format!("/{}/Load", dbg),       Value::Real(  0.00),       0,       6.98828058431894,       2.78124897825802),
 
             // ("64.0",    format!("/{}/Load", self_id),       Value::Real(  0.00),       0,       00.0000,                0.0),
             // ("65.0",    format!("/{}/Load", self_id),       Value::Real(  3.30),       0,       00.0000,                0.4125),
@@ -246,11 +247,11 @@ mod cma_recorder {
             // ("127.0",    format!("/{}/Load", self_id),       Value::Real(  0.30),       0,       6.98828058431894,       6.15224551127907),
             // ("128.0",    format!("/{}/Exit", self_id),       Value::String("exit".to_owned()),       0,       6.98828058431894,       2.78124897825802),
 
-            ("64.0",    format!("/{}/Exit", self_id),       Value::String("exit".to_owned()),       0,       6.98828058431894,       2.78124897825802),
+            ("64.0",    format!("/{}/Exit", dbg),       Value::String("exit".to_owned()),       0,       6.98828058431894,       2.78124897825802),
         ];
         let total_count = test_data.len();
         let (len, sum) = test_data.iter().fold((0, 0.0), |(mut len, mut sum), (i, _name, value, _op_cycle, _thrd, _smooth)| {
-            if _name == &format!("/{}/Load", self_id) {
+            if _name == &format!("/{}/Load", dbg) {
                 if _op_cycle > &0 {
                     len += 1;
                     sum += value.as_real();
@@ -272,7 +273,7 @@ mod cma_recorder {
         let target_thrd_count = target_thrd.len();
         let target_smooth_count = target_smooth.len();
         let receiver = Arc::new(TaskTestReceiver::new(
-            self_id,
+            dbg,
             "",
             "in-queue",
             total_count * 1000,
@@ -282,8 +283,8 @@ mod cma_recorder {
             (name, value)
         }).collect();
         let producer = Arc::new(TaskTestProducer::new(
-            self_id,
-            &format!("/{}/MultiQueue.in-queue", self_id),
+            dbg,
+            &format!("/{}/MultiQueue.in-queue", dbg),
             Duration::from_millis(10),
             services.clone(),
             &test_data,
@@ -348,25 +349,25 @@ mod cma_recorder {
             assert!(matched, "\n results does not matched with required pattern '{}'", target);
         }
         let smooth: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/Smooth", self_id)
+            point.name() == format!("/{}/RecorderTask/Smooth", dbg)
         }).collect();
         for (i, result) in smooth.iter().enumerate() {
             println!("smooth: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
         let thrd: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/Threshold", self_id)
+            point.name() == format!("/{}/RecorderTask/Threshold", dbg)
         }).collect();
         for (i, result) in thrd.iter().enumerate() {
             println!("threshold: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
         let op_cycle_is_active: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/OpCycleIsActive", self_id)
+            point.name() == format!("/{}/RecorderTask/OpCycleIsActive", dbg)
         }).collect();
         for (i, result) in op_cycle_is_active.iter().enumerate() {
             println!("op cycle: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
         let op_cycle_sql: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
-            point.name() == format!("/{}/RecorderTask/OpCycleSql", self_id)
+            point.name() == format!("/{}/RecorderTask/OpCycleSql", dbg)
         }).collect();
         for (i, result) in op_cycle_sql.iter().enumerate() {
             println!("op cycle SQL: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());

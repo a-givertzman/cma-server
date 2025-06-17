@@ -1,12 +1,11 @@
-use coco::Stack;
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::{entity::{Name, Object, Point}, Service, ServiceCycle};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread::{self, JoinHandle}, time::Duration};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::api_client_config::ApiClientConfig, 
-    core_::{retain_buffer::retain_buffer::RetainBuffer, Mutex},
+    core_::retain_buffer::retain_buffer::RetainBuffer,
 };
 ///
 /// - Holding single input queue
@@ -16,11 +15,11 @@ use crate::{
 pub struct ApiClient {
     dbg: Dbg,
     name: Name,
-    recv: Mutex<Option<Receiver<Point>>>,
+    recv: Owner<Receiver<Point>>,
     send: HashMap<String, Sender<Point>>,
     conf: ApiClientConfig,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -29,16 +28,17 @@ impl ApiClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: ApiClientConfig) -> Self {
-        let (send, recv) = mpsc::channel();
+    pub fn new(conf: ApiClientConfig, scheduler: Scheduler) -> Self {
+        let (send, recv) = channel::unbounded();
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
-            recv: Mutex::new(Some(recv)),
+            recv: Owner::new(recv),
             send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -46,12 +46,19 @@ impl ApiClient {
     /// Reads all avalible at the moment items from the in-queue
     fn read_queue(dbg: &Dbg, recv: &Receiver<Point>, buffer: &mut RetainBuffer<Point>) {
         let max_read_at_once = 1000;
-        for (index, point) in recv.try_iter().enumerate() {   
-            log::debug!("{}.read_queue | point: {:?}", dbg, &point);
-            buffer.push(point);
-            if index > max_read_at_once {
-                break;
-            }                 
+        if !recv.is_empty() {
+            for _ in 0..max_read_at_once {
+                match recv.try_recv() {
+                    Ok(point) => match point {
+                        Some(point) => {
+                            log::trace!("{}.read_queue | point: {:?}", dbg, &point);
+                            buffer.push(point);
+                        }
+                        None => return,
+                    }
+                    Err(_) => return,
+                }
+            }
         }
     }
     ///
@@ -121,17 +128,16 @@ impl Service for ApiClient {
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
-        let is_finished = self.is_finished.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
-        let recv = self.recv.lock().take().unwrap();
+        let recv = self.recv.take().unwrap();
         let (cyclic, cycle_interval) = match conf.cycle {
             Some(interval) => (interval > Duration::ZERO, interval),
             None => (false, Duration::ZERO),
         };
         // let reconnect = if conf.reconnectCycle.is_some() {conf.reconnectCycle.unwrap()} else {Duration::from_secs(3)};
         let _queue_max_length = conf.rx_max_len;
-        let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let mut buffer = RetainBuffer::new(&dbg, "", Some(conf.rx_max_len as usize));
             let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
             // let mut connect = TcpClientConnect::new(self_id.clone() + "/TcpSocketClientConnect", conf.address, reconnect);
@@ -191,13 +197,13 @@ impl Service for ApiClient {
                     cycle.wait();
                 }
             };
-            is_finished.store(true, Ordering::SeqCst);
             log::info!("{}.run | Exit", dbg);
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -210,21 +216,12 @@ impl Service for ApiClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     // 

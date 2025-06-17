@@ -28,14 +28,13 @@
 //! - `COUNT` - length of the array in the `DATA` field
 //! - `DATA` - array of values of type specified in the `TYPE` field
 //! 
-use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
-use coco::Stack;
+use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::{ChangeNotify, Switch, SwitchCondition, SwitchState},
-    services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services},
+    services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services}, sync::Handles, thread_pool::Scheduler,
 };
 use crate::{
     conf::udp_client_config::udp_client_config::UdpClientConfig,
@@ -57,8 +56,8 @@ pub struct UdpClient {
     name: Name,
     conf: UdpClientConfig,
     services: Arc<Services>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    scheduler: Scheduler,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -72,16 +71,17 @@ impl UdpClient {
     pub const HEAD_LEN: usize = 7;
     //
     /// Crteates new instance of the UdpClient 
-    pub fn new(conf: UdpClientConfig, services: Arc<Services>) -> Self {
+    pub fn new(conf: UdpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             tx_id,
-            dbg: Dbg::new(conf.name.parent(), conf.name.me()),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            scheduler,
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -254,7 +254,7 @@ impl Service for UdpClient {
         let services = self.services.clone();
         log::info!("{}.run | Preparing thread...", dbg);
         *SELF_ID.write() = dbg.clone();
-        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
             let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
                 (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
@@ -367,11 +367,12 @@ impl Service for UdpClient {
                     break 'main;
                 }
             }
+            Ok(())
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -384,21 +385,12 @@ impl Service for UdpClient {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

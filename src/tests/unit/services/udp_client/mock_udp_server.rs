@@ -6,13 +6,12 @@
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, mpsc::Sender, Arc}, thread::{self, JoinHandle}, time::Duration};
-use coco::Stack;
+use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
     services::{entity::{Name, Object, Point},
-    Service, ServiceCycle, Services}
+    Service, ServiceCycle, Services}, sync::{channel::Sender, Handles}
 };
 use crate::{
     // conf::tcp_server_config::MockUdpServerConfig,
@@ -40,8 +39,7 @@ pub struct MockUdpServer {
     #[allow(unused)]
     services: Arc<Services>,
     test_data: Vec<i16>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -50,14 +48,14 @@ impl MockUdpServer {
     //
     /// Crteates new instance of the MockUdpServer 
     pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<Services>, test_data: &[i16]) -> Self {
+        let dbg = Dbg::new(parent, format!("MockUdpServer({})", conf.name));
         Self {
-            dbg: Dbg::new(parent, format!("MockUdpServer({})", conf.name)),
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
             test_data: test_data.into(),
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -220,7 +218,7 @@ impl Service for MockUdpServer {
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -233,21 +231,12 @@ impl Service for MockUdpServer {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

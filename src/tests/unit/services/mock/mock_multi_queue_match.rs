@@ -1,5 +1,4 @@
-#![allow(non_snake_case)]
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc}, thread};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use sal_sync::services::{
     entity::{Name, Object, {Point, PointTxId}},
     service::{LinkName, Service},
@@ -15,7 +14,7 @@ pub struct MockMultiQueueMatch {
     name: Name,
     subscriptions: Arc<RwLock<Subscriptions>>,
     rxSend: HashMap<String, Sender<Point>>,
-    rx_recv: Mutex<Option<Receiver<Point>>>,
+    rx_recv: Owner<Receiver<Point>>,
     sendQueues: Vec<String>,
     services: Arc<Services>,
     exit: Arc<AtomicBool>,
@@ -28,13 +27,13 @@ impl MockMultiQueueMatch {
     /// - [parent] - the ID if the parent entity
     pub fn new(parent: impl Into<String>, txQueues: Vec<String>, rxQueue: impl Into<String>, services: Arc<Services>) -> Self {
         let name = Name::new(parent, format!("MockMultiQueueMatch{}", COUNT.fetch_add(1, Ordering::Relaxed)));
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         Self {
             id: name.join(),
             name: name.clone(),
             subscriptions: Arc::new(RwLock::new(Subscriptions::new(name))),
             rxSend: HashMap::from([(rxQueue.into(), send)]),
-            rx_recv: Mutex::new(Some(recv)),
+            rx_recv: Owner::new(recv),
             sendQueues: txQueues,
             services,
             exit: Arc::new(AtomicBool::new(false)),
@@ -75,7 +74,7 @@ impl Service for MockMultiQueueMatch {
     //
     //
     fn subscribe(&mut self, receiverId: &str, points: &[SubscriptionCriteria]) -> (Sender<Point>, Receiver<Point>) {
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel::unbounded();
         let receiverId = PointTxId::from_str(receiverId);
         if points.is_empty() {
             self.subscriptions.add_broadcast(receiverId, send.clone());

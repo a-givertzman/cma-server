@@ -58,6 +58,7 @@ pub struct AppConfig {
     pub(crate) name: Name,
     pub(crate) description: String,
     // pub(crate) cycle: Option<Duration>,
+    pub(crate) tread_pool: Option<usize>,
     pub(crate) nodes: IndexMap<ConfKeywd, ConfTree>,
     pub(crate) services: ServicesConf,
 }
@@ -74,6 +75,8 @@ impl AppConfig {
         log::debug!("{}.new | name: {:?}", self_id, self_name);
         let description = conf.get("description").unwrap();
         log::debug!("{}.new | description: {:?}", self_id, description);
+        let tread_pool = conf.get("tread_pool").map(|v: u64| v as usize);
+        log::debug!("{}.new | tread_pool: {:?}", self_id, tread_pool);
         let mut nodes = IndexMap::new();
         for key in conf.keys(&["name", "description", "services", "retain"]) {
             let keyword = ConfKeywd::from_str(&key).unwrap();
@@ -107,7 +110,7 @@ impl AppConfig {
         Self {
             name: self_name,
             description,
-            // cycle,
+            tread_pool,
             nodes,
             services,
         }

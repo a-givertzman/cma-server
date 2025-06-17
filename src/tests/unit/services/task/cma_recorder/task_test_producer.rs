@@ -1,24 +1,20 @@
-use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self, JoinHandle}, time::Duration};
-use coco::Stack;
-use sal_core::error::Error;
-use sal_sync::services::{entity::{Name, Object, Point, ToPoint, PointConfig, PointTxId}, LinkName, Service, Services};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::{services::{entity::{Name, Object, Point, PointConfig, PointTxId, ToPoint}, LinkName, Service, Services}, sync::Handles};
 use testing::entities::test_value::Value;
-
 use crate::core_::RwLock;
 
 ///
 /// 
 pub struct TaskTestProducer {
-    dbg: String,
+    dbg: Dbg,
     name: Name,
     send_to: LinkName, 
     cycle: Duration,
-    // rxSend: HashMap<String, Sender<PointType>>,
     services: Arc<Services>,
     test_data: Vec<(String, Value)>,
     sent: Arc<RwLock<Vec<Point>>>,
-    handle: Stack<JoinHandle<()>>,
-    is_finished: Arc<AtomicBool>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -26,17 +22,16 @@ pub struct TaskTestProducer {
 impl TaskTestProducer {
     pub fn new(parent: &str, send_to: &str, cycle: Duration, services: Arc<Services>, test_data: &[(String, Value)]) -> Self {
         let name = Name::new(parent, format!("TaskTestProducer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+        let dbg = Dbg::new(name.parent(), name.me());
         Self {
-            dbg: name.join(),
             name,
             send_to: LinkName::from_str(send_to).unwrap(),
             cycle,
-            // rxSend: HashMap::new(),
             services,
             test_data: test_data.to_vec(),
             sent: Arc::new(RwLock::new(vec![])),
-            handle: Stack::new(),
-            is_finished: Arc::new(AtomicBool::new(false)),
+            handles: Handles::new(&dbg),
+            dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -69,8 +64,8 @@ impl Service for TaskTestProducer {
     //
     // 
     fn run(&self) -> Result<(), Error> {
-        let self_id = self.dbg.clone();
-        let tx_id = PointTxId::from_str(&self_id);
+        let dbg = self.dbg.clone();
+        let tx_id = PointTxId::from_str(&self.name.join());
         let cycle = self.cycle;
         let delayed = !cycle.is_zero();
         let tx_send = self.services.get_link(&self.send_to).unwrap_or_else(|err| {
@@ -78,31 +73,31 @@ impl Service for TaskTestProducer {
         });
         let sent = self.sent.clone();
         let test_data = self.test_data.clone();
-        let handle = thread::Builder::new().name(self_id.clone()).spawn(move || {
-            log::debug!("{}.run | calculating step...", self_id);
+        let handle = thread::Builder::new().name(dbg.to_string()).spawn(move || {
+            log::debug!("{}.run | calculating step...", dbg);
             for (name, value) in test_data {
                 let point = value.to_point(tx_id, &name);
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
                         sent.write().push(point.clone());
-                        log::trace!("{}.run | sent points: {:?}", self_id, sent.read().len());
+                        log::trace!("{}.run | sent points: {:?}", dbg, sent.read().len());
                     }
                     Err(err) => {
-                        log::warn!("{}.run | Error write to queue: {:?}", self_id, err);
+                        log::warn!("{}.run | Error write to queue: {:?}", dbg, err);
                     }
                 }
                 if delayed {
                     thread::sleep(cycle);
                 }
             }
-            log::info!("{}.run | All sent: {}", self_id, sent.read().len());
+            log::info!("{}.run | All sent: {}", dbg, sent.read().len());
             // thread::sleep(Duration::from_secs_f32(0.1));
             // debug!("TaskTestProducer({}).run | calculating step - done ({:?})", name, cycle.elapsed());
         });
         match handle {
             Ok(handle) => {
                 log::info!("{}.run | Started", self.dbg);
-                self.handle.push(handle);
+                self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
@@ -141,21 +136,12 @@ impl Service for TaskTestProducer {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        while !self.handle.is_empty() {
-            if let Some(handle) = self.handle.pop() {
-                if let Err(err) = handle.join() {
-                    log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                    return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                }
-            }
-        }
-        self.is_finished.store(true, Ordering::SeqCst);
-        Ok(())
+        self.handles.wait()
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.is_finished.load(Ordering::SeqCst)
+        self.handles.is_finished()
     }
     //
     //

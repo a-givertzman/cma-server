@@ -1,13 +1,12 @@
 #[cfg(test)]
 
 mod task_nodes {
-    use coco::Stack;
-    use sal_core::error::Error;
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services};
-    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Once}, thread::{self, JoinHandle}};
+    use sal_core::{dbg::Dbg, error::Error};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
+    use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Once}, thread::{self}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig, core_::Mutex, services::task::{nested_function::{
+        conf::task_config::TaskConfig, services::task::{nested_function::{
             comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric,
         }, task_nodes::TaskNodes}
     };
@@ -48,7 +47,7 @@ mod task_nodes {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), None));
         let mock_service = Arc::new(MockService::new(self_id, "queue"));
         services.insert(mock_service.clone());
         let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);
@@ -149,29 +148,28 @@ mod task_nodes {
     ///
     ///
     struct MockService {
-        dbg: String,
+        dbg: Dbg,
         name: Name,
         links: HashMap<String, Sender<Point>>,
-        rx_recv: Mutex<Option<Receiver<Point>>>,
-        handle: Stack<JoinHandle<()>>,
-        is_finished: Arc<AtomicBool>,
+        rx_recv: Owner<Receiver<Point>>,
+        handles: Handles<()>,
         exit: Arc<AtomicBool>,
     }
     //
     //
     impl MockService {
         fn new(parent: &str, link_name: &str) -> Self {
-            let (send, recv) = mpsc::channel();
+            let (send, recv) = channel::unbounded();
             let name = Name::new(parent, format!("MockService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+            let dbg = Dbg::new(name.parent(), name.me());
             Self {
-                dbg: name.join(),
                 name,
                 links: HashMap::from([
                     (link_name.to_string(), send),
                 ]),
-                rx_recv: Mutex::new(Some(recv)),
-                handle: Stack::new(),
-                is_finished: Arc::new(AtomicBool::new(false)),
+                rx_recv: Owner::new(recv),
+                handles: Handles::new(&dbg),
+                dbg,
                 exit: Arc::new(AtomicBool::new(false)),
             }
         }
@@ -210,7 +208,7 @@ mod task_nodes {
             log::info!("{}.run | Starting...", self.dbg);
             let self_id = self.dbg.clone();
             let exit = self.exit.clone();
-            let rx_recv = self.rx_recv.lock().take().unwrap();
+            let rx_recv = self.rx_recv.take().unwrap();
             let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
                 loop {
                     match rx_recv.recv() {
@@ -229,7 +227,7 @@ mod task_nodes {
             match handle {
                 Ok(handle) => {
                     log::info!("{}.run | Starting - ok", self.dbg);
-                    self.handle.push(handle);
+                    self.handles.push(handle);
                     Ok(())
                 }
                 Err(err) => {
@@ -242,21 +240,12 @@ mod task_nodes {
         //
         //
         fn wait(&self) -> Result<(), Error> {
-            while !self.handle.is_empty() {
-                if let Some(handle) = self.handle.pop() {
-                    if let Err(err) = handle.join() {
-                        log::warn!("{}.wait | Error: {:?}", self.dbg, err);
-                        return Err(Error::new(&self.dbg, "wait").pass(format!("{:?}", err)));
-                    }
-                }
-            }
-            self.is_finished.store(true, Ordering::SeqCst);
-            Ok(())
+            self.handles.wait()
         }
         //
         //
         fn is_finished(&self) -> bool {
-            self.is_finished.load(Ordering::SeqCst)
+            self.handles.is_finished()
         }
         //
         //

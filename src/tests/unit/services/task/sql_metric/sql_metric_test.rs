@@ -2,7 +2,7 @@
 
 mod sql_metric {
     use regex::RegexBuilder;
-    use sal_sync::services::{conf::{ConfTree, ServicesConf}, entity::{Name, {Point, ToPoint}}, Services};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point, ToPoint}, Services}, thread_pool::ThreadPool};
     use std::sync::{Once, Arc};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::services::task::nested_function::fn_result::FnResult;
@@ -34,19 +34,20 @@ mod sql_metric {
     fn int() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        let self_id = "test_int";
-        let self_name = Name::new("", self_id);
-        log::debug!("\n{}", self_id);
+        let dbg = "test_int";
+        let self_name = Name::new("", dbg);
+        log::debug!("\n{}", dbg);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_int_test.yaml";
         let conf = TaskConfig::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
-        let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let mut nodes = TaskNodes::new(dbg);
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         nodes.build_nodes(&self_name, conf, services);
         log::debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -112,19 +113,20 @@ mod sql_metric {
     fn real() {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
-        let self_id = "test_real";
-        let self_name = Name::new("", self_id);
-        log::debug!("\n{}", self_id);
+        let dbg = "test_real";
+        let self_name = Name::new("", dbg);
+        log::debug!("\n{}", dbg);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_real_test.yaml";
         let conf = TaskConfig::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
-        let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(Services::new(self_id, ServicesConf::new(
-            self_id, 
+        let mut nodes = TaskNodes::new(dbg);
+        let tp = ThreadPool::new(dbg, Some(8));
+        let services = Arc::new(Services::new(dbg, ServicesConf::new(
+            dbg, 
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), Some(tp.scheduler())));
         nodes.build_nodes(&self_name, conf, services);
         log::debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -212,7 +214,7 @@ mod sql_metric {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        )));
+        ), None));
         nodes.build_nodes(&self_name, conf, services);
         log::debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
