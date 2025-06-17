@@ -35,7 +35,7 @@ regex = "~1.11"
 #
 # Math
 rand = "~0.9"
-rustfft = "~6.3"
+rustfft = "~6.4"
 
 #
 # Tread safe
