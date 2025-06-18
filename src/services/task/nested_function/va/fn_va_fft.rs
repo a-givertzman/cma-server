@@ -35,7 +35,7 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 /// fn VaFft:
 ///     enable: const bool true         # optional, default true
 ///     send-to: /AppTest/MultiQueue.in-queue
-///     conf point Fft:                 # Conf for Point's to be exported full name will be: /App/Task/Fft.freq
+///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: /App/Task/Fft.freq
 ///         type: 'Real'                # Double / Real / Int
 ///     input: point string /AppTest/Exit
 ///     freq: 300000                    # Sampling freq
@@ -91,16 +91,27 @@ impl FnVaFft {
             Err(_) => panic!("{}.new | Parameter 'freq' - missed", dbg),
         };
         log::debug!("{}.new | sampl_freq: {:?}", dbg, sampl_freq);
-        let point_conf = Self::export_point_conf(parent, &dbg, &conf);
+        let point_conf = Self::parse_point_conf(parent, &dbg, &conf);
         log::debug!("{}.new | point_conf: {:#?}", dbg, point_conf);
-        let threshold_conf = Self::threshold_conf(&dbg, &conf);
+        let threshold_conf = Self::parse_threshold_conf(&dbg, &conf);
         log::debug!("{}.new | threshold: {:#?}", dbg, threshold_conf);
-        let send_to = Self::get_send_to(&dbg, &conf, &services);
+        let send_to = Self::parse_send_to(&dbg, &conf, &services);
         let fft_buf = FftBuf::new(fft_size, sampl_freq);
         let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
         let filters = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
-                Some(freq) => strcat!(&point_conf.name "." freq),
+                Some(freq) => {
+                    match &point_conf.name.split('/').last() {
+                        Some(name) => {
+                            if name.is_empty() {
+                                strcat!(freq)
+                            } else {
+                                strcat!(name "-" freq)
+                            }
+                        }
+                        None => strcat!(freq)
+                    }
+                }
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
             (freq_name, Self::filter(threshold_conf.clone()))
@@ -135,8 +146,8 @@ impl FnVaFft {
         }
     }
     ///
-    /// Returns Export point_conf
-    fn export_point_conf(parent: impl Into<String>, self_id: &str, conf: &FnConfig) -> PointConfig {
+    /// Returns Conf for Point's to be exported (by send-to) full name will be: /App/Task/Fft.freq
+    fn parse_point_conf(parent: impl Into<String>, self_id: &str, conf: &FnConfig) -> PointConfig {
         match conf.clone().input_conf("conf") {
             Ok(conf) => match conf {
                 FnConfKind::PointConf(conf) => match conf.conf.type_ {
@@ -146,14 +157,14 @@ impl FnVaFft {
                 _ => panic!("{}.new | Invalid Point config in: {:?}", self_id, conf.name()),
             }
             Err(_) => PointConfig::from_yaml(&Name::new(parent, ""), &serde_yaml::from_str(r#"
-                conf point Fft:
+                conf point FFT:
                     type: 'Real'
             "#).unwrap()),
         }
     }
     ///
     /// Returns Threshold config
-    fn threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfigFilter> {
+    fn parse_threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfigFilter> {
         match conf.param("filter") {
             Ok(threshold) => match threshold {
                 FnConfKind::Param(threshold) => match serde_yaml::from_value(threshold.conf.clone()) {
@@ -179,7 +190,7 @@ impl FnVaFft {
     }
     ///
     /// Returns send_to
-    fn get_send_to(self_id: &str, conf: &FnConfig, services: &Arc<Services>) -> Option<Sender<Point>> {
+    fn parse_send_to(self_id: &str, conf: &FnConfig, services: &Arc<Services>) -> Option<Sender<Point>> {
         match conf.param("send-to") {
             Ok(send_to) => {
                 match send_to {

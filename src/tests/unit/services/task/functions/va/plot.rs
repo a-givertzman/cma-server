@@ -1,16 +1,21 @@
 use std::path::Path;
 
-use plotters::{chart::ChartBuilder, prelude::{BitMapBackend, Circle, EmptyElement, IntoDrawingArea}, series::{LineSeries, PointSeries}, style::{IntoFont, RGBColor, WHITE}};
+use plotters::{chart::{ChartBuilder, ChartContext}, coord::types::RangedCoordf64, prelude::{BitMapBackend, Cartesian2d, Circle, EmptyElement, IntoDrawingArea}, series::{LineSeries, PointSeries}, style::{IntoFont, RGBColor, WHITE}};
+use sal_core::error::Error;
 
 // use plotters::prelude::*;
 ///
     /// 
-    pub fn plot<P: AsRef<Path>>(path: P, x_lables: usize, series: Vec<Vec<(f64, f64)>>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn plot<P: AsRef<Path>>(path: P, x_lables: usize, series: Vec<Vec<(f64, f64)>>, kind: SeriesKind) -> Result<(), Box<dyn std::error::Error>> {
         let colors = colors(7);
-        let root = BitMapBackend::new(&path, (100000, 1024)).into_drawing_area();
+        let root = BitMapBackend::new(&path, (2048, 1024)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root.margin(10, 10, 10, 10);
         // After this point, we should be able to construct a chart context
+        let (min_x, _) = series[0].iter().min_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap().to_owned();
+        let (max_x, _) = series[0].iter().max_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap().to_owned();
+        let (min_y, _) = series[0].iter().min_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();
+        let (max_y, _) = series[0].iter().max_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();
         let mut chart = ChartBuilder::on(&root)
             // Set the caption of the chart
             .caption("Plot", ("sans-serif", 40).into_font())
@@ -18,37 +23,49 @@ use plotters::{chart::ChartBuilder, prelude::{BitMapBackend, Circle, EmptyElemen
             .x_label_area_size(20)
             .y_label_area_size(40)
             // Finally attach a coordinate on the drawing area and make a chart context
-            .build_cartesian_2d(0f64..3f64, 0f64..300f64)?;
+            .build_cartesian_2d((min_x - min_x * 0.1)..(max_x + max_x * 0.1), (max_y + max_y * 0.1)..(min_y - min_y * 0.1))?;
     
         // Then we can draw a mesh
         chart
             .configure_mesh()
             // We can customize the maximum number of labels allowed for each axis
-            .x_labels(x_lables)
-            .y_labels(10)
+            // .x_labels(x_lables)
+            // .y_labels(10)
             // We can also change the format of the label text
             .y_label_formatter(&|x| format!("{:.3}", x))
             .draw()?;
     
         // And we can draw something in the drawing area
         for (i, ser) in series.into_iter().enumerate() {
-            chart.draw_series(LineSeries::new(
-                ser.clone(),
-                colors[i],
-                // vec![(0.0, 0.0), (5.0, 5.0), (8.0, 7.0)],
-                // &RED,
-            ))?;
-            // Similarly, we can draw point series
-            chart.draw_series(PointSeries::of_element(
-                ser,
-                3,
-                colors[i],
-                &|c, s, st| {
-                    return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
-                    + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
-                    // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
-                },
-            ))?;
+            fn draw_line_series(chart: &mut ChartContext<'_, BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, ser: Vec<(f64, f64)>, color: RGBColor) -> Result<(), Error> {
+                chart.draw_series(LineSeries::new(
+                    ser,
+                    color,
+                    // vec![(0.0, 0.0), (5.0, 5.0), (8.0, 7.0)],
+                    // &RED,
+                )).map_or_else(|err| Err(Error::new("plot", "plot").pass(err.to_string())), |_| Ok(()))
+            }
+            fn draw_point_series(chart: &mut ChartContext<'_, BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, ser: Vec<(f64, f64)>, color: RGBColor) -> Result<(), Error> {
+                // Similarly, we can draw point series
+                chart.draw_series(PointSeries::of_element(
+                    ser,
+                    4,
+                    color,
+                    &|c, s, st| {
+                        return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
+                        + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
+                        // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
+                    },
+                )).map_or_else(|err| Err(Error::new("plot", "plot").pass(err.to_string())), |_| Ok(()))
+            }
+            match kind {
+                SeriesKind::Points => draw_point_series(&mut chart, ser, colors[i])?,
+                SeriesKind::Line => draw_line_series(&mut chart, ser, colors[i])?,
+                SeriesKind::Both => {
+                    draw_line_series(&mut chart, ser.clone(), colors[i])?;
+                    draw_point_series(&mut chart, ser, colors[i])?;
+                }
+            }
         }
         root.present()?;
         Ok(())
@@ -95,3 +112,9 @@ use plotters::{chart::ChartBuilder, prelude::{BitMapBackend, Circle, EmptyElemen
         let b = u8::from_str_radix(&s[4..6], 16).unwrap();
         RGBColor(r, g, b)
     }
+
+pub(crate) enum SeriesKind {
+    Points,
+    Line,
+    Both,
+}

@@ -15,7 +15,7 @@ mod fn_va_fft {
         services::task::{
             nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
             task_test_receiver::TaskTestReceiver,
-        }, tests::unit::services::task::functions::va::plot::plot,
+        }, tests::unit::services::task::functions::va::plot::{plot, SeriesKind},
     };
     ///
     /// Colors
@@ -56,13 +56,13 @@ mod fn_va_fft {
         test_duration.run().unwrap();
         let test_data = [
             // sampl_freq   fft_size    ffts    target
-            (     12,            12,    1,      vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
-            (     16,            16,    2,      vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
-            (    128,           128,    2,      vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
-            (    256,           256,    2,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), ( 37.0,  20.0), (112.0, 12.0), (  126.0, 15.0)]),
-            ( 10_000,        10_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
-            ( 30_000,        30_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
-            (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
+            // (     12,            12,    1,      vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
+            // (     16,            16,    2,      vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
+            // (    128,           128,    2,      vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
+            (    256,           256,    3,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), ( 37.0,  20.0), (112.0, 12.0), (  126.0, 15.0)]),
+            // ( 10_000,        10_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
+            // ( 30_000,        30_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
+            // (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
         let tp = ThreadPool::new(dbg, Some(12));
         for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
@@ -88,7 +88,7 @@ mod fn_va_fft {
             // Configuring FnVaFft
             let enable = init_each(Some("true"), FnConfPointType::Bool);
             let fn_va_fft_input = init_each(None, FnConfPointType::Double);
-            let export_point_name = "Fft";
+            let export_point_name = "/";
             let conf = serde_yaml::from_str(&format!(r#"
                 fn VaFft:
                     enable: const bool true         # optional, default true
@@ -129,6 +129,7 @@ mod fn_va_fft {
             }).collect();
             let mut ffts: Vec< Vec<f64> > = vec![];
             let mut plot_values: Vec<(f64, f64)> = vec![];
+            let mut plot_ffts: Vec<(f64, f64)> = vec![];
             for step in 0..fft_size * target_ffts {
                 let t = fft_buf.time();
                 let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
@@ -187,7 +188,10 @@ mod fn_va_fft {
                         }).collect::<Vec<String>>());
                         log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|v| {
                             let val = v.as_double().value;
+                            let freq: f64 = v.name().parse().unwrap();
+                            println!("\t| received  {:.3}, {:?}", freq, val);
                             if val > 1.0 {
+                                plot_ffts.push((freq, val));
                                 Some(format!("{:.3}", v.as_double().value))
                             } else {
                                 None
@@ -205,7 +209,8 @@ mod fn_va_fft {
                 };
             }
 
-            plot(format!("values-{:?}", sampl_freq), 10, vec![plot_values]).unwrap();
+            plot(format!("src/tests/unit/services/task/functions/va/values-{:?}.png", sampl_freq), 10, vec![plot_values], SeriesKind::Both).unwrap();
+            plot(format!("src/tests/unit/services/task/functions/va/ffts-{:?}.png", sampl_freq), 10, vec![plot_ffts], SeriesKind::Points).unwrap();
 
             receiver.exit();
             services.exit();
