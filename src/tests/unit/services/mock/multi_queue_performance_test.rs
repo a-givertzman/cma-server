@@ -245,7 +245,7 @@ mod multi_queue {
         let mut total_received = 0;
         let mut all_received: HashMap<&'a str, usize> = HashMap::new();
         for (recv_id, recv) in receivers {
-            let recved = recv.read().unwrap().received().read().len();
+            let recved = recv.read().unwrap().received_len();
             total_received += recved;
             all_received.insert(recv_id, recved);
         }

@@ -39,8 +39,13 @@ impl TaskTestProducer {
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
-        self.sent.clone()
+    pub fn sent(&self) -> Vec<Point> {
+        self.sent.read().clone()
+    }
+    ///
+    /// 
+    pub fn sent_len(&self) -> usize {
+        self.sent.read().len()
     }
 }
 //

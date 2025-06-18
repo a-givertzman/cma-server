@@ -113,7 +113,7 @@ mod tcp_server {
         let result = (received.len() as f32) / (total_count as f32);
         // println!("elapsed: {:?}", timer.elapsed());
         println!("total test events: {:?}", total_count);
-        println!("sent events: {:?}", producer.sent().read().len());
+        println!("sent events: {:?}", producer.sent().len());
         println!("recv events: {:?} ({}%)", received.len(), result * 100.0);
         assert!(result >= target, "\nresult: {:?}\ntarget: {:?}", result, target);
         emulated_tcp_client_recv.exit();
@@ -208,8 +208,7 @@ mod tcp_server {
         receiver.wait().unwrap();
         emulated_tcp_client.exit();
         emulated_tcp_client.wait().unwrap();
-        let received = receiver.received();
-        let mut received = received.write();
+        let mut received = receiver.received();
         let target = total_count;
         let result = received.len();
         assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);

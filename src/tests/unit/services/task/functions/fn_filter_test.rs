@@ -142,8 +142,8 @@ mod cma_recorder {
         multi_queue.wait().unwrap();
         services.exit();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent().len();
+        let result = receiver.received().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -151,7 +151,7 @@ mod cma_recorder {
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         let target_name = "/App/RecorderTask/Load002";
-        for result in receiver.received().read().iter() {
+        for result in receiver.received().iter() {
             let (_, _, target) = target_data.next().unwrap();
             assert!(result.value().as_real() == target.unwrap(), "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);

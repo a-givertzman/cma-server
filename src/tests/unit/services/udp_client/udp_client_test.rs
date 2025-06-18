@@ -107,8 +107,7 @@ mod udp_client {
         let wait_time = Instant::now();
         while received < test_data.len() {
             thread::sleep(Duration::from_millis(500));
-            let r = receiver.received();
-            received = r.read().len();
+            received = receiver.received().len();
             log::debug!("{} | receiver {}/{} ...", dbg, received, test_data.len());
             if wait_time.elapsed() > timeout {
                 break;
@@ -120,9 +119,6 @@ mod udp_client {
         log::debug!("{} | wait for receiver - finished", dbg);
         log::debug!("{} | get received...", dbg);
         let received = receiver.received();
-        log::debug!("{} | get received - ok", dbg);
-        log::debug!("{} | get received points...", dbg);
-        let received = received.read();
         log::debug!("{} | get received points - ok", dbg);
         log::info!("Sampling freq: {}", freq);
         log::info!("Messages sent per second: {}", messages_per_sec);

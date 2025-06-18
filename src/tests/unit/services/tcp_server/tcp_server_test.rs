@@ -204,8 +204,7 @@ mod tcp_server {
         emulated_tcp_client.run().unwrap();
         thread::sleep(Duration::from_millis(100));
         receiver.wait().unwrap();
-        let received = receiver.received();
-        let mut received = received.write();
+        let mut received = receiver.received();
         let target = total_count;
         let result = received.len();
         assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);

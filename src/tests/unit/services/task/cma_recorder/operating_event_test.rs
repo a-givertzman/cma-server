@@ -478,12 +478,12 @@ mod cma_recorder {
         producer.wait().unwrap();
         multi_queue.wait().unwrap();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent_len();
+        let result = receiver.received_len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
-        for (i, result) in receiver.received().read().iter().enumerate() {
+        for (i, result) in receiver.received().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
             // assert!(result.name() == target_name, "step {} \nresult: {:?}\ntarget: {:?}", step, result.name(), target_name);
         };

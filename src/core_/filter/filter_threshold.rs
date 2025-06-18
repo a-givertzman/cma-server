@@ -13,7 +13,7 @@ pub struct FilterThreshold<const N: usize, T> {
 //
 // 
 impl<T: Copy, const N: usize> FilterThreshold<N, T> {
-    const N: usize = N;
+    // const N: usize = N;
     ///
     /// Creates new FilterThreshold<const N: usize, T>
     /// - `N` - size of the Filter bufer,

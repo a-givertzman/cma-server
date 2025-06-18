@@ -43,8 +43,8 @@ impl TaskTestProducer {
     ///
     /// Returns vector of sent Pont's
     #[allow(unused)]
-    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
-        self.sent.clone()
+    pub fn sent(&self) -> Vec<Point> {
+        self.sent.read().clone()
     }
 }
 //

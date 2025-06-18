@@ -162,20 +162,20 @@ mod fn_export {
         multi_queue.wait().unwrap();
         services.exit();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent_len();
+        let result = receiver.received_len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         println!("trget: {:?}", target_count);
-        for (i, point) in receiver.received().read().iter().enumerate() {
+        for (i, point) in receiver.received().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         let target_name = "/App/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.received().read().iter() {
+        for result in receiver.received() {
             let (_, target) = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
@@ -291,20 +291,20 @@ mod fn_export {
         multi_queue.wait().unwrap();
         services.exit();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent_len();
+        let result = receiver.received_len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         println!("trget: {:?}", target_count);
-        for (i, point) in receiver.received().read().iter().enumerate() {
+        for (i, point) in receiver.received().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         let target_name = "/App/RecorderTask/Load002";
         target_data.reverse();
-        for result in receiver.received().read().iter() {
+        for result in receiver.received() {
             let (_, target) = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);
@@ -418,20 +418,20 @@ mod fn_export {
         multi_queue.wait().unwrap();
         services.exit();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent_len();
+        let result = receiver.received_len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         println!("trget: {:?}", target_count);
-        for (i, point) in receiver.received().read().iter().enumerate() {
+        for (i, point) in receiver.received().iter().enumerate() {
             println!("received {}: {:?}", i, point)
         }
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == target_count, "\nresult: {:?}\ntarget: {:?}", result, target_count);
         let target_name = "/App/RecorderTask/Load001";
         target_data.reverse();
-        for result in receiver.received().read().iter() {
+        for result in receiver.received() {
             let (_, target) = target_data.pop().unwrap();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);

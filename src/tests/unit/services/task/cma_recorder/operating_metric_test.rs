@@ -322,21 +322,21 @@ mod cma_recorder {
         producer.wait().unwrap();
         multi_queue.wait().unwrap();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent_len();
+        let result = receiver.received_len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         println!("target smooth   : {:?}", target_smooth_count);
         println!("target threshold: {:?}", target_thrd_count);
-        for (i, result) in receiver.received().read().iter().enumerate() {
+        for (i, result) in receiver.received().iter().enumerate() {
             println!("received: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
         // assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         // assert!(result >= total_count, "\nresult: {:?}\ntarget: {:?}", result, total_count);
         let target_received = target_received();
         let received: Vec<String> = receiver.received()
-            .read().clone().iter()
+            .into_iter()
             .map(|p| p.to_string().as_string().value)
             .collect();
         for target in target_received {
@@ -350,25 +350,25 @@ mod cma_recorder {
             }
             assert!(matched, "\n results does not contains required value '{}'", target);
         }
-        let smooth: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+        let smooth: Vec<Point> = receiver.received().into_iter().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Smooth", dbg)
         }).collect();
         for (i, result) in smooth.iter().enumerate() {
             println!("smooth: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let thrd: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+        let thrd: Vec<Point> = receiver.received().into_iter().filter(|point| {
             point.name() == format!("/{}/RecorderTask/Threshold", dbg)
         }).collect();
         for (i, result) in thrd.iter().enumerate() {
             println!("threshold: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle_is_active: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+        let op_cycle_is_active: Vec<Point> = receiver.received().into_iter().filter(|point| {
             point.name() == format!("/{}/RecorderTask/OpCycleIsActive", dbg)
         }).collect();
         for (i, result) in op_cycle_is_active.iter().enumerate() {
             println!("op cycle: {}\t|\t{}\t|\t{:?}", i, result.name(), result.value());
         };
-        let op_cycle_sql: Vec<Point> = receiver.received().read().iter().cloned().filter(|point| {
+        let op_cycle_sql: Vec<Point> = receiver.received().into_iter().filter(|point| {
             point.name() == format!("/{}/RecorderTask/OpCycleSql", dbg)
         }).collect();
         for (i, result) in op_cycle_sql.iter().enumerate() {

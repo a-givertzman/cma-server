@@ -144,15 +144,15 @@ mod fn_point {
         multi_queue.wait().unwrap();
         services.exit();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent_len();
+        let result = receiver.received_len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
         assert!(sent == total_count, "\nresult: {:?}\ntarget: {:?}", sent, total_count);
         assert!(result == total_count, "\nresult: {:?}\ntarget: {:?}", result, total_count);
         let target_name = "/App/RecorderTask/Load002";
-        for (i, result) in receiver.received().read().iter().enumerate() {
+        for (i, result) in receiver.received().iter().enumerate() {
             let (_, target) = test_data[i].clone();
             assert!(result.value() == target, "\nresult: {:?}\ntarget: {:?}", result.value(), target);
             assert!(result.name() == target_name, "\nresult: {:?}\ntarget: {:?}", result.name(), target_name);

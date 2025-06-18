@@ -136,10 +136,11 @@ mod fn_va_fft {
 
                 // FnVaFft process
                 let time = Instant::now();
+                // add new sample to the fn_va_fft input
                 fn_va_fft_input.borrow_mut().add(&value.to_point(tx_id, &format!("t: {}", t)));
+                // process fn_va_fft, if changes detected on inner fft filters, it will be sent to the receiver
                 fn_va_fft.out();
                 log::trace!("main | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
-
                 match fft_buf.add(value) {
                     Some(buf) => {
                         // Pure FFT process
@@ -165,11 +166,10 @@ mod fn_va_fft {
 
                         // Receiving FnVaFft results
                         let time = Instant::now();
-                        while receiver.received().read().len() < fft_scalar.len() {
+                        while receiver.received().len() < fft_scalar.len() {
                             thread::sleep(Duration::from_millis(3));
                         }
-                        let received = receiver.received().read().to_vec();
-                        receiver.clear_received();
+                        let received = receiver.drain(0..fft_scalar.len());
                         log::debug!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
                         log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];
@@ -344,11 +344,10 @@ mod fn_va_fft {
 
                         // Receiving FnVaFft results
                         let time = Instant::now();
-                        while receiver.received().read().len() < fft_scalar.len() {
+                        while receiver.received().len() < fft_scalar.len() {
                             thread::sleep(Duration::from_millis(3));
                         }
-                        let received = receiver.received().read().to_vec();
-                        receiver.clear_received();
+                        let received = receiver.drain(0..fft_scalar.len());
                         log::debug!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
                         log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];

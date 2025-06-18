@@ -1,6 +1,6 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
+use std::{collections::HashMap, fmt::Debug, ops::RangeBounds, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
 use crate::core_::RwLock;
 ///
 /// 
@@ -41,8 +41,20 @@ impl TaskTestReceiver {
     ///
     /// Returns vector of received Pont's
     #[allow(unused)]
-    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
-        self.received.clone()
+    pub fn received(&self) -> Vec<Point> {
+        self.received.read().clone()
+    }
+    ///
+    /// Returns vector of received Pont's
+    #[allow(unused)]
+    pub fn received_len(&self) -> usize {
+        self.received.read().len()
+    }
+    ///
+    /// Returns and removes the subslice by the specified range from inner `received`
+    #[allow(unused)]
+    pub fn drain<R: RangeBounds<usize>>(&self, range: R) -> Vec<Point> {
+        self.received.write().drain(range).collect()
     }
     ///
     /// Clearing vector of received Pont's

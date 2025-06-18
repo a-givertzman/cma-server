@@ -104,8 +104,8 @@ mod task {
         task.wait().unwrap();
         producer.wait().unwrap();
         services.wait().unwrap();
-        let sent = producer.sent().read().len();
-        let result = receiver.received().read().len();
+        let sent = producer.sent().len();
+        let result = receiver.received().len();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent);
         println!("received: {:?}", result);
@@ -186,10 +186,8 @@ mod task {
         receiver.wait().unwrap();
         services.exit();
         services.wait().unwrap();
-        let producer_sent = producer.sent();
-        let sent = producer_sent.read();
-        let receiver_received = receiver.received();
-        let mut received = receiver_received.write();
+        let sent = producer.sent();
+        let mut received = receiver.received();
         println!(" elapsed: {:?}", time.elapsed());
         println!("    sent: {:?}", sent.len());
         println!("received: {:?}", received.len());
