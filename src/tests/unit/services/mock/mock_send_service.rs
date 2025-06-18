@@ -20,6 +20,7 @@ pub struct MockSendService {
 //
 // 
 impl MockSendService {
+    #[allow(unused)]
     pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, delay: Option<Duration>) -> Self {
         let name = Name::new(parent, format!("MockSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let dbg = Dbg::new(name.parent(), name.me());
@@ -42,8 +43,15 @@ impl MockSendService {
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
-        self.sent.clone()
+    #[allow(unused)]
+    pub fn sent(&self) -> Vec<Point> {
+        self.sent.read().clone()
+    }
+    ///
+    /// 
+    #[allow(unused)]
+    pub fn sent_len(&self) -> usize {
+        self.sent.read().len()
     }
 }
 //

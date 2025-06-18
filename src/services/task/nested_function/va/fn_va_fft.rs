@@ -77,38 +77,37 @@ pub struct FnVaFft {
 impl FnVaFft {
     ///
     /// Creates new instance of the FnVaFft
-    #[allow(dead_code)]
+    #[allow(unused)]
     pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef, conf: FnConfig, services: Arc<Services>) -> Self {
         let parent = parent.into();
-        let self_id = format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
+        let dbg = format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
         let fft_size = match conf.param("len") {
             Ok(len) => len.as_param().conf.as_u64().unwrap() as usize,
-            Err(_) => panic!("{}.new | Parameter 'len' - missed", self_id),
+            Err(_) => panic!("{}.new | Parameter 'len' - missed", dbg),
         };
-        log::debug!("{}.new | fft_len: {:?}", self_id, fft_size);
+        log::debug!("{}.new | fft_len: {:?}", dbg, fft_size);
         let sampl_freq = match conf.param("freq") {
             Ok(freq) => freq.as_param().conf.as_u64().unwrap() as usize,
-            Err(_) => panic!("{}.new | Parameter 'freq' - missed", self_id),
+            Err(_) => panic!("{}.new | Parameter 'freq' - missed", dbg),
         };
-        log::debug!("{}.new | sampl_freq: {:?}", self_id, sampl_freq);
-        let point_conf = Self::export_point_conf(parent, &self_id, &conf);
-        log::debug!("{}.new | point_conf: {:#?}", self_id, point_conf);
-        let threshold_conf = Self::threshold_conf(&self_id, &conf);
-        log::debug!("{}.new | threshold: {:#?}", self_id, threshold_conf);
-        let send_to = Self::send_to_conf(&self_id, &conf, &services);
-        log::debug!("{}.new | send_to: {:#?}", self_id, threshold_conf);
+        log::debug!("{}.new | sampl_freq: {:?}", dbg, sampl_freq);
+        let point_conf = Self::export_point_conf(parent, &dbg, &conf);
+        log::debug!("{}.new | point_conf: {:#?}", dbg, point_conf);
+        let threshold_conf = Self::threshold_conf(&dbg, &conf);
+        log::debug!("{}.new | threshold: {:#?}", dbg, threshold_conf);
+        let send_to = Self::get_send_to(&dbg, &conf, &services);
         let fft_buf = FftBuf::new(fft_size, sampl_freq);
         let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
         let filters = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
                 Some(freq) => strcat!(&point_conf.name "." freq),
-                None => panic!("{}.out | Freq index {} out of the fft_size {}", self_id, i, fft_size),
+                None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
             (freq_name, Self::filter(threshold_conf.clone()))
         }).collect();
         Self {
-            tx_id: PointTxId::from_str(&self_id),
-            id: self_id,
+            tx_id: PointTxId::from_str(&dbg),
+            id: dbg,
             kind: FnKind::Fn,
             enable,
             point_conf,
@@ -180,15 +179,20 @@ impl FnVaFft {
     }
     ///
     /// Returns send_to
-    fn send_to_conf(self_id: &str, conf: &FnConfig, services: &Arc<Services>) -> Option<Sender<Point>> {
+    fn get_send_to(self_id: &str, conf: &FnConfig, services: &Arc<Services>) -> Option<Sender<Point>> {
         match conf.param("send-to") {
             Ok(send_to) => {
-                let send_to = match send_to {
-                    FnConfKind::Param(send_to) => LinkName::from_str(send_to.conf.as_str().unwrap()).unwrap(),
-                    _ => panic!("{}.new | Parameter 'send-to' - invalid type (string expected): {:#?}", self_id, send_to),
-                };
-                log::debug!("{}.new | send-to: {:?}", self_id, send_to);
-                services.get_link(&send_to).map_or(None, |send| Some(send))
+                match send_to {
+                    FnConfKind::Param(send_to) => {
+                        let send_to = LinkName::from_str(send_to.conf.as_str().unwrap()).unwrap();
+                        log::debug!("{}.new | send-to: {:?}", self_id, send_to.name());
+                        services.get_link(&send_to).map_or(None, |send| Some(send))
+                    }
+                    _ => {
+                        log::warn!("{}.new | Parameter 'send-to' - invalid type (string expected): {:#?}", self_id, send_to);
+                        None
+                    }
+                }
             }
             Err(_) => {
                 log::warn!("{}.new | Parameter 'send-to' - missed in {:#?}", self_id, conf);

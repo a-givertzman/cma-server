@@ -15,7 +15,7 @@ mod fn_va_fft {
         services::task::{
             nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
             task_test_receiver::TaskTestReceiver,
-        },
+        }, tests::unit::services::task::functions::va::plot::plot,
     };
     ///
     /// Colors
@@ -59,7 +59,7 @@ mod fn_va_fft {
             (     12,            12,    1,      vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
             (     16,            16,    2,      vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
             (    128,           128,    2,      vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
-            (    256,           256,    2,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), (  37.0, 20.0), (  112.0, 12.0), (  126.0, 15.0)]),
+            (    256,           256,    2,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), ( 37.0,  20.0), (112.0, 12.0), (  126.0, 15.0)]),
             ( 10_000,        10_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
             ( 30_000,        30_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
             (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
@@ -114,10 +114,10 @@ mod fn_va_fft {
     
             let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
             let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
-            log::debug!("main | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
+            log::debug!("{dbg} | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
             assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
             let fft_amp_factor = fft_buf.amp_factor();
-            log::debug!("main | fft_buf.amp_factor: {}", fft_amp_factor);
+            log::debug!("{dbg} | fft_buf.amp_factor: {}", fft_amp_factor);
             assert!(fft_amp_factor == 1.0 / ((fft_size as f64) / 2.0), "\nresult: {:?}\ntarget: {:?}", fft_amp_factor, 1.0 / ((fft_size as f64) / 2.0));
             let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
             let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
@@ -128,27 +128,28 @@ mod fn_va_fft {
                 (freq_name, filter(None))
             }).collect();
             let mut ffts: Vec< Vec<f64> > = vec![];
+            let mut plot_values: Vec<(f64, f64)> = vec![];
             for step in 0..fft_size * target_ffts {
                 let t = fft_buf.time();
                 let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
                     val + amp * (2. * PI *  freq * t).sin()
                 });
-
+                plot_values.push((t, value));
                 // FnVaFft process
                 let time = Instant::now();
                 // add new sample to the fn_va_fft input
                 fn_va_fft_input.borrow_mut().add(&value.to_point(tx_id, &format!("t: {}", t)));
                 // process fn_va_fft, if changes detected on inner fft filters, it will be sent to the receiver
                 fn_va_fft.out();
-                log::trace!("main | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
+                log::trace!("{dbg} | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
                 match fft_buf.add(value) {
                     Some(buf) => {
                         // Pure FFT process
-                        log::trace!("main | t: {:.4},  buf: {:?}", t, buf);
+                        log::trace!("{dbg} | t: {:.4},  buf: {:?}", t, buf);
                         let time = Instant::now();
                         fft.process(buf);
-                        log::debug!("main | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
-                        // log::debug!("main | t: {:.4},  fft: {:?}", t, buf);
+                        log::debug!("{dbg} | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
+                        // log::debug!("{dbg} | t: {:.4},  fft: {:?}", t, buf);
                         let mut fft_scalar: Vec<f64> = vec![];  //buf.iter().take(fft_size / 2).skip(1).map(|val| val.abs() * fft_amp_factor).collect();
                         for (index, val) in buf.iter().take(fft_size / 2).skip(1).enumerate() {
                             match fft_filters.get_mut(index) {
@@ -158,10 +159,10 @@ mod fn_va_fft {
                                         fft_scalar.push(filter_value);
                                     }
                                 }
-                                None => panic!("main | fft_filters index {} out of size {}", index, fft_filters.len()),
+                                None => panic!("{dbg} | fft_filters index {} out of size {}", index, fft_filters.len()),
                             }
                         }
-                        log::trace!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
+                        log::trace!("{dbg} | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
                         ffts.push(fft_scalar.clone());
 
                         // Receiving FnVaFft results
@@ -170,21 +171,21 @@ mod fn_va_fft {
                             thread::sleep(Duration::from_millis(3));
                         }
                         let received = receiver.drain(0..fft_scalar.len());
-                        log::debug!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
-                        log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
+                        log::debug!("{dbg} | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
+                        log::trace!("{dbg} | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];
                         for point in &received {
                             va_fft_buf.push(point.as_double().value)
                         }
 
-                        log::debug!("main |           target: {:?}", fft_scalar.iter().filter_map(|val| {
+                        log::debug!("{dbg} |           target: {:?}", fft_scalar.iter().filter_map(|val| {
                             if *val > 1.0 {
                                 Some(format!("{:.3}", val))
                             } else {
                                 None
                             }
                         }).collect::<Vec<String>>());
-                        log::debug!("main | FnVaFft received: {:?}", received.iter().filter_map(|v| {
+                        log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|v| {
                             let val = v.as_double().value;
                             if val > 1.0 {
                                 Some(format!("{:.3}", v.as_double().value))
@@ -194,22 +195,24 @@ mod fn_va_fft {
                         }).collect::<Vec<String>>());
 
                         if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
-                            panic!("main | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
+                            panic!("{dbg} | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
                             // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
                         }
                     }
                     None => {
-                        log::trace!("main | t: {:.4}", t);
+                        log::trace!("{dbg} | t: {:.4}", t);
                     },
                 };
             }
+
+            plot(format!("values-{:?}", sampl_freq), 10, vec![plot_values]).unwrap();
 
             receiver.exit();
             services.exit();
             services.wait().unwrap();
             receiver.wait().unwrap();
 
-            log::trace!("main | ffts: {}", ffts.len());
+            log::trace!("{dbg} | ffts: {}", ffts.len());
             let result = ffts.len();
             let target = target_ffts;
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
@@ -236,7 +239,7 @@ mod fn_va_fft {
             (     12,         12,    1,   5.0,   vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
             (     16,         16,    2,   5.0,   vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
             (    128,        128,    2,   5.0,   vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
-            (    256,        256,    2,   5.0,   vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), (  37.0, 20.0), (112.0,  12.0), ( 126.0,  15.0)]),
+            (    256,        256,    2,   5.0,   vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), ( 37.0,  20.0), (112.0,  12.0), ( 126.0,  15.0)]),
             ( 10_000,     10_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
             ( 30_000,     30_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.1), (9000.0, 200.2), (12000.0, 200.3), (14998.0, 300.0)]),
             (300_000,    300_000,    2,   5.0,   vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
@@ -293,10 +296,10 @@ mod fn_va_fft {
     
             let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
             let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
-            log::debug!("main | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
+            log::debug!("{dbg} | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
             assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
             let fft_amp_factor = fft_buf.amp_factor();
-            log::debug!("main | fft_buf.amp_factor: {}", fft_amp_factor);
+            log::debug!("{dbg} | fft_buf.amp_factor: {}", fft_amp_factor);
             assert!(fft_amp_factor == 1.0 / ((fft_size as f64) / 2.0), "\nresult: {:?}\ntarget: {:?}", fft_amp_factor, 1.0 / ((fft_size as f64) / 2.0));
             let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
             let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
@@ -317,16 +320,16 @@ mod fn_va_fft {
                 let time = Instant::now();
                 fn_va_fft_input.borrow_mut().add(&value.to_point(tx_id, &format!("t: {}", t)));
                 fn_va_fft.out();
-                log::trace!("main | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
+                log::trace!("{dbg} | {}  freq: {}  FnVaFft Elapsed: {:?}", step, sampl_freq, time.elapsed());
 
                 match fft_buf.add(value) {
                     Some(buf) => {
                         // Pure FFT process
-                        log::trace!("main | t: {:.4},  buf: {:?}", t, buf);
+                        log::trace!("{dbg} | t: {:.4},  buf: {:?}", t, buf);
                         let time = Instant::now();
                         fft.process(buf);
-                        log::debug!("main | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
-                        // log::debug!("main | t: {:.4},  fft: {:?}", t, buf);
+                        log::debug!("{dbg} | freq: {}  Pure FFT Elapsed: {:?}", sampl_freq, time.elapsed());
+                        // log::debug!("{dbg} | t: {:.4},  fft: {:?}", t, buf);
                         let mut fft_scalar: Vec<f64> = vec![];  //buf.iter().take(fft_size / 2).skip(1).map(|val| val.abs() * fft_amp_factor).collect();
                         for (index, val) in buf.iter().take(fft_size / 2).skip(1).enumerate() {
                             match fft_filters.get_mut(index) {
@@ -336,10 +339,10 @@ mod fn_va_fft {
                                         fft_scalar.push(filter_value);
                                     }
                                 }
-                                None => panic!("main | fft_filters index {} out of size {}", index, fft_filters.len()),
+                                None => panic!("{dbg} | fft_filters index {} out of size {}", index, fft_filters.len()),
                             }
                         }
-                        log::trace!("main | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
+                        log::trace!("{dbg} | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
                         ffts.push(fft_scalar.clone());
 
                         // Receiving FnVaFft results
@@ -348,23 +351,23 @@ mod fn_va_fft {
                             thread::sleep(Duration::from_millis(3));
                         }
                         let received = receiver.drain(0..fft_scalar.len());
-                        log::debug!("main | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
-                        log::trace!("main | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
+                        log::debug!("{dbg} | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
+                        // log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];
                         for point in &received {
                             va_fft_buf.push(point.as_double().value)
                         }
 
-                        log::debug!("main |           target: {:?}", fft_scalar.iter().filter_map(|val| {
-                            if *val > 1.0 {
+                        log::debug!("{dbg} |           target: {:?}", fft_scalar.iter().filter_map(|val| {
+                            if *val > 0.0001 {
                                 Some(format!("{:.3}", val))
                             } else {
                                 None
                             }
                         }).collect::<Vec<String>>());
-                        log::debug!("main | FnVaFft received: {:?}", received.iter().filter_map(|v| {
+                        log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|v| {
                             let val = v.as_double().value;
-                            if val > 1.0 {
+                            if val > 0.0001 {
                                 Some(format!("{:.3}", v.as_double().value))
                             } else {
                                 None
@@ -372,12 +375,12 @@ mod fn_va_fft {
                         }).collect::<Vec<String>>());
 
                         if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
-                            panic!("main | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
+                            panic!("{dbg} | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
                             // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
                         }
                     }
                     None => {
-                        log::trace!("main | t: {:.4}", t);
+                        log::trace!("{dbg} | t: {:.4}", t);
                     },
                 };
             }
@@ -387,7 +390,7 @@ mod fn_va_fft {
             services.wait().unwrap();
             receiver.wait().unwrap();
 
-            log::trace!("main | ffts: {}", ffts.len());
+            log::trace!("{dbg} | ffts: {}", ffts.len());
             let result = ffts.len();
             let target = target_ffts;
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);

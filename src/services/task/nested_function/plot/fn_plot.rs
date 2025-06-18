@@ -152,6 +152,7 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 lazy_static! {
     static ref UI_PLOT: Sender<(String, egui::accesskit::Point)> = ui_plot();
 }
+// #[cfg(not(feature = "plot"))]
 #[cfg(feature = "plot")]
 fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
     use sal_sync::sync::channel;
@@ -182,6 +183,7 @@ fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
     });
     send
 }
+// #[cfg(feature = "plot")]
 #[cfg(not(feature = "plot"))]
 fn ui_plot() -> Sender<(String, egui::accesskit::Point)> {
     use sal_sync::sync::channel;

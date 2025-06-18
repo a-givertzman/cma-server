@@ -37,6 +37,7 @@ impl TaskTestProducer {
     }
     ///
     /// 
+    #[allow(unused)]
     pub fn sent(&self) -> Vec<Point> {
         self.sent.read().clone()
     }

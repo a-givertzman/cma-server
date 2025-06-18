@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, sync::{mpsc::Receiver, Arc}};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 use eframe::CreationContext;
 use egui_plot::{Line, Plot, Points};
 use hsl::HSL;
@@ -6,9 +6,10 @@ use indexmap::IndexMap;
 use egui::{
     accesskit::Point, vec2, Align2, Color32, FontFamily, FontId, TextStyle 
 };
-use sal_sync::kernel::state::ChangeNotify;
+use sal_sync::{kernel::state::ChangeNotify, sync::channel::Receiver};
 ///
 /// Plot the point values
+/// used in `FnPlot`
 pub struct UiPlot {
     id: String,
     // renderDelay: Duration,
@@ -127,7 +128,7 @@ impl eframe::App for UiPlot {
             None => ctx.input(|i: &egui::InputState| i.screen_rect),
         };
         let head_hight = 34.0;
-        while let Ok((name, value)) = self.input.try_recv() {
+        while let Ok(Some((name, value))) = self.input.try_recv() {
             self.points.entry(name.clone())
                 .or_insert(vec![[value.x, value.y]])
                 .push([value.x, value.y]);
@@ -275,6 +276,7 @@ impl eframe::App for UiPlot {
                                             let scale = plot_style.borrow().scale.clone();
                                             plot_ui.points(
                                                 Points::new(
+                                                    "",
                                                     points.iter().map(|p| [p[0], scale.scale_y(p[1])] ).collect::<Vec<[f64; 2]>>()
                                                 )
                                                     .name(label)
@@ -288,6 +290,7 @@ impl eframe::App for UiPlot {
                                             let scale = plot_style.borrow().scale.clone();
                                             plot_ui.line(
                                                 Line::new(
+                                                    "",
                                                     points.iter().fold(Vec::<[f64; 2]>::new(), |mut acc, p| {
                                                         if square {
                                                             if let Some(prev_) = &prev {

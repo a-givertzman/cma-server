@@ -403,8 +403,8 @@ mod fn_retain {
         DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
-        #[derive(Copy, Clone, Eq, PartialEq)]
-        struct T(());
+        // #[derive(Copy, Clone, Eq, PartialEq)]
+        // struct T(());
         // let uid = uid::Id::<T>::new();
         let dbg = &format!("AppTest");
         let self_name = Name::new("", dbg);
