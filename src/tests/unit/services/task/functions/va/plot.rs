@@ -8,14 +8,14 @@ use sal_core::error::Error;
     /// 
     pub fn plot<P: AsRef<Path>>(path: P, x_lables: usize, series: Vec<Vec<(f64, f64)>>, kind: SeriesKind) -> Result<(), Box<dyn std::error::Error>> {
         let colors = colors(7);
-        let root = BitMapBackend::new(&path, (2048, 1024)).into_drawing_area();
+        let root = BitMapBackend::new(&path, (2048, 1200)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root.margin(10, 10, 10, 10);
         // After this point, we should be able to construct a chart context
         let (min_x, _) = series[0].iter().min_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap().to_owned();
         let (max_x, _) = series[0].iter().max_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap().to_owned();
-        let (min_y, _) = series[0].iter().min_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();
-        let (max_y, _) = series[0].iter().max_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();
+        let (_, min_y) = series[0].iter().min_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();
+        let (_, max_y) = series[0].iter().max_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();
         let mut chart = ChartBuilder::on(&root)
             // Set the caption of the chart
             .caption("Plot", ("sans-serif", 40).into_font())
@@ -23,7 +23,7 @@ use sal_core::error::Error;
             .x_label_area_size(20)
             .y_label_area_size(40)
             // Finally attach a coordinate on the drawing area and make a chart context
-            .build_cartesian_2d((min_x - min_x * 0.1)..(max_x + max_x * 0.1), (max_y + max_y * 0.1)..(min_y - min_y * 0.1))?;
+            .build_cartesian_2d((min_x - max_x * 0.1)..(max_x + max_x * 0.1), (min_y - max_y * 0.1)..(max_y + max_y * 0.1))?;
     
         // Then we can draw a mesh
         chart
