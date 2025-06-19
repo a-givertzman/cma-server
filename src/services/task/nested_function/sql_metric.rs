@@ -14,7 +14,7 @@ use crate::{
 ///
 /// Function | SqlMetric, builds sql replacing {xyz} with the values from coresponding inputs 
 ///     - values received from the [input]s puts into the target sql query
-///     - sql query buit by replacing markers with current values:
+///     - sql query bulit by replacing markers with current values:
 ///         - table = 'point_values'
 ///         - input1.name = 'test-point'
 ///         - input1.value = 123.456
@@ -31,7 +31,7 @@ use crate::{
 ///     sql: "UPDATE {table} SET value = '{input1}' WHERE id = '{input2}';"
 ///     input1: point int '/path/Point.Name'
 ///     input2: const int 11
-///     
+///     ...
 /// ```
 #[derive(Debug)]
 pub struct SqlMetric {
@@ -161,4 +161,4 @@ impl FnIn for SqlMetric {}
 impl FnInOut for SqlMetric {}
 ///
 /// Global static counter of SqlMetric instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

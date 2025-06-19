@@ -104,4 +104,4 @@ impl FnOut for FnGe {
 impl FnInOut for FnGe {}
 ///
 /// Global static counter of FnGe instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

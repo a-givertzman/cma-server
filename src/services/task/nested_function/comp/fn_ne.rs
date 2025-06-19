@@ -104,4 +104,4 @@ impl FnOut for FnNe {
 impl FnInOut for FnNe {}
 ///
 /// Global static counter of FnNe instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

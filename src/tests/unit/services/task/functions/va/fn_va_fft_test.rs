@@ -48,7 +48,7 @@ mod fn_va_fft {
         init_once();
         // init_each();
         log::debug!("");
-        let dbg = "test";
+        let dbg = "empty_filter-test";
         let self_name = Name::new("", dbg);
         let tx_id = PointTxId::from_str(&dbg);
         log::debug!("\n{}", dbg);
@@ -61,7 +61,7 @@ mod fn_va_fft {
             (    128,           128,    2,      vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
             (    256,           256,    3,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), ( 37.0,  20.0), (112.0, 12.0), (  126.0, 15.0)]),
             ( 10_000,        10_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
-            ( 30_000,        30_000,    20,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 140.0), (4000.0, 200.1), (9000.0, 210.2), (12000.0, 220.3), (14998.0, 300.0)]),
+            ( 30_000,        30_000,   20,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 140.0), (4000.0, 200.1), (9000.0, 210.2), (12000.0, 220.3), (14998.0, 300.0)]),
             (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
         ];
         let tp = ThreadPool::new(dbg, Some(12));
@@ -113,13 +113,13 @@ mod fn_va_fft {
             log::debug!("{} | All services started", dbg);
     
             let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
-            let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
-            log::debug!("{dbg} | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
-            assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
+            let mut fft_buf = FftBuf::new(fft_size);
+            // log::debug!("{dbg} | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
+            // assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
             let fft_amp_factor = fft_buf.amp_factor();
             log::debug!("{dbg} | fft_buf.amp_factor: {}", fft_amp_factor);
             assert!(fft_amp_factor == 1.0 / ((fft_size as f64) / 2.0), "\nresult: {:?}\ntarget: {:?}", fft_amp_factor, 1.0 / ((fft_size as f64) / 2.0));
-            let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
+            let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect();
             let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
                 let freq_name = match fft_freqs.get(i) {
                     Some(freq) => strcat!(dbg export_point_name "." freq),
@@ -131,7 +131,7 @@ mod fn_va_fft {
             let mut plot_values: Vec<(f64, f64)> = vec![];
             let mut plot_ffts: Vec<(f64, f64)> = vec![];
             for step in 0..fft_size * target_ffts {
-                let t = fft_buf.time();
+                let t = FftBuf::time(sampl_freq, step);
                 let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
                     val + amp * (2. * PI *  freq * t).sin()
                 });
@@ -208,9 +208,9 @@ mod fn_va_fft {
                     },
                 };
             }
-
-            plot(format!("src/tests/unit/services/task/functions/va/values-{:?}.png", sampl_freq), 10, vec![plot_values], SeriesKind::Both).unwrap();
-            plot(format!("src/tests/unit/services/task/functions/va/ffts-{:?}.png", sampl_freq), 10, vec![plot_ffts], SeriesKind::Points).unwrap();
+            let path = "src/tests/unit/services/task/functions/va/empty-filter";
+            plot(format!("{path}/values-{:?}.png", sampl_freq), None, vec![plot_values], SeriesKind::Both).unwrap();
+            plot(format!("{path}/ffts-{:?}.png", sampl_freq), None, vec![plot_ffts], SeriesKind::Points).unwrap();
 
             receiver.exit();
             services.exit();
@@ -228,12 +228,12 @@ mod fn_va_fft {
     ///
     /// Testing FftBuf with absolute threshold filter
     #[test]
-    fn absolute_threshold_filter() {
+    fn absolute_filter() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         // init_each();
         log::debug!("");
-        let dbg = "test";
+        let dbg = "absolute_filter-test";
         let self_name = Name::new("", dbg);
         let tx_id = PointTxId::from_str(&dbg);
         log::debug!("\n{}", dbg);
@@ -300,13 +300,13 @@ mod fn_va_fft {
             log::debug!("{} | All services started", dbg);
     
             let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
-            let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
-            log::debug!("{dbg} | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
-            assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
+            let mut fft_buf = FftBuf::new(fft_size);
+            // log::debug!("{dbg} | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
+            // assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
             let fft_amp_factor = fft_buf.amp_factor();
             log::debug!("{dbg} | fft_buf.amp_factor: {}", fft_amp_factor);
             assert!(fft_amp_factor == 1.0 / ((fft_size as f64) / 2.0), "\nresult: {:?}\ntarget: {:?}", fft_amp_factor, 1.0 / ((fft_size as f64) / 2.0));
-            let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
+            let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect();
             let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
                 let freq_name = match fft_freqs.get(i) {
                     Some(freq) => strcat!(dbg export_point_name "." freq),
@@ -316,7 +316,7 @@ mod fn_va_fft {
             }).collect();
             let mut ffts: Vec< Vec<f64> > = vec![];
             for step in 0..fft_size * target_ffts {
-                let t = fft_buf.time();
+                let t = FftBuf::time(sampl_freq, step);
                 let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
                     val + amp * (2. * PI *  freq * t).sin()
                 });

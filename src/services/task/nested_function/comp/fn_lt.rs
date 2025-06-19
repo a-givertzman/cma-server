@@ -104,4 +104,4 @@ impl FnOut for FnLt {
 impl FnInOut for FnLt {}
 ///
 /// Global static counter of FnLt instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

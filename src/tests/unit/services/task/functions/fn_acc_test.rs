@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod fn_acc {
-        use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
+    use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         core_::FnInOutRef, 
-        services::task::nested_function::{fn_::FnOut, fn_acc::{self, FnAcc}, fn_input::FnInput, reset_counter::AtomicReset},
+        services::task::nested_function::{fn_::FnOut, fn_acc::FnAcc, fn_input::FnInput},
     };
     ///
     ///
@@ -22,7 +22,6 @@ mod fn_acc {
     ///  - ...
     fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
         let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-        fn_acc::COUNT.reset(0);
         Rc::new(RefCell::new(Box::new(
             FnInput::new("test", 0, &mut conf)
         )))

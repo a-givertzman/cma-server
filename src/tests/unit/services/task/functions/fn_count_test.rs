@@ -6,7 +6,7 @@ mod fn_count {
     use crate::{
          core_::FnInOutRef,
         services::task::nested_function::{
-            fn_::FnOut, fn_count::{self, FnCount}, fn_input::FnInput, reset_counter::AtomicReset,
+            fn_::FnOut, fn_count::FnCount, fn_input::FnInput,
         }
     };
     ///
@@ -24,7 +24,6 @@ mod fn_count {
     ///  - ...
     fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
         let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-        fn_count::COUNT.reset(0);
         Rc::new(RefCell::new(Box::new(
             FnInput::new("test", 0, &mut conf)
         )))

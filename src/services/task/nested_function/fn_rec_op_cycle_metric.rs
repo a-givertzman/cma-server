@@ -195,4 +195,4 @@ impl FnOut for FnRecOpCycleMetric {
 impl FnInOut for FnRecOpCycleMetric {}
 ///
 /// Global static counter of FnRecOpCycleMetric instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

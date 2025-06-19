@@ -148,4 +148,4 @@ impl FnOut for FnAverage {
 impl FnInOut for FnAverage {}
 ///
 /// Global static counter of FnAverage instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

@@ -8,6 +8,8 @@ use crate::{
     core_::retain_buffer::retain_buffer::RetainBuffer,
 };
 ///
+/// ### Sending data to the API
+/// 
 /// - Holding single input queue
 /// - Received string messages pops from the queue into the end of local buffer
 /// - Sending messages (wrapped into ApiQuery) from the beginning of the buffer

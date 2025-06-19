@@ -16,7 +16,6 @@ use crate::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     }
 };
-
 use super::fft_buff::FftBuf;
 ///
 /// Global static counter of FnVaFft instances
@@ -29,13 +28,19 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 /// - `point_conf` - config of the sent Point's, if not specified - default '/parent/Fft.freq' type 'Real' will be sent
 /// - Returns value from `enable` input
 /// 
+/// 
+/// 
 /// Example
 /// 
 /// ```yaml
 /// fn VaFft:
-///     enable: const bool true         # optional, default true
-///     send-to: /AppTest/MultiQueue.in-queue
-///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: /App/Task/Fft.freq
+///     enable: const bool true                 # optional, default true
+///     send-to: /AppTest/MultiQueue.in-queue   # Send `Point` to the specified service.queue
+///     format:                                 # Convert Point to formated string, for example SQL
+///         table: 'public.va_fft'
+///         pattern: "UPDATE table_name SET VALUES () = () WHERE ;"
+///     filter: 
+///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: '/App/Task/Fft.freq', use '/' to have 'freq' only
 ///         type: 'Real'                # Double / Real / Int
 ///     input: point string /AppTest/Exit
 ///     freq: 300000                    # Sampling freq
@@ -96,8 +101,8 @@ impl FnVaFft {
         let threshold_conf = Self::parse_threshold_conf(&dbg, &conf);
         log::debug!("{}.new | threshold: {:#?}", dbg, threshold_conf);
         let send_to = Self::parse_send_to(&dbg, &conf, &services);
-        let fft_buf = FftBuf::new(fft_size, sampl_freq);
-        let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(i)) ).collect();
+        let fft_buf = FftBuf::new(fft_size);
+        let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect();
         let filters = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
                 Some(freq) => {

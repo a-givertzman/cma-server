@@ -121,4 +121,4 @@ impl FnOut for FnMax {
 impl FnInOut for FnMax {}
 ///
 /// Global static counter of FnMax instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

@@ -44,15 +44,15 @@ mod fft_buf {
         ];
         for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
             let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
-            let mut fft_buf = FftBuf::new(fft_size, sampl_freq);
-            log::debug!("main | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
-            assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
+            let mut fft_buf = FftBuf::new(fft_size);
+            // log::debug!("main | fft_buf.sampling_freq: {}", fft_buf.sampl_freq());
+            // assert!(fft_buf.sampl_freq() == sampl_freq, "\nresult: {:?}\ntarget: {:?}", fft_buf.sampl_freq(), sampl_freq);
             let fft_amp_factor = fft_buf.amp_factor();
             log::debug!("main | fft_buf.amp_factor: {}", fft_amp_factor);
             assert!(fft_amp_factor == 1.0 / ((fft_size as f64) / 2.0), "\nresult: {:?}\ntarget: {:?}", fft_amp_factor, 1.0 / ((fft_size as f64) / 2.0));
             let mut ffts: Vec< Vec<f64> > = vec![];
-            for _ in 0..fft_size * target_ffts {
-                let t = fft_buf.time();
+            for step in 0..fft_size * target_ffts {
+                let t = FftBuf::time(sampl_freq, step);
                 let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
                     val + amp * (2. * PI *  freq * t).sin()
                 });
@@ -83,7 +83,7 @@ mod fft_buf {
                 let mut error_limit = ErrorLimit::new(3);
                 let mut detected_freqs = 0;
                 for (i, amp) in fft.into_iter().enumerate() {
-                    let freq = fft_buf.freq_of(i);
+                    let freq = fft_buf.freq_of(sampl_freq, i);
                     log::trace!("main | fft.freq[{}]: {}", i, freq);
                     if amp > 1.0 && freq > 0.0 {
                         match nierest_freq(freq, &target_freqs) {

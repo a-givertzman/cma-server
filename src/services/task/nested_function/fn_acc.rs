@@ -110,4 +110,4 @@ impl FnOut for FnAcc {
 impl FnInOut for FnAcc {}
 ///
 /// Global static counter of FnAcc instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

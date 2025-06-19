@@ -7,7 +7,7 @@ mod task_nodes {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::task_config::TaskConfig, services::task::{nested_function::{
-            comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric,
+            fn_kind::FnKind, fn_result::FnResult,
         }, task_nodes::TaskNodes}
     };
     ///
@@ -50,56 +50,59 @@ mod task_nodes {
         ), None));
         let mock_service = Arc::new(MockService::new(self_id, "queue"));
         services.insert(mock_service.clone());
-        let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);
-        let fn_count_count = fn_count::COUNT.load(Ordering::SeqCst);
-        let fn_ge_count = fn_ge::COUNT.load(Ordering::SeqCst);
         task_nodes.build_nodes(&Name::from(self_id), conf, services);
         let test_data = vec![
             (
                 "/path/Point.Name1", 101,
-                HashMap::from([
-                    (format!("/{}/SqlMetric{}", self_id, sql_metric_count), "101, 1102, 0, 0"),
-                    (format!("/{}/FnCount{}.out", self_id, fn_count_count), "1"),
-                ])
+                [
+                    ("SqlMetric", "101, 1102, 0, 0"),
+                    ("FnCount", "1"),
+                    ("FnGe", "---"),
+                ]
             ),
             (
                 "/path/Point.Name1", 201,
-                HashMap::from([
-                    (format!("/{}/SqlMetric{}", self_id, sql_metric_count), "201, 1202, 0, 0"),
-                    (format!("/{}/FnCount{}.out", self_id, fn_count_count), "1"),
-                ])
+                [
+                    ("SqlMetric", "201, 1202, 0, 0"),
+                    ("FnCount", "1"),
+                    ("FnGe", "---"),
+                ]
 
             ),
             (
                 "/path/Point.Name1", 301,
-                HashMap::from([
-                    (format!("/{}/SqlMetric{}", self_id, sql_metric_count), "301, 1302, 0, 0"),
-                    (format!("/{}/FnCount{}.out", self_id, fn_count_count), "1"),
-                ])
+                [
+                    ("SqlMetric", "301, 1302, 0, 0"),
+                    ("FnCount", "1"),
+                    ("FnGe", "---"),
+                ]
 
             ),
             (
                 "/path/Point.Name2", 202,
-                HashMap::from([
-                    (format!("/{}/SqlMetric{}", self_id, sql_metric_count), "301, 1302, 202, 0"),
-                    (format!("/{}/FnGe{}.out", self_id, fn_ge_count), "true"),
-                ])
+                [
+                    ("SqlMetric", "301, 1302, 202, 0"),
+                    ("FnCount", "---"),
+                    ("FnGe", "true"),
+                ]
 
             ),
             (
                 "/path/Point.Name3", 303,
-                HashMap::from([
-                    (format!("/{}/SqlMetric{}", self_id, sql_metric_count), "301, 1302, 202, 303"),
-                    (format!("/{}/FnGe{}.out", self_id, fn_ge_count), "false"),
-                ])
+                [
+                    ("SqlMetric", "301, 1302, 202, 303"),
+                    ("FnCount", "---"),
+                    ("FnGe", "false"),
+                ]
 
             ),
             (
                 "/path/Point.Name3", 304,
-                HashMap::from([
-                    (format!("/{}/SqlMetric{}", self_id, sql_metric_count), "301, 1302, 202, 304"),
-                    (format!("/{}/FnGe{}.out", self_id, fn_ge_count), "false"),
-                ])
+                [
+                    ("SqlMetric", "301, 1302, 202, 304"),
+                    ("FnCount", "---"),
+                    ("FnGe", "false"),
+                ]
 
             ),
         ];
@@ -128,9 +131,11 @@ mod task_nodes {
                                 if eval_node_out.borrow().kind() != &FnKind::Var {
                                     let out_name = out.name();
                                     log::debug!("TaskEvalNode.eval | out.name: '{}'", out_name);
-                                    let target = match target_value.get(out_name.as_str()) {
-                                        Some(target) => target.to_string(),
-                                        None => panic!("TaskEvalNode.eval | out.name '{}' - not foind in {:?}", out_name, target_value),
+                                    let target = match out_name {
+                                        x if x.contains("SqlMetric") => target_value[0].1,
+                                        x if x.contains("FnCount") => target_value[1].1,
+                                        x if x.contains("FnGe") => target_value[2].1,
+                                        _ => panic!("TaskEvalNode.eval | unexpected function {out_name}")
                                     };
                                     assert!(out_value == target, "\n   outValue: {} \ntargetValue: {}", out_value, target);
                                 }

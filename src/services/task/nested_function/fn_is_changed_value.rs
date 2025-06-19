@@ -116,4 +116,4 @@ impl FnOut for FnIsChangedValue {
 impl FnInOut for FnIsChangedValue {}
 ///
 /// Global static counter of FnIsChangedValue instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

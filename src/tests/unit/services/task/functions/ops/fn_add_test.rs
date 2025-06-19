@@ -5,7 +5,7 @@ mod fn_add {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         core_::FnInOutRef, 
-        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, ops::fn_add::{self, FnAdd}, reset_counter::AtomicReset}
+        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, ops::fn_add::FnAdd}
     };
     ///
     ///
@@ -22,7 +22,6 @@ mod fn_add {
     ///  - ...
     fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
         let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-        fn_add::COUNT.reset(0);
         Rc::new(RefCell::new(Box::new(
             FnInput::new("test", 0, &mut conf)
         )))

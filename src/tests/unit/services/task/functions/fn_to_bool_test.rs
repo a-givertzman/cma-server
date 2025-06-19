@@ -5,7 +5,7 @@ mod fn_to_bool {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         core_::FnInOutRef, 
-        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_to_bool::{self, FnToBool}, reset_counter::AtomicReset},
+        services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_to_bool::FnToBool},
     };
     ///
     ///
@@ -22,7 +22,6 @@ mod fn_to_bool {
     ///  - ...
     fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
         let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-        fn_to_bool::COUNT.reset(0);
         Rc::new(RefCell::new(Box::new(
             FnInput::new("test", 0, &mut conf)
         )))

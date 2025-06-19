@@ -4,11 +4,11 @@ use rustfft::{num_complex::Complex, num_traits::Zero};
 /// Holds a buffer of samples ready to FFT processing
 pub struct FftBuf {
     fft_size: usize,
-    sampl_freq: usize,
+    // sampl_freq: usize,
     /// Used for restoring the frequency by it's index withing 0..`fft_size`
-    freq_factor: f64,
+    // freq_factor: f64,
     amp_factor: f64,
-    delta_t: f64,
+    // delta_t: f64,
     /// continuous index
     time_i: usize,
     unit_complex: Vec<Complex<f64>>,
@@ -25,9 +25,9 @@ impl FftBuf {
     /// Returns new instance of `FftBuf`
     /// - `fft_size` - length of the FFT input buffer as well as length of the FFT out buffer
     /// - `sampl_freq` - frequency of the sampling of the input signal, Hz
-    pub fn new(fft_size: usize, sampl_freq: usize) -> Self {
-        let sampling_period = 1.0 / (sampl_freq as f64);
-        let delta_t = sampling_period;  // / (fft_size as f64);
+    pub fn new(fft_size: usize) -> Self {
+        // let sampling_period = 1.0 / (sampl_freq as f64);
+        // let delta_t = sampling_period;  // / (fft_size as f64);
         let unit_complex: Vec<Complex<f64>> = (0..fft_size).into_iter().map(|i| {
             let angle = PI * 2.0 * (i as f64) / (fft_size as f64);
             Complex {
@@ -38,10 +38,10 @@ impl FftBuf {
         log::trace!("FftBuf.new | unit_complex: {:?}", unit_complex);
         Self {
             fft_size,
-            sampl_freq,
-            freq_factor: (sampl_freq as f64) / (fft_size as f64),
+            // sampl_freq,
+            // freq_factor: (sampl_freq as f64) / (fft_size as f64),
             amp_factor: 2.0 / (fft_size as f64),
-            delta_t,
+            // delta_t,
             time_i: 0,
             unit_complex,
             index: 0,
@@ -49,11 +49,11 @@ impl FftBuf {
             complex: vec![Complex::zero(); fft_size],
         }
     }
-    ///
-    /// Returns sampling frequency
-    pub fn sampl_freq(&self) -> usize {
-        self.sampl_freq
-    }
+    // ///
+    // /// Returns sampling frequency
+    // pub fn sampl_freq(&self) -> usize {
+    //     self.sampl_freq
+    // }
     ///
     /// Returns factor to restore the amplitude from FFT results
     pub fn amp_factor(&self) -> f64 {
@@ -88,15 +88,27 @@ impl FftBuf {
         self.index = 0;
         self.time_i = 0;
     }
-    ///
-    /// Returns current timestamp as f64
-    pub fn time(&self) -> f64 {
-        (self.time_i as f64) * self.delta_t
-    }
+    // ///
+    // /// Returns current timestamp as f64
+    // pub fn time(&self) -> f64 {
+    //     (self.time_i as f64) * self.delta_t
+    // }
     ///
     /// Retirns freq corresponding to freq `index` withing `0..fft_size`
     /// - Follow to [Restore FFT frequences](https://stackoverflow.com/a/4371627/17986285) for details
-    pub fn freq_of(&self, index: usize) -> f64 {
-        (index as f64) * self.freq_factor
+    /// 
+    /// **Used for testing only**
+    pub fn freq_of(&self, sampl_freq: usize, index: usize) -> f64 {
+        let freq_factor = (sampl_freq as f64) / (self.fft_size as f64);
+        (index as f64) * freq_factor
+    }
+    ///
+    /// Retirns time corresponding to the sampl_freq and current `step` of calculation
+    /// 
+    /// **Used for testing only**
+    #[allow(unused)]
+    pub fn time(sampl_freq: usize, index: usize) -> f64 {
+        let sampling_period = 1.0 / (sampl_freq as f64);
+        (index as f64) * sampling_period
     }
 }

@@ -104,4 +104,4 @@ impl FnOut for FnEq {
 impl FnInOut for FnEq {}
 ///
 /// Global static counter of FnEq instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+static COUNT: AtomicUsize = AtomicUsize::new(1);

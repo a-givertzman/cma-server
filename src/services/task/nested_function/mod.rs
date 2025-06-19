@@ -56,7 +56,7 @@ pub mod comp;
 pub mod ops;
 pub mod plot;
 
-pub mod reset_counter;
+// pub mod reset_counter;
 
 ///
 /// Recorder functions
