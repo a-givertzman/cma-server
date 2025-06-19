@@ -11,7 +11,7 @@ use sal_sync::{services::{
 }, sync::channel::Sender};
 use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
-    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, FnInOutRef},
+    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::format::Format, FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     }
@@ -38,7 +38,7 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///     send-to: /AppTest/MultiQueue.in-queue   # Send `Point` to the specified service.queue
 ///     format:                                 # Convert Point to formated string, for example SQL
 ///         table: 'public.va_fft'
-///         pattern: "UPDATE table_name SET VALUES () = () WHERE ;"
+///         pattern: "UPDATE table_name SET () = () WHERE ;"
 ///     filter: 
 ///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: '/App/Task/Fft.freq', use '/' to have 'freq' only (`freq` will replaced by it's index if sampling freq is not specified)
 ///         type: 'Real'                # Double / Real / Int
@@ -76,6 +76,7 @@ pub struct FnVaFft {
     /// FFT Freq (name, filter)
     filters: Vec<(String, Box<dyn Filter<Item = f64>>)>,
     tx_send: Option<Sender<Point>>,
+    format: Option<Format>,
 }
 //
 //
@@ -87,13 +88,13 @@ impl FnVaFft {
         let parent = parent.into();
         let dbg = format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
         let fft_size = match conf.param("len") {
-            Ok(len) => len.as_param().conf.as_u64().unwrap() as usize,
-            Err(_) => panic!("{}.new | Parameter 'len' - missed", dbg),
+            Some(len) => len.as_param().conf.as_u64().unwrap() as usize,
+            None => panic!("{}.new | Parameter 'len' - missed", dbg),
         };
         log::debug!("{}.new | fft_len: {:?}", dbg, fft_size);
         let sampl_freq = match conf.param("sampl-freq") {
-            Ok(freq) => Some(freq.as_param().conf.as_u64().unwrap() as usize),
-            Err(_) => {
+            Some(freq) => Some(freq.as_param().conf.as_u64().unwrap() as usize),
+            None => {
                 log::info!("{}.new | Parameter 'freq' - missed, index of corresponding freq will used for naming", dbg);
                 None
             }
@@ -104,6 +105,7 @@ impl FnVaFft {
         let threshold_conf = Self::parse_threshold_conf(&dbg, &conf);
         log::debug!("{}.new | threshold: {:#?}", dbg, threshold_conf);
         let send_to = Self::parse_send_to(&dbg, &conf, &services);
+        let format = conf.param("format").map(|v| Format::new(v.as_param().conf.as_str().unwrap()));
         let fft_buf = FftBuf::new(fft_size);
         let fft_freqs: Vec<String> = match sampl_freq {
             Some(sampl_freq) => (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect(),
@@ -142,6 +144,7 @@ impl FnVaFft {
             sampl_freq,
             filters,
             tx_send: send_to,
+            format,
         }
     }
     ///
@@ -177,7 +180,7 @@ impl FnVaFft {
     /// Returns Threshold config
     fn parse_threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfigFilter> {
         match conf.param("filter") {
-            Ok(threshold) => match threshold {
+            Some(threshold) => match threshold {
                 FnConfKind::Param(threshold) => match serde_yaml::from_value(threshold.conf.clone()) {
                     Ok(threshold) => {
                         let threshold: PointConfigFilter = threshold;
@@ -193,7 +196,7 @@ impl FnVaFft {
                     None
                 }
             }
-            Err(_) => {
+            None => {
                 log::warn!("{}.new | Threshold filter config missed in: {:?}", self_id, conf);
                 None
             },
@@ -203,7 +206,7 @@ impl FnVaFft {
     /// Returns send_to
     fn parse_send_to(self_id: &str, conf: &FnConfig, services: &Arc<Services>) -> Option<Sender<Point>> {
         match conf.param("send-to") {
-            Ok(send_to) => {
+            Some(send_to) => {
                 match send_to {
                     FnConfKind::Param(send_to) => {
                         let send_to = LinkName::from_str(send_to.conf.as_str().unwrap()).unwrap();
@@ -216,7 +219,7 @@ impl FnVaFft {
                     }
                 }
             }
-            Err(_) => {
+            None => {
                 log::warn!("{}.new | Parameter 'send-to' - missed in {:#?}", self_id, conf);
                 None
             },

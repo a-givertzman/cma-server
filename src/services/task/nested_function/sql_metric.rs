@@ -70,11 +70,11 @@ impl SqlMetric {
         }
         let id = conf.name.clone();
         // let initial = conf.param("initial").name.parse().unwrap();
-        let table = conf.param("table").unwrap_or_else(|_|
+        let table = conf.param("table").unwrap_or_else(||
             panic!("{}.new | Parameter 'table' - missed", self_id)
         ).as_param();
         let table = table.conf.as_str().unwrap();
-        let sql = conf.param("sql").unwrap_or_else(|_|
+        let sql = conf.param("sql").unwrap_or_else(||
             panic!("{}.new | Parameter 'sql' - missed", self_id)
         ).as_param();
         let sql = sql.conf.as_str().unwrap();

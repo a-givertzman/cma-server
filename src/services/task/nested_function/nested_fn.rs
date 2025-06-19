@@ -100,7 +100,7 @@ impl NestedFn {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes ,services.clone());
-                        let queue_name = conf.param("queue").unwrap_or_else(|_|
+                        let queue_name = conf.param("queue").unwrap_or_else(||
                             panic!("{}.function | Parameter 'queue' - missed in '{}'", self_id, conf.name)
                         ).as_param();
                         let queue_name = queue_name.conf.as_str().unwrap();
@@ -302,7 +302,7 @@ impl NestedFn {
                             Err(_) => None,
                         };
                         let send_queue = match conf.param("send-to") {
-                            Ok(queue_name) => {
+                            Some(queue_name) => {
                                 let queue_name = match queue_name {
                                     FnConfKind::Param(queue_name) => queue_name.conf.as_str().unwrap(),
                                     _ => panic!("{}.function | Parameter 'send-to' - invalid type (string expected) '{:#?}'", self_id, queue_name),
@@ -310,7 +310,7 @@ impl NestedFn {
                                 let link_name = LinkName::from_str(queue_name).unwrap();
                                 services.get_link(&link_name).map_or(None, |send| Some(send))
                             }
-                            Err(_) => {
+                            None => {
                                 log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
                                 None
                             },
@@ -385,7 +385,7 @@ impl NestedFn {
                                 },
                             }
                         });
-                        let key = conf.param("key").unwrap_or_else(|_|
+                        let key = conf.param("key").unwrap_or_else(||
                             panic!("{}.function | Parameter 'key' - missed in '{}'", self_id, conf.name)
                         ).as_param();
                         let key = key.conf.as_str().unwrap();
@@ -559,7 +559,7 @@ impl NestedFn {
                             None => None,
                         };
                         let tx_send = match conf.param("send-to") {
-                            Ok(queue_name) => {
+                            Some(queue_name) => {
                                 let queue_name = match queue_name {
                                     FnConfKind::Param(queue_name) => queue_name.conf.as_str().unwrap(),
                                     _ => panic!("{}.function | Parameter 'send-to' - invalid type (string expected) '{:#?}'", self_id, queue_name),
@@ -567,7 +567,7 @@ impl NestedFn {
                                 let link_name = LinkName::from_str(queue_name).unwrap();
                                 services.get_link(&link_name).map_or(None, |send| Some(send))
                             }
-                            Err(_) => {
+                            None => {
                                 log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
                                 None
                             },
@@ -611,7 +611,7 @@ impl NestedFn {
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
                         log::trace!("{}.function | PiecewiseLineApprox conf: {:#?}", self_id, conf);
                         let pieces: IndexMap<serde_yaml::Value, serde_yaml::Value> = match conf.param("piecewise") {
-                            Ok(piecewise) => {
+                            Some(piecewise) => {
                                 match piecewise {
                                     FnConfKind::Param(piecewise) => {
                                         serde_yaml::from_value(piecewise.conf.clone()).unwrap()
@@ -619,7 +619,7 @@ impl NestedFn {
                                     _ => panic!("{}.function | Parameter 'piecewise' - has invalid type (map expected) in '{}'", self_id, conf.name)
                                 }
                             }
-                            Err(_) => panic!("{}.function | Parameter 'piecewise' - missed in '{}'", self_id, conf.name),
+                            None => panic!("{}.function | Parameter 'piecewise' - missed in '{}'", self_id, conf.name),
                         };
                         Rc::new(RefCell::new(Box::new(
                             FnPiecewiseLineApprox::new(parent, input, pieces)
