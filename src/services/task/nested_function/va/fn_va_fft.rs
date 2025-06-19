@@ -28,7 +28,7 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 /// - `point_conf` - config of the sent Point's, if not specified - default '/parent/Fft.freq' type 'Real' will be sent
 /// - Returns value from `enable` input
 /// 
-/// 
+///   id  | timestamp | value
 /// 
 /// Example
 /// 
@@ -40,10 +40,10 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///         table: 'public.va_fft'
 ///         pattern: "UPDATE table_name SET VALUES () = () WHERE ;"
 ///     filter: 
-///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: '/App/Task/Fft.freq', use '/' to have 'freq' only
+///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: '/App/Task/Fft.freq', use '/' to have 'freq' only (`freq` will replaced by it's index if sampling freq is not specified)
 ///         type: 'Real'                # Double / Real / Int
 ///     input: point string /AppTest/Exit
-///     freq: 300000                    # Sampling freq
+///     sampl-freq: 300000              # Sampling freq, optionally can be specified to have a name of point contains a freq instead of index in the sufix
 ///     len: 30000                      # Length of the FFT sequence processing at a time, also defining number of frequencies returned from the FFT
 ///     window: 512
 ///     filter:                 # Filter conf, for each frequency to be filtered on fly
@@ -72,7 +72,7 @@ pub struct FnVaFft {
     amp_factor: f64,
     #[derivative(Debug="ignore")]
     fft_buf: FftBuf,
-    sampl_freq: usize,
+    sampl_freq: Option<usize>,
     /// FFT Freq (name, filter)
     filters: Vec<(String, Box<dyn Filter<Item = f64>>)>,
     tx_send: Option<Sender<Point>>,
@@ -91,9 +91,12 @@ impl FnVaFft {
             Err(_) => panic!("{}.new | Parameter 'len' - missed", dbg),
         };
         log::debug!("{}.new | fft_len: {:?}", dbg, fft_size);
-        let sampl_freq = match conf.param("freq") {
-            Ok(freq) => freq.as_param().conf.as_u64().unwrap() as usize,
-            Err(_) => panic!("{}.new | Parameter 'freq' - missed", dbg),
+        let sampl_freq = match conf.param("sampl-freq") {
+            Ok(freq) => Some(freq.as_param().conf.as_u64().unwrap() as usize),
+            Err(_) => {
+                log::info!("{}.new | Parameter 'freq' - missed, index of corresponding freq will used for naming", dbg);
+                None
+            }
         };
         log::debug!("{}.new | sampl_freq: {:?}", dbg, sampl_freq);
         let point_conf = Self::parse_point_conf(parent, &dbg, &conf);
@@ -102,7 +105,10 @@ impl FnVaFft {
         log::debug!("{}.new | threshold: {:#?}", dbg, threshold_conf);
         let send_to = Self::parse_send_to(&dbg, &conf, &services);
         let fft_buf = FftBuf::new(fft_size);
-        let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect();
+        let fft_freqs: Vec<String> = match sampl_freq {
+            Some(sampl_freq) => (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect(),
+            None => (0..fft_size / 2).map(|i| format!("{i}") ).collect(),
+        };
         let filters = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
                 Some(freq) => {
