@@ -127,7 +127,11 @@ mod fn_va_fft {
                 };
                 (freq_name, filter(None))
             }).collect();
-            let mut ffts: Vec< Vec<f64> > = vec![];
+            // reference FFT's, calculated locally
+            let mut ref_ffts: Vec< Vec<f64> > = vec![];
+            // FFT's, calculated by FnVaFft
+            let mut received_ffts: Vec< Vec<f64> > = vec![];
+            // sequences used for plotting charts
             let mut plot_values: Vec<(f64, f64)> = vec![];
             let mut plot_ffts: Vec<(f64, f64)> = vec![];
             for step in 0..fft_size * target_ffts {
@@ -164,7 +168,7 @@ mod fn_va_fft {
                             }
                         }
                         log::trace!("{dbg} | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
-                        ffts.push(fft_scalar.clone());
+                        ref_ffts.push(fft_scalar.clone());
 
                         // Receiving FnVaFft results
                         let time = Instant::now();
@@ -176,26 +180,24 @@ mod fn_va_fft {
                         log::trace!("{dbg} | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];
                         for point in &received {
-                            va_fft_buf.push(point.as_double().value)
-                        }
-
-                        log::debug!("{dbg} |           target: {:?}", fft_scalar.iter().filter_map(|val| {
-                            if *val > 1.0 {
-                                Some(format!("{:.3}", val))
-                            } else {
-                                None
-                            }
-                        }).collect::<Vec<String>>());
-                        log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|v| {
-                            let val = v.as_double().value;
-                            let freq: f64 = v.name().parse().unwrap();
+                            va_fft_buf.push(point.as_double().value);
+                            let val = point.as_double().value;
+                            let freq: f64 = point.name().parse().unwrap();
                             println!("\t| received  {:.3}, {:?}", freq, val);
                             if val > 1.0 {
                                 plot_ffts.push((freq, val));
-                                Some(format!("{:.3}", v.as_double().value))
-                            } else {
-                                None
                             }
+                        }
+                        received_ffts.push(va_fft_buf.clone());
+
+                        log::debug!("{dbg} |           target: {:?}", fft_scalar.iter().filter_map(|val| {
+                            (*val > 1.0).then(|| format!("{:.3}", val))
+                        }).collect::<Vec<String>>());
+                        log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|point| {
+                            let val = point.as_double().value;
+                            // let freq: f64 = v.name().parse().unwrap();
+                            // println!("\t| received  {:.3}, {:?}", freq, val);
+                            (val > 1.0).then(|| format!("{:.3}", val))
                         }).collect::<Vec<String>>());
 
                         if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
@@ -208,18 +210,21 @@ mod fn_va_fft {
                     },
                 };
             }
-            let path = "src/tests/unit/services/task/functions/va/empty-filter";
-            plot(format!("{path}/values-{:?}.png", sampl_freq), None, vec![plot_values], SeriesKind::Both).unwrap();
-            plot(format!("{path}/ffts-{:?}.png", sampl_freq), None, vec![plot_ffts], SeriesKind::Points).unwrap();
-
+            
             receiver.exit();
             services.exit();
             services.wait().unwrap();
             receiver.wait().unwrap();
 
-            log::trace!("{dbg} | ffts: {}", ffts.len());
-            let result = ffts.len();
+            let path = "src/tests/unit/services/task/functions/va/empty-filter";
+            plot(format!("{path}/values-{:?}.png", sampl_freq), None, vec![plot_values], SeriesKind::Both).unwrap();
+            plot(format!("{path}/ffts-{:?}.png", sampl_freq), None, vec![plot_ffts], SeriesKind::Points).unwrap();
+
+            log::trace!("{dbg} | ffts: {}", ref_ffts.len());
+            let result = ref_ffts.len();
             let target = target_ffts;
+            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            let result = received_ffts.len();
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -314,12 +319,19 @@ mod fn_va_fft {
                 };
                 (freq_name, filter(Some(PointConfigFilter { threshold: threshold, factor: None })))
             }).collect();
-            let mut ffts: Vec< Vec<f64> > = vec![];
+            // reference FFT's, calculated locally
+            let mut ref_ffts: Vec< Vec<f64> > = vec![];
+            // FFT's, calculated by FnVaFft
+            let mut received_ffts: Vec< Vec<f64> > = vec![];
+            // sequences used for plotting charts
+            let mut plot_values: Vec<(f64, f64)> = vec![];
+            let mut plot_ffts: Vec<(f64, f64)> = vec![];
             for step in 0..fft_size * target_ffts {
                 let t = FftBuf::time(sampl_freq, step);
                 let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
                     val + amp * (2. * PI *  freq * t).sin()
                 });
+                plot_values.push((t, value));
 
                 // FnVaFft process
                 let time = Instant::now();
@@ -348,7 +360,7 @@ mod fn_va_fft {
                             }
                         }
                         log::trace!("{dbg} | t: {:.4},  fft_scalar: {:?}", t, fft_scalar.iter().map(|v| format!("{:.3}", v)).collect::<Vec<String>>());
-                        ffts.push(fft_scalar.clone());
+                        ref_ffts.push(fft_scalar.clone());
 
                         // Receiving FnVaFft results
                         let time = Instant::now();
@@ -360,23 +372,24 @@ mod fn_va_fft {
                         // log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
                         let mut va_fft_buf = vec![];
                         for point in &received {
-                            va_fft_buf.push(point.as_double().value)
+                            va_fft_buf.push(point.as_double().value);
+                            let val = point.as_double().value;
+                            let freq: f64 = point.name().parse().unwrap();
+                            println!("\t| received  {:.3}, {:?}", freq, val);
+                            if val > 1.0 {
+                                plot_ffts.push((freq, val));
+                            }
                         }
+                        received_ffts.push(va_fft_buf.clone());
 
                         log::debug!("{dbg} |           target: {:?}", fft_scalar.iter().filter_map(|val| {
-                            if *val > 0.0001 {
-                                Some(format!("{:.3}", val))
-                            } else {
-                                None
-                            }
+                            (*val > 1.0).then(|| format!("{:.3}", val))
                         }).collect::<Vec<String>>());
-                        log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|v| {
-                            let val = v.as_double().value;
-                            if val > 0.0001 {
-                                Some(format!("{:.3}", v.as_double().value))
-                            } else {
-                                None
-                            }
+                        log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|point| {
+                            let val = point.as_double().value;
+                            // let freq: f64 = v.name().parse().unwrap();
+                            // println!("\t| received  {:.3}, {:?}", freq, val);
+                            (val > 1.0).then(|| format!("{:.3}", val))
                         }).collect::<Vec<String>>());
 
                         if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
@@ -395,9 +408,15 @@ mod fn_va_fft {
             services.wait().unwrap();
             receiver.wait().unwrap();
 
-            log::trace!("{dbg} | ffts: {}", ffts.len());
-            let result = ffts.len();
+            let path = "src/tests/unit/services/task/functions/va/absolute-filter";
+            plot(format!("{path}/values-{:?}.png", sampl_freq), None, vec![plot_values], SeriesKind::Both).unwrap();
+            plot(format!("{path}/ffts-{:?}.png", sampl_freq), None, vec![plot_ffts], SeriesKind::Points).unwrap();
+
+            log::trace!("{dbg} | ffts: {}", ref_ffts.len());
+            let result = ref_ffts.len();
             let target = target_ffts;
+            assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+            let result = received_ffts.len();
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
