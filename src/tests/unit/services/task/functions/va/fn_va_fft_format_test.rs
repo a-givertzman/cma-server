@@ -43,12 +43,12 @@ mod fn_va_fft {
     ///
     /// Testing FftBuf with empty filter
     #[test]
-    fn empty_filter() {
+    fn format_sql() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         // init_each();
         log::debug!("");
-        let dbg = "empty_filter-test";
+        let dbg = "format-sql-test";
         let self_name = Name::new("", dbg);
         let tx_id = PointTxId::from_str(&dbg);
         log::debug!("\n{}", dbg);
@@ -68,12 +68,7 @@ mod fn_va_fft {
         for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
             let services = Arc::new(Services::new(dbg, ServicesConf::new(
                 dbg, 
-                ConfTree::new_root(serde_yaml::from_str(r#"
-                    retain:
-                        path: assets/testing/retain/
-                        point:
-                            path: point/id.json
-                "#).unwrap()),
+                ConfTree::empty(),
             ), Some(tp.scheduler())));
             let receiver = Arc::new(TaskTestReceiver::new(
                 dbg,

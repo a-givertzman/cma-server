@@ -13,6 +13,7 @@
 //! - Noise reduction filtering - Trend extruction
 //! 
 
+mod fn_va_fft_format_test;
 mod fn_va_fft_test;
 mod plot;
 // mod sampling_freq_test;

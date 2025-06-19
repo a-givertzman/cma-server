@@ -29,19 +29,16 @@ pub fn plot<P: AsRef<Path>>(path: P, size: Option<(u32, u32)>, series: Vec<Vec<(
     for (i, ser) in series.iter().enumerate() {
         log::debug!("plot.plot | \tser[{i}]: {}", ser.len());
     }
-    log::debug!("plot.plot | series: {}", series.len());
-    let (min_x, _) = series.first().unwrap().iter().min_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap_or(&(0.0, 0.0)).to_owned();
-    let (max_x, _) = series.first().unwrap().iter().max_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap_or(&(500.0, 0.0)).to_owned();
-    let (_, min_y) = series.first().unwrap().iter().min_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap_or(&(0.0, 0.0)).to_owned();
-    let (_, max_y) = series.first().unwrap().iter().max_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap_or(&(0.0, 500.0)).to_owned();
+    let (x_range, y_range) = ranges(&series);
+    log::debug!("plot.plot | ranges: x: {:?},   y: {:?}", x_range, y_range);
     let mut chart = ChartBuilder::on(&root)
         // Set the caption of the chart
         .caption("Plot", ("sans-serif", 40).into_font())
         // Set the size of the label region
         .x_label_area_size(20)
-        .y_label_area_size(40)
+        .y_label_area_size(60)
         // Finally attach a coordinate on the drawing area and make a chart context
-        .build_cartesian_2d((min_x - max_x * 0.1)..(max_x + max_x * 0.1), (min_y - max_y * 0.1)..(max_y + max_y * 0.1))?;
+        .build_cartesian_2d(x_range, y_range)?;
 
     // Then we can draw a mesh
     chart
@@ -55,27 +52,6 @@ pub fn plot<P: AsRef<Path>>(path: P, size: Option<(u32, u32)>, series: Vec<Vec<(
 
     // And we can draw something in the drawing area
     for (i, ser) in series.into_iter().enumerate() {
-        fn draw_line_series(chart: &mut ChartContext<'_, BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, ser: Vec<(f64, f64)>, color: RGBColor) -> Result<(), Error> {
-            chart.draw_series(LineSeries::new(
-                ser,
-                color,
-                // vec![(0.0, 0.0), (5.0, 5.0), (8.0, 7.0)],
-                // &RED,
-            )).map_or_else(|err| Err(Error::new("plot", "plot").pass(err.to_string())), |_| Ok(()))
-        }
-        fn draw_point_series(chart: &mut ChartContext<'_, BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, ser: Vec<(f64, f64)>, color: RGBColor) -> Result<(), Error> {
-            // Similarly, we can draw point series
-            chart.draw_series(PointSeries::of_element(
-                ser,
-                4,
-                color,
-                &|c, s, st| {
-                    return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
-                    + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
-                    // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
-                },
-            )).map_or_else(|err| Err(Error::new("plot", "plot").pass(err.to_string())), |_| Ok(()))
-        }
         match kind {
             SeriesKind::Points => draw_point_series(&mut chart, ser, colors[i])?,
             SeriesKind::Line => draw_line_series(&mut chart, ser, colors[i])?,
@@ -87,6 +63,41 @@ pub fn plot<P: AsRef<Path>>(path: P, size: Option<(u32, u32)>, series: Vec<Vec<(
     }
     root.present()?;
     Ok(())
+}
+///
+/// 
+fn draw_line_series(chart: &mut ChartContext<'_, BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, ser: Vec<(f64, f64)>, color: RGBColor) -> Result<(), Error> {
+    chart.draw_series(LineSeries::new(
+        ser,
+        color,
+        // vec![(0.0, 0.0), (5.0, 5.0), (8.0, 7.0)],
+        // &RED,
+    )).map_or_else(|err| Err(Error::new("plot", "plot").pass(err.to_string())), |_| Ok(()))
+}
+///
+/// 
+fn draw_point_series(chart: &mut ChartContext<'_, BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, ser: Vec<(f64, f64)>, color: RGBColor) -> Result<(), Error> {
+    // Similarly, we can draw point series
+    chart.draw_series(PointSeries::of_element(
+        ser,
+        4,
+        color,
+        &|c, s, st| {
+            return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
+            + Circle::new((0, 0), s, st.filled()) // At this point, the new pixel coordinate is established
+            // + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 10).into_font());
+        },
+    )).map_or_else(|err| Err(Error::new("plot", "plot").pass(err.to_string())), |_| Ok(()))
+}
+///
+/// 
+fn ranges(series: &Vec<Vec<(f64, f64)>>) -> (std::ops::Range<f64>, std::ops::Range<f64>) {
+    let flatten: Vec<&(f64, f64)> = series.iter().flatten().collect();
+    let (min_x, _) = flatten.iter().min_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap().to_owned();//.unwrap_or(&(0.0, 0.0)).to_owned();
+    let (max_x, _) = flatten.iter().max_by(|(x1, _), (x2, _)| x1.total_cmp(x2)).unwrap().to_owned();//.unwrap_or(&(500.0, 0.0)).to_owned();
+    let (_, min_y) = flatten.iter().min_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();//.unwrap_or(&(0.0, 0.0)).to_owned();
+    let (_, max_y) = flatten.iter().max_by(|(_, y1), (_, y2)| y1.total_cmp(y2)).unwrap().to_owned();//.unwrap_or(&(0.0, 500.0)).to_owned();
+    ((min_x - max_x * 0.1)..(max_x + max_x * 0.1), (min_y - max_y * 0.1)..(max_y + max_y * 0.1))
 }
 ///
 /// 
