@@ -2,8 +2,13 @@ use std::f64::consts::PI;
 use rustfft::{num_complex::Complex, num_traits::Zero};
 ///
 /// Holds a buffer of samples ready to FFT processing
+/// 
+/// Push measured samples one by one using `add` method
+/// 
+/// When specified in `size` number of semples added,
+/// method `add` returns and removes all holding samples as vector
 pub struct FftBuf {
-    fft_size: usize,
+    size: usize,
     // sampl_freq: usize,
     /// Used for restoring the frequency by it's index withing 0..`fft_size`
     // freq_factor: f64,
@@ -25,11 +30,11 @@ impl FftBuf {
     /// Returns new instance of `FftBuf`
     /// - `fft_size` - length of the FFT input buffer as well as length of the FFT out buffer
     /// - `sampl_freq` - frequency of the sampling of the input signal, Hz
-    pub fn new(fft_size: usize) -> Self {
+    pub fn new(size: usize) -> Self {
         // let sampling_period = 1.0 / (sampl_freq as f64);
         // let delta_t = sampling_period;  // / (fft_size as f64);
-        let unit_complex: Vec<Complex<f64>> = (0..fft_size).into_iter().map(|i| {
-            let angle = PI * 2.0 * (i as f64) / (fft_size as f64);
+        let unit_complex: Vec<Complex<f64>> = (0..size).into_iter().map(|i| {
+            let angle = PI * 2.0 * (i as f64) / (size as f64);
             Complex {
                 re: angle.cos(), 
                 im: angle.sin()
@@ -37,16 +42,16 @@ impl FftBuf {
         }).collect();
         log::trace!("FftBuf.new | unit_complex: {:?}", unit_complex);
         Self {
-            fft_size,
+            size,
             // sampl_freq,
             // freq_factor: (sampl_freq as f64) / (fft_size as f64),
-            amp_factor: 2.0 / (fft_size as f64),
+            amp_factor: 2.0 / (size as f64),
             // delta_t,
             time_i: 0,
             unit_complex,
             index: 0,
-            index_last: fft_size - 1,
-            complex: vec![Complex::zero(); fft_size],
+            index_last: size - 1,
+            complex: vec![Complex::zero(); size],
         }
     }
     // ///
@@ -67,17 +72,17 @@ impl FftBuf {
     // pub fn add(&mut self, value: f64) -> Option<&mut Vec<Complex<f64> >> {
     pub fn add(&mut self, value: f64) -> Option<&mut [Complex<f64>]> {
         if self.index == 0 {
-            self.complex = vec![Complex::zero(); self.fft_size];
+            self.complex = vec![Complex::zero(); self.size];
         }
         self.complex[self.index].re = value * self.unit_complex[self.index].re;
         self.complex[self.index].im = value * self.unit_complex[self.index].im;
         log::trace!("FftBuf.add | index: {}", self.index);
         if self.index < self.index_last {
-            self.index = (self.index  + 1) % self.fft_size;
+            self.index = (self.index  + 1) % self.size;
             self.time_i += 1;
             None
         } else {
-            self.index = (self.index  + 1) % self.fft_size;
+            self.index = (self.index  + 1) % self.size;
             self.time_i += 1;
             Some(&mut self.complex)
         }
@@ -99,7 +104,7 @@ impl FftBuf {
     /// 
     /// **Used for testing only**
     pub fn freq_of(&self, sampl_freq: usize, index: usize) -> f64 {
-        let freq_factor = (sampl_freq as f64) / (self.fft_size as f64);
+        let freq_factor = (sampl_freq as f64) / (self.size as f64);
         (index as f64) * freq_factor
     }
     ///
