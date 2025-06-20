@@ -91,8 +91,10 @@ pub struct FnVaFft {
     #[derivative(Debug="ignore")]
     fft_buf: FftBuf,
     sampl_freq: Option<usize>,
-    /// Retain (name, input, out)
-    retain: FxHashMap<String, (FnInOutRef, FnRetain)>,
+    /// Retain for load    (name,   out)
+    retain_load: FxHashMap<String, FnRetain>,
+    /// Retain for store    (name,   input,      out)
+    retain_store: FxHashMap<String, (FnInOutRef, FnRetain)>,
     /// FFT Freq (name, filter)
     filters: Vec<(String, Box<dyn Filter<Item = f64>>)>,
     tx_send: Option<Sender<Point>>,
@@ -136,7 +138,8 @@ impl FnVaFft {
             Some(sampl_freq) => (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect(),
             None => (0..fft_size / 2).map(|i| format!("{i}") ).collect(),
         };
-        let mut retain = FxHashMap::new();
+        let mut retain_load = FxHashMap::new();
+        let mut retain_store = FxHashMap::new();
         let filters = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
                 Some(freq) => {
@@ -154,7 +157,7 @@ impl FnVaFft {
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
             let retain_input = Self::retain_input(&dbg, txid, &freq_name);
-            let mut fn_retain = FnRetain::new(
+            let mut fn_retain_store = FnRetain::new(
                 &name,
                 "assets/testing/retain/",
                 enable.clone(),
@@ -163,7 +166,17 @@ impl FnVaFft {
                 None,
                 Some(retain_input.clone()),
             );
-            retain.insert(freq_name.clone(), (retain_input, fn_retain));
+            let mut fn_retain_load = FnRetain::new(
+                &name,
+                "assets/testing/retain/",
+                enable.clone(),
+                false,
+                &freq_name,
+                None,
+                None,
+            );
+            retain_load.insert(freq_name.clone(), fn_retain_load);
+            retain_store.insert(freq_name.clone(), (retain_input, fn_retain_store));
             (freq_name, Self::build_filter(threshold_conf.clone(), None))
         }).collect();
         Self {
@@ -179,7 +192,8 @@ impl FnVaFft {
             amp_factor: fft_buf.amp_factor(),
             fft_buf,
             sampl_freq,
-            retain,
+            retain_load,
+            retain_store,
             filters,
             tx_send: send_to,
             format,
@@ -200,7 +214,7 @@ impl FnVaFft {
                     type_: FnConfPointType::Double,
                     options: FnConfOptions::default(),
                 },
-            ),
+            )
         )))
     }
     ///
@@ -340,7 +354,7 @@ impl FnVaFft {
                         match self.filters.get_mut(index) {
                             Some((freq_name, filter)) => {
                                 if let Some(_) = &self.first {
-                                    if let Some((_, retain)) = self.retain.get_mut(freq_name) {
+                                    if let Some(retain) = self.retain_load.get_mut(freq_name) {
                                         match retain.out() {
                                             FnResult::Ok(val) => {
                                                 let val = val.as_double().value;
@@ -367,7 +381,7 @@ impl FnVaFft {
                                                 input.cot(),
                                                 input.timestamp(),
                                             ));
-                                            if let Some((retain_in, retain)) = self.retain.get_mut(freq_name) {
+                                            if let Some((retain_in, retain)) = self.retain_store.get_mut(freq_name) {
                                                 retain_in.borrow_mut().add(&value);
                                                 retain.out();
                                             }
