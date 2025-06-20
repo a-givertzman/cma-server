@@ -8,14 +8,14 @@ use sal_sync::{collections::FxHashMap, services::{
     entity::{
         Cot, Name,
         Point, PointConfig, PointConfigFilter, PointConfigType, PointHlr, PointTxId,
-        Status,
+        Status, ToPoint,
     }, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, types::Bool, LinkName, Services
 }, sync::channel::Sender};
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
     core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::FormatPoint, FnInOutRef},
     services::task::nested_function::{
-        fn_::{FnIn, FnInOut, FnOut}, fn_input::FnInput, fn_kind::FnKind, fn_result::FnResult, io::fn_retain::FnRetain
+        fn_::{FnIn, FnInOut, FnOut}, fn_const::FnConst, fn_input::FnInput, fn_kind::FnKind, fn_result::FnResult, io::fn_retain::FnRetain
     }
 };
 use super::fft_buff::FftBuf;
@@ -172,7 +172,9 @@ impl FnVaFft {
                 enable.clone(),
                 false,
                 &freq_name,
-                None,
+                Some(Rc::new(RefCell::new(Box::new(
+                    FnConst::new(&name.join(), 0.0.to_point(txid, &name.join())),
+                )))),
                 None,
             );
             retain_load.insert(freq_name.clone(), fn_retain_load);
