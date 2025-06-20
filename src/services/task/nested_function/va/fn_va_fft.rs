@@ -91,10 +91,8 @@ pub struct FnVaFft {
     #[derivative(Debug="ignore")]
     fft_buf: FftBuf,
     sampl_freq: Option<usize>,
-    /// Retain for load    (name,   out)
-    retain_load: FxHashMap<String, FnRetain>,
     /// Retain for store    (name,   input,      out)
-    retain_store: FxHashMap<String, (FnInOutRef, FnRetain)>,
+    retain: FxHashMap<String, (FnInOutRef, FnRetain)>,
     /// FFT Freq (name, filter)
     filters: Vec<(String, Box<dyn Filter<Item = f64>>)>,
     tx_send: Option<Sender<Point>>,
@@ -138,8 +136,7 @@ impl FnVaFft {
             Some(sampl_freq) => (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect(),
             None => (0..fft_size / 2).map(|i| format!("{i}") ).collect(),
         };
-        let mut retain_load = FxHashMap::new();
-        let mut retain_store = FxHashMap::new();
+        let mut retain = FxHashMap::new();
         let filters = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
                 Some(freq) => {
@@ -186,8 +183,7 @@ impl FnVaFft {
                 }
             };
             log::debug!("{dbg}.new | Initial | {freq_name}: {:?}", retained);
-            retain_load.insert(freq_name.clone(), fn_retain_load);
-            retain_store.insert(freq_name.clone(), (retain_input, fn_retain_store));
+            retain.insert(freq_name.clone(), (retain_input, fn_retain_store));
             (freq_name, Self::build_filter(threshold_conf.clone(), retained))
         }).collect();
         Self {
@@ -203,13 +199,11 @@ impl FnVaFft {
             amp_factor: fft_buf.amp_factor(),
             fft_buf,
             sampl_freq,
-            retain_load,
-            retain_store,
+            retain,
             filters,
             tx_send: send_to,
             format,
             format_key,
-            // first: Some(()),
         }
     }
     ///
@@ -234,10 +228,10 @@ impl FnVaFft {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<2, f64>::new(initial, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<1, f64>::new(initial, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<2, f64>::new(None)),
+            None => Box::new(FilterEmpty::<1, f64>::new(None)),
         }
     }
     ///
@@ -364,40 +358,27 @@ impl FnVaFft {
                     for (index, amplitude) in buf.iter().take(self.fft_size / 2).skip(1).enumerate() {
                         match self.filters.get_mut(index) {
                             Some((freq_name, filter)) => {
-                                // if let Some(_) = &self.first {
-                                //     if let Some(retain) = self.retain_load.get_mut(freq_name) {
-                                //         match retain.out() {
-                                //             FnResult::Ok(val) => {
-                                //                 let val = val.as_double().value;
-                                //                 filter.add(val);
-                                //                 log::debug!("{}.new | Initial | {freq_name}: {:?}", self.id, val);
-                                //             }
-                                //             FnResult::None => log::debug!("{}.new | Initial | {freq_name}: None", self.id),
-                                //             FnResult::Err(err) => log::warn!("{}.new | Initial | {freq_name}: error: {:?}", self.id, err),
-                                //         };
-                                //     }
-                                // }
                                 filter.add(amplitude.abs() * self.amp_factor);
                                 if let Some(value) = filter.pop() {
                                     // let amplitude = amplitude.abs() * self.amp_factor;
                                     // log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
+                                    let point = Point::Double(PointHlr::new(
+                                        self.txid,
+                                        freq_name,
+                                        value,
+                                        input.status(),
+                                        input.cot(),
+                                        input.timestamp(),
+                                    ));
+                                    if let Some((retain_input, retain)) = self.retain.get_mut(freq_name) {
+                                        retain_input.borrow_mut().add(&point);
+                                        retain.out();
+                                    }
                                     let point = match &mut self.format {
                                         Some(format) => {
                                             // log::debug!("{}.out | fft.process format.names: {:#?}", self.id, format.names());
-                                            let value = Point::Double(PointHlr::new(
-                                                self.txid,
-                                                freq_name,
-                                                value,
-                                                input.status(),
-                                                input.cot(),
-                                                input.timestamp(),
-                                            ));
-                                            if let Some((retain_in, retain)) = self.retain_store.get_mut(freq_name) {
-                                                retain_in.borrow_mut().add(&value);
-                                                retain.out();
-                                            }
                                             for (key, _) in format.names() {
-                                                format.insert(&key, value.clone());
+                                                format.insert(&key, point.clone());
                                             }
                                             Point::String(PointHlr::new(
                                                 self.txid,
