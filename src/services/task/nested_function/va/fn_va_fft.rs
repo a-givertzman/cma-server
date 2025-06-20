@@ -18,27 +18,43 @@ use crate::{
 };
 use super::fft_buff::FftBuf;
 ///
-/// Global static counter of FnVaFft instances
-static COUNT: AtomicUsize = AtomicUsize::new(1);
-///
-/// Function | FFT analysis
+/// ### Function | FFT analysis
 /// - `enable` - enables the activity
 /// - `len` - length of the FFT sequence processing at a time, also defining number of frequencies returned from the FFT
 /// - `input` - Point's caming from Vibro-analitics micro-controller
 /// - `point_conf` - config of the sent Point's, if not specified - default '/parent/Fft.freq' type 'Real' will be sent
 /// - Returns value from `enable` input
 /// 
-///   id  | timestamp | value
+/// **Description**
 /// 
-/// Example
+///   Used for convertion sequence of measured (with sampl freq) samples
+/// into the squence of amplitudes of frequences same length / 2
+/// 
+///   This means if in the sampling period we have `N` samples,
+/// then after fft we will have `N/2` numbers, representing amplitude
+/// of each frequence in the range of `0..N/2`
+/// 
+///   If filtering used, then result of each fft processing will
+/// returns only frequences, wich amplitudes differs to prevouse result
+/// 
+/// **Database table example**
+/// ```ignore
+///   id  | timestamp | value
+///   --  | --        | --
+///   int | timestamp | any
+/// ```
+/// 
+/// **Timestamp example:**
+///   - `1985-04-12 23:20:50.52`
+///   - `2025-06-20 13:51:27.086998288 UTC`
+/// 
+/// **Config example**
 /// 
 /// ```yaml
 /// fn VaFft:
 ///     enable: const bool true                 # optional, default true
 ///     send-to: /AppTest/MultiQueue.in-queue   # Send `Point` to the specified service.queue
-///     format:                                 # Convert Point to formated string, for example SQL
-///         table: 'public.va_fft'
-///         pattern: "UPDATE table_name SET () = () WHERE ;"
+///     format: UPDATE public.fft SET (id, timestamp, value) = ({{in.name}}, {{in.timestamp}}, {{in.value}});       # Convert Point to formated string, into SQL for example
 ///     filter: 
 ///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: '/App/Task/Fft.freq', use '/' to have 'freq' only (`freq` will replaced by it's index if sampling freq is not specified)
 ///         type: 'Real'                # Double / Real / Int
@@ -234,6 +250,7 @@ impl FnVaFft {
         match conf.param("format") {
             Some(conf) => {
                 let conf = conf.as_param().conf.as_str().unwrap().to_owned();
+                log::debug!("{dbg}.new | format: {conf}");
                 let format = FormatPoint::new(&conf);
                 let format_key = format.names().into_iter().enumerate().fold(String::new(), |prev, (i, (_, (name, _)))| {
                     if (i > 0) & (prev != name) {
@@ -291,20 +308,21 @@ impl FnVaFft {
                                     // log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
                                     let point = match &mut self.format {
                                         Some(format) => {
-                                            format.insert(
-                                                &self.format_key,
-                                                Point::String(PointHlr::new(
+                                            // log::debug!("{}.out | fft.process format.names: {:#?}", self.id, format.names());
+                                            let value = Point::Double(PointHlr::new(
                                                     self.tx_id,
-                                                    &freq_name,
-                                                    value.to_string(),
+                                                    freq_name,
+                                                    value,
                                                     input.status(),
                                                     input.cot(),
                                                     input.timestamp(),
-                                                )),
-                                            );
+                                                ));
+                                            for (key, _) in format.names() {
+                                                format.insert(&key, value.clone());
+                                            }
                                             Point::String(PointHlr::new(
                                                 self.tx_id,
-                                                &freq_name,
+                                                freq_name,
                                                 format.out(),
                                                 input.status(),
                                                 input.cot(),
@@ -314,7 +332,7 @@ impl FnVaFft {
                                         None => {
                                             Point::Double(PointHlr::new(
                                                 self.tx_id,
-                                                &freq_name,
+                                                freq_name,
                                                 value,
                                                 input.status(),
                                                 input.cot(),
@@ -401,3 +419,6 @@ impl FnOut for FnVaFft {
 //
 //
 impl FnInOut for FnVaFft {}
+///
+/// Global static counter of FnVaFft instances
+static COUNT: AtomicUsize = AtomicUsize::new(1);

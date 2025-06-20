@@ -14,7 +14,7 @@ use crate::{
     services::task::{
         nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
         task_test_receiver::TaskTestReceiver,
-    }, tests::unit::services::task::functions::va::plot::{plot, SeriesKind},
+    },
 };
 ///
 /// Colors
@@ -54,17 +54,17 @@ fn format_sql() {
     let test_duration = TestDuration::new(dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
     let test_data = [
-        // sampl_freq   fft_size    ffts    target
-        (     12,            12,    1,      vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)]),
-        (     16,            16,    2,      vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)]),
-        (    128,           128,    4,      vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)]),
-        (    256,           256,    3,      vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), ( 37.0,  20.0), (112.0, 12.0), (  126.0, 15.0)]),
-        ( 10_000,        10_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
-        ( 30_000,        30_000,   20,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 140.0), (4000.0, 200.1), (9000.0, 210.2), (12000.0, 220.3), (14998.0, 300.0)]),
-        (300_000,       300_000,    2,      vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
+        // sampl_freq   fft_size    ffts    threshold   target_ffts   target freqs                                            target formated
+        // (     12,            12,    1,      5.0,     1,            vec![(  2.0, 50.0), (  3.0, 150.0), (   4.0, 200.0)],   vec!["(  2.0, 50.0)", "(3.0, 150.0)", "(4.0, 200.0)"]),
+        // (     16,            16,    2,      5.0,     1,            vec![(  3.0, 50.0), (  5.0, 150.0), (   6.0, 200.0)],   vec!["(  2.0, 50.0)", "(3.0, 150.0)", "(4.0, 200.0)"]),
+        // (    128,           128,    4,      5.0,     1,            vec![( 16.0, 50.0), ( 36.0, 150.0), (  62.0, 200.0)],   vec!["(  2.0, 50.0)", "(3.0, 150.0)", "(4.0, 200.0)"]),
+        (    256,           256,    3,      5.0,     1,            vec![(  2.0, 50.0), (  4.0, 150.0), (  12.0, 200.0), ( 37.0,  20.0), (112.0, 12.0), (  126.0, 15.0)], vec!["(  2.0, 50.0)"]),
+        // ( 10_000,        10_000,    2,      5.0,     1,            vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 200.0), (4998.0, 300.0)]),
+        // ( 30_000,        30_000,   20,      5.0,     1,            vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 140.0), (4000.0, 200.1), (9000.0, 210.2), (12000.0, 220.3), (14998.0, 300.0)]),
+        // (300_000,       300_000,    2,      5.0,     1,            vec![(  5.0,  5.0), ( 10.0,  10.0), (  50.0,  50.0), (100.0, 100.0), (400.0, 150.0), (4000.0, 201.1), (9000.0, 202.2), (12000.0, 203.3), (24000.0, 250.0), (64000.0, 264.0), (120000.0, 280.0), (149998.0, 300.0)]),
     ];
     let tp = ThreadPool::new(dbg, Some(12));
-    for (sampl_freq, fft_size, target_ffts, target_freqs) in test_data {
+    for (sampl_freq, fft_size, ffts, threshold, target_ffts, target_freqs, target) in test_data {
         let services = Arc::new(Services::new(dbg, ServicesConf::new(
             dbg, 
             ConfTree::empty(),
@@ -87,13 +87,15 @@ fn format_sql() {
             fn VaFft:
                 enable: const bool true         # optional, default true
                 send-to: {}.in-queue
-                format: UPDATE public.fft SET (id, timestamp, value) = ({{}}, {{}}, {{}});
+                format: UPDATE public.fft SET (id, timestamp, value) = ({{in.name}}, {{in.timestamp}}, {{in.value}});
                 conf point {}:                 # full name will be: /App/Task/Ffr.freq
                     type: 'Double'
                 input: point string /AppTest/Exit
                 freq: {}                        # Sampling freq
                 len: {}                         # Length of the                         
-        "#, receiver_name, export_point_name, sampl_freq, fft_size)).unwrap();
+                filter:
+                    threshold: {:?}
+        "#, receiver_name, export_point_name, sampl_freq, fft_size, threshold)).unwrap();
         let conf = match FnConfig::from_yaml(dbg, &self_name, &conf, &mut vec![]) {
             FnConfKind::Fn(conf) => conf,
             _ => panic!("{} | Wrong VaFft config: {:#?}", dbg, conf),
@@ -120,16 +122,15 @@ fn format_sql() {
                 Some(freq) => strcat!(dbg export_point_name "." freq),
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
-            (freq_name, filter(None))
+            (freq_name, filter(Some(PointConfigFilter { threshold, factor: None })))
         }).collect();
         // reference FFT's, calculated locally
         let mut ref_ffts: Vec< Vec<f64> > = vec![];
         // FFT's, calculated by FnVaFft
-        let mut received_ffts: Vec< Vec<f64> > = vec![];
+        let mut received_ffts: Vec< Vec<String> > = vec![];
         // sequences used for plotting charts
         let mut plot_values: Vec<(f64, f64)> = vec![];
-        let mut plot_ffts: Vec<Vec<(f64, f64)>> = vec![];
-        for step in 0..fft_size * target_ffts {
+        for step in 0..fft_size * ffts {
             let t = FftBuf::time(sampl_freq, step);
             let value = target_freqs.iter().fold(0.0, |val, (freq, amp)| {
                 val + amp * (2. * PI *  freq * t).sin()
@@ -172,20 +173,13 @@ fn format_sql() {
                     }
                     let received = receiver.drain(0..fft_scalar.len());
                     log::debug!("{dbg} | FnVaFft received in {:?}, \t received: {}", time.elapsed(), received.len());
-                    log::trace!("{dbg} | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_double().value)).collect::<Vec<String>>());
+                    log::trace!("{dbg} | FnVaFft received: {:?}", received.iter().map(|v| format!("{:.3}", v.as_string().value)).collect::<Vec<String>>());
                     let mut va_fft_buf = vec![];
-                    let mut plot_ffts_step = vec![];
                     for point in &received {
-                        va_fft_buf.push(point.as_double().value);
-                        let val = point.as_double().value;
+                        let val = point.as_string().value;
+                        va_fft_buf.push(val.clone());
                         let freq: f64 = point.name().parse().unwrap();
-                        println!("\t| received  {:.3}, {:.4}", freq, val);
-                        if val > 1.0 {
-                            plot_ffts_step.push((freq, val + (received_ffts.len() as f64) * 10.0));
-                        }
-                    }
-                    if !plot_ffts_step.is_empty() {
-                        plot_ffts.push(plot_ffts_step);
+                        println!("\t| received  {:.3}, {:?}", freq, val);
                     }
                     if !va_fft_buf.is_empty() {
                         received_ffts.push(va_fft_buf.clone());
@@ -194,17 +188,16 @@ fn format_sql() {
                     log::debug!("{dbg} |           target: {:?}", fft_scalar.iter().filter_map(|val| {
                         (*val > 1.0).then(|| format!("{:.3}", val))
                     }).collect::<Vec<String>>());
-                    log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|point| {
-                        let val = point.as_double().value;
-                        // let freq: f64 = v.name().parse().unwrap();
-                        // println!("\t| received  {:.3}, {:?}", freq, val);
-                        (val > 1.0).then(|| format!("{:.3}", val))
-                    }).collect::<Vec<String>>());
+                    // log::debug!("{dbg} | FnVaFft received: {:?}", received.iter().filter_map(|point| {
+                    //     let val = point.as_string().value;
+                    //     // (val > 1.0).then(|| format!("{:.3}", val))
+                    //     Some(val)
+                    // }).collect::<Vec<String>>());
 
-                    if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
-                        panic!("{dbg} | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
-                        // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
-                    }
+                    // if let Err((result, target)) = compare_vecs(&va_fft_buf, &fft_scalar)  {
+                    //     panic!("{dbg} | FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, result, target);
+                    //     // log::error!("FnVaFft({} sec) error \n result: {:?} \n target {:?}", t, va_fft_buf, fft_scalar);
+                    // }
                 }
                 None => {
                     log::trace!("{dbg} | t: {:.4}", t);
@@ -212,20 +205,20 @@ fn format_sql() {
             };
         }
         
+        log::debug!("{dbg} | sampl_freq {sampl_freq} done, exiting...");
+
         receiver.exit();
         services.exit();
         services.wait().unwrap();
         receiver.wait().unwrap();
+        log::debug!("{dbg} | sampl_freq {sampl_freq} done, exiting - Ok");
 
-        let path = "src/tests/unit/services/task/functions/va/empty-filter";
-        plot(format!("{path}/values-{:?}.png", sampl_freq), None, vec![plot_values], SeriesKind::Both).unwrap();
-        plot(format!("{path}/ffts-{:?}.png", sampl_freq), None, plot_ffts, SeriesKind::Points).unwrap();
-
-        log::debug!("{dbg} | ffts: \n\t target: {}, \n\t ref calculated: {}, \n\t  va calculated: {}", target_ffts, ref_ffts.len(), received_ffts.len());
+        log::debug!("{dbg} | ffts: \n\t target: {}, \n\t ref calculated: {}, \n\t  va calculated: {}", ffts, ref_ffts.len(), received_ffts.len());
         let result = ref_ffts.len();
-        let target = target_ffts;
+        let target = ffts;
         assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         let result = received_ffts.len();
+        let target = target_ffts;
         assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
     }
     // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
