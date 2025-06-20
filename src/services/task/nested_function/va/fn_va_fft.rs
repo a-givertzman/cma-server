@@ -98,6 +98,7 @@ pub struct FnVaFft {
     tx_send: Option<Sender<Point>>,
     format: Option<FormatPoint>,
     format_key: String,
+    first: Option<()>,
 }
 //
 //
@@ -155,20 +156,15 @@ impl FnVaFft {
             let retain_input = Self::retain_input(&dbg, txid, &freq_name);
             let mut fn_retain = FnRetain::new(
                 &name,
-                format!("assets/testing/retain/"), enable.clone(),
+                "assets/testing/retain/",
+                enable.clone(),
                 false,
                 &freq_name,
                 None,
                 Some(retain_input.clone()),
             );
-            let retained_val = match fn_retain.out() {
-                FnResult::Ok(val) => Some(val.as_double().value),
-                FnResult::None => None,
-                FnResult::Err(_) => None,
-            };
-            log::debug!("{}.new | Initial | {freq_name}: {:?}", dbg, retained_val);
             retain.insert(freq_name.clone(), (retain_input, fn_retain));
-            (freq_name, Self::build_filter(threshold_conf.clone(), retained_val))
+            (freq_name, Self::build_filter(threshold_conf.clone(), None))
         }).collect();
         Self {
             txid,
@@ -188,6 +184,7 @@ impl FnVaFft {
             tx_send: send_to,
             format,
             format_key,
+            first: Some(()),
         }
     }
     ///
@@ -342,6 +339,19 @@ impl FnVaFft {
                     for (index, amplitude) in buf.iter().take(self.fft_size / 2).skip(1).enumerate() {
                         match self.filters.get_mut(index) {
                             Some((freq_name, filter)) => {
+                                if let Some(_) = &self.first {
+                                    if let Some((_, retain)) = self.retain.get_mut(freq_name) {
+                                        match retain.out() {
+                                            FnResult::Ok(val) => {
+                                                let val = val.as_double().value;
+                                                filter.add(val);
+                                                log::debug!("{}.new | Initial | {freq_name}: {:?}", self.id, val);
+                                            }
+                                            FnResult::None => log::debug!("{}.new | Initial | {freq_name}: None", self.id),
+                                            FnResult::Err(err) => log::warn!("{}.new | Initial | {freq_name}: error: {:?}", self.id, err),
+                                        };
+                                    }
+                                }
                                 filter.add(amplitude.abs() * self.amp_factor);
                                 if let Some(value) = filter.pop() {
                                     // let amplitude = amplitude.abs() * self.amp_factor;
@@ -392,6 +402,7 @@ impl FnVaFft {
                         }
                     }
                 }
+                self.first = None;
             }
             None => {},
         };

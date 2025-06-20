@@ -68,6 +68,10 @@ fn format_sql() {
         let services = Arc::new(Services::new(dbg, ServicesConf::new(
             dbg, 
             ConfTree::empty(),
+            // ConfTree::new_root(serde_yaml::from_str(r#"
+            //     retain:
+            //         path: assets/testing/retain/
+            // "#).unwrap()),
         ), Some(tp.scheduler())));
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
@@ -106,7 +110,7 @@ fn format_sql() {
         // Runing all services
         services.run().unwrap();
         receiver.run().unwrap();
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(150));
         log::debug!("{} | All services started", dbg);
 
         let fft: Arc<dyn Fft<f64>> = FftPlanner::new().plan_fft_forward(fft_size);
