@@ -11,7 +11,7 @@ use sal_sync::{services::{
 }, sync::channel::Sender};
 use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
-    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::format::Format, FnInOutRef},
+    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::FormatPoint, FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     }
@@ -76,7 +76,8 @@ pub struct FnVaFft {
     /// FFT Freq (name, filter)
     filters: Vec<(String, Box<dyn Filter<Item = f64>>)>,
     tx_send: Option<Sender<Point>>,
-    format: Option<Format>,
+    format: Option<FormatPoint>,
+    format_key: String,
 }
 //
 //
@@ -105,7 +106,8 @@ impl FnVaFft {
         let threshold_conf = Self::parse_threshold_conf(&dbg, &conf);
         log::debug!("{}.new | threshold: {:#?}", dbg, threshold_conf);
         let send_to = Self::parse_send_to(&dbg, &conf, &services);
-        let format = conf.param("format").map(|v| Format::new(v.as_param().conf.as_str().unwrap()));
+        let (format, format_key) = Self::parse_format(&dbg, &conf);
+        if format.is_some() { log::debug!("{}.new | format_key: {:#?}", dbg, format_key); }
         let fft_buf = FftBuf::new(fft_size);
         let fft_freqs: Vec<String> = match sampl_freq {
             Some(sampl_freq) => (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect(),
@@ -127,7 +129,7 @@ impl FnVaFft {
                 }
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
-            (freq_name, Self::filter(threshold_conf.clone()))
+            (freq_name, Self::build_filter(threshold_conf.clone()))
         }).collect();
         Self {
             tx_id: PointTxId::from_str(&dbg),
@@ -145,11 +147,12 @@ impl FnVaFft {
             filters,
             tx_send: send_to,
             format,
+            format_key,
         }
     }
     ///
     /// Returns Threshold (key filter)
-    fn filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64>> {
+    fn build_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64>> {
         match conf {
             Some(conf) => {
                 Box::new(
@@ -226,6 +229,24 @@ impl FnVaFft {
         }
     }
     ///
+    /// Returns format config
+    fn parse_format(dbg: &str, conf: &FnConfig) -> (Option<FormatPoint>, String) {
+        match conf.param("format") {
+            Some(conf) => {
+                let conf = conf.as_param().conf.as_str().unwrap().to_owned();
+                let format = FormatPoint::new(&conf);
+                let format_key = format.names().into_iter().enumerate().fold(String::new(), |prev, (i, (_, (name, _)))| {
+                    if (i > 0) & (prev != name) {
+                        panic!("{dbg}.new | format '{conf}' has diferent inputs: '{prev}' and '{name}', but must have single");
+                    }
+                    name
+                });
+                (Some(format), format_key)
+            }
+            None => (None, String::new())
+        }
+    }
+    ///
     /// Sending FFT results as Point's to the external service if 'send-to' specified
     fn send(self_id: &str, tx_send: &Option<Sender<Point>>, point: Point) {
         if let Some(tx_send) = tx_send {
@@ -267,15 +288,40 @@ impl FnVaFft {
                                 filter.add(amplitude.abs() * self.amp_factor);
                                 if let Some(value) = filter.pop() {
                                     // let amplitude = amplitude.abs() * self.amp_factor;
-                                    log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
-                                    let point = Point::Double(PointHlr::new(
-                                        self.tx_id,
-                                        &freq_name,
-                                        value,
-                                        input.status(),
-                                        input.cot(),
-                                        input.timestamp(),
-                                    ));
+                                    // log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
+                                    let point = match &mut self.format {
+                                        Some(format) => {
+                                            format.insert(
+                                                &self.format_key,
+                                                Point::String(PointHlr::new(
+                                                    self.tx_id,
+                                                    &freq_name,
+                                                    value.to_string(),
+                                                    input.status(),
+                                                    input.cot(),
+                                                    input.timestamp(),
+                                                )),
+                                            );
+                                            Point::String(PointHlr::new(
+                                                self.tx_id,
+                                                &freq_name,
+                                                format.out(),
+                                                input.status(),
+                                                input.cot(),
+                                                input.timestamp(),
+                                            ))
+                                        }
+                                        None => {
+                                            Point::Double(PointHlr::new(
+                                                self.tx_id,
+                                                &freq_name,
+                                                value,
+                                                input.status(),
+                                                input.cot(),
+                                                input.timestamp(),
+                                            ))
+                                        },
+                                    };
                                     log::trace!("{}.out | point: {:#?}", self.id, point);
                                     Self::send(&self.id, &self.tx_send, point);
                                 }

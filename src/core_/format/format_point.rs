@@ -2,17 +2,18 @@ use std::collections::HashMap;
 use regex::RegexBuilder;
 use sal_sync::services::entity::Point;
 ///
-/// ### Replaces markers in the input sreing with the concrete values
+/// ### Replaces markers in the input sreing with the concrete `Point`'s parameters
 /// ````
-/// let name = "test-point";
-/// let value = 12;
-/// let timestamp = "";
-/// let status = Status::Ok;
-///
-/// "select * from table where id = {name}"      => "select * from table where id = test-point"
-/// "select * from table where id = {value}"     => "select * from table where id = 12"
-/// "select * from table where id = {timestamp}" => "select * from table where id = "
-/// "select * from table where id = {status}"    => "select * from table where id = 0"
+/// Point {
+///     name: "test-point",
+///     value: 12,
+///     timestamp: "",
+///     status: Ok,
+/// }
+/// "select * from table where id = {point.name}"      => "select * from table where id = test-point"
+/// "select * from table where id = {point.value}"     => "select * from table where id = 12"
+/// "select * from table where id = {point.timestamp}" => "select * from table where id = "
+/// "select * from table where id = {point.status}"    => "select * from table where id = 0"
 /// ````
 ///
 /// input marker can be:
@@ -27,14 +28,14 @@ use sal_sync::services::entity::Point;
 /// - values can be added using insert method format.insert("input1", point)
 /// - values: table = "temperature"; point.status = 1; point.value = 19,7
 /// - out   : "insert into temperature (id, value) values (0, 19,7)"
-pub struct Format {
+pub struct FormatPoint {
     input: String,
     names: HashMap<String, (String, Option<String>)>,
     values: HashMap<String, Point>,
 }
 //
 // 
-impl Format {
+impl FormatPoint {
     ///
     /// Creates new instance of the Format from configuration string
     pub fn new(input: &str) -> Self {
@@ -125,14 +126,14 @@ impl Format {
 }
 //
 //
-impl std::fmt::Display for Format {
+impl std::fmt::Display for FormatPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.out())
     }
 }
 //
 // 
-impl std::fmt::Debug for Format {
+impl std::fmt::Debug for FormatPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.out())
         // f.debug_struct("Format").field("input", &self.input).field("values", &self.values).finish()

@@ -27,7 +27,7 @@ use crate::{
 #[derive(Debug)]
 pub struct FnRetain {
     id: String,
-    name: Name,
+    // name: Name,
     tx_id: usize,
     kind: FnKind,
     enable: Option<FnInOutRef>,
@@ -56,7 +56,7 @@ impl FnRetain {
         path.push(parent.join().trim_start_matches('/'));
         Self {
             id: self_id.clone(),
-            name: parent.clone(),
+            // name: parent.clone(),
             tx_id: PointTxId::from_str(&self_id),
             kind: FnKind::Fn,
             enable,

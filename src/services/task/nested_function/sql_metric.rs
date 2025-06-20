@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use indexmap::IndexMap;
 use crate::{
     core_::{
-        format::format::Format,
+        format::FormatPoint,
         FnInOutRef,
     },
     services::task::{
@@ -42,7 +42,7 @@ pub struct SqlMetric {
     inputs: IndexMap<String, FnInOutRef>,
     // initial: f64,
     // table: String,
-    sql: Format,
+    sql: FormatPoint,
     sql_names: HashMap<String, (String, Option<String>)>,
 }
 //
@@ -78,7 +78,7 @@ impl SqlMetric {
             panic!("{}.new | Parameter 'sql' - missed", self_id)
         ).as_param();
         let sql = sql.conf.as_str().unwrap();
-        let mut sql = Format::new(&sql);
+        let mut sql = FormatPoint::new(&sql);
         sql.insert("id", id.clone().to_point(tx_id, ""));
         sql.insert("table", table.to_point(tx_id, ""));
         sql.prepare();

@@ -6,7 +6,7 @@ mod tests {
     use std::sync::Once;
     use regex::RegexBuilder;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::core_::format::format::Format;
+    use crate::core_::format::FormatPoint;
     ///
     ///
     static INIT: Once = Once::new();
@@ -37,7 +37,7 @@ mod tests {
             ("abc {a} xyz '{b}' rty \"{c}\" str \"{d}\".", (false, 12, 1.618, "1223"), "abc false xyz '12' rty \"1.618\" str \"1223\"."),
         ];
         for (input, values, target) in test_data {
-            let mut format = Format::new(input);
+            let mut format = FormatPoint::new(input);
             format.insert("a", values.0.to_point(0, ""));
             format.insert("b", values.1.to_point(0, ""));
             format.insert("c", values.2.to_point(0, ""));
@@ -61,7 +61,7 @@ mod tests {
             ("abc {a.value} xyz {b.name} rty {c.timestamp} str {c.id}.", (false, 02, 0.618, "1223"), r"abc false xyz  rty {c.timestamp} UTC str {c.id}."),
         ];
         for (input, values, target) in test_data {
-            let mut format = Format::new(input);
+            let mut format = FormatPoint::new(input);
             format.insert("a.value", values.0.to_point(0, ""));
             format.insert("b.name", values.1.to_point(0, ""));
             format.insert("c.timestamp", values.2.to_point(0, ""));
@@ -91,7 +91,7 @@ mod tests {
         log::info!("test_prepare");
         // let (initial, switches) = init_each();
 
-        let mut format = Format::new("abc {const} xyz '{b.name}' rty {c.value} str {c.timestamp}.");
+        let mut format = FormatPoint::new("abc {const} xyz '{b.name}' rty {c.value} str {c.timestamp}.");
         format.insert("const", 12345.to_point(0, ""));
         format.insert("b.name", "".to_point(0, "the.name"));
         log::trace!("format: {}", format);
