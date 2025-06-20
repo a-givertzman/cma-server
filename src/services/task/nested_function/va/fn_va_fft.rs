@@ -1,19 +1,21 @@
 use chrono::Utc;
 use concat_in_place::strcat;
 use derivative::Derivative;
+use egui::ahash::HashMapExt;
+use indexmap::IndexMap;
 use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
-use sal_sync::{services::{
+use sal_sync::{collections::FxHashMap, services::{
     entity::{
         Cot, Name,
         Point, PointConfig, PointConfigFilter, PointConfigType, PointHlr, PointTxId,
         Status,
-    }, task::functions::{FnConfKind, FnConfig}, types::Bool, LinkName, Services
+    }, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, types::Bool, LinkName, Services
 }, sync::channel::Sender};
-use std::{str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
+use std::{cell::RefCell, rc::Rc, str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
     core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::FormatPoint, FnInOutRef},
     services::task::nested_function::{
-        fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
+        fn_::{FnIn, FnInOut, FnOut}, fn_input::FnInput, fn_kind::FnKind, fn_result::FnResult, io::fn_retain::FnRetain
     }
 };
 use super::fft_buff::FftBuf;
@@ -56,15 +58,15 @@ use super::fft_buff::FftBuf;
 ///     send-to: /AppTest/MultiQueue.in-queue   # Send `Point` to the specified service.queue
 ///     format: UPDATE public.fft SET (id, timestamp, value) = ({{in.name}}, {{in.timestamp}}, {{in.value}});       # Convert Point to formated string, into SQL for example
 ///     filter: 
-///     conf point Fft:                 # Conf for Point's to be exported (by sent-to) full name will be: '/App/Task/Fft.freq', use '/' to have 'freq' only (`freq` will replaced by it's index if sampling freq is not specified)
-///         type: 'Real'                # Double / Real / Int
-///     input: point string /AppTest/Exit
-///     sampl-freq: 300000              # Sampling freq, optionally can be specified to have a name of point contains a freq instead of index in the sufix
-///     len: 30000                      # Length of the FFT sequence processing at a time, also defining number of frequencies returned from the FFT
-///     window: 512
-///     filter:                 # Filter conf, for each frequency to be filtered on fly
-///         threshold: 0.5      #   absolute threshold delta
-///         factor: 1.5         #   multiplier for absolute threshold delta - in this case the delta will be accumulated
+///     conf point Fft:                     # Conf for Point's to be exported (by sent-to) full name will be: '/App/Task/Fft.freq', use '/' to have 'freq' only (`freq` will replaced by it's index if sampling freq is not specified)
+///         type: 'Real'                    # Double / Real / Int
+///     input: point real /App/Sensor1      # Input signal of measured samples
+///     sampl-freq: 300000                  # Sampling freq, optionally can be specified to have a name of point contains a freq instead of index in the sufix
+///     len: 30000                          # Length of the FFT sequence processing at a time, also defining number of frequencies returned from the FFT
+///     window: 512                         # Not used for now, reserved for future
+///     filter:                             # Filter conf, for each frequency to be filtered on fly
+///         threshold: 0.5                  #   absolute threshold delta
+///         factor: 1.5                     #   multiplier for absolute threshold delta - in this case the delta will be accumulated
 /// ```
 /// 
 /// References
@@ -72,7 +74,7 @@ use super::fft_buff::FftBuf;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct FnVaFft {
-    tx_id: usize,
+    txid: usize,
     id: String,
     kind: FnKind,
     enable: Option<FnInOutRef>,
@@ -89,6 +91,8 @@ pub struct FnVaFft {
     #[derivative(Debug="ignore")]
     fft_buf: FftBuf,
     sampl_freq: Option<usize>,
+    /// Retain (name, input, out)
+    retain: FxHashMap<String, (FnInOutRef, FnRetain)>,
     /// FFT Freq (name, filter)
     filters: Vec<(String, Box<dyn Filter<Item = f64>>)>,
     tx_send: Option<Sender<Point>>,
@@ -103,7 +107,9 @@ impl FnVaFft {
     #[allow(unused)]
     pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef, conf: FnConfig, services: Arc<Services>) -> Self {
         let parent = parent.into();
-        let dbg = format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
+        let name = Name::new(&parent, format!("FnVaFft-{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+        let dbg = name.join();      //format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
+        let txid = PointTxId::from_str(&name.join());
         let fft_size = match conf.param("len") {
             Some(len) => len.as_param().conf.as_u64().unwrap() as usize,
             None => panic!("{}.new | Parameter 'len' - missed", dbg),
@@ -129,6 +135,7 @@ impl FnVaFft {
             Some(sampl_freq) => (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect(),
             None => (0..fft_size / 2).map(|i| format!("{i}") ).collect(),
         };
+        let mut retain = FxHashMap::new();
         let filters = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
                 Some(freq) => {
@@ -145,10 +152,26 @@ impl FnVaFft {
                 }
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
-            (freq_name, Self::build_filter(threshold_conf.clone()))
+            let retain_input = Self::retain_input(&dbg, txid, &freq_name);
+            let mut fn_retain = FnRetain::new(
+                &name,
+                format!("assets/testing/retain/"), enable.clone(),
+                false,
+                &freq_name,
+                None,
+                Some(retain_input.clone()),
+            );
+            let retained_val = match fn_retain.out() {
+                FnResult::Ok(val) => Some(val.as_double().value),
+                FnResult::None => None,
+                FnResult::Err(_) => None,
+            };
+            log::debug!("{}.new | Initial | {freq_name}: {:?}", dbg, retained_val);
+            retain.insert(freq_name.clone(), (retain_input, fn_retain));
+            (freq_name, Self::build_filter(threshold_conf.clone(), retained_val))
         }).collect();
         Self {
-            tx_id: PointTxId::from_str(&dbg),
+            txid,
             id: dbg,
             kind: FnKind::Fn,
             enable,
@@ -160,6 +183,7 @@ impl FnVaFft {
             amp_factor: fft_buf.amp_factor(),
             fft_buf,
             sampl_freq,
+            retain,
             filters,
             tx_send: send_to,
             format,
@@ -167,12 +191,28 @@ impl FnVaFft {
         }
     }
     ///
+    /// Rturns the input for retain
+    fn retain_input(parent: impl Into<String>, txid: usize, freq_name: &str) -> FnInOutRef {
+        Rc::new(RefCell::new(Box::new(
+            FnInput::new(
+                parent,
+                txid,
+                &mut FnConfig {
+                    name: freq_name.to_string(),
+                    inputs: IndexMap::new(),
+                    type_: FnConfPointType::Double,
+                    options: FnConfOptions::default(),
+                },
+            ),
+        )))
+    }
+    ///
     /// Returns Threshold (key filter)
-    fn build_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64>> {
+    fn build_filter(conf: Option<PointConfigFilter>, initial: Option<f64>) -> Box<dyn Filter<Item = f64>> {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<2, f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<2, f64>::new(initial, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
             None => Box::new(FilterEmpty::<2, f64>::new(None)),
@@ -310,18 +350,22 @@ impl FnVaFft {
                                         Some(format) => {
                                             // log::debug!("{}.out | fft.process format.names: {:#?}", self.id, format.names());
                                             let value = Point::Double(PointHlr::new(
-                                                    self.tx_id,
-                                                    freq_name,
-                                                    value,
-                                                    input.status(),
-                                                    input.cot(),
-                                                    input.timestamp(),
-                                                ));
+                                                self.txid,
+                                                freq_name,
+                                                value,
+                                                input.status(),
+                                                input.cot(),
+                                                input.timestamp(),
+                                            ));
+                                            if let Some((retain_in, retain)) = self.retain.get_mut(freq_name) {
+                                                retain_in.borrow_mut().add(&value);
+                                                retain.out();
+                                            }
                                             for (key, _) in format.names() {
                                                 format.insert(&key, value.clone());
                                             }
                                             Point::String(PointHlr::new(
-                                                self.tx_id,
+                                                self.txid,
                                                 freq_name,
                                                 format.out(),
                                                 input.status(),
@@ -331,7 +375,7 @@ impl FnVaFft {
                                         }
                                         None => {
                                             Point::Double(PointHlr::new(
-                                                self.tx_id,
+                                                self.txid,
                                                 freq_name,
                                                 value,
                                                 input.status(),
@@ -400,7 +444,7 @@ impl FnOut for FnVaFft {
         FnResult::Ok(match en_point {
             Some(point) => point,
             None => Point::Bool(PointHlr::new(
-                self.tx_id,
+                self.txid,
                 &self.id,
                 Bool(enable),
                 Status::Ok,

@@ -7,7 +7,8 @@ use super::{fn_kind::FnKind, fn_result::FnResult};
 pub trait FnIn: std::fmt::Debug {
     ///
     /// Adds new value into Input
-    fn add(&mut self, _point: &Point) {
+    fn add(&mut self, point: &Point) {
+        let _ = point;
         panic!("FnIn.add | don't use this method, used only for FnInput")
     }
     ///

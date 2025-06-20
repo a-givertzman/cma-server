@@ -47,7 +47,7 @@ impl FnRetain {
     /// - `path` something like "assets/retain/"
     /// - `name` - the name of the parent
     /// - `enable` - boolean (numeric) input enables the readinf/storing and pass through if true (> 0)
-    /// - `every`cycle] - if true read will done in every computing cycle, else read will done only once
+    /// - `every-cycle` - if true read will done in every computing cycle, else read will done only once
     /// - `key` - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
     /// - `input` - incoming Point's
     pub fn new(parent: &Name, path: impl AsRef<Path>, enable: Option<FnInOutRef>, every_cycle: bool, key: &str, default: Option<FnInOutRef>, input: Option<FnInOutRef>) -> Self {
