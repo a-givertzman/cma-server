@@ -11,6 +11,7 @@ use crate::{
 };
 ///
 /// Function | Used for store input Point value to the local disk
+///  - First store input, then returns loaded,
 ///  - Point will be read from disk if:
 ///     - if enable is true or >0 (if not specified - default true)
 ///     - if retain file already exists
