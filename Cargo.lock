@@ -3668,7 +3668,7 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 [[package]]
 name = "sal-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/rust-sal-core.git?tag=0.1.0#d1344384aff1ac852ca8cc009085c69bf3b3582a"
+source = "git+https://github.com/a-givertzman/rust-sal-core.git?tag=0.1.0#68c6c8276b49d7b3baabfd55258cb3725f4ebbc0"
 dependencies = [
  "bincode",
  "debugging",
@@ -3681,7 +3681,7 @@ dependencies = [
 [[package]]
 name = "sal-core-macros"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/rust-sal-core.git?tag=0.1.0#d1344384aff1ac852ca8cc009085c69bf3b3582a"
+source = "git+https://github.com/a-givertzman/rust-sal-core.git?tag=0.1.0#68c6c8276b49d7b3baabfd55258cb3725f4ebbc0"
 dependencies = [
  "proc-macro2",
  "quote",

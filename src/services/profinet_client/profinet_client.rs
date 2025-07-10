@@ -5,7 +5,7 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_core::{dbg::Dbg, error::Error};
+use sal_core::{dbg::Dbg, error::{Error, ErrorLimit}};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ChangeNotify,
     services::{
@@ -18,7 +18,7 @@ use sal_sync::{
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
     core_::{
-        constants::constants::RECV_TIMEOUT, failure::ErrorLimit, Mutex,
+        constants::constants::RECV_TIMEOUT, Mutex,
     },
     services::{
         diagnosis::diag_point::DiagPoint,

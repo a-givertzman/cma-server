@@ -4,7 +4,7 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_core::error::Error;
+use sal_core::error::{Error, ErrorLimit};
 use sal_sync::{
     collections::FxIndexMap,
     kernel::state::{ChangeNotify, ExitNotify},
@@ -12,7 +12,7 @@ use sal_sync::{
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::{failure::ErrorLimit, Mutex},
+    core_::Mutex,
     services::slmp_client::slmp_db::SlmpDb
 };
 ///

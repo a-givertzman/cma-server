@@ -7,16 +7,13 @@
 //!     parameter: value    # meaning
 //! ```
 use std::{net::UdpSocket, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
-use sal_core::{dbg::Dbg, error::Error};
+use sal_core::{dbg::Dbg, error::{Error, ErrorLimit}};
 use sal_sync::{
     kernel::state::ChangeNotify,
     services::{entity::{Name, Object, Point},
     Service, ServiceCycle, Services}, sync::{channel::Sender, Handles}
 };
-use crate::{
-    // conf::tcp_server_config::MockUdpServerConfig,
-    core_::failure::ErrorLimit, services::udp_client::udp_client::UdpClient 
-};
+use crate::services::udp_client::udp_client::UdpClient;
 ///
 /// 
 #[derive(Clone)]

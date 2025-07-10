@@ -31,14 +31,14 @@
 use std::{hash::BuildHasherDefault, net::{SocketAddr, UdpSocket}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_core::{dbg::Dbg, error::Error};
+use sal_core::{dbg::Dbg, error::{Error, ErrorLimit}};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::{ChangeNotify, Switch, SwitchCondition, SwitchState},
     services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services}, sync::Handles, thread_pool::Scheduler,
 };
 use crate::{
     conf::udp_client_config::udp_client_config::UdpClientConfig,
-    core_::{failure::ErrorLimit, RwLock},
+    core_::RwLock,
 };
 use super::udp_client_db::UdpClientDb;
 ///
