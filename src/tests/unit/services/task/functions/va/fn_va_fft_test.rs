@@ -2,7 +2,7 @@
 
 use core::f64;
 use std::{cell::RefCell, f64::consts::PI, rc::Rc, sync::{Arc, Once}, thread, time::{Duration, Instant}};
-use concat_in_place::strcat;
+use concat_string::concat_string;
 use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::{math::AproxEq, services::{
     conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfigFilter, PointTxId, ToPoint}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, Service, Services
@@ -113,7 +113,7 @@ fn empty_filter() {
         let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect();
         let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
-                Some(freq) => strcat!(dbg export_point_name "." freq),
+                Some(freq) => concat_string!(dbg, export_point_name, ".", freq),
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
             (freq_name, filter(None))
@@ -303,7 +303,7 @@ fn absolute_filter() {
         let fft_freqs: Vec<String> = (0..fft_size / 2).map(|i| format!("{:?}", fft_buf.freq_of(sampl_freq, i)) ).collect();
         let mut fft_filters: Vec<(String, Box<dyn Filter<Item = f64>>)> = (0..fft_size / 2).map(|i| {
             let freq_name = match fft_freqs.get(i) {
-                Some(freq) => strcat!(dbg export_point_name "." freq),
+                Some(freq) => concat_string!(dbg, export_point_name, ".", freq),
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
             (freq_name, filter(Some(PointConfigFilter { threshold: threshold, factor: None })))

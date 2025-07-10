@@ -1,5 +1,5 @@
 use chrono::Utc;
-use concat_in_place::strcat;
+use concat_string::concat_string;
 use derivative::Derivative;
 use egui::ahash::HashMapExt;
 use indexmap::IndexMap;
@@ -143,12 +143,12 @@ impl FnVaFft {
                     match &point_conf.name.split('/').last() {
                         Some(name) => {
                             if name.is_empty() {
-                                strcat!(freq)
+                                freq.to_owned()
                             } else {
-                                strcat!(name "-" freq)
+                                concat_string!(name, "-", freq)
                             }
                         }
-                        None => strcat!(freq)
+                        None => freq.to_owned()
                     }
                 }
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
