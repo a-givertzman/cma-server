@@ -35,12 +35,7 @@ pub struct FrdmServiceConf {
     pub(crate) rope_width: ConfDistance,
     pub(crate) rope_length: PointConfig,
     pub(crate) camera: CameraConf,
-
-    pub(crate) rx: String,
-    pub(crate) rx_max_length: i64,
     pub(crate) subscribe: ConfSubscribe,
-    pub(crate) nodes: IndexMap<String, FnConfKind>,
-    pub(crate) vars: Vec<String>,
 }
 //
 // 
@@ -56,6 +51,8 @@ impl FrdmServiceConf {
         log::debug!("{}.new | name: {:?}", dbg, name);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
+        let rope_width = conf.get_distance("rope-width").unwrap();
+        log::debug!("{}.new | rope-width: {:?}", dbg, cycle);
         let (rx, rx_max_length) = conf.get_in_queue().unwrap();
         log::debug!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_length);
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
@@ -76,11 +73,10 @@ impl FrdmServiceConf {
         FrdmServiceConf {
             name,
             cycle,
-            rx,
-            rx_max_length,
+            rope_width,
+            rope_length,
+            camera,
             subscribe,
-            nodes,
-            vars,
         }
     }
     ///
