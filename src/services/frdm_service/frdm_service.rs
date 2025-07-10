@@ -15,6 +15,7 @@
 //! ```
 //! 
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use frdm_tools::{camera::{Camera, CameraConf}, conf::{FastScanConf, FineScanConf}, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
@@ -110,16 +111,60 @@ impl Service for FrdmService {
             let send = services
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-            let mut reconnect = ServiceCycle::new(dbg, conf.reconnect);
-            'main: loop {
+            let conf = serde_yaml::from_str(r"
+                service Camera Camera1:
+                    fps: Max                    # Max / Min / 30.0
+                    resolution: 
+                        width: 1200
+                        height: 800
+                    index: 0
+                    # address: 192.168.10.12:2020
+                    # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
+                    # pixel-format:  Mono8
+                    # pixel-format:  BayerRG8
+                    # pixel-format:  QOI_Mono8
+                    pixel-format:  QOI_BayerRG8
+                    exposure:
+                        auto: Off                   # Off / Continuous
+                        time: 26000                   # microseconds
+                    auto-packet-size: true          # StreamAutoNegotiatePacketSize
+                    channel-packet-size: Max        # Maximizing packet size increases frame rate
+                    resend-packet: true             # StreamPacketResendEnable
+            ").unwrap();
+            let conf = CameraConf::from_yaml(dbg, &conf);
+            let mut camera = Camera::new(conf);
+            let camera_stream = camera.stream();
+            let handle = camera.read().unwrap();
+            let conf = frdm_tools::conf::Conf {
+                fast_scan: FastScanConf {
+                    geometry_defect_threshold: frdm_tools::Threshold::min(),
+                },
+                fine_scan: FineScanConf {},
+            };
+            
+            for frame in camera_stream {
+                let result = GeometryDefect::new(
+                    conf.fast_scan.geometry_defect_threshold,
+                    *Box::new(Mad::new()),
+                    EdgeDetection::new(
+                        DetectingContoursCv::new(
+                            Initial::new(
+                                InitialCtx::new(frame),
+                            ),
+                        ),
+                    ),
+                )
+                .eval(());
+                _ = result;
                 if exit.load(Ordering::SeqCst) {
-                    break 'main;
+                    break;
                 }
-                reconnect.wait();
                 if exit.load(Ordering::SeqCst) {
-                    break 'main;
+                    break;
                 }
             }
+            // 'main: loop {
+            // }
             Ok(())
         });
         match handle {

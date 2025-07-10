@@ -65,12 +65,13 @@ impl ApiClient {
     }
     ///
     /// Writing sql string to the TcpStream
-    fn send(dbg: &Dbg, request: &mut ApiRequest, database: &str, sql: String, keep_alive: bool) -> Result<ApiReply, String> {
+    fn send(dbg: &Dbg, request: &mut ApiRequest, database: &str, sql: String, keep_alive: bool) -> Result<ApiReply, Error> {
+        let error = Error::new(dbg, "send");
         let query = ApiQuery::new(
             ApiQueryKind::Sql(ApiQuerySql::new(database, sql)),
             true,
         );
-        match request.fetch(&query, keep_alive) {
+        match request.fetch_with(&query, keep_alive) {
             Ok(reply) => {
                 if log::max_level() > log::LevelFilter::Info {
                     let reply_str = std::str::from_utf8(&reply).unwrap();
@@ -83,16 +84,12 @@ impl ApiClient {
                             Ok(reply) => reply.to_string(),
                             Err(err) => concat_string!(dbg, ".send | Error parsing reply to utf8 string: ", err.to_string()),
                         };
-                        let message = concat_string!(dbg, ".send | Error parsing API reply: {:?} \n\t reply was: {:?}", err.to_string(), reply);
-                        log::warn!("{}", message);
-                        Err(message)
+                        Err(error.pass_with(format!("Error parsing API reply: {:?}", reply), err.to_string()))
                     }
                 }
             }
             Err(err) => {
-                let message = concat_string!(dbg, ".send | Error sending API request: {:?}", err);
-                log::warn!("{}", message);
-                Err(message)
+                Err(error.pass_with("Error sending API request", err))
             }
         }
     }
