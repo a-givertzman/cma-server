@@ -49,7 +49,7 @@ coco = "~0.3"
 #
 # Collections
 linked-hash-map = "~0.5"
-indexmap = "~2.9"
+indexmap = "~2.10"
 hashers = "~1.0"
 circular-buffer = "~1.1"
 
