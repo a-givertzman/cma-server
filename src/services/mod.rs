@@ -13,6 +13,7 @@ pub mod app;
 pub mod api_cient;
 pub mod cache;
 pub mod diagnosis;
+mod frdm_service;
 pub mod history;
 pub mod profinet_client;
 pub mod server;
@@ -20,3 +21,5 @@ pub mod slmp_client;
 pub mod task;
 pub mod tcp_client;
 pub mod udp_client;
+
+pub use frdm_service::*;
