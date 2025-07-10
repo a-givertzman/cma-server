@@ -14,6 +14,8 @@
 //!     ...
 //! ```
 //! 
+mod frdm_service_conf;
 mod frdm_service;
 
+pub use frdm_service_conf::*;
 pub use frdm_service::*;
