@@ -1,5 +1,6 @@
+use frdm_tools::camera::CameraConf;
 use indexmap::IndexMap;
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, ConfSubscribe, task::functions::{FnConfKind, FnConfig}};
+use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::{FnConfKind, FnConfig}, ConfSubscribe};
 use std::{fs, time::Duration};
 ///
 /// Config for FrdmService format:
@@ -7,7 +8,7 @@ use std::{fs, time::Duration};
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     rope-width: 35 mm
-///     rope-length: point real '/path/Point.Name'
+///     rope-length: point real '/path/Point.Name'      # in meters
 ///     camera:
 ///         fps: Max                    # Max / Min / 30.0
 ///         resolution: 
@@ -31,6 +32,10 @@ use std::{fs, time::Duration};
 pub struct FrdmServiceConf {
     pub(crate) name: Name,
     pub(crate) cycle: Option<Duration>,
+    pub(crate) rope_width: ConfDistance,
+    pub(crate) rope_length: PointConfig,
+    pub(crate) camera: CameraConf,
+
     pub(crate) rx: String,
     pub(crate) rx_max_length: i64,
     pub(crate) subscribe: ConfSubscribe,
@@ -47,8 +52,8 @@ impl FrdmServiceConf {
         let me = conf.sufix_or(conf.name().unwrap());
         let dbg = format!("FrdmServiceConf({})", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
-        let self_name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, self_name);
+        let name = Name::new(parent, me);
+        log::debug!("{}.new | name: {:?}", dbg, name);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let (rx, rx_max_length) = conf.get_in_queue().unwrap();
@@ -62,14 +67,14 @@ impl FrdmServiceConf {
             let node_conf = conf.get(key).unwrap();
             log::trace!("{}.new | nodeConf: {:?}", dbg, node_conf);
             node_index += 1;
-            let node_conf = FnConfig::new(&self_name.join(), &self_name, &node_conf, &mut vars);
+            let node_conf = FnConfig::new(&name.join(), &name, &node_conf, &mut vars);
             nodes.insert(
                 format!("{}-{}", node_conf.name(), node_index),
                 node_conf,
             );
         }
         FrdmServiceConf {
-            name: self_name,
+            name,
             cycle,
             rx,
             rx_max_length,
