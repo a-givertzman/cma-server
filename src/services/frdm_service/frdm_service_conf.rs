@@ -41,23 +41,7 @@ pub struct FrdmServiceConf {
 // 
 impl FrdmServiceConf {
     ///
-    /// creates config from serde_yaml::Value of following format:
-    /// ```yaml
-    /// task taskName:
-    ///     cycle: 100 ms
-    ///     in queue recv-queue:
-    ///         max-length: 10000
-    ///     fn sqlUpdateMetric:
-    ///         table: "TableName"
-    ///         sql: "UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';"
-    ///         initial: 123.456
-    ///         inputs:
-    ///             input1:
-    ///                 fn functionName:
-    ///                     ...
-    ///             input2:
-    ///                 fn SqlMetric:
-    ///                     ...
+    /// Returns [FrdmServiceConf] built from `ConfTree`:
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> FrdmServiceConf {
         let mut vars = vec![];
         let me = conf.sufix_or(conf.name().unwrap());
