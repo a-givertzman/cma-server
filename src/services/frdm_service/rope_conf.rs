@@ -24,7 +24,7 @@ pub struct RopeConf {
 impl RopeConf {
     ///
     /// Returns [RopeConf] built from `ConfTree`:
-    pub fn new(parent: impl Into<String>, conf: ConfTree) -> RopeConf {
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
         let me = conf.sufix_or(conf.name().unwrap());
         let dbg = format!("RopeConf({})", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);

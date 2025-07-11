@@ -2,7 +2,7 @@ use frdm_tools::camera::CameraConf;
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, ConfSubscribe};
 use std::{fs, time::Duration};
 
-use crate::services::RopeConf;
+use crate::services::{BendingsConf, RopeConf};
 ///
 /// Config for FrdmService format:
 /// ```yaml
@@ -37,6 +37,7 @@ pub struct FrdmServiceConf {
     pub name: Name,
     pub cycle: Option<Duration>,
     pub rope: RopeConf,
+    pub bendings: BendingsConf,
     pub camera: CameraConf,
     pub subscribe: ConfSubscribe,
 }
@@ -56,7 +57,11 @@ impl FrdmServiceConf {
 
         let rope = conf.get("rope").unwrap();
         let rope = RopeConf::new(&name, rope);
-        log::debug!("{dbg}.new | rope-width: {:?}", rope);
+        log::debug!("{dbg}.new | rope: {:?}", rope);
+
+        let bendings = conf.get("bendings").unwrap();
+        let bendings = BendingsConf::new(&name, rope);
+        log::debug!("{dbg}.new | bendings: {:?}", rope);
 
         let (_, rope_length) = conf.get_by_keywd("rope-length", "point").unwrap();
         let rope_length = PointConfig::new(name, &rope_length);
@@ -75,6 +80,7 @@ impl FrdmServiceConf {
             name,
             cycle,
             rope,
+            bendings,
             camera,
             subscribe,
         }
