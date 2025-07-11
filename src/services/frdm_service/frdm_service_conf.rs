@@ -1,15 +1,18 @@
 use frdm_tools::camera::CameraConf;
-use indexmap::IndexMap;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::{FnConfKind, FnConfig}, ConfSubscribe};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, ConfSubscribe};
 use std::{fs, time::Duration};
+
+use crate::services::RopeConf;
 ///
 /// Config for FrdmService format:
 /// ```yaml
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
-///     rope-width: 35 mm
-///     rope-length: point real 'App/Winch.EncoderBR2'      # in meters
-///     rope-load: point real '/App/Winch.Load'             # in tonn
+///     rope:
+///         width: 35 mm
+///         length: point real 'App/Winch.EncoderBR2'      # in meters
+///         load: point real '/App/Winch.Load'             # in tonn
+///         segment: 100 mm
 ///     camera:
 ///         fps: Max                    # Max / Min / 30.0
 ///         resolution: 
@@ -31,12 +34,11 @@ use std::{fs, time::Duration};
 ///                         ...
 #[derive(Debug, PartialEq, Clone)]
 pub struct FrdmServiceConf {
-    pub(crate) name: Name,
-    pub(crate) cycle: Option<Duration>,
-    pub(crate) rope_width: ConfDistance,
-    pub(crate) rope_length: PointConfig,
-    pub(crate) camera: CameraConf,
-    pub(crate) subscribe: ConfSubscribe,
+    pub name: Name,
+    pub cycle: Option<Duration>,
+    pub rope: RopeConf,
+    pub camera: CameraConf,
+    pub subscribe: ConfSubscribe,
 }
 //
 // 
@@ -44,7 +46,6 @@ impl FrdmServiceConf {
     ///
     /// Returns [FrdmServiceConf] built from `ConfTree`:
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> FrdmServiceConf {
-        let mut vars = vec![];
         let me = conf.sufix_or(conf.name().unwrap());
         let dbg = format!("FrdmServiceConf({})", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
@@ -53,8 +54,9 @@ impl FrdmServiceConf {
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
 
-        let rope_width = conf.get_distance("rope-width").unwrap();
-        log::debug!("{dbg}.new | rope-width: {:?}", rope_width);
+        let rope = conf.get("rope").unwrap();
+        let rope = RopeConf::new(&name, rope);
+        log::debug!("{dbg}.new | rope-width: {:?}", rope);
 
         let (_, rope_length) = conf.get_by_keywd("rope-length", "point").unwrap();
         let rope_length = PointConfig::new(name, &rope_length);
@@ -72,8 +74,7 @@ impl FrdmServiceConf {
         FrdmServiceConf {
             name,
             cycle,
-            rope_width,
-            rope_length,
+            rope,
             camera,
             subscribe,
         }
@@ -109,13 +110,5 @@ impl FrdmServiceConf {
                 panic!("FrdmServiceConf.read | File {} reading error: {:?}", path, err)
             }
         }
-    }
-    ///
-    /// Returns list of configurations of the defined points
-    pub fn points(&self) -> Vec<PointConfig> {
-        self.nodes.iter().fold(vec![], |mut points, (_node_name,node_conf)| {
-            points.extend(node_conf.points());
-            points
-        })
     }
 }
