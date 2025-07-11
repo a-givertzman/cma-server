@@ -8,7 +8,8 @@ use std::{fs, time::Duration};
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     rope-width: 35 mm
-///     rope-length: point real '/path/Point.Name'      # in meters
+///     rope-length: point real 'App/Winch.EncoderBR2'      # in meters
+///     rope-load: point real '/App/Winch.Load'             # in tonn
 ///     camera:
 ///         fps: Max                    # Max / Min / 30.0
 ///         resolution: 
@@ -51,25 +52,23 @@ impl FrdmServiceConf {
         log::debug!("{}.new | name: {:?}", dbg, name);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
+
         let rope_width = conf.get_distance("rope-width").unwrap();
-        log::debug!("{}.new | rope-width: {:?}", dbg, cycle);
-        let (rx, rx_max_length) = conf.get_in_queue().unwrap();
-        log::debug!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_length);
+        log::debug!("{dbg}.new | rope-width: {:?}", rope_width);
+
+        let (_, rope_length) = conf.get_by_keywd("rope-length", "point").unwrap();
+        let rope_length = PointConfig::new(name, &rope_length);
+        log::debug!("{dbg}.new | rope_length: {:?}", rope_length);
+
+        let camera: ConfTree = conf.get("camera").unwrap();
+        let camera = CameraConf::new(name, &camera);
+        log::debug!("{dbg}.new | camera: {:?}", camera);
+
+
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
         let subscribe = ConfSubscribe::new(subscribe);
         log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
-        let mut node_index = 0;
-        let mut nodes = IndexMap::new();
-        for key in conf.keys(&["cycle", "subscribe", format!("in queue {}", rx).as_str()]) {
-            let node_conf = conf.get(key).unwrap();
-            log::trace!("{}.new | nodeConf: {:?}", dbg, node_conf);
-            node_index += 1;
-            let node_conf = FnConfig::new(&name.join(), &name, &node_conf, &mut vars);
-            nodes.insert(
-                format!("{}-{}", node_conf.name(), node_index),
-                node_conf,
-            );
-        }
+
         FrdmServiceConf {
             name,
             cycle,
