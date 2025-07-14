@@ -42,7 +42,7 @@ impl RopeConf {
         log::debug!("{dbg}.new | pos: {}: {}", pos.name(), Self::type_(&pos));
         let load = conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap();
         log::debug!("{dbg}.new | load: {}: {}", load.name(), Self::type_(&load));
-        RopeConf {
+        Self {
             width,
             length,
             segment,

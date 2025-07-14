@@ -33,7 +33,7 @@ pub struct FrdmService {
     conf: FrdmServiceConf,
     services: Arc<Services>,
     scheduler: Scheduler,
-    handles: Handles<()>,
+    handles: Arc<Handles<()>>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
@@ -51,7 +51,7 @@ impl FrdmService {
             conf: conf.clone(),
             services,
             scheduler,
-            handles: Handles::new(&dbg),
+            handles: Arc::new(Handles::new(&dbg)),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
@@ -97,6 +97,7 @@ impl Service for FrdmService {
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let services = self.services.clone();
+        let handles_clone = self.handles.clone();
         log::debug!("{}.run | Preparing thread...", dbg);
         *SELF_ID.write() = dbg.clone();
         let handle = self.scheduler.spawn(move || {
@@ -113,13 +114,7 @@ impl Service for FrdmService {
             let mut camera = Camera::new(conf.camera);
             let camera_stream = camera.stream();
             let handle = camera.read().unwrap();
-            let conf = frdm_tools::conf::Conf {
-                fast_scan: FastScanConf {
-                    geometry_defect_threshold: frdm_tools::Threshold::min(),
-                },
-                fine_scan: FineScanConf {},
-            };
-            
+            handles_clone.push(handle);            
             for frame in camera_stream {
                 let result = GeometryDefect::new(
                     conf.fast_scan.geometry_defect_threshold,
@@ -134,10 +129,8 @@ impl Service for FrdmService {
                 )
                 .eval(());
                 _ = result;
-                if exit.load(Ordering::SeqCst) {
-                    break;
-                }
-                if exit.load(Ordering::SeqCst) {
+                if exit.load(Ordering::Acquire) {
+                    camera.exit();
                     break;
                 }
             }
@@ -171,6 +164,6 @@ impl Service for FrdmService {
     //
     //
     fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
+        self.exit.store(true, Ordering::Release);
     }    
 }

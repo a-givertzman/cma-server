@@ -103,7 +103,7 @@ impl Service for MockRecvService {
                         if received_count >= recv_limit {
                             break;
                         }
-                        if exit.load(Ordering::SeqCst) {
+                        if exit.load(Ordering::Acquire) {
                             break;
                         }
                     }
@@ -117,7 +117,7 @@ impl Service for MockRecvService {
                             }
                             Err(_) => {}
                         };
-                        if exit.load(Ordering::SeqCst) {
+                        if exit.load(Ordering::Acquire) {
                             break;
                         }
                     }
@@ -150,6 +150,6 @@ impl Service for MockRecvService {
     //
     //
     fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
+        self.exit.store(true, Ordering::Release);
     }
 }

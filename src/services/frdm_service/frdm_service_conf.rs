@@ -1,8 +1,8 @@
-use frdm_tools::camera::CameraConf;
+use frdm_tools::{camera::CameraConf, conf::FastScanConf};
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, ConfSubscribe, LinkName};
 use std::{fs, str::FromStr, time::Duration};
-
 use crate::services::{BendingsConf, RopeConf};
+
 ///
 /// Config for FrdmService format:
 /// ```yaml
@@ -15,6 +15,10 @@ use crate::services::{BendingsConf, RopeConf};
 ///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
 ///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
 ///         load: point real '/App/Winch.Load'          # tonn, current rope load 
+///     fast-scan:
+///         geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
+///     fine-scan:
+///         no-params: not implemented yet
 ///     camera:
 ///         fps: Max                    # Max / Min / 30.0
 ///         resolution: 
@@ -41,8 +45,9 @@ pub struct FrdmServiceConf {
     pub cycle: Option<Duration>,
     pub rope: RopeConf,
     pub bendings: BendingsConf,
+    pub fast_scan: FastScanConf,
     pub camera: CameraConf,
-    pub subscribe: ConfSubscribe,
+    // pub subscribe: ConfSubscribe,
 }
 //
 // 
@@ -69,17 +74,21 @@ impl FrdmServiceConf {
         let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
         let camera = CameraConf::new(&name, &camera);
         log::debug!("{dbg}.new | camera: {:?}", camera);
-        let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
-        let subscribe = ConfSubscribe::new(subscribe);
-        log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
+        let fast_scan: ConfTree = conf.get("fast-scan").expect(&format!("{dbg}.new | 'fast-scan' - not found or wrong configuration"));
+        let fast_scan = FastScanConf::new(&name, fast_scan);
+        log::debug!("{dbg}.new | fast-scan: {:?}", fast_scan);
+        // let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
+        // let subscribe = ConfSubscribe::new(subscribe);
+        // log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
         FrdmServiceConf {
             name,
             send_to,
             cycle,
             rope,
             bendings,
+            fast_scan,
             camera,
-            subscribe,
+            // subscribe,
         }
     }
     ///

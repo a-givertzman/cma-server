@@ -75,7 +75,7 @@ fn run() {
         &serde_yaml::from_str(&format!(r"
             service FrdmService:
                 cycle: 100 ms
-                send-to: /{dbg}/MockRecvService.in-queue
+                send-to: /{dbg}/MockRecvService0.in-queue
                 rope:
                     width: 35 mm        # Diameter of the rome
                     length: 3000 m      # Total working length of the rope
@@ -86,6 +86,9 @@ fn run() {
                     - 2.4..2.5 m
                     - 2.7..2.9 m
                     - 3.1..3.2 m
+                fast-scan:
+                    geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
+
                 camera:
                     fps: Max                    # Max / Min / 30.0
                     resolution: 
@@ -100,7 +103,7 @@ fn run() {
                     pixel-format:  QOI_BayerRG8
                     exposure:
                         auto: Off                   # Off / Continuous
-                        time: 26000                   # microseconds
+                        time: 26000                 # microseconds
                     auto-packet-size: true          # StreamAutoNegotiatePacketSize
                     channel-packet-size: Max        # Maximizing packet size increases frame rate
                     resend-packet: true             # StreamPacketResendEnable
