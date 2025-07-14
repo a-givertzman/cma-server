@@ -1,6 +1,6 @@
 #[cfg(test)]
 
-use std::{sync::Once, time::{Duration, Instant}};
+use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
@@ -24,12 +24,12 @@ fn init_each() -> () {}
 ///
 /// Testing such functionality / behavior
 #[test]
-fn functionality() {
+fn new() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = Dbg::own("functionality");
+    let dbg = Dbg::own("new");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();

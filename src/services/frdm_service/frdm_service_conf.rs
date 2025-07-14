@@ -1,5 +1,5 @@
 use frdm_tools::camera::CameraConf;
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, ConfSubscribe};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, ConfSubscribe};
 use std::{fs, time::Duration};
 
 use crate::services::{BendingsConf, RopeConf};
@@ -9,10 +9,11 @@ use crate::services::{BendingsConf, RopeConf};
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     rope:
-///         width: 35 mm
-///         length: point real 'App/Winch.EncoderBR2'      # in meters
-///         load: point real '/App/Winch.Load'             # in tonn
-///         segment: 100 mm
+///         width: 35 mm        # Diameter of the rome
+///         length: 3000 m      # Total working length of the rope
+///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
+///         load: point real '/App/Winch.Load'          # tonn, current rope load 
 ///     camera:
 ///         fps: Max                    # Max / Min / 30.0
 ///         resolution: 
@@ -64,7 +65,7 @@ impl FrdmServiceConf {
         log::debug!("{dbg}.new | bendings: {:?}", rope);
 
         let (_, rope_length) = conf.get_by_keywd("rope-length", "point").unwrap();
-        let rope_length = PointConfig::new(&name, &rope_length);
+        let rope_length = PointConf::new(&name, &rope_length);
         log::debug!("{dbg}.new | rope_length: {:?}", rope_length);
 
         let camera: ConfTree = conf.get("camera").unwrap();
