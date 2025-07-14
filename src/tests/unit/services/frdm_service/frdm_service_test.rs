@@ -88,7 +88,8 @@ fn run() {
                     - 3.1..3.2 m
                 fast-scan:
                     geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
-
+                fine-scan:
+                    no-params: not implemented yet
                 camera:
                     fps: Max                    # Max / Min / 30.0
                     resolution: 

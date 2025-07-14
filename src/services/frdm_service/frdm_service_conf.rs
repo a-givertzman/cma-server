@@ -1,5 +1,5 @@
 use frdm_tools::{camera::CameraConf, conf::FastScanConf};
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, ConfSubscribe, LinkName};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use std::{fs, str::FromStr, time::Duration};
 use crate::services::{BendingsConf, RopeConf};
 
@@ -70,10 +70,10 @@ impl FrdmServiceConf {
         log::trace!("{dbg}.new | rope: {:?}", rope);
         let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong configuration"));
         let bendings = BendingsConf::new(&name, bendings);
-        log::debug!("{dbg}.new | bendings: {:?}", bendings);
+        log::debug!("{dbg}.new | bendings: {:#?}", bendings);
         let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
         let camera = CameraConf::new(&name, &camera);
-        log::debug!("{dbg}.new | camera: {:?}", camera);
+        log::debug!("{dbg}.new | camera: {:#?}", camera);
         let fast_scan: ConfTree = conf.get("fast-scan").expect(&format!("{dbg}.new | 'fast-scan' - not found or wrong configuration"));
         let fast_scan = FastScanConf::new(&name, fast_scan);
         log::debug!("{dbg}.new | fast-scan: {:?}", fast_scan);

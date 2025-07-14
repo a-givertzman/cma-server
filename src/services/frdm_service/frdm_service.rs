@@ -112,23 +112,32 @@ impl Service for FrdmService {
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
             let mut camera = Camera::new(conf.camera);
-            let camera_stream = camera.stream();
-            let handle = camera.read().unwrap();
-            handles_clone.push(handle);            
-            for frame in camera_stream {
-                let result = GeometryDefect::new(
-                    conf.fast_scan.geometry_defect_threshold,
-                    *Box::new(Mad::new()),
-                    EdgeDetection::new(
-                        DetectingContoursCv::new(
-                            Initial::new(
-                                InitialCtx::new(frame),
-                            ),
+            let mut camera_stream = camera.stream();
+            let mut timestamp = 0;
+            let defect = GeometryDefect::new(
+                conf.fast_scan.geometry_defect_threshold,
+                *Box::new(Mad::new()),
+                EdgeDetection::new(
+                    DetectingContoursCv::new(
+                        Initial::new(
+                            InitialCtx::new(),
                         ),
                     ),
-                )
-                .eval(());
-                _ = result;
+                ),
+            );
+            loop {
+                let handle = camera.read().unwrap();
+                handles_clone.push(handle);
+                for frame in &mut camera_stream {
+                    timestamp = frame.timestamp;
+                    let result = defect.eval(frame);
+                    _ = result;
+                    if exit.load(Ordering::Acquire) {
+                        camera.exit();
+                        break;
+                    }
+                }
+                camera.exit();
                 if exit.load(Ordering::Acquire) {
                     camera.exit();
                     break;

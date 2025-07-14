@@ -25,10 +25,8 @@ impl BendingsConf {
         let parent = parent.into();
         let me = "RopeConf";
         let dbg = Dbg::new(&parent, me);
-        log::debug!("{dbg}.new | conf: {:?}", conf);
+        log::trace!("{dbg}.new | conf: {:?}", conf);
         let bend_re = Regex::new(r"^([-+]?\d[\d]*\.?[\d]+)[ \t]*\.\.[ \t]*([-+]?\d[\d]*\.?[\d]+)[ \t]*(nm|um|cm|mm|m|km|in)$").unwrap();
-        // let bendings: serde_yaml::Value = conf.get("bendings").unwrap();
-        // let bendings = bendings.as_sequence().expect(&format!("{dbg}.new | Wrong bending: {:?}, Expected list of items: string: start..end unit (0.5..0.8 m)", bendings));
         let bendings = conf.iter().filter_map(|bend| {
             match bend.as_str() {
                 Some(bend) => {
@@ -47,7 +45,7 @@ impl BendingsConf {
                 None => panic!("{dbg}.new | Wrong bending: {:?}, Expected string: start..end unit (0.5..0.8 m)", bend),
             }
         }).collect();
-        log::debug!("{dbg}.new | bendings: {:?}", bendings);
+        log::trace!("{dbg}.new | bendings: {:?}", bendings);
         Self {
             bendings,
         }
