@@ -83,9 +83,9 @@ fn run() {
                     pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
                     load: point real '/App/Winch.Load'          # tonn, current rope load
                 bendings:
-                    - 2.4..2.5
-                    - 2.7..2.9
-                    - 3.1..3.2
+                    - 2.4..2.5 m
+                    - 2.7..2.9 m
+                    - 3.1..3.2 m
                 camera:
                     fps: Max                    # Max / Min / 30.0
                     resolution: 
