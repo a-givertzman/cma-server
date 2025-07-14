@@ -1,10 +1,10 @@
 use chrono::Utc;
-use sal_sync::services::entity::{Cot, PointHlr, Point, PointConfig, Status};
+use sal_sync::services::entity::{Cot, PointHlr, Point, PointConf, Status};
 ///
 /// Provides the state for diagnosis Point's
 pub struct DiagPoint {
     tx_id: usize,
-    conf: PointConfig,
+    conf: PointConf,
     value: Status,
 }
 //
@@ -12,7 +12,7 @@ pub struct DiagPoint {
 impl DiagPoint {
     ///
     /// Creates new instance of the DiagPoint
-    pub fn new(tx_id: usize, conf: PointConfig) -> Self {
+    pub fn new(tx_id: usize, conf: PointConf) -> Self {
         Self {
             tx_id,
             conf,

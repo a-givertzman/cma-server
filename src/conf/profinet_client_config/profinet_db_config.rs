@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::{FnConfKeywd, FnConfKindName}};
 use std::str::FromStr;
 ///
 /// 
@@ -9,7 +9,7 @@ pub struct ProfinetDbConfig {
     pub(crate) number: u64,
     pub(crate) offset: u64,
     pub(crate) size: u64,
-    pub(crate) points: Vec<PointConfig>,
+    pub(crate) points: Vec<PointConf>,
 }
 //
 // 
@@ -37,7 +37,7 @@ impl ProfinetDbConfig {
                 let point_conf = conf.get(key).unwrap();
                 log::trace!("{}.new | Point '{}'", dbg, point_name);
                 log::trace!("{}.new | Point '{}'   |   conf: {:?}", dbg, point_name, point_conf);
-                let node_conf = PointConfig::new(&self_name, &point_conf);
+                let node_conf = PointConf::new(&self_name, &point_conf);
                 points.push(
                     node_conf,
                 );
@@ -56,7 +56,7 @@ impl ProfinetDbConfig {
     }    
     ///
     /// Returns list of configurations of the defined points
-    pub fn points(&self) -> Vec<PointConfig> {
+    pub fn points(&self) -> Vec<PointConf> {
         self.points.iter().fold(vec![], |mut points, conf| {
             points.push(conf.clone());
             points

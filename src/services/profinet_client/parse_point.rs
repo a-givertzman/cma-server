@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sal_sync::services::entity::{Point, PointConfigAddress, Status};
+use sal_sync::services::entity::{Point, PointConfAddress, Status};
 ///
 /// Returns updated points parsed from the data slice from the S7 device,
 pub trait ParsePoint {
@@ -14,5 +14,5 @@ pub trait ParsePoint {
     fn is_changed(&self) -> bool;
     ///
     /// Returns raw protocol specific address
-    fn address(&self) -> PointConfigAddress;
+    fn address(&self) -> PointConfAddress;
 }

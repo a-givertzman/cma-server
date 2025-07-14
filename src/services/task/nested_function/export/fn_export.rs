@@ -1,4 +1,4 @@
-use sal_sync::{services::{entity::{Point, PointConfig, PointConfigType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
+use sal_sync::{services::{entity::{Point, PointConf, PointConfType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{
     core_::FnInOutRef, 
@@ -30,7 +30,7 @@ pub struct FnExport {
     tx_id: usize,
     kind: FnKind,
     enable: Option<FnInOutRef>,
-    conf: Option<PointConfig>,
+    conf: Option<PointConf>,
     input: FnInOutRef,
     tx_send: Option<Sender<Point>>,
 }
@@ -44,7 +44,7 @@ impl FnExport {
     /// - conf - the configuration of the Point to be prodused, if None - input Point will be sent
     /// - input - incoming points
     /// - send-to - destination queue
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, conf: Option<PointConfig>, input: FnInOutRef, send: Option<Sender<Point>>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, conf: Option<PointConf>, input: FnInOutRef, send: Option<Sender<Point>>) -> Self {
         let self_id = format!("{}/FnExport{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
@@ -65,7 +65,7 @@ impl FnExport {
                 None => (point.type_(), point.name()),
             };
             let point = match type_ {
-                PointConfigType::Bool => {
+                PointConfType::Bool => {
                     Point::Bool(PointHlr::new(
                         self.tx_id, 
                         &name, 
@@ -75,7 +75,7 @@ impl FnExport {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Int => {
+                PointConfType::Int => {
                     Point::Int(PointHlr::new(
                         self.tx_id, 
                         &name, 
@@ -85,7 +85,7 @@ impl FnExport {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Real => {
+                PointConfType::Real => {
                     Point::Real(PointHlr::new(
                         self.tx_id, 
                         &name, 
@@ -95,7 +95,7 @@ impl FnExport {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Double => {
+                PointConfType::Double => {
                     Point::Double(PointHlr::new(
                         self.tx_id, 
                         &name, 
@@ -105,7 +105,7 @@ impl FnExport {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::String => {
+                PointConfType::String => {
                     Point::String(PointHlr::new(
                         self.tx_id, 
                         &name, 
@@ -115,7 +115,7 @@ impl FnExport {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Json => {
+                PointConfType::Json => {
                     Point::String(PointHlr::new(
                         self.tx_id, 
                         &name, 

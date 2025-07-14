@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use sal_sync::services::entity::{Point, PointConfigType};
+use sal_sync::services::entity::{Point, PointConfType};
 use crate::{
     core_::FnInOutRef, services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
@@ -76,9 +76,9 @@ impl FnOut for FnSmooth {
                 log::trace!("{}.out | value: {:?}", self.id, value);
                 let value = Point::Double(value);
                 self.value = match input_type {
-                    PointConfigType::Int => value.to_int(),
-                    PointConfigType::Real => value.to_real(),
-                    PointConfigType::Double => value.to_double(),
+                    PointConfType::Int => value.to_int(),
+                    PointConfType::Real => value.to_real(),
+                    PointConfType::Double => value.to_double(),
                     _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
                 };
                 log::trace!("{}.out | value: {:?}", self.id, self.value);

@@ -1,7 +1,7 @@
 use chrono::Utc;
 use concat_string::concat_string;
 use sal_sync::services::{
-    entity::{Cot, Name, {Point, PointConfigType, PointHlr, PointTxId}, Status},
+    entity::{Cot, Name, {Point, PointConfType, PointHlr, PointTxId}, Status},
     types::Bool,
 };
 use std::{env, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
@@ -138,7 +138,7 @@ impl FnRetain {
     }
     ///
     /// Loads retained Point value from the disk
-    fn load(&mut self, type_: PointConfigType) -> Option<Point> {
+    fn load(&mut self, type_: PointConfType) -> Option<Point> {
         match self.path() {
             Ok(path) => {
                 match fs::OpenOptions::new().read(true).open(&path) {
@@ -147,7 +147,7 @@ impl FnRetain {
                         match f.read_to_string(&mut input) {
                             Ok(_) => {
                                 match type_ {
-                                    PointConfigType::Bool => match input.as_str() {
+                                    PointConfType::Bool => match input.as_str() {
                                         "true" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
                                         "false" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                         _ => {
@@ -155,7 +155,7 @@ impl FnRetain {
                                             None
                                         }
                                     }
-                                    PointConfigType::Int => match input.as_str().parse() {
+                                    PointConfType::Int => match input.as_str().parse() {
                                         Ok(value) => {
                                             Some(Point::Int(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
@@ -164,7 +164,7 @@ impl FnRetain {
                                             None
                                         }
                                     }
-                                    PointConfigType::Real => match input.as_str().parse() {
+                                    PointConfType::Real => match input.as_str().parse() {
                                         Ok(value) => {
                                             Some(Point::Real(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
@@ -173,7 +173,7 @@ impl FnRetain {
                                             None
                                         }
                                     }
-                                    PointConfigType::Double => match input.as_str().parse() {
+                                    PointConfType::Double => match input.as_str().parse() {
                                         Ok(value) => {
                                             Some(Point::Double(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
@@ -182,10 +182,10 @@ impl FnRetain {
                                             None
                                         }
                                     }
-                                    PointConfigType::String => {
+                                    PointConfType::String => {
                                         Some(Point::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
                                     }
-                                    PointConfigType::Json => {
+                                    PointConfType::Json => {
                                         Some(Point::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
                                     }
                                 }

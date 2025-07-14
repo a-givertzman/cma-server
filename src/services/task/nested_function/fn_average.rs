@@ -1,4 +1,4 @@
-use sal_sync::services::entity::{Point, PointConfigType, PointHlr};
+use sal_sync::services::entity::{Point, PointConfType, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::core_::FnInOutRef;
@@ -85,7 +85,7 @@ impl FnOut for FnAverage {
                     log::trace!("{}.out | count: {:?}", self.id, self.count);
                     log::trace!("{}.out | average: {:?}", self.id, average);
                     match input.type_() {
-                        PointConfigType::Int => {
+                        PointConfType::Int => {
                             FnResult::Ok(Point::Int(
                                 PointHlr::new(
                                     input.tx_id(),
@@ -97,7 +97,7 @@ impl FnOut for FnAverage {
                                 )
                             ))
                         }
-                        PointConfigType::Real => {
+                        PointConfType::Real => {
                             FnResult::Ok(Point::Real(
                                 PointHlr::new(
                                     input.tx_id(),
@@ -109,7 +109,7 @@ impl FnOut for FnAverage {
                                 )
                             ))
                         }
-                        PointConfigType::Double => {
+                        PointConfType::Double => {
                             FnResult::Ok(Point::Double(
                                 PointHlr::new(
                                     input.tx_id(),

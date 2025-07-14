@@ -2,7 +2,7 @@
 
 mod udp_client_config {
     use std::{str::FromStr, sync::Once, time::Duration};
-    use sal_sync::{collections::FxIndexMap, services::{conf::DiagKeywd, entity::{Name, {PointConfig, PointConfigHistory, PointConfigType}}, LinkName, ConfSubscribe}};
+    use sal_sync::{collections::FxIndexMap, services::{conf::DiagKeywd, entity::{Name, {PointConf, PointConfHistory, PointConfType}}, LinkName, ConfSubscribe}};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::conf::udp_client_config::{udp_client_config::UdpClientConfig, udp_client_db_config::UdpClientDbConfig};
@@ -77,21 +77,21 @@ mod udp_client_config {
                     remote_addr: "192.168.100.241:15180".to_owned(),
                     mtu: 1500,
                     diagnosis: FxIndexMap::from_iter([
-                        (DiagKeywd::Status, PointConfig {
+                        (DiagKeywd::Status, PointConf {
                             id: 0,
                             name: Name::new(self_id, "UdpClient/Status").join(),
-                            type_: PointConfigType::Int,
-                            history: PointConfigHistory::None,
+                            type_: PointConfType::Int,
+                            history: PointConfHistory::None,
                             alarm: None,
                             address: None,
                             filters: None,
                             comment: None,
                         }),
-                        (DiagKeywd::Connection, PointConfig {
+                        (DiagKeywd::Connection, PointConf {
                             id: 0,
                             name: Name::new(self_id, "UdpClient/Connection").join(),
-                            type_: PointConfigType::Int,
-                            history: PointConfigHistory::None,
+                            type_: PointConfType::Int,
+                            history: PointConfHistory::None,
                             alarm: None,
                             address: None,
                             filters: None,
@@ -103,21 +103,21 @@ mod udp_client_config {
                             name: Name::new(self_id, "UdpClient/data"),
                             description: "Data block of the device".to_owned(),
                             points: [
-                                PointConfig {
+                                PointConf {
                                     id: 0,
                                     name: Name::new(self_id, "UdpClient/data/Sensor1").join(),
-                                    type_: PointConfigType::Int,
-                                    history: PointConfigHistory::None,
+                                    type_: PointConfType::Int,
+                                    history: PointConfHistory::None,
                                     alarm: None,
                                     address: None,
                                     filters: None,
                                     comment: None,
                                 },
-                                PointConfig {
+                                PointConf {
                                     id: 0,
                                     name: Name::new(self_id, "UdpClient/data/Sensor2").join(),
-                                    type_: PointConfigType::Int,
-                                    history: PointConfigHistory::None,
+                                    type_: PointConfType::Int,
+                                    history: PointConfHistory::None,
                                     alarm: None,
                                     address: None,
                                     filters: None,
@@ -179,41 +179,41 @@ mod udp_client_config {
                             name: Name::new(self_id, "UdpIed01/data"),
                             description: "Data block of the device".to_owned(),
                             points: [
-                                PointConfig {
+                                PointConf {
                                     id: 0,
                                     name: Name::new(self_id, "UdpIed01/data/Sensor1").join(),
-                                    type_: PointConfigType::Int,
-                                    history: PointConfigHistory::None,
+                                    type_: PointConfType::Int,
+                                    history: PointConfHistory::None,
                                     alarm: None,
                                     address: None,
                                     filters: None,
                                     comment: None,
                                 },
-                                PointConfig {
+                                PointConf {
                                     id: 0,
                                     name: Name::new(self_id, "UdpIed01/data/Sensor2").join(),
-                                    type_: PointConfigType::Int,
-                                    history: PointConfigHistory::None,
+                                    type_: PointConfType::Int,
+                                    history: PointConfHistory::None,
                                     alarm: None,
                                     address: None,
                                     filters: None,
                                     comment: None,
                                 },
-                                PointConfig {
+                                PointConf {
                                     id: 0,
                                     name: Name::new(self_id, "UdpIed01/data/Sensor3").join(),
-                                    type_: PointConfigType::Real,
-                                    history: PointConfigHistory::ReadWrite,
+                                    type_: PointConfType::Real,
+                                    history: PointConfHistory::ReadWrite,
                                     alarm: None,
                                     address: None,
                                     filters: None,
                                     comment: None,
                                 },
-                                PointConfig {
+                                PointConf {
                                     id: 0,
                                     name: Name::new(self_id, "UdpIed01/data/Sensor4").join(),
-                                    type_: PointConfigType::Double,
-                                    history: PointConfigHistory::Read,
+                                    type_: PointConfType::Double,
+                                    history: PointConfHistory::Read,
                                     alarm: None,
                                     address: None,
                                     filters: None,

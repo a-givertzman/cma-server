@@ -10,7 +10,7 @@ mod cma_recorder {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{api_client_config::ApiClientConfig, task_config::TaskConfig},
+        conf::{api_client_conf::ApiClientConf, task_config::TaskConfig},
         services::{
             api_cient::api_client::ApiClient,
             task::{task::Task, task_test_receiver::TaskTestReceiver},
@@ -91,7 +91,7 @@ mod cma_recorder {
         );
         let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
-        let conf = ApiClientConfig::from_yaml(
+        let conf = ApiClientConf::from_yaml(
             dbg,
             &serde_yaml::from_str(r"service ApiClient:
                 cycle: 100 ms

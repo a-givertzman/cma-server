@@ -1,6 +1,6 @@
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::{collections::FxIndexMap, services::{conf::{ConfTree, ConfTreeGet, DiagKeywd}, entity::{Name, PointConfig}, LinkName, ConfSubscribe}};
+use sal_sync::{collections::FxIndexMap, services::{conf::{ConfTree, ConfTreeGet, DiagKeywd}, entity::{Name, PointConf}, LinkName, ConfSubscribe}};
 use std::{fs, hash::BuildHasherDefault, str::FromStr, time::Duration};
 use crate::conf::udp_client_config::keywd::{self, Keywd};
 use super::udp_client_db_config::UdpClientDbConfig;
@@ -49,7 +49,7 @@ pub struct UdpClientConfig {
     pub remote_addr: String,
     /// Maximum Transmission Unit, default 1500, [Resolve IPv4 Fragmentation, MTU...](https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/25885-pmtud-ipfrag.html)
     pub mtu: usize,
-    pub diagnosis: FxIndexMap<DiagKeywd, PointConfig>,
+    pub diagnosis: FxIndexMap<DiagKeywd, PointConf>,
     pub dbs: FxIndexMap<String, UdpClientDbConfig>,
 }
 //
@@ -150,7 +150,7 @@ impl UdpClientConfig {
     }
     ///
     /// Returns list of configurations of the defined points
-    pub fn points(&self) -> Vec<PointConfig> {
+    pub fn points(&self) -> Vec<PointConf> {
         self.dbs
             .iter()
             .fold(vec![], |mut points, (_device_name, device_conf)| {

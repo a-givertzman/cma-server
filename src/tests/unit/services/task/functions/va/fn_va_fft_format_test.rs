@@ -5,7 +5,7 @@ use std::{cell::RefCell, f64::consts::PI, rc::Rc, sync::{Arc, Once}, thread, tim
 use concat_string::concat_string;
 use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::{services::{
-    conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfigFilter, PointTxId, ToPoint}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, Service, Services
+    conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfFilter, PointTxId, ToPoint}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, Service, Services
 }, thread_pool::ThreadPool};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -126,7 +126,7 @@ fn format_sql() {
                 Some(freq) => concat_string!(dbg, export_point_name, ".", freq),
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
             };
-            (freq_name, filter(Some(PointConfigFilter { threshold, factor: None })))
+            (freq_name, filter(Some(PointConfFilter { threshold, factor: None })))
         }).collect();
         // reference FFT's, calculated locally
         let mut ref_ffts: Vec< Vec<f64> > = vec![];
@@ -230,7 +230,7 @@ fn format_sql() {
 }
 ///
 /// Returns Threshold (key filter)
-fn filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64>> {
+fn filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f64>> {
     match conf {
         Some(conf) => {
             Box::new(

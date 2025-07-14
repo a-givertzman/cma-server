@@ -7,7 +7,7 @@ use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::{collections::FxHashMap, services::{
     entity::{
         Cot, Name,
-        Point, PointConfig, PointConfigFilter, PointConfigType, PointHlr, PointTxId,
+        Point, PointConf, PointConfFilter, PointConfType, PointHlr, PointTxId,
         Status, ToPoint,
     }, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, types::Bool, LinkName, Services
 }, sync::channel::Sender};
@@ -79,7 +79,7 @@ pub struct FnVaFft {
     kind: FnKind,
     enable: Option<FnInOutRef>,
     /// Point config for exported Point's
-    point_conf: PointConfig,
+    point_conf: PointConf,
     fft_size: usize,
     input: FnInOutRef,
     #[derivative(Debug="ignore")]
@@ -224,7 +224,7 @@ impl FnVaFft {
     }
     ///
     /// Returns Threshold (key filter)
-    fn build_filter(conf: Option<PointConfigFilter>, initial: Option<f64>) -> Box<dyn Filter<Item = f64>> {
+    fn build_filter(conf: Option<PointConfFilter>, initial: Option<f64>) -> Box<dyn Filter<Item = f64>> {
         match conf {
             Some(conf) => {
                 Box::new(
@@ -236,16 +236,16 @@ impl FnVaFft {
     }
     ///
     /// Returns Conf for Point's to be exported (by send-to) full name will be: /App/Task/Fft.freq
-    fn parse_point_conf(parent: impl Into<String>, self_id: &str, conf: &FnConfig) -> PointConfig {
+    fn parse_point_conf(parent: impl Into<String>, self_id: &str, conf: &FnConfig) -> PointConf {
         match conf.clone().input_conf("conf") {
             Ok(conf) => match conf {
                 FnConfKind::PointConf(conf) => match conf.conf.type_ {
-                    PointConfigType::Int | PointConfigType::Real | PointConfigType::Double => conf.conf.clone(),
+                    PointConfType::Int | PointConfType::Real | PointConfType::Double => conf.conf.clone(),
                     _ => panic!("{}.new | Invalid Point type: '{:?}' in {:#?}", self_id, conf.conf.type_, conf.conf),
                 }
                 _ => panic!("{}.new | Invalid Point config in: {:?}", self_id, conf.name()),
             }
-            Err(_) => PointConfig::from_yaml(&Name::new(parent, ""), &serde_yaml::from_str(r#"
+            Err(_) => PointConf::from_yaml(&Name::new(parent, ""), &serde_yaml::from_str(r#"
                 conf point FFT:
                     type: 'Real'
             "#).unwrap()),
@@ -253,12 +253,12 @@ impl FnVaFft {
     }
     ///
     /// Returns Threshold config
-    fn parse_threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfigFilter> {
+    fn parse_threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfFilter> {
         match conf.param("filter") {
             Some(threshold) => match threshold {
                 FnConfKind::Param(threshold) => match serde_yaml::from_value(threshold.conf.clone()) {
                     Ok(threshold) => {
-                        let threshold: PointConfigFilter = threshold;
+                        let threshold: PointConfFilter = threshold;
                         Some(threshold)
                     }
                     Err(err) => {

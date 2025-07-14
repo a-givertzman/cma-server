@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{
-    Cot, Point, PointConfig, PointConfigAddress, PointConfigType, PointHlr, Status,
+    Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status,
 };
 use crate::{core_::filter::filter::{Filter, FilterEmpty}, services::slmp_client::parse_point::ParsePoint};
 ///
@@ -8,13 +8,13 @@ use crate::{core_::filter::filter::{Filter, FilterEmpty}, services::slmp_client:
 #[derive(Debug)]
 pub struct SlmpParseReal {
     id: String,
-    pub type_: PointConfigType,
+    pub type_: PointConfType,
     pub tx_id: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = f32> + Send>,
     pub status: Box<dyn Filter<Item = Status> + Send>,
     pub offset: Option<u32>,
-    // pub history: PointConfigHistory,
+    // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
@@ -30,7 +30,7 @@ impl SlmpParseReal {
     pub fn new(
         tx_id: usize,
         name: String,
-        config: &PointConfig,
+        config: &PointConf,
         filter: Box<dyn Filter<Item = f32> + Send>,
     ) -> SlmpParseReal {
         SlmpParseReal {
@@ -40,7 +40,7 @@ impl SlmpParseReal {
             value: filter,
             status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
             name,
-            offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
+            offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
@@ -120,7 +120,7 @@ impl SlmpParseReal {
 impl ParsePoint for SlmpParseReal {
     //
     //
-    fn type_(&self) -> PointConfigType {
+    fn type_(&self) -> PointConfType {
         self.type_.clone()
     }
     //
@@ -145,8 +145,8 @@ impl ParsePoint for SlmpParseReal {
     }
     //
     //
-    fn address(&self) -> PointConfigAddress {
-        PointConfigAddress { offset: self.offset, bit: None }
+    fn address(&self) -> PointConfAddress {
+        PointConfAddress { offset: self.offset, bit: None }
     }
     //
     //

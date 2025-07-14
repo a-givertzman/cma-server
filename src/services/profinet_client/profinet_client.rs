@@ -9,7 +9,7 @@ use sal_core::{dbg::Dbg, error::{Error, ErrorLimit}};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ChangeNotify,
     services::{
-        conf::DiagKeywd, entity::{Cot, Name, Object, Point, PointConfig, PointHlr, PointTxId, Status},
+        conf::DiagKeywd, entity::{Cot, Name, Object, Point, PointConf, PointHlr, PointTxId, Status},
         Service, ServiceCycle,
         Services, SubscriptionCriteria,
     },
@@ -204,7 +204,7 @@ impl ProfinetClient {
                 ]
             );
             let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
-            let mut points: Vec<PointConfig> = vec![];
+            let mut points: Vec<PointConf> = vec![];
             for (db_name, db_conf) in conf.dbs {
                 log::info!("{}.write | configuring ProfinetDb: {:?}...", dbg, db_name);
                 let db = ProfinetDb::new(&dbg, tx_id, &db_conf);
@@ -430,7 +430,7 @@ impl Service for ProfinetClient {
     }
     //
     //
-    fn points(&self) -> Vec<PointConfig> {
+    fn points(&self) -> Vec<PointConf> {
         self.conf.points()
     }
     //

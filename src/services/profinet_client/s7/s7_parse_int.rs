@@ -1,5 +1,5 @@
 use sal_sync::services::entity::{
-    Cot, Point, PointConfig, PointConfigAddress, PointHlr, Status
+    Cot, Point, PointConf, PointConfAddress, PointHlr, Status
 };
 use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
@@ -13,7 +13,7 @@ pub struct S7ParseInt {
     pub value: Box<dyn Filter<Item = i64>>,
     pub status: Box<dyn Filter<Item = Status>>,
     pub offset: Option<u32>,
-    // pub history: PointConfigHistory,
+    // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
@@ -26,7 +26,7 @@ impl S7ParseInt {
     pub fn new(
         tx_id: usize,
         name: String,
-        config: &PointConfig,
+        config: &PointConf,
         filter: Box<dyn Filter<Item = i64>>,
     ) -> S7ParseInt {
         S7ParseInt {
@@ -34,7 +34,7 @@ impl S7ParseInt {
             name,
             value: filter,
             status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
-            offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
+            offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
@@ -130,7 +130,7 @@ impl ParsePoint for S7ParseInt {
     }
     //
     //
-    fn address(&self) -> PointConfigAddress {
-        PointConfigAddress { offset: self.offset, bit: None }
+    fn address(&self) -> PointConfAddress {
+        PointConfAddress { offset: self.offset, bit: None }
     }
 }

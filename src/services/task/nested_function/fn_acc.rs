@@ -1,4 +1,4 @@
-use sal_sync::services::entity::{Point, PointConfigType, PointHlr};
+use sal_sync::services::entity::{Point, PointConfType, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::core_::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
@@ -71,13 +71,13 @@ impl FnOut for FnAcc {
                                 }
                             }
                             None => match input.type_() {
-                                PointConfigType::Bool | PointConfigType::Int  => Point::Int(PointHlr::new(
+                                PointConfType::Bool | PointConfType::Int  => Point::Int(PointHlr::new(
                                     input.tx_id(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
                                 )),
-                                PointConfigType::Real => Point::Real(PointHlr::new(
+                                PointConfType::Real => Point::Real(PointHlr::new(
                                     input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
-                                PointConfigType::Double => Point::Double(PointHlr::new(
+                                PointConfType::Double => Point::Double(PointHlr::new(
                                     input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
                                 _ => panic!("{}.out | Invalit input type '{:?}'", self.id, input.type_()),

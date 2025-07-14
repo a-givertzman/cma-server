@@ -4,7 +4,7 @@ mod jds_routes {
     use sal_sync::{services::{
         conf::{ConfTree, ServicesConf}, entity::{
             Cot, Name, Object,
-            Point, PointConfig, PointHlr, PointTxId,
+            Point, PointConf, PointHlr, PointTxId,
             Status,
         }, LinkName, MultiQueue, MultiQueueConf, Service, Services
     }, thread_pool::ThreadPool};
@@ -47,27 +47,27 @@ mod jds_routes {
     }
     ///
     /// Generets configurations of points
-    fn point_configs(parent_name: &Name) -> Vec<PointConfig> {
+    fn point_configs(parent_name: &Name) -> Vec<PointConf> {
         vec![
-            PointConfig::from_yaml(parent_name, &serde_yaml::from_str(&format!(
+            PointConf::from_yaml(parent_name, &serde_yaml::from_str(&format!(
                 r#"{}:
                     type: String      # Bool / Int / Real / Double / String / Json
                     comment: Auth request, contains token / pass string"#,
                 format!("Jds/{}", RequestKind::AUTH_SECRET),
             )).unwrap()),
-            PointConfig::from_yaml(parent_name, &serde_yaml::from_str(&format!(
+            PointConf::from_yaml(parent_name, &serde_yaml::from_str(&format!(
                 r#"{}:
                     type: String      # Bool / Int / Real / Double / String / Json
                     comment: Auth request, contains SSH key"#,
                 format!("Jds/{}", RequestKind::AUTH_SSH),
             )).unwrap()),
-            PointConfig::from_yaml(parent_name, &serde_yaml::from_str(&format!(
+            PointConf::from_yaml(parent_name, &serde_yaml::from_str(&format!(
                 r#"{}:
                     type: String      # Bool / Int / Real / Double / String / Json
                     comment: Request all Ponts configurations"#,
                 format!("Jds/{}", RequestKind::POINTS),
             )).unwrap()),
-            PointConfig::from_yaml(parent_name, &serde_yaml::from_str(&format!(
+            PointConf::from_yaml(parent_name, &serde_yaml::from_str(&format!(
                 r#"{}:
                     type: String      # Bool / Int / Real / Double / String / Json
                     comment: Request to begin transmossion of all configured Points"#,
@@ -489,8 +489,8 @@ mod jds_routes {
         // assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result.name(), target.name());
         // assert!(result.value() == target.value(), "\nresult: {:?}\ntarget: {:?}", result.value(), target.value());
         let points: HashMap<String, serde_json::Value> = serde_json::from_str(&result.value().as_string()).unwrap();
-        let points: HashMap<_, PointConfig> = points.iter().map(|(name, value)| {
-            (name, PointConfig::from_json(name, value).unwrap())
+        let points: HashMap<_, PointConf> = points.iter().map(|(name, value)| {
+            (name, PointConf::from_json(name, value).unwrap())
         }).collect();
         println!("{} | Points request reply: {:#?}", self_id, points);
         for target in point_configs(&self_name) {
@@ -503,7 +503,7 @@ mod jds_routes {
                     assert!(result.address == target.address, "\nresult: {:?}\ntarget: {:?}", result.address, target.address);
                 }
                 None => {
-                    panic!("PointConfig '{}' - not found in the Points request reply", target.name)
+                    panic!("PointConf '{}' - not found in the Points request reply", target.name)
                 }
             }
         }

@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, ConfSubscribe, task::functions::{FnConfKind, FnConfig}};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, ConfSubscribe, task::functions::{FnConfKind, FnConfig}};
 use std::{fs, time::Duration};
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -121,7 +121,7 @@ impl TaskConfig {
     }
     ///
     /// Returns list of configurations of the defined points
-    pub fn points(&self) -> Vec<PointConfig> {
+    pub fn points(&self) -> Vec<PointConf> {
         self.nodes.iter().fold(vec![], |mut points, (_node_name,node_conf)| {
             points.extend(node_conf.points());
             points

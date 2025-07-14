@@ -1,6 +1,6 @@
 use sal_sync::{
     kernel::state::{Switch, SwitchCondition, SwitchState},
-    services::entity::{Cot, {Point, PointConfigType, PointHlr}}
+    services::entity::{Cot, {Point, PointConfType, PointHlr}}
 };
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
 use crate::core_::FnInOutRef;
@@ -217,9 +217,9 @@ impl FnOut for FnTimer {
                         match initial.borrow_mut().out() {
                             FnResult::Ok(initial) => {
                                 match initial.type_() {
-                                    PointConfigType::Int => FnResult::Ok(value.to_int()),
-                                    PointConfigType::Real => FnResult::Ok(value.to_real()),
-                                    PointConfigType::Double => FnResult::Ok(value),
+                                    PointConfType::Int => FnResult::Ok(value.to_int()),
+                                    PointConfType::Real => FnResult::Ok(value.to_real()),
+                                    PointConfType::Double => FnResult::Ok(value),
                                     _ => panic!("{}.out | Usupported type in initial input '{:?}'", self.id, initial.type_()),
                                 }
                             }

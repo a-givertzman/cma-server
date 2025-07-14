@@ -4,7 +4,7 @@ use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle},
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
-    conf::api_client_config::ApiClientConfig, 
+    conf::api_client_conf::ApiClientConf, 
     core_::retain_buffer::retain_buffer::RetainBuffer,
 };
 ///
@@ -19,7 +19,7 @@ pub struct ApiClient {
     name: Name,
     recv: Owner<Receiver<Point>>,
     send: HashMap<String, Sender<Point>>,
-    conf: ApiClientConfig,
+    conf: ApiClientConf,
     scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
@@ -30,7 +30,7 @@ impl ApiClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: ApiClientConfig, scheduler: Scheduler) -> Self {
+    pub fn new(conf: ApiClientConf, scheduler: Scheduler) -> Self {
         let (send, recv) = channel::unbounded();
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {

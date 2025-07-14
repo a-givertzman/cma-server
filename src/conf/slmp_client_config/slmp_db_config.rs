@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, task::functions::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::{FnConfKeywd, FnConfKindName}};
 use std::{str::FromStr, time::Duration};
 use crate::services::slmp_client::slmp::device_code::DeviceCode;
 ///
@@ -11,7 +11,7 @@ pub struct SlmpDbConfig {
     pub(crate) offset: u32,
     pub(crate) size: u16,
     pub(crate) cycle: Option<Duration>,
-    pub(crate) points: Vec<PointConfig>,
+    pub(crate) points: Vec<PointConf>,
 }
 //
 // 
@@ -42,7 +42,7 @@ impl SlmpDbConfig {
                 let point_conf = conf.get(key).unwrap();
                 log::trace!("{}.new | Point '{}'", self_id, point_name);
                 log::trace!("{}.new | Point '{}'   |   conf: {:?}", self_id, point_name, point_conf);
-                let node_conf = PointConfig::new(&self_name, &point_conf);
+                let node_conf = PointConf::new(&self_name, &point_conf);
                 points.push(
                     node_conf,
                 );
@@ -62,7 +62,7 @@ impl SlmpDbConfig {
     }    
     ///
     /// Returns list of configurations of the defined points
-    pub fn points(&self) -> Vec<PointConfig> {
+    pub fn points(&self) -> Vec<PointConf> {
         self.points.iter().fold(vec![], |mut points, conf| {
             points.push(conf.clone());
             points

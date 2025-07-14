@@ -3,7 +3,7 @@
 mod fn_retain {
     use chrono::Utc;
     use sal_sync::{math::AproxEq, services::{
-        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointConfigType, PointHlr, Status}, types::Bool, MultiQueue, MultiQueueConf, Service, Services
+        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointConfType, PointHlr, Status}, types::Bool, MultiQueue, MultiQueueConf, Service, Services
     }, thread_pool::ThreadPool};
     use std::{env, fs, io::Read, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
@@ -25,7 +25,7 @@ mod fn_retain {
     }
     ///
     /// Loads retained Point value from the disk
-    fn load(self_id: &str, path: &str, type_: PointConfigType) -> Option<Point> {
+    fn load(self_id: &str, path: &str, type_: PointConfType) -> Option<Point> {
         let tx_id = 10001;
         match fs::OpenOptions::new().read(true).open(&path) {
             Ok(mut f) => {
@@ -33,7 +33,7 @@ mod fn_retain {
                 match f.read_to_string(&mut input) {
                     Ok(_) => {
                         match type_ {
-                            PointConfigType::Bool => match input.as_str() {
+                            PointConfType::Bool => match input.as_str() {
                                 "true" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
                                 "false" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                 _ => {
@@ -41,7 +41,7 @@ mod fn_retain {
                                     None
                                 }
                             }
-                            PointConfigType::Int => match input.as_str().parse() {
+                            PointConfType::Int => match input.as_str().parse() {
                                 Ok(value) => {
                                     Some(Point::Int(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
@@ -50,7 +50,7 @@ mod fn_retain {
                                     None
                                 }
                             }
-                            PointConfigType::Real => match input.as_str().parse() {
+                            PointConfType::Real => match input.as_str().parse() {
                                 Ok(value) => {
                                     Some(Point::Real(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
@@ -59,7 +59,7 @@ mod fn_retain {
                                     None
                                 }
                             }
-                            PointConfigType::Double => match input.as_str().parse() {
+                            PointConfType::Double => match input.as_str().parse() {
                                 Ok(value) => {
                                     Some(Point::Double(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
@@ -68,10 +68,10 @@ mod fn_retain {
                                     None
                                 }
                             }
-                            PointConfigType::String => {
+                            PointConfType::String => {
                                 Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
                             }
-                            PointConfigType::Json => {
+                            PointConfType::Json => {
                                 Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
                             }
                         }
@@ -108,7 +108,7 @@ mod fn_retain {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", dbg), PointConfigType::Bool)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", dbg), PointConfType::Bool)
             .map_or(false, |init| init.as_bool().value.0);
         let tp = ThreadPool::new(dbg, Some(8));
         let services = Arc::new(Services::new(dbg, ServicesConf::new(
@@ -322,7 +322,7 @@ mod fn_retain {
             (format!("/{}/Load", dbg), Value::Real(0.0)),
         ];
         let total_count = test_data.len();
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/Count.json", dbg), PointConfigType::Int)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/Count.json", dbg), PointConfType::Int)
             .map_or(0, |init| init.as_int().value);
         let mut target_data = vec![
             Value::Int(initial + 0),
@@ -486,7 +486,7 @@ mod fn_retain {
             (format!("/{}/Load", dbg), Value::Real(1.1)),
         ];
         let total_count = test_data.len();
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetain.json", dbg), PointConfigType::Real)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetain.json", dbg), PointConfType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let mut target_data = vec![
             Value::Real(initial + 0.1),
@@ -577,7 +577,7 @@ mod fn_retain {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", dbg), PointConfigType::Real)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", dbg), PointConfType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let tp = ThreadPool::new(dbg, Some(8));
         let services = Arc::new(Services::new(dbg, ServicesConf::new(

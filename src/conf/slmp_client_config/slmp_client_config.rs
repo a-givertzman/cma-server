@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::{collections::FxIndexMap, services::{conf::{ConfTree, ConfTreeGet, DiagKeywd}, entity::{Name, PointConfig}, LinkName}};
+use sal_sync::{collections::FxIndexMap, services::{conf::{ConfTree, ConfTreeGet, DiagKeywd}, entity::{Name, PointConf}, LinkName}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::conf::slmp_client_config::{keywd::{Keywd, Kind}, slmp_db_config::SlmpDbConfig};
 ///
@@ -39,7 +39,7 @@ pub struct SlmpClientConfig {
     pub(crate) description: String,
     pub(crate) ip: String,
     pub(crate) port: u64,
-    pub(crate) diagnosis: FxIndexMap<DiagKeywd, PointConfig>,
+    pub(crate) diagnosis: FxIndexMap<DiagKeywd, PointConf>,
     pub(crate) dbs: IndexMap<String, SlmpDbConfig>,
 }
 //
@@ -134,7 +134,7 @@ impl SlmpClientConfig {
     }
     ///
     /// Returns list of configurations of the defined points
-    pub fn points(&self) -> Vec<PointConfig> {
+    pub fn points(&self) -> Vec<PointConf> {
         self.dbs
             .iter()
             .fold(vec![], |mut points, (_device_name, device_conf)| {

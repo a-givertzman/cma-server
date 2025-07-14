@@ -6,7 +6,7 @@ use sal_sync::{
     kernel::state::ChangeNotify,
     services::entity::{
         Name, 
-        Point, PointConfig, PointConfigType,
+        Point, PointConf, PointConfType,
         Status,
     }, sync::channel::Sender
 };
@@ -213,16 +213,16 @@ impl UdpClientDb {
     fn configure_parse_points(self_id: &str, tx_id: usize, conf: &UdpClientDbConfig) -> IndexMap<String, Box<dyn ParsePoint>> {
         conf.points.iter().map(|point_conf| {
             match point_conf.type_ {
-                // PointConfigType::Bool => {
+                // PointConfType::Bool => {
                 //     (point_conf.name.clone(), Self::box_bool(tx_id, point_conf.name.clone(), point_conf))
                 // }
-                PointConfigType::Int => {
+                PointConfType::Int => {
                     (point_conf.name.clone(), Self::box_i16(tx_id, point_conf.name.clone(), point_conf))
                 }
-                // PointConfigType::Real => {
+                // PointConfType::Real => {
                 //     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 // }
-                // PointConfigType::Double => {
+                // PointConfType::Double => {
                 //     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 // }
                 _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for S7 Device", self_id, point_conf.type_)
@@ -231,12 +231,12 @@ impl UdpClientDb {
     }
     // ///
     // ///
-    // fn box_bool(tx_id: usize, name: String, config: &PointConfig) -> Box<dyn ParsePoint> {
+    // fn box_bool(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
     //     Box::new(UdpClientParseBool::new(tx_id, name, config))
     // }
     ///
     ///
-    fn box_i16(tx_id: usize, name: String, config: &PointConfig) -> Box<dyn ParsePoint> {
+    fn box_i16(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
         Box::new(UdpcParseI16::new(
             tx_id,
             name,
@@ -245,7 +245,7 @@ impl UdpClientDb {
     }
     // ///
     // ///
-    // fn box_real(tx_id: usize, name: String, config: &PointConfig) -> Box<dyn ParsePoint> {
+    // fn box_real(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
     //     Box::new(S7ParseReal::new(
     //         tx_id,
     //         name,
@@ -255,7 +255,7 @@ impl UdpClientDb {
     // }
     // ///
     // ///
-    // fn i16_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = i16>> {
+    // fn i16_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = i16>> {
     //     match conf {
     //         Some(conf) => {
     //             Box::new(
@@ -267,7 +267,7 @@ impl UdpClientDb {
     // }
     // ///
     // ///
-    // fn real_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f32>> {
+    // fn real_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f32>> {
     //     match conf {
     //         Some(conf) => {
     //             Box::new(
@@ -279,7 +279,7 @@ impl UdpClientDb {
     // }
     // ///
     // ///
-    // fn double_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64>> {
+    // fn double_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f64>> {
     //     match conf {
     //         Some(conf) => {
     //             Box::new(

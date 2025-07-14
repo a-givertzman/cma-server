@@ -220,7 +220,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn points(&self) -> Vec<sal_sync::services::entity::PointConfig> {
+    fn points(&self) -> Vec<sal_sync::services::entity::PointConf> {
         std::vec![]
     }
     //

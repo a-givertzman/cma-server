@@ -2,7 +2,7 @@ use std::{fs, io::{BufReader, Read, Write}, net::TcpStream};
 use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use sal_sync::{services::entity::{Name, Point, PointConfig, PointConfigFilter, PointConfigType, Status}, sync::channel::Sender};
+use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
     conf::slmp_client_config::slmp_db_config::SlmpDbConfig,
     core_::{
@@ -94,16 +94,16 @@ impl SlmpDb {
     fn configure_parse_points(self_id: &str, tx_id: usize, conf: &SlmpDbConfig) -> IndexMap<String, Box<dyn ParsePoint>> {
         conf.points.iter().map(|point_conf| {
             match point_conf.type_ {
-                PointConfigType::Bool => {
+                PointConfType::Bool => {
                     (point_conf.name.clone(), Self::box_bool(tx_id, point_conf.name.clone(), point_conf))
                 }
-                PointConfigType::Int => {
+                PointConfType::Int => {
                     (point_conf.name.clone(), Self::box_int(tx_id, point_conf.name.clone(), point_conf))
                 }
-                PointConfigType::Real => {
+                PointConfType::Real => {
                     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 }
-                PointConfigType::Double => {
+                PointConfType::Double => {
                     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 }
                 _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for Device", self_id, point_conf.type_)
@@ -302,12 +302,12 @@ impl SlmpDb {
     }
     ///
     ///
-    fn box_bool(tx_id: usize, name: String, config: &PointConfig) -> Box<dyn ParsePoint> {
+    fn box_bool(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
         Box::new(SlmpParseBool::new(tx_id, name, config))
     }
     ///
     ///
-    fn box_int(tx_id: usize, name: String, config: &PointConfig) -> Box<dyn ParsePoint> {
+    fn box_int(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
         Box::new(SlmpParseInt::new(
             tx_id,
             name,
@@ -317,7 +317,7 @@ impl SlmpDb {
     }
     ///
     ///
-    fn box_real(tx_id: usize, name: String, config: &PointConfig) -> Box<dyn ParsePoint> {
+    fn box_real(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
         Box::new(SlmpParseReal::new(
             tx_id,
             name,
@@ -327,7 +327,7 @@ impl SlmpDb {
     }
     ///
     ///
-    fn int_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = i64> + Send> {
+    fn int_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = i64> + Send> {
         match conf {
             Some(conf) => {
                 Box::new(
@@ -339,7 +339,7 @@ impl SlmpDb {
     }
     ///
     ///
-    fn real_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f32> + Send> {
+    fn real_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f32> + Send> {
         match conf {
             Some(conf) => {
                 Box::new(
@@ -351,7 +351,7 @@ impl SlmpDb {
     }
     // ///
     // ///
-    // fn double_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f64>> {
+    // fn double_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f64>> {
     //     match conf {
     //         Some(conf) => {
     //             Box::new(

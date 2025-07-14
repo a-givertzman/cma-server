@@ -11,6 +11,7 @@ services:
                 auth_token: 123!@#
                 database: crane_data_server
 
+service FrdmService:
 
 service MultiQueue:
     in queue in-queue:

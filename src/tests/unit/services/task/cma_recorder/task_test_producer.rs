@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point, PointConfig, PointTxId, ToPoint}, LinkName, Service, Services}, sync::Handles};
+use sal_sync::{services::{entity::{Name, Object, Point, PointConf, PointTxId, ToPoint}, LinkName, Service, Services}, sync::Handles};
 use testing::entities::test_value::Value;
 use crate::core_::RwLock;
 
@@ -114,8 +114,8 @@ impl Service for TaskTestProducer {
         }
     }
     //
-    // Returns Vec<PointConfig> of points found in the test_data
-    fn points(&self) -> Vec<PointConfig> {
+    // Returns Vec<PointConf> of points found in the test_data
+    fn points(&self) -> Vec<PointConf> {
         self.test_data
             .iter()
             .map(|(name, value)| {
@@ -131,7 +131,7 @@ impl Service for TaskTestProducer {
                     Value::Double(_) => "Double",
                     Value::String(_) => "String",
                 };
-                PointConfig::from_yaml(
+                PointConf::from_yaml(
                     &Name::new("", ""),
                     &serde_yaml::from_str(&format!(r#"{}:
                         type: {}"#, name, type_)).unwrap()

@@ -11,7 +11,7 @@ use libc::{
 use signal_hook::iterator::Signals;
 use crate::{
     conf::{
-        api_client_config::ApiClientConfig, app::app_config::AppConfig, cache_service_config::CacheServiceConfig,
+        api_client_conf::ApiClientConf, app::app_config::AppConfig, cache_service_config::CacheServiceConfig,
         profinet_client_config::profinet_client_config::ProfinetClientConfig,
         slmp_client_config::slmp_client_config::SlmpClientConfig, task_config::TaskConfig,
         tcp_client_config::TcpClientConfig, tcp_server_config::TcpServerConfig
@@ -106,7 +106,7 @@ impl App {
     fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<Services>, scheduler: Scheduler) -> Arc<dyn Service> {
         match node_name {
             Services::API_CLIENT => Arc::new(
-                ApiClient::new(ApiClientConfig::new(parent, node_conf), scheduler.clone())
+                ApiClient::new(ApiClientConf::new(parent, node_conf), scheduler.clone())
             ),
             Services::MULTI_QUEUE => Arc::new(
                 MultiQueue::new(MultiQueueConf::new(parent, node_conf), services, Some(scheduler.clone()))

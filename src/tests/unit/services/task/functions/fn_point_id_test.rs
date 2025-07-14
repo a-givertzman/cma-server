@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod fn_point_id {
-        use sal_sync::services::{entity::{Name, PointConfig, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
+        use sal_sync::services::{entity::{Name, PointConf, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
     use testing::entities::test_value::Value;
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -55,7 +55,7 @@ mod fn_point_id {
         println!("{}", self_id);
         let input = init_each("0", FnConfPointType::Any);
         let points = POINTS.into_iter().map(|(id, conf)| {
-            let mut point = PointConfig::from_yaml(&Name::new(self_id, ""), &serde_yaml::from_str(conf).unwrap());
+            let mut point = PointConf::from_yaml(&Name::new(self_id, ""), &serde_yaml::from_str(conf).unwrap());
             point.id = *id;
             point
         }).collect();

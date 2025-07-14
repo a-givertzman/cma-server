@@ -1,8 +1,9 @@
 #[cfg(test)]
 
 use std::{sync::Once, time::{Duration, Instant}};
+use indexmap::IndexMap;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree}, entity::{Name, PointConf, PointConfHistory, PointConfType}};
+use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree}, entity::{Name, PointConf, PointConfHistory, PointConfType}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::services::{BendingsConf, RopeConf};
@@ -46,25 +47,17 @@ fn new() {
                 width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                 length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
                 segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-                pos: PointConf {
-                    id: 0,
+                pos: FnConfig {
                     name: format!("{dbg}/App/Winch.EncoderBR2"),
-                    type_: PointConfType::Real,
-                    history: PointConfHistory::None,
-                    alarm: None,
-                    address: None,
-                    filters: None,
-                    comment: None,
+                    inputs: IndexMap::new(),
+                    type_: FnConfPointType::Real,
+                    options: FnConfOptions::default(),
                 },
-                load: PointConf {
-                    id: 0,
+                load: FnConfig {
                     name: format!("{dbg}/App/Winch.Load"),
-                    type_: PointConfType::Real,
-                    history: PointConfHistory::None,
-                    alarm: None,
-                    address: None,
-                    filters: None,
-                    comment: None,
+                    inputs: IndexMap::new(),
+                    type_: FnConfPointType::Real,
+                    options: FnConfOptions::default(),
                 },
             }
         ),

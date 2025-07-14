@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConfig}, LinkName, task::functions::{FnConfKeywd, FnConfKindName}};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, LinkName, task::functions::{FnConfKeywd, FnConfKindName}};
 use std::{fs, str::FromStr, time::Duration};
 ///
 /// creates config from serde_yaml::Value of following format:
@@ -25,7 +25,7 @@ pub struct ProducerServiceConfig {
     pub(crate) send_to: LinkName,
     pub(crate) debug: bool,
     // pub(crate) subscribe: ConfSubscribe,
-    pub(crate) nodes: IndexMap<String, PointConfig>,
+    pub(crate) nodes: IndexMap<String, PointConf>,
 }
 //
 // 
@@ -70,7 +70,7 @@ impl ProducerServiceConfig {
                     let point_conf = node_conf.get(key).unwrap();
                     log::trace!("{}.new | Point '{}'", dbg, point_name);
                     log::trace!("{}.new | Point '{}'   |   conf: {:?}", dbg, point_name, point_conf);
-                    let node_conf = PointConfig::new(&Name::new(&self_name, &node_name), &point_conf);
+                    let node_conf = PointConf::new(&Name::new(&self_name, &node_name), &point_conf);
                     nodes.insert(
                         node_conf.name.clone(),
                         node_conf,
@@ -122,7 +122,7 @@ impl ProducerServiceConfig {
     }
     ///
     /// Returns list of configurations of the defined points
-    pub fn points(&self) -> Vec<PointConfig> {
+    pub fn points(&self) -> Vec<PointConf> {
         self.nodes.iter().fold(vec![], |mut points, (_node_name,node_conf)| {
             points.push(node_conf.clone());
             points

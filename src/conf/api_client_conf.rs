@@ -12,7 +12,7 @@ use std::{fs, time::Duration, net::SocketAddr};
 ///     debug: false                # API debug mode, optional, default false
 ///                         ...
 #[derive(Debug, PartialEq, Clone)]
-pub struct ApiClientConfig {
+pub struct ApiClientConf {
     pub(crate) name: Name,
     pub(crate) address: SocketAddr,
     pub(crate) database: String,
@@ -25,7 +25,7 @@ pub struct ApiClientConfig {
 }
 //
 // 
-impl ApiClientConfig {
+impl ApiClientConf {
     ///
     /// creates config from serde_yaml::Value of following format:
     /// ```yaml
@@ -84,7 +84,7 @@ impl ApiClientConfig {
     }
     ///
     /// reads config from path
-    pub fn read(parent: impl Into<String>, path: &str) -> ApiClientConfig {
+    pub fn read(parent: impl Into<String>, path: &str) -> ApiClientConf {
         match fs::read_to_string(path) {
             Ok(yaml_string) => {
                 match serde_yaml::from_str(&yaml_string) {

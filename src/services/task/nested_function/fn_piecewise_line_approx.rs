@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{Point, PointConfigType, PointHlr}, types::TypeOf};
+use sal_sync::services::{entity::{Point, PointConfType, PointHlr}, types::TypeOf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
@@ -43,7 +43,7 @@ impl FnPiecewiseLineApprox {
     /// Build an out Point deppending on the input type
     fn build_point(&self, input: &Point, value: f64) -> Point {
         match input.type_() {
-            PointConfigType::Int => Point::Int(
+            PointConfType::Int => Point::Int(
                 PointHlr::new(
                     input.tx_id(),
                     &concat_string!(self.id, ".out"),
@@ -53,7 +53,7 @@ impl FnPiecewiseLineApprox {
                     input.timestamp(),
                 )
             ),
-            PointConfigType::Real => Point::Real(
+            PointConfType::Real => Point::Real(
                 PointHlr::new(
                     input.tx_id(),
                     &concat_string!(self.id, ".out"),
@@ -63,7 +63,7 @@ impl FnPiecewiseLineApprox {
                     input.timestamp(),
                 )
             ),
-            PointConfigType::Double => Point::Double(
+            PointConfType::Double => Point::Double(
                 PointHlr::new(
                     input.tx_id(),
                     &concat_string!(self.id, ".out"),

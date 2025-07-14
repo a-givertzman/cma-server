@@ -1,5 +1,5 @@
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::{Name, PointConf}};
+use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::FnConfig};
 ///
 /// ## The configuration parameters for the rope
 /// 
@@ -17,8 +17,8 @@ pub struct RopeConf {
     pub width: ConfDistance,
     pub length: ConfDistance,
     pub segment: ConfDistance,
-    pub pos: PointConf,
-    pub load: PointConf,
+    pub pos: FnConfig,
+    pub load: FnConfig,
 }
 //
 // 
@@ -42,14 +42,15 @@ impl RopeConf {
         let segment = conf.get_distance("segment").unwrap();
         log::debug!("{dbg}.new | segment: {:?}", segment);
 
-        let pos: ConfTree = conf.get("pos").unwrap();
-        log::debug!("{dbg}.new | pos: {:?}", pos.conf);
-        let pos = PointConf::new(&name, &pos.next().unwrap());
+        let pos: FnConfig = conf.get("pos").unwrap();
         log::debug!("{dbg}.new | pos: {:?}", pos);
+        // let pos = pos.input_conf("pos").unwrap();
+        // log::debug!("{dbg}.new | pos: {:?}", pos);
 
-        let (_, load) = conf.get_by_keywd("load", "point").unwrap();
-        let load = PointConf::new(&name, &load);
+        let load: FnConfig = conf.get("load").unwrap();
         log::debug!("{dbg}.new | load: {:?}", load);
+        // let pos = pos.input_conf("pos").unwrap();
+        // log::debug!("{dbg}.new | pos: {:?}", pos);
 
         RopeConf {
             width,

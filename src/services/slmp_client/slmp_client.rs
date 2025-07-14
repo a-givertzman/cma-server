@@ -2,7 +2,7 @@ use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ord
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ExitNotify, services::{
-        conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
+        conf::DiagKeywd, entity::{Name, Object, Point, PointConf, PointTxId, Status},
         Service,
         Services,
     }, sync::{channel::Sender, Handles}, thread_pool::Scheduler
@@ -235,7 +235,7 @@ impl Service for SlmpClient {
     }
     //
     //
-    fn points(&self) -> Vec<PointConfig> {
+    fn points(&self) -> Vec<PointConf> {
         self.conf.points()
     }
     //

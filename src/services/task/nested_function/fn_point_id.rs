@@ -1,6 +1,6 @@
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
-use sal_sync::services::entity::{Point, PointConfig, PointHlr};
+use sal_sync::services::entity::{Point, PointConf, PointHlr};
 use std::{hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use concat_string::concat_string;
 use crate::{
@@ -34,7 +34,7 @@ impl FnPointId {
     ///
     /// Creates new instance of the FnPointId
     // #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnInOutRef, points: Vec<PointConfig>) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnInOutRef, points: Vec<PointConf>) -> Self {
         Self { 
             id: format!("{}/FnPointId{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,

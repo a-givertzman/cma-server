@@ -4,9 +4,9 @@ mod api_client {
     use std::{sync::{Once, Arc}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use api_tools::api::reply::api_reply::ApiReply;
+    use api_tools::api::{message::{fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn}, message::{MessageField, MessageParse}, message_kind::MessageKind, parse_data::ParseData, parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn}, reply::api_reply::ApiReply, socket::tcp_socket::TcpMessage};
     use crate::{
-        conf::api_client_config::ApiClientConfig, core_::Mutex, services::api_cient::api_client::ApiClient
+        conf::api_client_conf::ApiClientConf, core_::Mutex, services::api_cient::api_client::ApiClient
     };
     ///
     static INIT: Once = Once::new();
@@ -33,7 +33,7 @@ mod api_client {
         let path = "./src/tests/unit/services/api_client/api_client.yaml";
         let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
-        let mut conf = ApiClientConfig::read(dbg, path);
+        let mut conf = ApiClientConf::read(dbg, path);
         // let addr = conf.address.clone();
         let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
         conf.address = addr.parse().unwrap();
@@ -80,6 +80,35 @@ mod api_client {
         let mut buf = [0; 1024 * 4];
         let receiver_handle = thread::spawn(move || {
             let mut received = received_ref.lock();
+            let mut message = TcpMessage::new(
+                dbg,
+                vec![
+                    MessageField::Syn(FieldSyn::default()),
+                    MessageField::Id(FieldId(4)),
+                    MessageField::Kind(FieldKind(MessageKind::Bytes)),
+                    MessageField::Size(FieldSize(4)),
+                    MessageField::Data(FieldData(vec![]))
+                ],
+                ParseData::new(
+                    dbg,
+                    ParseSize::new(
+                        dbg,
+                        FieldSize(4),
+                        ParseKind::new(
+                            dbg,
+                            FieldKind(MessageKind::Bytes),
+                            ParseId::new(
+                                dbg,
+                                FieldId(4),
+                                ParseSyn::new(
+                                    dbg,
+                                    FieldSyn::default(),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            );
             log::info!("TCP server | Preparing test server...");
             match TcpListener::bind(addr) {
                 Ok(listener) => {
@@ -95,48 +124,55 @@ mod api_client {
                                 while received.len() < count {
                                     for e in buf.iter_mut() {*e = 0;}
                                     match _socket.read(&mut buf) {
-                                        Ok(bytes) => {
-                                            log::debug!("TCP server | received bytes: {:?}", bytes);
-                                            let raw = String::from_utf8(buf.to_vec()).unwrap();
-                                            let raw = raw.trim_matches(char::from(0));
-                                            log::debug!("TCP server | received raw: {:?}", raw);
-                                            match serde_json::from_str(&raw) {
-                                                Ok(value) => {
-                                                    let value: serde_json::Value = value;
-                                                    log::debug!("TCP server | received: {:?}", value);
-                                                    received.push(value.clone());
-                                                    let obj = value.as_object().unwrap();
-                                                    let reply = ApiReply::new(
-                                                        obj.get("authToken").unwrap().as_str().unwrap().to_string(),
-                                                        obj.get("id").unwrap().as_str().unwrap().to_string(),
-                                                        obj.get("keepAlive").unwrap().as_bool().unwrap(),
-                                                        "".into(),
-                                                        vec![],
-                                                    );
-                                                    match _socket.write(&reply.as_bytes()) {
-                                                        Ok(bytes) => {
-                                                            log::debug!("TCP server | sent bytes: {:?}", bytes);
+                                        Ok(len) => {
+                                            log::debug!("TCP server | received bytes: {:?}", len);
+                                            // let raw = String::from_utf8(buf[..bytes].to_vec()).unwrap();
+                                            // let raw = raw.trim_matches(char::from(0));
+                                            // log::debug!("TCP server | received raw: {:?}", raw);
+                                            match message.parse(buf[..len].to_owned()) {
+                                                Ok(bytes) => {
+                                                    match serde_json::from_slice(&buf) {
+                                                        Ok(value) => {
+                                                            let value: serde_json::Value = value;
+                                                            log::debug!("TCP server | received: {:?}", value);
+                                                            received.push(value.clone());
+                                                            let obj = value.as_object().unwrap();
+                                                            let reply = ApiReply::new(
+                                                                obj.get("authToken").unwrap().as_str().unwrap().to_string(),
+                                                                obj.get("id").unwrap().as_str().unwrap().to_string(),
+                                                                obj.get("keepAlive").unwrap().as_bool().unwrap(),
+                                                                "".into(),
+                                                                vec![],
+                                                            );
+                                                            match _socket.write(&reply.as_bytes()) {
+                                                                Ok(bytes) => {
+                                                                    log::debug!("TCP server | sent bytes: {:?}", bytes);
+                                                                }
+                                                                Err(err) => {
+                                                                    log::debug!("TCP server | socket write - error: {:?}", err);
+                                                                }
+                                                            };
+                                                            // debug!("TCP server | received / count: {:?}", received.len() / count);
+                                                            if (state == 0) && received.len() as f64 / count as f64 > 0.333 {
+                                                                state = 1;
+                                                                let duration = Duration::from_millis(500);
+                                                                log::debug!("TCP server | beaking socket connection for {:?}", duration);
+                                                                _socket.flush().unwrap();
+                                                                _socket.shutdown(std::net::Shutdown::Both).unwrap();
+                                                                thread::sleep(duration);
+                                                                log::debug!("TCP server | beaking socket connection for {:?} - elapsed, restoring...", duration);
+                                                                break;
+                                                            }
                                                         }
                                                         Err(err) => {
-                                                            log::debug!("TCP server | socket write - error: {:?}", err);
+                                                            log::error!("TCP server | Deserialise bytes error: {:?}", err);
                                                         }
                                                     };
-                                                    // debug!("TCP server | received / count: {:?}", received.len() / count);
-                                                    if (state == 0) && received.len() as f64 / count as f64 > 0.333 {
-                                                        state = 1;
-                                                        let duration = Duration::from_millis(500);
-                                                        log::debug!("TCP server | beaking socket connection for {:?}", duration);
-                                                        _socket.flush().unwrap();
-                                                        _socket.shutdown(std::net::Shutdown::Both).unwrap();
-                                                        thread::sleep(duration);
-                                                        log::debug!("TCP server | beaking socket connection for {:?} - elapsed, restoring...", duration);
-                                                        break;
-                                                    }
                                                 }
                                                 Err(err) => {
-                                                    log::debug!("TCP server | parse read data error: {:?}", err);
+                                                    log::error!("TCP server | Parse message error: {:?}", err);
                                                 }
-                                            };
+                                            }
                                         }
                                         Err(err) => {
                                             log::debug!("socket read - error: {:?}", err);

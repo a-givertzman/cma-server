@@ -1,6 +1,6 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
-    entity::{Name, Object, Point, PointConfig, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
+    entity::{Name, Object, Point, PointConf, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
 }, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration,
@@ -215,7 +215,7 @@ impl Service for Task {
     }
     //
     //
-    fn points(&self) -> Vec<PointConfig> {
+    fn points(&self) -> Vec<PointConf> {
         self.conf.points()
     }
     //
