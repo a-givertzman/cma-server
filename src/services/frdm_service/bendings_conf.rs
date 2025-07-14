@@ -25,12 +25,12 @@ impl BendingsConf {
         let parent = parent.into();
         let me = "RopeConf";
         let dbg = Dbg::new(&parent, me);
-        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        log::debug!("{dbg}.new | conf: {:?}", conf);
         let bend_re = Regex::new(r"^([-+]?\d[\d]*\.?[\d]+)[ \t]*\.\.[ \t]*([-+]?\d[\d]*\.?[\d]+)[ \t]*(nm|um|cm|mm|m|km|in)$").unwrap();
-        let bendings: serde_yaml::Value = conf.get("bendings").unwrap();
-        let bendings = bendings.as_sequence().expect(&format!("{dbg}.new | Wrong bending: {:?}, Expected list of items: string: start..end unit (0.5..0.8 m)", bendings));
-        let bendings = bendings.iter().filter_map(|bend| {
-            match bend.as_str() {
+        // let bendings: serde_yaml::Value = conf.get("bendings").unwrap();
+        // let bendings = bendings.as_sequence().expect(&format!("{dbg}.new | Wrong bending: {:?}, Expected list of items: string: start..end unit (0.5..0.8 m)", bendings));
+        let bendings = conf.sub_nodes().unwrap().filter_map(|bend| {
+            match bend.conf.as_str() {
                 Some(bend) => {
                     match bend_re.captures(bend) {
                         Some(caps) => {
