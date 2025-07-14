@@ -7,7 +7,7 @@ mod udp_client {
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::udp_client_config::udp_client_config::UdpClientConfig,
+        conf::udp_client_config::udp_client_conf::UdpClientConf,
         services::{task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient},
         tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig},
     };
@@ -65,7 +65,7 @@ mod udp_client {
             "#).unwrap()),
         ), Some(tp.scheduler())));
         let path = "./src/tests/unit/services/udp_client/udp-client.yaml";
-        let conf = UdpClientConfig::read(dbg, path);
+        let conf = UdpClientConf::read(dbg, path);
         let udp_client = Arc::new(UdpClient::new(conf, services.clone(), tp.scheduler()));
         services.insert(udp_client.clone());
         // let conf = MultiQueueConf::from_yaml(

@@ -22,8 +22,7 @@ use sal_sync::{
     services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services}, sync::Handles, thread_pool::Scheduler,
 };
 use crate::{
-    conf::udp_client_config::udp_client_config::UdpClientConfig,
-    core_::RwLock,
+    core_::RwLock, services::FrdmServiceConf,
 };
 ///
 /// FRDM Service (Fiber Rope Defects Monitoring)
@@ -31,7 +30,7 @@ use crate::{
 pub struct FrdmService {
     tx_id: usize,
     name: Name,
-    conf: UdpClientConfig,
+    conf: FrdmServiceConf,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Handles<()>,
@@ -43,7 +42,7 @@ pub struct FrdmService {
 impl FrdmService {
     //
     /// Crteates new instance of the FrdmService 
-    pub fn new(conf: UdpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: FrdmServiceConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
@@ -111,28 +110,7 @@ impl Service for FrdmService {
             let send = services
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-            let conf = serde_yaml::from_str(r"
-                service Camera Camera1:
-                    fps: Max                    # Max / Min / 30.0
-                    resolution: 
-                        width: 1200
-                        height: 800
-                    index: 0
-                    # address: 192.168.10.12:2020
-                    # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
-                    # pixel-format:  Mono8
-                    # pixel-format:  BayerRG8
-                    # pixel-format:  QOI_Mono8
-                    pixel-format:  QOI_BayerRG8
-                    exposure:
-                        auto: Off                   # Off / Continuous
-                        time: 26000                   # microseconds
-                    auto-packet-size: true          # StreamAutoNegotiatePacketSize
-                    channel-packet-size: Max        # Maximizing packet size increases frame rate
-                    resend-packet: true             # StreamPacketResendEnable
-            ").unwrap();
-            let conf = CameraConf::from_yaml(dbg, &conf);
-            let mut camera = Camera::new(conf);
+            let mut camera = Camera::new(conf.camera);
             let camera_stream = camera.stream();
             let handle = camera.read().unwrap();
             let conf = frdm_tools::conf::Conf {

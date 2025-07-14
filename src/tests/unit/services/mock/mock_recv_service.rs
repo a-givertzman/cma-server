@@ -10,8 +10,8 @@ static COUNT: AtomicUsize = AtomicUsize::new(0);
 pub struct MockRecvService {
     dbg: Dbg,
     name: Name,
-    rx_send: HashMap<String, Sender<Point>>,
-    rx_recv: Owner<Receiver<Point>>,
+    in_queue: HashMap<String, Sender<Point>>,
+    recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     handles: Handles<()>,
@@ -20,14 +20,17 @@ pub struct MockRecvService {
 //
 // 
 impl MockRecvService {
-    pub fn new(parent: impl Into<String>, rx_queue: &str, recv_limit: Option<usize>) -> Self {
+    ///
+    /// - `in_queue` - The name if link to send to
+    /// - `recv_limit` - Service will exit after received specified number of events
+    pub fn new(parent: impl Into<String>, in_queue: &str, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = channel::unbounded();
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
-            rx_send: HashMap::from([(rx_queue.to_string(), send)]),
-            rx_recv: Owner::new(recv),
+            in_queue: HashMap::from([(in_queue.to_string(), send)]),
+            recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             handles: Handles::new(&dbg),
@@ -69,7 +72,7 @@ impl Service for MockRecvService {
     //
     //
     fn get_link(&self, name: &str) -> Sender<Point> {
-        match self.rx_send.get(name) {
+        match self.in_queue.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
         }
@@ -78,20 +81,20 @@ impl Service for MockRecvService {
     //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
-        let self_id = self.dbg.clone();
+        let dbg = self.dbg.clone();
         let exit = self.exit.clone();
-        let in_recv = self.rx_recv.take().unwrap();
+        let recv = self.recv.take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
-        let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
-            log::info!("{}.run | Preparing thread - ok", self_id);
+        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+            log::info!("{}.run | Preparing thread - ok", dbg);
             match recv_limit {
                 Some(recv_limit) => {
                     let mut received_count = 0;
                     loop {
-                        match in_recv.recv_timeout(RECV_TIMEOUT) {
+                        match recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
-                                log::trace!("{}.run | received: {:?}", self_id, point);
+                                log::trace!("{}.run | received: {:?}", dbg, point);
                                 received.write().push(point);
                                 received_count += 1;
                             }
@@ -107,9 +110,9 @@ impl Service for MockRecvService {
                 }
                 None => {
                     loop {
-                        match in_recv.recv_timeout(RECV_TIMEOUT) {
+                        match recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
-                                log::trace!("{}.run | received: {:?}", self_id, point);
+                                log::trace!("{}.run | received: {:?}", dbg, point);
                                 received.write().push(point);
                             }
                             Err(_) => {}

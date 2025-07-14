@@ -37,7 +37,7 @@ use super::udp_client_db_config::UdpClientDbConfig;
 ///                 ...
 /// 
 #[derive(Debug, PartialEq, Clone)]
-pub struct UdpClientConfig {
+pub struct UdpClientConf {
     pub name: Name,
     pub description: String,
     pub subscribe: ConfSubscribe,
@@ -54,7 +54,7 @@ pub struct UdpClientConfig {
 }
 //
 // 
-impl UdpClientConfig {
+impl UdpClientConf {
     ///
     /// Creates new instance of the [UdpClientConfig]:
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
@@ -101,7 +101,7 @@ impl UdpClientConfig {
                 log::debug!("{}.new | device expected, but found {:?}", dbg, keyword);
             }
         }
-        UdpClientConfig {
+        UdpClientConf {
             name: self_name,
             description,
             subscribe,
@@ -118,7 +118,7 @@ impl UdpClientConfig {
     }
     ///
     /// Returns config build from serde_yaml::Value
-    pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> UdpClientConfig {
+    pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> UdpClientConf {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
                 Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
@@ -131,12 +131,12 @@ impl UdpClientConfig {
     ///
     /// Returns config build from path
     #[allow(dead_code)]
-    pub fn read(parent: impl Into<String>, path: &str) -> UdpClientConfig {
+    pub fn read(parent: impl Into<String>, path: &str) -> UdpClientConf {
         match fs::read_to_string(path) {
             Ok(yaml_string) => {
                 match serde_yaml::from_str(&yaml_string) {
                     Ok(config) => {
-                        UdpClientConfig::from_yaml(parent, &config)
+                        UdpClientConf::from_yaml(parent, &config)
                     }
                     Err(err) => {
                         panic!("UdpClientConfig.read | Error in config: {:?}\n\terror: {:#?}", yaml_string, err)

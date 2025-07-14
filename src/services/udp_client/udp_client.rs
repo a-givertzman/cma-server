@@ -37,7 +37,7 @@ use sal_sync::{
     services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services}, sync::Handles, thread_pool::Scheduler,
 };
 use crate::{
-    conf::udp_client_config::udp_client_config::UdpClientConfig,
+    conf::udp_client_config::udp_client_conf::UdpClientConf,
     core_::RwLock,
 };
 use super::udp_client_db::UdpClientDb;
@@ -54,7 +54,7 @@ pub struct UdpClient {
     tx_id: usize,
     dbg: Dbg,
     name: Name,
-    conf: UdpClientConfig,
+    conf: UdpClientConf,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Handles<()>,
@@ -71,7 +71,7 @@ impl UdpClient {
     pub const HEAD_LEN: usize = 7;
     //
     /// Crteates new instance of the UdpClient 
-    pub fn new(conf: UdpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: UdpClientConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
@@ -87,7 +87,7 @@ impl UdpClient {
     }
     ///
     /// Returns UdpClint's DB blokcs
-    pub fn build_dbs(dbg: &Dbg, tx_id: usize, conf: &UdpClientConfig) -> FxIndexMap<Dbs, UdpClientDb> {
+    pub fn build_dbs(dbg: &Dbg, tx_id: usize, conf: &UdpClientConf) -> FxIndexMap<Dbs, UdpClientDb> {
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for (db_name, db_conf) in &conf.dbs {
             log::info!("{}.build_dbs | Configuring UdpClientDb: {:?}...", dbg, db_name);
@@ -106,7 +106,7 @@ impl UdpClient {
     /// Returns the socket ready to receive data messages
     /// - Connected to the remote address
     /// - Hanshaked - Start message sent and acknowledged
-    fn handshake(dbg: &Dbg, socket: UdpSocket, conf: &UdpClientConfig, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
+    fn handshake(dbg: &Dbg, socket: UdpSocket, conf: &UdpClientConf, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
         let mut buf = vec![0; conf.mtu];
         match socket.send_to(&[Self::SYN, Self::EOT], &conf.remote_addr) {
             Ok(_) => {
@@ -174,7 +174,7 @@ impl UdpClient {
     /// Returns the socket ready to receive data messages
     /// - Connected to the remote address
     /// - Hanshaked - Start message sent and acknowledged
-    fn connect(dbg: &Dbg, conf: &UdpClientConfig, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
+    fn connect(dbg: &Dbg, conf: &UdpClientConf, exit: Arc<AtomicBool>) -> Result<(UdpSocket, SocketAddr, Vec<u8>), String> {
         match UdpSocket::bind(&conf.local_addr) {
             Ok(socket) => {
                 loop {

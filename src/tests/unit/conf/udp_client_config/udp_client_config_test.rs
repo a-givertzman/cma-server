@@ -5,7 +5,7 @@ mod udp_client_config {
     use sal_sync::{collections::FxIndexMap, services::{conf::DiagKeywd, entity::{Name, {PointConf, PointConfHistory, PointConfType}}, LinkName, ConfSubscribe}};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::udp_client_config::{udp_client_config::UdpClientConfig, udp_client_db_config::UdpClientDbConfig};
+    use crate::conf::udp_client_config::{udp_client_conf::UdpClientConf, udp_client_db_config::UdpClientDbConfig};
     ///
     ///
     static INIT: Once = Once::new();
@@ -63,7 +63,7 @@ mod udp_client_config {
                             type: 'Int'
                             input: 0                    # the number of input 0..8 (0 - first input channel)
                 "#),
-                UdpClientConfig {
+                UdpClientConf {
                     name: Name::new(self_id, "UdpClient"),
                     description: "UDP-IED-01.01".to_owned(),
                     subscribe: ConfSubscribe::new(serde_yaml::from_str("Multiqueue").unwrap()),
@@ -159,7 +159,7 @@ mod udp_client_config {
                             input: 3                    # the number of input 0..8 (0 - first input channel)
                             history: r
                 "#),
-                UdpClientConfig {
+                UdpClientConf {
                     name: Name::new(self_id, "UdpIed01"),
                     description: "UDP-IED-01.01".to_owned(),
                     subscribe: ConfSubscribe::new(serde_yaml::from_str(r#"Multiqueue: 
@@ -227,7 +227,7 @@ mod udp_client_config {
         ];
         for (step, conf, target) in test_data {
             let conf = serde_yaml::from_str(&conf).unwrap();
-            let result = UdpClientConfig::from_yaml(self_id, &conf);
+            let result = UdpClientConf::from_yaml(self_id, &conf);
             log::debug!("{}  |  conf: {:#?}", step, result);
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }

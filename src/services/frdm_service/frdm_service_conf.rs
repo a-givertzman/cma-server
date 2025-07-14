@@ -1,6 +1,6 @@
 use frdm_tools::camera::CameraConf;
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, ConfSubscribe};
-use std::{fs, time::Duration};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}, ConfSubscribe, LinkName};
+use std::{fs, str::FromStr, time::Duration};
 
 use crate::services::{BendingsConf, RopeConf};
 ///
@@ -8,6 +8,7 @@ use crate::services::{BendingsConf, RopeConf};
 /// ```yaml
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
+///     send-to: /App/ApiClient.in-queue
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
@@ -36,6 +37,7 @@ use crate::services::{BendingsConf, RopeConf};
 #[derive(Debug, PartialEq, Clone)]
 pub struct FrdmServiceConf {
     pub name: Name,
+    pub send_to: LinkName,
     pub cycle: Option<Duration>,
     pub rope: RopeConf,
     pub bendings: BendingsConf,
@@ -53,6 +55,9 @@ impl FrdmServiceConf {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
+        let send_to: String = conf.get("send-to").unwrap();
+        let send_to = LinkName::from_str(&send_to).unwrap();
+        log::debug!("{}.new | send-to: {}", dbg, send_to);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let rope = conf.get("rope").unwrap();
@@ -72,6 +77,7 @@ impl FrdmServiceConf {
         log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
         FrdmServiceConf {
             name,
+            send_to,
             cycle,
             rope,
             bendings,
