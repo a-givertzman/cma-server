@@ -1,12 +1,12 @@
 #[cfg(test)]
 
-use std::{sync::Once, time::{Duration, Instant}};
+use std::{sync::Once, time::Duration};
 use indexmap::IndexMap;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree}, entity::{Name, PointConf, PointConfHistory, PointConfType}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
+use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::{BendingsConf, RopeConf};
+use crate::services::RopeConf;
 
 ///
 ///
@@ -40,25 +40,29 @@ fn new() {
                 width: 35 mm
                 length: 3000m
                 segment: 100 mm
-                pos: point real 'App/Winch.EncoderBR2'      # in meters
+                pos: point real '/App/Winch.EncoderBR2'      # in meters
                 load: point real '/App/Winch.Load'             # in tonn
             ").unwrap(),
             RopeConf {
                 width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                 length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
                 segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-                pos: FnConfig {
-                    name: format!("{dbg}/App/Winch.EncoderBR2"),
-                    inputs: IndexMap::new(),
-                    type_: FnConfPointType::Real,
-                    options: FnConfOptions::default(),
-                },
-                load: FnConfig {
-                    name: format!("{dbg}/App/Winch.Load"),
-                    inputs: IndexMap::new(),
-                    type_: FnConfPointType::Real,
-                    options: FnConfOptions::default(),
-                },
+                pos: FnConfKind::Point(
+                    FnConfig {
+                        name: format!("/App/Winch.EncoderBR2"),
+                        inputs: IndexMap::new(),
+                        type_: FnConfPointType::Real,
+                        options: FnConfOptions::default(),
+                    }
+                ),
+                load: FnConfKind::Point(
+                    FnConfig {
+                        name: format!("/App/Winch.Load"),
+                        inputs: IndexMap::new(),
+                        type_: FnConfPointType::Real,
+                        options: FnConfOptions::default(),
+                    },
+                )
             }
         ),
     ];

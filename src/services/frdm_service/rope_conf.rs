@@ -1,5 +1,5 @@
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::FnConfig};
+use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, task::functions::FnConfKind};
 ///
 /// ## The configuration parameters for the rope
 /// 
@@ -17,8 +17,8 @@ pub struct RopeConf {
     pub width: ConfDistance,
     pub length: ConfDistance,
     pub segment: ConfDistance,
-    pub pos: FnConfig,
-    pub load: FnConfig,
+    pub pos: FnConfKind,
+    pub load: FnConfKind,
 }
 //
 // 
@@ -42,13 +42,13 @@ impl RopeConf {
         let segment = conf.get_distance("segment").unwrap();
         log::debug!("{dbg}.new | segment: {:?}", segment);
 
-        let pos: FnConfig = conf.get("pos").unwrap();
-        log::debug!("{dbg}.new | pos: {:?}", pos);
+        let pos = conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap();
+        log::debug!("{dbg}.new | pos: {}: {}", pos.name(), Self::type_(&pos));
         // let pos = pos.input_conf("pos").unwrap();
         // log::debug!("{dbg}.new | pos: {:?}", pos);
 
-        let load: FnConfig = conf.get("load").unwrap();
-        log::debug!("{dbg}.new | load: {:?}", load);
+        let load = conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap();
+        log::debug!("{dbg}.new | load: {}: {}", load.name(), Self::type_(&load));
         // let pos = pos.input_conf("pos").unwrap();
         // log::debug!("{dbg}.new | pos: {:?}", pos);
 
@@ -60,4 +60,17 @@ impl RopeConf {
             load,
         }
     }
+    ///
+    /// Return a type of 
+    fn type_(conf: &FnConfKind) -> String {
+        match conf {
+            FnConfKind::Fn(conf) => format!("{:?}", conf.type_),
+            FnConfKind::Var(conf) => format!("{:?}", conf.type_),
+            FnConfKind::Const(conf) => format!("{:?}", conf.type_),
+            FnConfKind::Point(conf) => format!("{:?}", conf.type_),
+            FnConfKind::PointConf(conf) => format!("{:?}", conf.conf.type_),
+            FnConfKind::Param(conf) => format!("{:?}", conf),
+        }
+    }
 }
+

@@ -1,8 +1,7 @@
 use std::{ops::Range, str::FromStr};
-
 use regex::Regex;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
+use sal_sync::services::conf::{ConfDistance, ConfTree, ConfTreeGet};
 
 ///
 /// ## The bendingsof the rope
