@@ -1,7 +1,8 @@
-use std::ops::Range;
+use std::{ops::Range, str::FromStr};
 
 use regex::Regex;
-use sal_sync::services::{conf::ConfTree, entity::Name};
+use sal_core::dbg::Dbg;
+use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
 
 ///
 /// ## The bendingsof the rope
@@ -22,16 +23,31 @@ impl BendingsConf {
     ///
     /// Returns [BendingsConf] built from `ConfTree`:
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
-        let me = conf.sufix_or(conf.name().unwrap());
-        let dbg = format!("RopeConf({})", me);
+        let parent = parent.into();
+        let me = "RopeConf";
+        let dbg = Dbg::new(&parent, me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
-        let name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, name);
-        let bend_re = Regex::new(r"");
-        let mut bendings: Vec<Range<f64>> = vec![];
-        for bend_conf in conf.sub_nodes() {
-            let bend = 
-        }
+        let bend_re = Regex::new(r"^([-+]?\d[\d]*\.?[\d]+)[ \t]*\.\.[ \t]*([-+]?\d[\d]*\.?[\d]+)[ \t]*(nm|um|cm|mm|m|km|in)$").unwrap();
+        let bendings: serde_yaml::Value = conf.get("bendings").unwrap();
+        let bendings = bendings.as_sequence().expect(&format!("{dbg}.new | Wrong bending: {:?}, Expected list of items: string: start..end unit (0.5..0.8 m)", bendings));
+        let bendings = bendings.iter().filter_map(|bend| {
+            match bend.as_str() {
+                Some(bend) => {
+                    match bend_re.captures(bend) {
+                        Some(caps) => {
+                            let start = caps.get(1).expect(&format!("{dbg}.new | Wrong bending: {:?}", bend)).as_str();
+                            let end = caps.get(2).expect(&format!("{dbg}.new | Wrong bending: {:?}", bend)).as_str();
+                            let unit = caps.get(3).expect(&format!("{dbg}.new | Unit is missing in the bending: {:?}", bend)).as_str();
+                            let start = ConfDistance::from_str(&format!("{start} {unit}")).expect(&format!("{dbg}.new | Wrong float or unit in the bending: {:?}", bend));
+                            let end = ConfDistance::from_str(&format!("{end} {unit}")).expect(&format!("{dbg}.new | Wrong float or unit in the bending: {:?}", bend));
+                            Some(start.as_m()..end.as_m())
+                        }
+                        None => panic!("{dbg}.new | Wrong bending: {:?}", bend),
+                    }
+                }
+                None => panic!("{dbg}.new | Wrong bending: {:?}, Expected string: start..end unit (0.5..0.8 m)", bend),
+            }
+        }).collect();
         log::debug!("{dbg}.new | bendings: {:?}", bendings);
         Self {
             bendings,

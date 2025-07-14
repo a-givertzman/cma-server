@@ -60,15 +60,15 @@ impl FrdmServiceConf {
         log::debug!("{dbg}.new | rope: {:?}", rope);
 
         let bendings = conf.get("bendings").unwrap();
-        let bendings = BendingsConf::new(&name, rope);
+        let bendings = BendingsConf::new(&name, bendings);
         log::debug!("{dbg}.new | bendings: {:?}", rope);
 
         let (_, rope_length) = conf.get_by_keywd("rope-length", "point").unwrap();
-        let rope_length = PointConfig::new(name, &rope_length);
+        let rope_length = PointConfig::new(&name, &rope_length);
         log::debug!("{dbg}.new | rope_length: {:?}", rope_length);
 
         let camera: ConfTree = conf.get("camera").unwrap();
-        let camera = CameraConf::new(name, &camera);
+        let camera = CameraConf::new(&name, &camera);
         log::debug!("{dbg}.new | camera: {:?}", camera);
 
 

@@ -1,8 +1,12 @@
 #[cfg(test)]
 
 use std::{sync::Once, time::{Duration, Instant}};
+use sal_core::dbg::Dbg;
+use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use crate::services::BendingsConf;
+
 ///
 ///
 static INIT: Once = Once::new();
@@ -30,12 +34,32 @@ fn functionality() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
-        (01, 111, 112),
-        (02, 222, 223),
-        (03, 333, 334),
+        (01,
+            serde_yaml::from_str(r"
+                bendings:
+                    - 5.0 .. 5.15 m
+                    - 7.23 .. 7.30 mm
+            ").unwrap(),
+            vec![
+                5.0..5.15,
+                7.23*0.001..7.3*0.001,
+            ]
+        ),
+        (02,
+            serde_yaml::from_str(r"
+                bendings:
+                    - -5.0..-5.15m
+                    - -7.23..-7.30km
+            ").unwrap(),
+            vec![
+                -5.0..-5.15,
+                -7.23*1000.0..-7.3*1000.0,
+            ]
+        ),
     ];
-    for (step, val, target) in test_data {
-        let result = val + 1;
+    for (step, conf, target) in test_data {
+        let result = BendingsConf::new(&dbg, ConfTree::new("bindings", conf));
+        let result = result.bendings;
         assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     }
     test_duration.exit();
