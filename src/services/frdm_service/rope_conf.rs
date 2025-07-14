@@ -32,26 +32,16 @@ impl RopeConf {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
-
         let width = conf.get_distance("width").unwrap();
         log::debug!("{dbg}.new | width: {:?}", width);
-
         let length = conf.get_distance("length").unwrap();
         log::debug!("{dbg}.new | length: {:?}", length);
-
         let segment = conf.get_distance("segment").unwrap();
         log::debug!("{dbg}.new | segment: {:?}", segment);
-
         let pos = conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap();
         log::debug!("{dbg}.new | pos: {}: {}", pos.name(), Self::type_(&pos));
-        // let pos = pos.input_conf("pos").unwrap();
-        // log::debug!("{dbg}.new | pos: {:?}", pos);
-
         let load = conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap();
         log::debug!("{dbg}.new | load: {}: {}", load.name(), Self::type_(&load));
-        // let pos = pos.input_conf("pos").unwrap();
-        // log::debug!("{dbg}.new | pos: {:?}", pos);
-
         RopeConf {
             width,
             length,
@@ -73,4 +63,3 @@ impl RopeConf {
         }
     }
 }
-

@@ -55,28 +55,21 @@ impl FrdmServiceConf {
         log::debug!("{}.new | name: {:?}", dbg, name);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
-
         let rope = conf.get("rope").unwrap();
         let rope = RopeConf::new(&name, rope);
         log::debug!("{dbg}.new | rope: {:?}", rope);
-
         let bendings = conf.get("bendings").unwrap();
         let bendings = BendingsConf::new(&name, bendings);
         log::debug!("{dbg}.new | bendings: {:?}", rope);
-
         let (_, rope_length) = conf.get_by_keywd("rope-length", "point").unwrap();
         let rope_length = PointConf::new(&name, &rope_length);
         log::debug!("{dbg}.new | rope_length: {:?}", rope_length);
-
         let camera: ConfTree = conf.get("camera").unwrap();
         let camera = CameraConf::new(&name, &camera);
         log::debug!("{dbg}.new | camera: {:?}", camera);
-
-
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
         let subscribe = ConfSubscribe::new(subscribe);
         log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
-
         FrdmServiceConf {
             name,
             cycle,
