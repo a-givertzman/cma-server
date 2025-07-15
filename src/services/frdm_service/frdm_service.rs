@@ -15,7 +15,6 @@
 //! ```
 //! 
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
-use concat_string::concat_string;
 use frdm_tools::{camera::Camera, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
@@ -24,14 +23,14 @@ use sal_sync::{
     sync::Handles, thread_pool::Scheduler,
 };
 use crate::{
-    domain::RwLock, services::FrdmServiceConf,
+    domain::RwLock, services::{FrdmServiceConf, RopeDeprecationRate},
 };
 ///
 /// FRDM Service (Fiber Rope Defects Monitoring)
 /// 
 pub struct FrdmService {
-    tx_id: usize,
     name: Name,
+    tx_id: usize,
     conf: FrdmServiceConf,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -48,9 +47,9 @@ impl FrdmService {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            tx_id,
             name: conf.name.clone(),
-            conf: conf.clone(),
+            tx_id,
+            conf,
             services,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
@@ -72,7 +71,7 @@ impl std::fmt::Debug for FrdmService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("FrdmService")
-            .field("id", &self.dbg)
+            .field("dbg", &self.dbg)
             .finish()
     }
 }
@@ -86,7 +85,7 @@ enum NotifyState {
 }
 //
 //
-static SELF_ID: std::sync::LazyLock<RwLock<Dbg>> = std::sync::LazyLock::new(|| RwLock::new(Dbg::own("")));
+// static SELF_ID: std::sync::LazyLock<RwLock<Dbg>> = std::sync::LazyLock::new(|| RwLock::new(Dbg::own("")));
 //
 // 
 impl Service for FrdmService {
@@ -99,11 +98,15 @@ impl Service for FrdmService {
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let services = self.services.clone();
+        let scheduler = self.scheduler.clone();
         let handles_clone = self.handles.clone();
         log::debug!("{}.run | Preparing thread...", dbg);
-        *SELF_ID.write() = dbg.clone();
+        // *SELF_ID.write() = dbg.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
+            let rope_deprecation = RopeDeprecationRate::new(dbg, conf.bendings, services.clone(), scheduler);
+            let handle = rope_deprecation.run();
+            handles_clone.push(handle);
             let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
                 (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
                 (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
@@ -128,43 +131,51 @@ impl Service for FrdmService {
             );
             'main: loop {
                 log::debug!("{dbg}.run | Starting camera...");
-                let handle = camera.read().unwrap();
-                log::debug!("{dbg}.run | Starting camera - Ok");
-                handles_clone.push(handle);
-                log::debug!("{dbg}.run | Receiving messages from camera...");
-                'camera: loop {
-                    match camera_stream.recv_timeout(RECV_TIMEOUT) {
-                        Ok(frame) => {
-                            let result = defect.eval(frame);
-                            let sql = format!(r"begin;
-                                update {} set {:?}
-                            commit;", conf.table, result);
-                            let point = Point::new(
-                                tx_id,
-                                &concat_string!(dbg, "sql"),
-                                sql,
-                            );
-                            if let Err(err) = send_to.send(point) {
-                                log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                match camera.read() {
+                    Ok(handle) => {
+                        log::debug!("{dbg}.run | Starting camera - Ok");
+                        handles_clone.push(handle);
+                        log::debug!("{dbg}.run | Receiving frames from camera...");
+                        'camera: loop {
+                            match camera_stream.recv_timeout(RECV_TIMEOUT) {
+                                Ok(frame) => {
+                                    let result = defect.eval(frame);
+                                    let sql = format!(r"begin;
+                                        update {} set {:?}
+                                    commit;", conf.table, result);
+                                    let point = Point::new(
+                                        tx_id,
+                                        &Name::new(dbg, "sql").join(),
+                                        sql,
+                                    );
+                                    if let Err(err) = send_to.send(point) {
+                                        log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                    }
+                                    if exit.load(Ordering::Acquire) {
+                                        camera.exit();
+                                        rope_deprecation.exit();
+                                        break 'main;
+                                    }
+                                }
+                                Err(err) => {
+                                    match err {
+                                        crate::domain::RecvTimeoutError::Timeout => {}
+                                        _ => {
+                                            camera.exit();
+                                            break 'camera;
+                                        }
+                                    }
+                                }
                             }
                             if exit.load(Ordering::Acquire) {
                                 camera.exit();
+                                rope_deprecation.exit();
                                 break 'main;
                             }
                         }
-                        Err(err) => {
-                            match err {
-                                crate::domain::RecvTimeoutError::Timeout => {}
-                                _ => {
-                                    camera.exit();
-                                    break 'camera;
-                                }
-                            }
-                        }
                     }
-                    if exit.load(Ordering::Acquire) {
-                        camera.exit();
-                        break 'main;
+                    Err(err) => {
+                        log::info!("{dbg}.run | Camera error: {:?}", err);
                     }
                 }
             }
