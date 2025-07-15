@@ -2,9 +2,10 @@ use std::sync::{atomic::AtomicBool, Arc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ChangeNotify, services::{entity::{Name, Object, PointTxId}, Service, Services}, sync::Handles, thread_pool::Scheduler};
 
-use crate::services::BendingsConf;
+use crate::services::{BendingsConf, RopeSlice};
 
 ///
+/// ## Rope deprecation rate
 /// - Counting passes rope via cargo block
 /// - Including:
 ///     - Rope width
@@ -87,7 +88,9 @@ impl Service for RopeDeprecationRate {
                 (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
                 (NotifyState::CameraError,    Box::new(|message| log::error!("{}", message))),
             ]);
-
+            let slices = (0..conf.bendings.len()).map(|slice| {
+                let slice = RopeSlice::new();
+            }).collect();
             // let send_to = services
             //     .get_link(&conf.send_to)
             //     .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
