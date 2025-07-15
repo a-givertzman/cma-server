@@ -14,17 +14,16 @@
 //!     parameter: value    # meaning
 //! ```
 //! 
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use frdm_tools::{camera::Camera, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
+use regex::Replacer;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
     services::{entity::{Name, Object, Point, PointTxId}, Service, Services, RECV_TIMEOUT},
     sync::Handles, thread_pool::Scheduler,
 };
-use crate::{
-    domain::RwLock, services::{FrdmServiceConf, RopeDeprecationRate},
-};
+use crate::services::{FrdmServiceConf, RopeDeprecationRate};
 ///
 /// FRDM Service (Fiber Rope Defects Monitoring)
 /// 
@@ -94,23 +93,31 @@ impl Service for FrdmService {
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
+        let name = self.name.clone();
         let tx_id = self.tx_id;
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let handles_clone = self.handles.clone();
+        let path = Path::new("./files").join(
+            name.join()
+                .chars()
+                .enumerate()
+                .filter(|(ix, ch)| !((*ix == 0) & (*ch == '/')))
+                .map(|(_, ch)| ch)
+                .collect::<String>()
+        );
+        let rope_deprecation = RopeDeprecationRate::new(&dbg, conf.bendings.clone(), services.clone(), scheduler);
+        let _ = rope_deprecation.run()?;
         log::debug!("{}.run | Preparing thread...", dbg);
         // *SELF_ID.write() = dbg.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let rope_deprecation = RopeDeprecationRate::new(dbg, conf.bendings, services.clone(), scheduler);
-            let handle = rope_deprecation.run();
-            handles_clone.push(handle);
             let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
-                (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
-                (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
-                (NotifyState::CameraError,    Box::new(|message| log::error!("{}", message))),
+                (NotifyState::Start,          Box::new(|message| log::info!("{message}"))),
+                (NotifyState::Exit,           Box::new(|message| log::info!("{message}"))),
+                (NotifyState::CameraError,    Box::new(|message| log::error!("{message}"))),
             ]);
 
             let send_to = services
@@ -140,6 +147,7 @@ impl Service for FrdmService {
                             match camera_stream.recv_timeout(RECV_TIMEOUT) {
                                 Ok(frame) => {
                                     let result = defect.eval(frame);
+                                    let defect_image_path = path.join(format!("defect_image/{}.jpeg", image_id));
                                     let sql = format!(r"begin;
                                         update {} set {:?}
                                     commit;", conf.table, result);
@@ -191,7 +199,7 @@ impl Service for FrdmService {
             Err(err) => {
                 let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
-                Err(err)
+                return Err(err)
             }
         }
     }
