@@ -13,7 +13,7 @@ use sal_sync::{
 };
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::Mutex,
+    domain::Mutex,
     services::slmp_client::slmp_db::SlmpDb,
 };
 

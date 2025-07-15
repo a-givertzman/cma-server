@@ -2,7 +2,7 @@
 mod retain_buffer {
     use std::sync::Once;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::core_::retain_buffer::retain_buffer::RetainBuffer;
+    use crate::domain::retain_buffer::retain_buffer::RetainBuffer;
     ///
     ///
     static INIT: Once = Once::new();

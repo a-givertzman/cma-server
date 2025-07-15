@@ -4,7 +4,7 @@ mod tests {
     use sal_sync::{services::{entity::{Cot, Point, PointHlr, Status}, types::Bool}, sync::channel};
     use std::sync::Once;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::{core_::net::protocols::jds::jds_serialize::JdsSerialize, tcp::steam_read::StreamRead};
+    use crate::{domain::net::protocols::jds::jds_serialize::JdsSerialize, tcp::steam_read::StreamRead};
     ///
     ///
     static INIT: Once = Once::new();

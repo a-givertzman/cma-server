@@ -1,12 +1,12 @@
 use sal_sync::services::entity::{Name, Object};
 use crate::{
-    core_::failure::RecvError,
+    domain::failure::RecvError,
     tcp::steam_read::StreamRead,
 };
 #[cfg(test)]
 mod tcp_stream_write {
     use crate::{
-        core_::{net::connection_status::ConnectionStatus, Mutex},
+        domain::{net::connection_status::ConnectionStatus, Mutex},
         tcp::tcp_stream_write::{OpResult, TcpStreamWrite},
         tests::unit::tcp::tcp_stream_write_test::MockStreamRead,
     };

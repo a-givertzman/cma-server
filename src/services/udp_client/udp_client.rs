@@ -38,7 +38,7 @@ use sal_sync::{
 };
 use crate::{
     conf::udp_client_config::udp_client_conf::UdpClientConf,
-    core_::RwLock,
+    domain::RwLock,
 };
 use super::udp_client_db::UdpClientDb;
 ///

@@ -6,7 +6,7 @@ mod api_client {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use api_tools::api::{message::{fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn}, message::{MessageField, MessageParse}, message_kind::MessageKind, parse_data::ParseData, parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn}, reply::api_reply::ApiReply, socket::tcp_socket::TcpMessage};
     use crate::{
-        conf::api_client_conf::ApiClientConf, core_::Mutex, services::api_cient::api_client::ApiClient
+        conf::api_client_conf::ApiClientConf, domain::Mutex, services::api_cient::api_client::ApiClient
     };
     ///
     static INIT: Once = Once::new();

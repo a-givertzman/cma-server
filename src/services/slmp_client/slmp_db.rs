@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
     conf::slmp_client_config::slmp_db_config::SlmpDbConfig,
-    core_::{
+    domain::{
         filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
         net::connection_status::{ConnectionStatus, SocketState},
     },

@@ -33,7 +33,7 @@ fn run() {
     log::debug!("");
     let dbg = Dbg::own("new");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
     let test_data = [
         (01,
@@ -125,7 +125,7 @@ fn run() {
     services.run().unwrap();
     receiver.run().unwrap();
     frdm.run().unwrap();
-
+    std::thread::sleep(Duration::from_secs(10));
     frdm.exit();
     services.exit();
     frdm.wait().unwrap();

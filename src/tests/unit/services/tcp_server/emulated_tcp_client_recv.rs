@@ -9,7 +9,7 @@ use sal_sync::{
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    core_::{net::{
+    domain::{net::{
         connection_status::ConnectionStatus,
         protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize},
     }, RwLock},

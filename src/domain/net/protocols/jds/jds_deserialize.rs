@@ -11,7 +11,7 @@ use sal_sync::services::{
     types::Bool
 };
 use crate::{
-    core_::net::connection_status::ConnectionStatus, tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult}
+    domain::net::connection_status::ConnectionStatus, tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult}
 };
 use super::jds_decode_message::JdsDecodeMessage;
 ///

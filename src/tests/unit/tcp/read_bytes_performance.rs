@@ -8,7 +8,7 @@ mod socket_read_performance {
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Read, BufReader, Write}};
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::core_::net::protocols::jds::jds_define::JDS_END_OF_TRANSMISSION;
+    use crate::domain::net::protocols::jds::jds_define::JDS_END_OF_TRANSMISSION;
     //
     //
     static INIT: Once = Once::new();

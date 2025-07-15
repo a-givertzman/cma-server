@@ -5,7 +5,7 @@ use std::{
 };
 use crate::{
     conf::tcp_server_config::TcpServerConfig,
-    core_::{constants::constants::RECV_TIMEOUT},
+    domain::{constants::constants::RECV_TIMEOUT},
     services::server::{
         connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection
     },

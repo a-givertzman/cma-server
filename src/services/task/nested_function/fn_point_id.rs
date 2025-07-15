@@ -4,7 +4,7 @@ use sal_sync::services::entity::{Point, PointConf, PointHlr};
 use std::{hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use concat_string::concat_string;
 use crate::{
-    core_::FnInOutRef, 
+    domain::FnInOutRef, 
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,

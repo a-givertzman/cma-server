@@ -6,7 +6,7 @@ use sal_core::error::Error;
 use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
     conf::profinet_client_config::profinet_db_config::ProfinetDbConfig,
-    core_::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
+    domain::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
     services::profinet_client::{
         parse_point::ParsePoint,
         s7::{

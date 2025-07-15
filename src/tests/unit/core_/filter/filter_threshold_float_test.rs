@@ -4,7 +4,7 @@ mod tests {
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::core_::filter::{filter::Filter, filter_threshold::FilterThreshold};
+    use crate::domain::filter::{filter::Filter, filter_threshold::FilterThreshold};
     ///
     ///
     static INIT: Once = Once::new();

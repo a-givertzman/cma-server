@@ -6,7 +6,7 @@ use sal_sync::services::{
 };
 use std::{env, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
 use crate::{
-    core_::FnInOutRef, 
+    domain::FnInOutRef, 
     services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///

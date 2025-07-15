@@ -3,7 +3,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{services::{entity::{Cot, Name, Point, PointConf, PointHlr, Status}, Services, SubscriptionCriteria}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
-    core_::{
+    domain::{
         auth::ssh::auth_ssh::AuthSsh,
         net::protocols::jds::request_kind::RequestKind, RwLock,
     }, services::server::{jds_cnnection::JdsState, jds_routes::RouterReply}

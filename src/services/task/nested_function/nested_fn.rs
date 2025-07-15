@@ -2,7 +2,7 @@ use sal_sync::services::{entity::{Name, Point, ToPoint}, LinkName, Services, tas
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::Arc};
 use indexmap::IndexMap;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::{
         nested_function::{
             comp::{fn_eq::FnEq, fn_ge::FnGe, fn_gt::FnGt, fn_le::FnLe, fn_lt::FnLt, fn_ne::FnNe},

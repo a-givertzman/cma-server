@@ -5,7 +5,7 @@ mod fn_falling_edge {
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        core_::FnInOutRef,
+        domain::FnInOutRef,
         services::task::nested_function::{
             edge_detection::fn_falling_edge::FnFallingEdge, fn_::FnOut, fn_input::FnInput
         }

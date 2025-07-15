@@ -15,14 +15,16 @@
 //! ```
 //! 
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
-use frdm_tools::{camera::{Camera, CameraConf}, conf::{FastScanConf, FineScanConf}, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
+use concat_string::concat_string;
+use frdm_tools::{camera::Camera, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
-    services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services}, sync::Handles, thread_pool::Scheduler,
+    services::{entity::{Name, Object, Point, PointTxId}, Service, Services, RECV_TIMEOUT},
+    sync::Handles, thread_pool::Scheduler,
 };
 use crate::{
-    core_::RwLock, services::FrdmServiceConf,
+    domain::RwLock, services::FrdmServiceConf,
 };
 ///
 /// FRDM Service (Fiber Rope Defects Monitoring)
@@ -108,12 +110,11 @@ impl Service for FrdmService {
                 (NotifyState::CameraError,    Box::new(|message| log::error!("{}", message))),
             ]);
 
-            let send = services
+            let send_to = services
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
             let mut camera = Camera::new(conf.camera);
             let mut camera_stream = camera.stream();
-            let mut timestamp = 0;
             let defect = GeometryDefect::new(
                 conf.fast_scan.geometry_defect_threshold,
                 *Box::new(Mad::new()),
@@ -125,26 +126,47 @@ impl Service for FrdmService {
                     ),
                 ),
             );
-            loop {
+            'main: loop {
+                log::debug!("{dbg}.run | Starting camera...");
                 let handle = camera.read().unwrap();
+                log::debug!("{dbg}.run | Starting camera - Ok");
                 handles_clone.push(handle);
-                for frame in &mut camera_stream {
-                    timestamp = frame.timestamp;
-                    let result = defect.eval(frame);
-                    _ = result;
+                log::debug!("{dbg}.run | Receiving messages from camera...");
+                'camera: loop {
+                    match camera_stream.recv_timeout(RECV_TIMEOUT) {
+                        Ok(frame) => {
+                            let result = defect.eval(frame);
+                            let sql = format!("{:?}", result);
+                            let point = Point::new(
+                                tx_id,
+                                &concat_string!(dbg, "sql"),
+                                sql,
+                            );
+                            if let Err(err) = send_to.send(point) {
+                                log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                            }
+                            if exit.load(Ordering::Acquire) {
+                                camera.exit();
+                                break 'main;
+                            }
+                        }
+                        Err(err) => {
+                            match err {
+                                crate::domain::RecvTimeoutError::Timeout => {}
+                                _ => {
+                                    camera.exit();
+                                    break 'camera;
+                                }
+                            }
+                        }
+                    }
                     if exit.load(Ordering::Acquire) {
                         camera.exit();
-                        break;
+                        break 'main;
                     }
                 }
-                camera.exit();
-                if exit.load(Ordering::Acquire) {
-                    camera.exit();
-                    break;
-                }
             }
-            // 'main: loop {
-            // }
+            log::info!("{dbg}.run | Exit");
             Ok(())
         });
         match handle {

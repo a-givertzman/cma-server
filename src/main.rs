@@ -2,11 +2,11 @@ use std::path::PathBuf;
 use clap::Parser;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use services::app::app::App;
-use crate::core_::cli::cli::Cli;
+use crate::domain::cli::cli::Cli;
 
 #[cfg(test)]
 mod tests;
-mod core_;
+mod domain;
 mod conf;
 mod services;
 mod tcp;

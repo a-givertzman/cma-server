@@ -2,7 +2,7 @@ use sal_sync::{services::{entity::{Cot, Point, PointHlr, PointTxId, Status}, typ
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use chrono::Utc;
 use indexmap::IndexMap;
-use crate::core_::FnInOutRef;
+use crate::domain::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Creates SQL requests on [op-cycle] falling edge:

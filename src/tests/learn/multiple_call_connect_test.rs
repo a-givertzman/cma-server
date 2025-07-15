@@ -5,7 +5,7 @@ mod tests {
     use std::{sync::Once, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 
-    use crate::core_::Mutex;
+    use crate::domain::Mutex;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     // use super::*;

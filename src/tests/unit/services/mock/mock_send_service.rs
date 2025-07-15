@@ -3,7 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point, ToPoint}, LinkName, Service, Services}, sync::{channel::Sender, Handles}};
 use testing::entities::test_value::Value;
 
-use crate::core_::RwLock;
+use crate::domain::RwLock;
 ///
 ///
 pub struct MockSendService {

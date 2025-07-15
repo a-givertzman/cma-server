@@ -5,7 +5,7 @@ use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
     conf::api_client_conf::ApiClientConf, 
-    core_::retain_buffer::retain_buffer::RetainBuffer,
+    domain::retain_buffer::retain_buffer::RetainBuffer,
 };
 ///
 /// ### Sending data to the API

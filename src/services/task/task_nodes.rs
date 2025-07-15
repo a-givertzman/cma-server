@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
 use crate::{
     conf::task_config::TaskConfig, 
-    core_::FnInOutRef, 
+    domain::FnInOutRef, 
     services::task::nested_function::{fn_kind::FnKind, nested_fn::NestedFn},
 };
 use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};

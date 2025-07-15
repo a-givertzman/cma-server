@@ -1,6 +1,6 @@
 use sal_sync::{services::entity::{Name, Object, Point}, sync::channel::{Receiver, RecvTimeoutError}};
 use crate::{
-    core_::{constants::constants::RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
+    domain::{constants::constants::RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
 };
 ///
 /// Converts PointType into the squence of bytes

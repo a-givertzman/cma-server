@@ -9,7 +9,7 @@ use std::{
 };
 use crate::{
     conf::tcp_client_config::TcpClientConfig,
-    core_::net::protocols::jds::{
+    domain::net::protocols::jds::{
         jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize,
         jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize,
     },

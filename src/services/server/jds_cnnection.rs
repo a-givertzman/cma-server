@@ -7,7 +7,7 @@ use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services,
 use serde_json::json;
 use crate::{
     conf::tcp_server_config::TcpServerConfig, 
-    core_::{
+    domain::{
         constants::constants::RECV_TIMEOUT, net::protocols::jds::{
             jds_decode_message::JdsDecodeMessage, 
             jds_deserialize::JdsDeserialize, 

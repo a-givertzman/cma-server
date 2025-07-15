@@ -6,7 +6,7 @@ mod tests {
     use std::sync::Once;
     use regex::RegexBuilder;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::core_::format::FormatPoint;
+    use crate::domain::format::FormatPoint;
     ///
     ///
     static INIT: Once = Once::new();

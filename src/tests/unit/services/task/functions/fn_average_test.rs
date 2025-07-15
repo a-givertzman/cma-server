@@ -5,7 +5,7 @@ mod fn_average {
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        core_::FnInOutRef,
+        domain::FnInOutRef,
         services::task::nested_function::{
             fn_::FnOut, fn_average::FnAverage, fn_input::FnInput, fn_result::FnResult
         }

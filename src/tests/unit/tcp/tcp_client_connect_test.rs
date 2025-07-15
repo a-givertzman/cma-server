@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod tcp_client_connect {
-    use crate::{core_::Mutex, tcp::tcp_client_connect::TcpClientConnect};
+    use crate::{domain::Mutex, tcp::tcp_client_connect::TcpClientConnect};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
         use std::{
         net::TcpListener,

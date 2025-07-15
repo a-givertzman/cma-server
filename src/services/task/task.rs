@@ -7,7 +7,7 @@ use std::{
 };
 use concat_string::concat_string;
 use crate::{
-    conf::task_config::TaskConfig, core_::constants::constants::RECV_TIMEOUT, services::task::task_nodes::TaskNodes,
+    conf::task_config::TaskConfig, domain::constants::constants::RECV_TIMEOUT, services::task::task_nodes::TaskNodes,
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations

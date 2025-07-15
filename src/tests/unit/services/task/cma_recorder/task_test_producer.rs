@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{Atomic
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point, PointConf, PointTxId, ToPoint}, LinkName, Service, Services}, sync::Handles};
 use testing::entities::test_value::Value;
-use crate::core_::RwLock;
+use crate::domain::RwLock;
 
 ///
 /// 

@@ -17,7 +17,7 @@ use sal_sync::{
 };
 use crate::{
     conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
-    core_::{
+    domain::{
         constants::constants::RECV_TIMEOUT, Mutex,
     },
     services::{
