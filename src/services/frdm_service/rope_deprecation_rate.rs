@@ -91,19 +91,6 @@ impl Service for RopeDeprecationRate {
             // let send_to = services
             //     .get_link(&conf.send_to)
             //     .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-            let mut camera = Camera::new(conf.camera);
-            let camera_stream = camera.stream();
-            let defect = GeometryDefect::new(
-                conf.fast_scan.geometry_defect_threshold,
-                *Box::new(Mad::new()),
-                EdgeDetection::new(
-                    DetectingContoursCv::new(
-                        Initial::new(
-                            InitialCtx::new(),
-                        ),
-                    ),
-                ),
-            );
             'main: loop {
                 log::debug!("{dbg}.run | Starting camera...");
                 match camera.read() {
