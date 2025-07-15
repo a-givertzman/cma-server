@@ -114,7 +114,7 @@ impl Service for FrdmService {
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
             let mut camera = Camera::new(conf.camera);
-            let mut camera_stream = camera.stream();
+            let camera_stream = camera.stream();
             let defect = GeometryDefect::new(
                 conf.fast_scan.geometry_defect_threshold,
                 *Box::new(Mad::new()),
@@ -136,7 +136,9 @@ impl Service for FrdmService {
                     match camera_stream.recv_timeout(RECV_TIMEOUT) {
                         Ok(frame) => {
                             let result = defect.eval(frame);
-                            let sql = format!("{:?}", result);
+                            let sql = format!(r"begin;
+                                update {} set {:?}
+                            commit;", conf.table, result);
                             let point = Point::new(
                                 tx_id,
                                 &concat_string!(dbg, "sql"),

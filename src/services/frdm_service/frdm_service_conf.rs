@@ -9,6 +9,7 @@ use crate::services::{BendingsConf, RopeConf};
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     send-to: /App/ApiClient.in-queue
+///     table: public.frdm
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
@@ -42,6 +43,7 @@ use crate::services::{BendingsConf, RopeConf};
 pub struct FrdmServiceConf {
     pub name: Name,
     pub send_to: LinkName,
+    pub table: String,
     pub cycle: Option<Duration>,
     pub rope: RopeConf,
     pub bendings: BendingsConf,
@@ -63,6 +65,8 @@ impl FrdmServiceConf {
         let send_to: String = conf.get("send-to").unwrap();
         let send_to = LinkName::from_str(&send_to).unwrap();
         log::debug!("{}.new | send-to: {}", dbg, send_to);
+        let table: String = conf.get("table").unwrap();
+        log::debug!("{}.new | table: {}", dbg, table);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{}.new | cycle: {:?}", dbg, cycle);
         let rope = conf.get("rope").expect(&format!("{dbg}.new | 'rope' - not found or wrong configuration"));
@@ -83,6 +87,7 @@ impl FrdmServiceConf {
         FrdmServiceConf {
             name,
             send_to,
+            table,
             cycle,
             rope,
             bendings,
