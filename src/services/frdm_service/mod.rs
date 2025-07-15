@@ -18,6 +18,7 @@ mod bendings_conf;
 mod frdm_service_conf;
 mod frdm_service;
 mod rope_conf;
+mod rope_deprecation_rate_conf;
 mod rope_deprecation_rate;
 mod rope_slice;
 
@@ -25,5 +26,6 @@ pub use bendings_conf::*;
 pub use frdm_service_conf::*;
 pub use frdm_service::*;
 pub use rope_conf::*;
+pub use rope_deprecation_rate_conf::*;
 pub use rope_deprecation_rate::*;
 pub use rope_slice::*;

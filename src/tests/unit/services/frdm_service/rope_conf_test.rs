@@ -1,9 +1,10 @@
+use std::str::FromStr;
 #[cfg(test)]
 
 use std::{sync::Once, time::Duration};
 use indexmap::IndexMap;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}};
+use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, LinkName};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::services::RopeConf;
@@ -47,22 +48,24 @@ fn new() {
                 width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                 length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
                 segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-                pos: FnConfKind::Point(
-                    FnConfig {
-                        name: format!("/App/Winch.EncoderBR2"),
-                        inputs: IndexMap::new(),
-                        type_: FnConfPointType::Real,
-                        options: FnConfOptions::default(),
-                    }
-                ),
-                load: FnConfKind::Point(
-                    FnConfig {
-                        name: format!("/App/Winch.Load"),
-                        inputs: IndexMap::new(),
-                        type_: FnConfPointType::Real,
-                        options: FnConfOptions::default(),
-                    },
-                )
+                pos: LinkName::from_str("/App/Winch.EncoderBR2").unwrap(),
+                // FnConfKind::Point(
+                //     FnConfig {
+                //         name: format!("/App/Winch.EncoderBR2"),
+                //         inputs: IndexMap::new(),
+                //         type_: FnConfPointType::Real,
+                //         options: FnConfOptions::default(),
+                //     }
+                // ),
+                load: LinkName::from_str("/App/Winch.Load").unwrap(),
+                // FnConfKind::Point(
+                //     FnConfig {
+                //         name: format!("/App/Winch.Load"),
+                //         inputs: IndexMap::new(),
+                //         type_: FnConfPointType::Real,
+                //         options: FnConfOptions::default(),
+                //     },
+                // ),
             }
         ),
     ];

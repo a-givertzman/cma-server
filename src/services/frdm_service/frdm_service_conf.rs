@@ -56,7 +56,7 @@ pub struct FrdmServiceConf {
 impl FrdmServiceConf {
     ///
     /// Returns [FrdmServiceConf] built from `ConfTree`:
-    pub fn new(parent: impl Into<String>, conf: ConfTree) -> FrdmServiceConf {
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
         let me = conf.sufix_or(conf.name().unwrap());
         let dbg = format!("FrdmServiceConf({})", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
@@ -81,10 +81,10 @@ impl FrdmServiceConf {
         let fast_scan: ConfTree = conf.get("fast-scan").expect(&format!("{dbg}.new | 'fast-scan' - not found or wrong configuration"));
         let fast_scan = FastScanConf::new(&name, fast_scan);
         log::debug!("{dbg}.new | fast-scan: {:?}", fast_scan);
-        // let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
-        // let subscribe = ConfSubscribe::new(subscribe);
-        // log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
-        FrdmServiceConf {
+        let fine_scan: ConfTree = conf.get("fast-scan").expect(&format!("{dbg}.new | 'fine-scan' - not found or wrong configuration"));
+        let fine_scan = FastScanConf::new(&name, fine_scan);
+        log::debug!("{dbg}.new | fine-scan: {:?}", fine_scan);
+        Self {
             name,
             send_to,
             table,

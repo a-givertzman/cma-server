@@ -1,8 +1,8 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use frdm_tools::{Eval, EvalMut};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{kernel::state::ChangeNotify, services::{entity::{Name, Object, PointTxId}, Service, Services}, sync::Handles, thread_pool::Scheduler};
-
-use crate::services::{BendingsConf, RopeSlice};
+use sal_sync::{kernel::state::ChangeNotify, services::{entity::{Cot, Name, Object, Point, PointTxId}, Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::{self, RecvTimeoutError}, Handles}, thread_pool::Scheduler};
+use crate::services::{RopeDeprecationRateConf, RopeSlice};
 
 ///
 /// ## Rope deprecation rate
@@ -14,7 +14,7 @@ use crate::services::{BendingsConf, RopeSlice};
 pub struct RopeDeprecationRate {
     name: Name,
     txid: usize,
-    conf: BendingsConf,
+    conf: RopeDeprecationRateConf,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
@@ -24,7 +24,7 @@ pub struct RopeDeprecationRate {
 //
 //
 impl RopeDeprecationRate {
-    pub fn new(parent: impl Into<String>, conf: BendingsConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(parent: impl Into<String>, conf: RopeDeprecationRateConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let name = Name::new(parent, "RopeDeprecationRate");
         let txid = PointTxId::from_str(&name.join());
         let dbg = Dbg::new(name.parent(), name.me());
@@ -73,14 +73,72 @@ impl Service for RopeDeprecationRate {
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
+        let name = self.name.clone();
         let tx_id = self.txid;
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let handles_clone = self.handles.clone();
+        let (send1, recv) = channel::unbounded();
+        let dbg1 = dbg.clone();
+        let name1 = name.clone();
+        let conf_pos_service = conf.pos.service();
+        let conf_load_service = conf.load.service();
+        let exit1 = exit.clone();
+        let send2 = send1.clone();
+        let services1 = services.clone();
+        let pos_point = SubscriptionCriteria::new(conf.pos.link(), Cot::Inf);
+        let handle1 = scheduler.spawn(move || {
+            let (_, recv_pos) = services1.subscribe(&conf_pos_service, &name1.join(), &[pos_point]);
+            loop {
+                match recv_pos.recv_timeout(RECV_TIMEOUT) {
+                    Ok(pos) => {
+                        if let Err(err) = send1.send((Some(pos), None)) {
+                            log::info!("{dbg1}.run | Send 'pos' error: {:?}", err);
+                        }
+                    }
+                    Err(err) => match err {
+                        RecvTimeoutError::Timeout => {}
+                        _ => {
+                            break;
+                        }
+                    },
+                }
+                if exit1.load(Ordering::Acquire) {
+                    break;
+                }
+            }
+            Ok(())
+        });
+        let dbg2 = dbg.clone();
+        let name2 = name.clone();
+        let exit2 = exit.clone();
+        let services2 = services.clone();
+        let load_point = SubscriptionCriteria::new(conf.load.link(), Cot::Inf);
+        let handle2 = scheduler.spawn(move || {
+            let (_, recv_load) = services2.subscribe(&conf_load_service, &name2.join(), &[load_point]);
+            loop {
+                match recv_load.recv_timeout(RECV_TIMEOUT) {
+                    Ok(load) => {
+                        if let Err(err) = send2.send((None, Some(load))) {
+                            log::info!("{dbg2}.run | Send 'load' error: {:?}", err);
+                        }
+                    }
+                    Err(err) => match err {
+                        RecvTimeoutError::Timeout => {}
+                        _ => {
+                            break;
+                        }
+                    },
+                }
+                if exit2.load(Ordering::Acquire) {
+                    break;
+                }
+            }
+            Ok(())
+        });
         log::debug!("{}.run | Preparing thread...", dbg);
-        // *SELF_ID.write() = dbg.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
             let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
@@ -88,60 +146,33 @@ impl Service for RopeDeprecationRate {
                 (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
                 (NotifyState::CameraError,    Box::new(|message| log::error!("{}", message))),
             ]);
-            let slices = (0..conf.bendings.len()).map(|slice| {
-                let slice = RopeSlice::new();
+            let slices: Vec<RopeSlice> = (0..conf.bendings.len()).map(|slice| {
+                RopeSlice::new()
             }).collect();
-            // let send_to = services
-            //     .get_link(&conf.send_to)
-            //     .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-            'main: loop {
-                log::debug!("{dbg}.run | Starting camera...");
-                match camera.read() {
-                    Ok(handle) => {
-                        log::debug!("{dbg}.run | Starting camera - Ok");
-                        handles_clone.push(handle);
-                        log::debug!("{dbg}.run | Receiving frames from camera...");
-                        'camera: loop {
-                            match camera_stream.recv_timeout(RECV_TIMEOUT) {
-                                Ok(frame) => {
-                                    let result = defect.eval(frame);
-                                    let sql = format!(r"begin;
-                                        update {} set {:?}
-                                    commit;", conf.table, result);
-                                    let point = Point::new(
-                                        tx_id,
-                                        &Name::new(dbg, "sql").join(),
-                                        sql,
-                                    );
-                                    if let Err(err) = send_to.send(point) {
-                                        log::warn!("{dbg}.run | Send sql error: {:?}", err);
-                                    }
-                                    if exit.load(Ordering::Acquire) {
-                                        camera.exit();
-                                        rope_deprecation.exit();
-                                        break 'main;
-                                    }
-                                }
-                                Err(err) => {
-                                    match err {
-                                        crate::domain::RecvTimeoutError::Timeout => {}
-                                        _ => {
-                                            camera.exit();
-                                            break 'camera;
-                                        }
-                                    }
-                                }
-                            }
-                            if exit.load(Ordering::Acquire) {
-                                camera.exit();
-                                rope_deprecation.exit();
-                                break 'main;
-                            }
+            loop {
+                let mut pos = 0.0;
+                let mut load = 0.0;
+                match recv.recv_timeout(RECV_TIMEOUT) {
+                    Ok((pos, load)) => {
+                        match (pos, load) {
+                            (None, None) => {},
+                            (None, Some(load_point)) => load = load_point.to_double().value(),
+                            (Some(pos_point), None) => todo!(),
+                            (Some(pos_point), Some(load_point)) => todo!(),
                         }
+                        // if let Err(err) = send2.send((None, Some(load))) {
+                        //     log::info!("{dbg2}.run | Send 'load' error: {:?}", err);
+                        // }
                     }
-                    Err(err) => {
-                        log::info!("{dbg}.run | Camera error: {:?}", err);
-                    }
+                    Err(err) => match err {
+                        RecvTimeoutError::Timeout => {}
+                        _ => {
+                            break;
+                        }
+                    },
+                }
+                if exit.load(Ordering::Acquire) {
+                    break;
                 }
             }
             log::info!("{dbg}.run | Exit");

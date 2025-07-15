@@ -50,4 +50,9 @@ impl BendingsConf {
             bendings,
         }
     }
+    ///
+    /// Returns the number of bendings in the collection
+    pub fn len(&self) -> usize {
+        self.bendings.len()
+    }
 }

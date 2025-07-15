@@ -23,7 +23,7 @@ use sal_sync::{
     services::{entity::{Name, Object, Point, PointTxId}, Service, Services, RECV_TIMEOUT},
     sync::Handles, thread_pool::Scheduler,
 };
-use crate::services::{FrdmServiceConf, RopeDeprecationRate};
+use crate::services::{FrdmServiceConf, RopeDeprecationRate, RopeDeprecationRateConf};
 ///
 /// FRDM Service (Fiber Rope Defects Monitoring)
 /// 
@@ -108,7 +108,12 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
-        let rope_deprecation = RopeDeprecationRate::new(&dbg, conf.bendings.clone(), services.clone(), scheduler);
+        let rope_deprecation = RopeDeprecationRate::new(
+            &dbg,
+            RopeDeprecationRateConf::new(&name, conf.rope.pos, conf.rope.load, conf.bendings),
+            services.clone(),
+            scheduler,
+        );
         let _ = rope_deprecation.run()?;
         log::debug!("{}.run | Preparing thread...", dbg);
         // *SELF_ID.write() = dbg.clone();
@@ -147,6 +152,7 @@ impl Service for FrdmService {
                             match camera_stream.recv_timeout(RECV_TIMEOUT) {
                                 Ok(frame) => {
                                     let result = defect.eval(frame);
+                                    let image_id = todo!();
                                     let defect_image_path = path.join(format!("defect_image/{}.jpeg", image_id));
                                     let sql = format!(r"begin;
                                         update {} set {:?}

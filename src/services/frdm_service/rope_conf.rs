@@ -1,5 +1,7 @@
+use std::str::FromStr;
+
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, task::functions::FnConfKind};
+use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, task::functions::FnConfKind, LinkName};
 ///
 /// ## The configuration parameters for the rope
 /// 
@@ -17,8 +19,8 @@ pub struct RopeConf {
     pub width: ConfDistance,
     pub length: ConfDistance,
     pub segment: ConfDistance,
-    pub pos: FnConfKind,
-    pub load: FnConfKind,
+    pub pos: LinkName,
+    pub load: LinkName,
 }
 //
 // 
@@ -38,10 +40,10 @@ impl RopeConf {
         log::debug!("{dbg}.new | length: {:?}", length);
         let segment = conf.get_distance("segment").unwrap();
         log::debug!("{dbg}.new | segment: {:?}", segment);
-        let pos = conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap();
-        log::debug!("{dbg}.new | pos: {}: {}", pos.name(), Self::type_(&pos));
-        let load = conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap();
-        log::debug!("{dbg}.new | load: {}: {}", load.name(), Self::type_(&load));
+        let pos = LinkName::from_str(&conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name()).unwrap();
+        log::debug!("{dbg}.new | pos: {:?}", pos);
+        let load = LinkName::from_str(&conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap().name()).unwrap();
+        log::debug!("{dbg}.new | load: {:?}", load);
         Self {
             width,
             length,
