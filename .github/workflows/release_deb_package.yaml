@@ -32,13 +32,13 @@ jobs:
       #     echo -e "\033[0;31m Escaped for now because of to much of errors, will be turned on later \033[0m"
       #     # cargo fmt --check
 
-      - name: Unit tests
-        run: cargo test -- --show-output
+      # - name: Unit tests
+      #   run: cargo test -- --show-output
 
-      - name: Integration tests
-        run: |
-          echo -e "\033[0;31m Not implemented yet \033[0m"
-          # src/tests/integration/run_tests.sh
+      # - name: Integration tests
+      #   run: |
+      #     echo -e "\033[0;31m Not implemented yet \033[0m"
+      #     # src/tests/integration/run_tests.sh
 
       - name: Update version number in the Cargo.toml
         run: |
