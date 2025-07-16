@@ -389,7 +389,7 @@ dependencies = [
  "futures-lite",
  "parking",
  "polling",
- "rustix 1.0.7",
+ "rustix 1.0.8",
  "slab",
  "tracing",
  "windows-sys 0.59.0",
@@ -421,7 +421,7 @@ dependencies = [
  "cfg-if",
  "event-listener",
  "futures-lite",
- "rustix 1.0.7",
+ "rustix 1.0.8",
  "tracing",
 ]
 
@@ -448,7 +448,7 @@ dependencies = [
  "cfg-if",
  "futures-core",
  "futures-io",
- "rustix 1.0.7",
+ "rustix 1.0.8",
  "signal-hook-registry",
  "slab",
  "windows-sys 0.59.0",
@@ -1757,7 +1757,7 @@ dependencies = [
 [[package]]
 name = "frdm-tools"
 version = "0.0.1"
-source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#da45e6ce78a7d9aaad2d44fbd80ded44c9e58c73"
+source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#ff18660a690a7af3628e1e8faa33e201800e24c9"
 dependencies = [
  "api-tools 0.2.1",
  "debugging",
@@ -2687,7 +2687,7 @@ dependencies = [
 [[package]]
 name = "lock_api"
 version = "0.4.13"
-source = "git+https://github.com/Amanieu/parking_lot.git#1a98d80edc2cb34cf781a30ee115a478440260fb"
+source = "git+https://github.com/Amanieu/parking_lot.git#e0a821b68c5e1eeab1ea8df01f94fe5e486c368c"
 dependencies = [
  "scopeguard 1.2.0",
 ]
@@ -3451,7 +3451,7 @@ dependencies = [
 [[package]]
 name = "parking_lot"
 version = "0.12.4"
-source = "git+https://github.com/Amanieu/parking_lot.git#1a98d80edc2cb34cf781a30ee115a478440260fb"
+source = "git+https://github.com/Amanieu/parking_lot.git#e0a821b68c5e1eeab1ea8df01f94fe5e486c368c"
 dependencies = [
  "lock_api 0.4.13 (git+https://github.com/Amanieu/parking_lot.git)",
  "parking_lot_core 0.9.11 (git+https://github.com/Amanieu/parking_lot.git)",
@@ -3473,7 +3473,7 @@ dependencies = [
 [[package]]
 name = "parking_lot_core"
 version = "0.9.11"
-source = "git+https://github.com/Amanieu/parking_lot.git#1a98d80edc2cb34cf781a30ee115a478440260fb"
+source = "git+https://github.com/Amanieu/parking_lot.git#e0a821b68c5e1eeab1ea8df01f94fe5e486c368c"
 dependencies = [
  "cfg-if",
  "libc",
@@ -3698,7 +3698,7 @@ dependencies = [
  "concurrent-queue",
  "hermit-abi",
  "pin-project-lite",
- "rustix 1.0.7",
+ "rustix 1.0.8",
  "tracing",
  "windows-sys 0.59.0",
 ]
@@ -4132,15 +4132,15 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.0.7"
+version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c71e83d6afe7ff64890ec6b71d6a69bb8a610ab78ce364b3352876bb4c801266"
+checksum = "11181fbabf243db407ef8df94a6ce0b2f9a733bd8be4ad02b4eda9602296cac8"
 dependencies = [
  "bitflags 2.9.1",
  "errno",
  "libc",
  "linux-raw-sys 0.9.4",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4200,7 +4200,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#dd678591b4a11c51d0b566492645f2010905cd9b"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#51d54128c359ac0060fa151352d54691c9de9cea"
 dependencies = [
  "api-tools 0.0.6",
  "chrono",
@@ -4645,7 +4645,7 @@ dependencies = [
  "fastrand",
  "getrandom 0.3.3",
  "once_cell",
- "rustix 1.0.7",
+ "rustix 1.0.8",
  "windows-sys 0.59.0",
 ]
 

@@ -101,6 +101,7 @@ impl Service for RopeDeprecationRate {
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}
                         _ => {
+                            log::info!("{dbg1}.run | Recv 'pos' error: {:?}", err);
                             break;
                         }
                     },
@@ -128,6 +129,7 @@ impl Service for RopeDeprecationRate {
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}
                         _ => {
+                            log::info!("{dbg2}.run | Recv 'load' error: {:?}", err);
                             break;
                         }
                     },
@@ -146,23 +148,31 @@ impl Service for RopeDeprecationRate {
                 (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
                 (NotifyState::CameraError,    Box::new(|message| log::error!("{}", message))),
             ]);
-            let slices: Vec<RopeSlice> = (0..conf.bendings.len()).map(|slice| {
+            let mut slices: Vec<RopeSlice> = (0..conf.bendings.len()).map(|slice| {
                 RopeSlice::new()
             }).collect();
             loop {
-                let mut pos = 0.0;
-                let mut load = 0.0;
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((pos, load)) => {
                         match (pos, load) {
                             (None, None) => {},
-                            (None, Some(load_point)) => load = load_point.to_double().value(),
-                            (Some(pos_point), None) => todo!(),
-                            (Some(pos_point), Some(load_point)) => todo!(),
+                            (None, Some(load)) => for slice in &mut slices { slice.add_load(load.clone()) },
+                            (Some(pos), None) => for slice in &mut slices { slice.add_pos(pos.clone()) },
+                            (Some(pos), Some(load)) => {
+                                for slice in &mut slices {
+                                    slice.add_pos(pos.clone());
+                                    slice.add_load(load.clone());
+                                }
+                            }
                         }
-                        // if let Err(err) = send2.send((None, Some(load))) {
-                        //     log::info!("{dbg2}.run | Send 'load' error: {:?}", err);
-                        // }
+                        for slice in &mut slices {
+                            if let Some(deprication) = slice.deprication() {
+                                let sql = format!("update ", );
+                                // if let Err(err) = send2.send((None, Some(load))) {
+                                //     log::info!("{dbg2}.run | Send 'load' error: {:?}", err);
+                                // }
+                            }
+                        }
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}
