@@ -156,7 +156,7 @@ impl Service for FrdmService {
                                     let defect_image_path = path.join(format!("defect_image/{}.jpeg", image_id));
                                     let sql = format!(r"begin;
                                         update {} set {:?}
-                                    commit;", conf.table, result);
+                                    commit;", conf.tables.defect, result);
                                     let point = Point::new(
                                         tx_id,
                                         &Name::new(dbg, "sql").join(),

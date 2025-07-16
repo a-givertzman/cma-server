@@ -44,3 +44,17 @@ create table public.frdm_defect_image (
     path                text not null,
 );
 ```
+
+**frdm_deprication**
+id  |  deprication
+
+```sql
+comment on type public.frdm_defect is E''
+    'FRDM (Fiber Rope Defects Monitoring) deprication values'
+    'Rope devided for slices, deprication value calculated for each slice'
+    'sliceLingth = ropeLength / slices'
+create table public.frdm_deprication (
+    id                  bigserial primary key not null,
+    deprication         double default 0.0 not null,
+);
+```

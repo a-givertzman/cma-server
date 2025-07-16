@@ -49,23 +49,7 @@ fn run() {
                 length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
                 segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
                 pos: LinkName::from_str("/App/Winch.EncoderBR2").unwrap(),
-                // FnConfKind::Point(
-                //     FnConfig {
-                //         name: format!("/App/Winch.EncoderBR2"),
-                //         inputs: IndexMap::new(),
-                //         type_: FnConfPointType::Real,
-                //         options: FnConfOptions::default(),
-                //     }
-                // ),
                 load: LinkName::from_str("/App/Winch.Load").unwrap(),
-                // FnConfKind::Point(
-                //     FnConfig {
-                //         name: format!("/App/Winch.Load"),
-                //         inputs: IndexMap::new(),
-                //         type_: FnConfPointType::Real,
-                //         options: FnConfOptions::default(),
-                //     },
-                // ),
             }
         ),
     ];
@@ -78,6 +62,10 @@ fn run() {
             service FrdmService:
                 cycle: 100 ms
                 send-to: /{dbg}/MockRecvService0.in-queue
+                tables:
+                    defect: public.frdm_defect
+                    defect-image: public.frdm_defect_image
+                    deprication: public.frdm_deprication
                 rope:
                     width: 35 mm        # Diameter of the rome
                     length: 3000 m      # Total working length of the rope

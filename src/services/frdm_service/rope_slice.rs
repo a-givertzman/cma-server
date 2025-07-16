@@ -23,21 +23,21 @@ impl RopeSlice {
     ///
     /// Registering new `pos` value, 
     /// So new deprication result can be evaluated
-    fn add_pos(&mut self, val: Point) {
+    pub fn add_pos(&mut self, val: Point) {
         self.pos = Some(val.to_double().as_double().value);
         self.changed = Some(());
     }
     ///
     /// Registering new `load` value, 
     /// So new deprication result can be evaluated
-    fn add_load(&mut self, val: Point) {
+    pub fn add_load(&mut self, val: Point) {
         self.pos = Some(val.to_double().as_double().value);
         self.changed = Some(());
     }
     ///
     /// Evaluates [RopeSlice] deprication, returns `Some` if was added `pos` or `load`
     /// - can be evaluated only once per new `pos` or `load`, else returns `None`
-    fn eval(&mut self) -> Option<f64> {
+    pub fn deprication(&mut self) -> Option<f64> {
         match self.changed {
             Some(_) => {
                 self.changed = None;

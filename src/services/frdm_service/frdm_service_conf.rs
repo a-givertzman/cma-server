@@ -1,7 +1,7 @@
 use frdm_tools::{camera::CameraConf, conf::FastScanConf};
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use std::{fs, str::FromStr, time::Duration};
-use crate::services::{BendingsConf, RopeConf};
+use crate::services::{BendingsConf, RopeConf, TablesConf};
 
 ///
 /// Config for FrdmService format:
@@ -9,7 +9,10 @@ use crate::services::{BendingsConf, RopeConf};
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     send-to: /App/ApiClient.in-queue
-///     table: public.frdm
+///     tables:
+///         defect: public.frdm_defect
+///         defect-image: public.frdm_defect_image
+///         deprication: public.frdm_deprication
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
@@ -43,7 +46,7 @@ use crate::services::{BendingsConf, RopeConf};
 pub struct FrdmServiceConf {
     pub name: Name,
     pub send_to: LinkName,
-    pub table: String,
+    pub tables: TablesConf,
     pub cycle: Option<Duration>,
     pub rope: RopeConf,
     pub bendings: BendingsConf,
@@ -59,16 +62,18 @@ impl FrdmServiceConf {
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
         let me = conf.sufix_or(conf.name().unwrap());
         let dbg = format!("FrdmServiceConf({})", me);
-        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        log::trace!("{dbg}.new | conf: {:?}", conf);
         let name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, name);
+        log::debug!("{dbg}.new | name: {:?}", name);
         let send_to: String = conf.get("send-to").unwrap();
         let send_to = LinkName::from_str(&send_to).unwrap();
-        log::debug!("{}.new | send-to: {}", dbg, send_to);
-        let table: String = conf.get("table").unwrap();
-        log::debug!("{}.new | table: {}", dbg, table);
+        log::debug!("{dbg}.new | send-to: {}", send_to);
+        let tables: TablesConf = conf.parse("tables").unwrap();
+        log::debug!("{dbg}.new | table defect: {}", tables.defect);
+        log::debug!("{dbg}.new | table defect-image: {}", tables.defect_image);
+        log::debug!("{dbg}.new | table deprication: {}", tables.deprication);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
+        log::debug!("{dbg}.new | cycle: {:?}", cycle);
         let rope = conf.get("rope").expect(&format!("{dbg}.new | 'rope' - not found or wrong configuration"));
         let rope = RopeConf::new(&name, rope);
         log::trace!("{dbg}.new | rope: {:?}", rope);
@@ -87,7 +92,7 @@ impl FrdmServiceConf {
         Self {
             name,
             send_to,
-            table,
+            tables,
             cycle,
             rope,
             bendings,
