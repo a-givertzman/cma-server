@@ -118,20 +118,20 @@ service Task RecorderTask:
     # Detect if pump #1 of HPU is active (true - isActive, false - isNotActive)
     let pump1IsActive:
         input fn Eq: # DsDps.on == 2
-            input0: point int '/App/HPU.Pump1.State' status ok default 0
-            input1: const int 2
+            input1: point int '/App/HPU.Pump1.State' status ok default 0
+            input2: const int 2
     #
     # Detect if pump #2 of HPU is active (true - isActive, false - isNotActive)
     let pump2IsActive:
         input fn Eq: # DsDps.on == 2
-            input0: point int '/App/HPU.Pump2.State' status ok default 0
-            input1: const int 2
+            input1: point int '/App/HPU.Pump2.State' status ok default 0
+            input2: const int 2
     #
     # Detect if emergency pump of HPU is active (true - isActive, false - isNotActive)
     let emergencyPumpIsActive:
         input fn Eq: # DsDps.on == 2
-            input0: point int '/App/HPU.EmergencyHPU.State' status ok default 0
-            input1: const int 2
+            input1: point int '/App/HPU.EmergencyHPU.State' status ok default 0
+            input2: const int 2
     #
     # Detect if any of HPU pumps is active (true - isActive, false - isNotActive)
     let pumpIsActive:
