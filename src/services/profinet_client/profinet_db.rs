@@ -1,17 +1,12 @@
-use std::{fs, io::Write, sync::mpsc::Sender, time::Duration};
+use std::{fs, io::Write, sync::mpsc::Sender};
 use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use log::{trace, warn};
+use sal_sync::services::entity::{name::Name, point::{point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType}, status::status::Status};
 use crate::{
-    conf::{
-        point_config::{name::Name, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType},
-        profinet_client_config::profinet_db_config::ProfinetDbConfig
-    },
-    core_::{
-        filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
-        point::point_type::PointType, status::status::Status
-    },
+    conf::profinet_client_config::profinet_db_config::ProfinetDbConfig,
+    core_::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
     services::profinet_client::{
         parse_point::ParsePoint,
         s7::{
@@ -31,7 +26,6 @@ pub struct ProfinetDb {
     pub number: u32,
     pub offset: u32,
     pub size: u32,
-    pub cycle: Option<Duration>,
     pub points: IndexMap<String, Box<dyn ParsePoint>>,
 }
 //
@@ -51,13 +45,13 @@ impl ProfinetDb {
             number: conf.number as u32,
             offset: conf.offset as u32,
             size: conf.size as u32,
-            cycle: conf.cycle,
             points: Self::configure_parse_points(&self_id, tx_id, conf),
         }
     }
     ///
     /// Writes Point's to the log file
-    fn log(self_id: &str, parent: &Name, point: &PointType) {
+    #[allow(unused)]
+    fn log(self_id: &str, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -120,7 +114,7 @@ impl ProfinetDb {
     ///     - reads data slice from the S7 device,
     ///     - parses raw data into the configured points
     ///     - returns only points with updated value or status
-    pub fn read(&mut self, client: &S7Client, tx_send: &Sender<PointType>) -> Result<(), String> {
+    pub fn read(&mut self, client: &S7Client, tx_send: &Sender<Point>) -> Result<(), String> {
         match client.is_connected() {
             Ok(is_connected) => {
                 if is_connected {
@@ -130,7 +124,7 @@ impl ProfinetDb {
                             trace!("{}.read | bytes: {:?}", self.id, bytes);
                             let timestamp = Utc::now();
                             let mut message = String::new();
-                            for (_key, parse_point) in &mut self.points {
+                            for (_, parse_point) in &mut self.points {
                                 if let Some(point) = parse_point.next(&bytes, timestamp) {
                                     // debug!("{}.read | point: {:?}", self.id, point);
                                     match tx_send.send(point) {
@@ -168,7 +162,7 @@ impl ProfinetDb {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    pub fn yield_status(&mut self, status: Status, tx_send: &Sender<PointType>) -> Result<(), String> {
+    pub fn yield_status(&mut self, status: Status, tx_send: &Sender<Point>) -> Result<(), String> {
         let mut message = String::new();
         for (_key, parse_point) in &mut self.points {
             if let Some(point) = parse_point.next_status(status) {
@@ -189,13 +183,13 @@ impl ProfinetDb {
     ///
     /// Writes point to the current DB
     ///     - Returns Ok() if succeed, Err(message) on fail
-    pub fn write(&mut self, client: &S7Client, point: PointType) -> Result<(), String> {
+    pub fn write(&mut self, client: &S7Client, point: Point) -> Result<(), String> {
         let mut message = String::new();
         match self.points.get(&point.name()) {
             Some(parse_point) => {
                 let address = parse_point.address();
                 match point {
-                    PointType::Bool(point) => {
+                    Point::Bool(point) => {
                         // !!! Not implemented because before write byte of the bool bits, that byte must be read from device
                         // let mut buf = [0; 16];
                         // let index = address.offset.unwrap() as usize;
@@ -204,16 +198,16 @@ impl ProfinetDb {
                         message = format!("{}.write | Write 'Bool' to the S7 Device - not implemented, point: {:?}", self.id, point.name);
                         Err(message)
                     }
-                    PointType::Int(point) => {
+                    Point::Int(point) => {
                         client.write(self.number, address.offset.unwrap(), 2, &mut (point.value as i16).to_be_bytes())
                     }
-                    PointType::Real(point) => {
+                    Point::Real(point) => {
                         client.write(self.number, address.offset.unwrap(), 4, &mut (point.value).to_be_bytes())
                     }
-                    PointType::Double(point) => {
+                    Point::Double(point) => {
                         client.write(self.number, address.offset.unwrap(), 4, &mut (point.value as f32).to_be_bytes())
                     }
-                    PointType::String(point) => {
+                    Point::String(point) => {
                         message = format!("{}.write | Write 'String' to the S7 Device - not implemented, point: {:?}", self.id, point.name);
                         Err(message)
                     }
@@ -276,7 +270,7 @@ impl ProfinetDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::new(0i64, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
             None => Box::new(FilterEmpty::new(0)),

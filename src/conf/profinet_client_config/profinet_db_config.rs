@@ -1,11 +1,7 @@
 use log::{debug, trace};
-use std::{str::FromStr, time::Duration};
-use crate::conf::{
-    conf_tree::ConfTree, 
-    fn_::fn_conf_keywd::{FnConfKeywd, FnConfKindName}, 
-    point_config::{point_config::PointConfig, name::Name}, 
-    service_config::ServiceConfig,
-};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::{name::Name, point::point_config::PointConfig}, task::functions::conf::fn_conf_keywd::{FnConfKeywd, FnConfKindName}};
+use std::str::FromStr;
+use crate::conf::service_config::ServiceConfig;
 ///
 /// 
 #[derive(Debug, PartialEq, Clone)]
@@ -15,7 +11,6 @@ pub struct ProfinetDbConfig {
     pub(crate) number: u64,
     pub(crate) offset: u64,
     pub(crate) size: u64,
-    pub(crate) cycle: Option<Duration>,
     pub(crate) points: Vec<PointConfig>,
 }
 //
@@ -31,8 +26,6 @@ impl ProfinetDbConfig {
         trace!("{}.new | self_conf: {:?}", self_id, self_conf);
         let self_name = Name::new(parent, name);
         debug!("{}.new | name: {:?}", self_id, self_name);
-        let cycle = self_conf.get_duration("cycle");
-        debug!("{}.new | cycle: {:?}", self_id, cycle);
         let description = self_conf.get_param_value("description").unwrap_or(serde_yaml::Value::String(String::new())).as_str().unwrap().to_string();
         debug!("{}.new | description: {:?}", self_id, description);
         let number = self_conf.get_param_value("number").unwrap().as_u64().unwrap();
@@ -63,7 +56,6 @@ impl ProfinetDbConfig {
             number,
             offset,
             size,
-            cycle,
             points,
         }
     }    

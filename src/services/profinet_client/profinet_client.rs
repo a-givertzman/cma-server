@@ -7,24 +7,21 @@ use std::{
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{cot::Cot, name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles}, subscription::subscription_criteria::SubscriptionCriteria}};
 use testing::stuff::wait::WaitTread;
 use crate::{
     conf::{
         diag_keywd::DiagKeywd,
-        point_config::{name::Name, point_config::PointConfig},
         profinet_client_config::profinet_client_config::ProfinetClientConfig,
     },
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, failure::errors_limit::ErrorLimit, object::object::Object, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, state::change_notify::ChangeNotify, status::status::Status, types::map::IndexMapFxHasher
+        constants::constants::RECV_TIMEOUT, failure::errors_limit::ErrorLimit, state::change_notify::ChangeNotify,
     },
     services::{
         diagnosis::diag_point::DiagPoint,
-        multi_queue::subscription_criteria::SubscriptionCriteria,
         profinet_client::{profinet_db::ProfinetDb, s7::s7_client::S7Client},
-        safe_lock::SafeLock,
-        service::{service::Service, service_handles::ServiceHandles},
+        safe_lock::rwlock::SafeLock,
         services::Services,
-        task::service_cycle::ServiceCycle,
     },
 };
 ///
@@ -66,7 +63,7 @@ impl ProfinetClient {
         diagnosis: &Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
         kewd: &DiagKeywd,
         value: Status,
-        tx_send: &Sender<PointType>,
+        tx_send: &Sender<Point>,
     ) {
         match diagnosis.lock() {
             Ok(mut diagnosis) => {
@@ -87,7 +84,7 @@ impl ProfinetClient {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    fn yield_status(self_id: &str, dbs: &mut IndexMapFxHasher<String, ProfinetDb>, tx_send: &Sender<PointType>) {
+    fn yield_status(self_id: &str, dbs: &mut IndexMapFxHasher<String, ProfinetDb>, tx_send: &Sender<Point>) {
         for (db_name, db) in dbs {
             debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(Status::Invalid, tx_send) {
@@ -100,7 +97,7 @@ impl ProfinetClient {
     }
     ///
     /// Reads data slice from the S7 device,
-    fn read(&mut self, tx_send: Sender<PointType>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn read(&mut self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
         info!("{}.read | starting...", self.id);
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
@@ -135,7 +132,7 @@ impl ProfinetClient {
                             match client.connect() {
                                 Ok(_) => {
                                     status = Status::Ok;
-                                    is_connected.add(true, &format!("{}.read | Connection established", self_id));
+                                    is_connected.add(true, format!("{}.read | Connection established", self_id));
                                     Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
                                     'read: while !exit.load(Ordering::SeqCst) {
                                         cycle.start();
@@ -170,7 +167,7 @@ impl ProfinetClient {
                                     }
                                 }
                                 Err(err) => {
-                                    is_connected.add(false, &format!("{}.read | Connection lost: {:?}", self_id, err));
+                                    is_connected.add(false, format!("{}.read | Connection lost: {:?}", self_id, err));
                                     trace!("{}.read | Connection error: {:?}", self_id, err);
                                 }
                             }
@@ -193,7 +190,7 @@ impl ProfinetClient {
     }
     ///
     /// Writes Point to the protocol (PROFINET device) specific address
-    fn write(&mut self, tx_send: Sender<PointType>) -> Result<JoinHandle<()>, std::io::Error> {
+    fn write(&mut self, tx_send: Sender<Point>) -> Result<JoinHandle<()>, std::io::Error> {
         let self_id = self.id.clone();
         let tx_id = self.tx_id;
         let exit = self.exit.clone();
@@ -233,7 +230,7 @@ impl ProfinetClient {
                 thread::sleep(conf.reconnect_cycle);
                 match client.connect() {
                     Ok(_) => {
-                        is_connected.add(true, &format!("{}.write | Connection established", self_id));
+                        is_connected.add(true, format!("{}.write | Connection established", self_id));
                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Ok, &tx_send);
                         'write: while !exit.load(Ordering::SeqCst) {
                             match rx_recv.recv_timeout(RECV_TIMEOUT) {
@@ -261,7 +258,7 @@ impl ProfinetClient {
                                                     if errors_limit.add().is_err() {
                                                         error!("{}.write | ProfinetDb '{}' - exceeded writing errors limit, trying to reconnect...", self_id, db_name);
                                                         Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
-                                                        if let Err(err) = tx_send.send(PointType::String(Point::new(
+                                                        if let Err(err) = tx_send.send(Point::String(PointHlr::new(
                                                             tx_id,
                                                             &point_name,
                                                             format!("Write error: {}", err),
@@ -302,7 +299,7 @@ impl ProfinetClient {
                         }
                     }
                     Err(err) => {
-                        is_connected.add(false, &format!("{}.write | Connection lost: {:?}", self_id, err));
+                        is_connected.add(false, format!("{}.write | Connection lost: {:?}", self_id, err));
                         trace!("{}.write | Connection error: {:?}", self_id, err);
                     }
                 }
@@ -314,10 +311,10 @@ impl ProfinetClient {
     }
     ///
     /// Creates confirmation reply point with the same value & Cot::ActCon
-    fn reply_point(tx_id: usize, point: PointType) -> PointType {
+    fn reply_point(tx_id: usize, point: Point) -> Point {
         match point {
-            PointType::Bool(point) => {
-                PointType::Bool(Point::new(
+            Point::Bool(point) => {
+                Point::Bool(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -326,8 +323,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Int(point) => {
-                PointType::Int(Point::new(
+            Point::Int(point) => {
+                Point::Int(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -336,8 +333,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Real(point) => {
-                PointType::Real(Point::new(
+            Point::Real(point) => {
+                Point::Real(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -346,8 +343,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::Double(point) => {
-                PointType::Double(Point::new(
+            Point::Double(point) => {
+                Point::Double(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -356,8 +353,8 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
-            PointType::String(point) => {
-                PointType::String(Point::new(
+            Point::String(point) => {
+                Point::String(PointHlr::new(
                     tx_id,
                     &point.name,
                     point.value,
@@ -394,7 +391,7 @@ impl Debug for ProfinetClient {
 impl Service for ProfinetClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let tx_send = self.services.rlock(&self.id).get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.id, err);
         });

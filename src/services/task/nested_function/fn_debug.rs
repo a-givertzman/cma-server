@@ -1,8 +1,9 @@
 use log::debug;
 use concat_string::concat_string;
+use sal_sync::services::entity::point::point::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef},
+    core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,
@@ -56,9 +57,9 @@ impl FnOut for FnDebug {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let mut inputs = self.inputs.iter();
-        let mut value: PointType;
+        let mut value: Point;
         // let first = .cloned();
         match inputs.next() {
             Some(first) => {

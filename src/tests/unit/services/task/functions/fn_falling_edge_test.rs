@@ -1,14 +1,13 @@
 #[cfg(test)]
 mod fn_falling_edge {
     use log::{debug, info};
+    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use testing::entities::test_value::Value;
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
-        core_::{
-            point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef,
-        },
+        conf::fn_::fn_config::FnConfig, 
+        core_::types::fn_in_out_ref::FnInOutRef,
         services::task::nested_function::{
             edge_detection::fn_falling_edge::FnFallingEdge, fn_::FnOut, fn_input::FnInput
         }
@@ -54,7 +53,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_bool() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
         info!("{}", self_id);
@@ -94,7 +93,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
         info!("{}", self_id);
@@ -134,7 +133,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
         info!("{}", self_id);
@@ -174,7 +173,7 @@ mod fn_falling_edge {
     ///
     #[test]
     fn test_double() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
         info!("{}", self_id);

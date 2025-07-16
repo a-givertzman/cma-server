@@ -1,17 +1,18 @@
 #![allow(non_snake_case)]
-use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
+use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use log::{info, warn, trace};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, service::{link_name::LinkName, service::Service, service_handles::ServiceHandles}};
 use testing::entities::test_value::Value;
-use crate::{conf::point_config::name::Name, core_::{object::object::Object, point::point_type::{PointType, ToPoint}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
 ///
 pub struct MockSendService {
     id: String,
     name: Name,
-    send_to: QueueName,
+    send_to: LinkName,
     services: Arc<RwLock<Services>>,
     test_data: Vec<Value>,
-    sent: Arc<Mutex<Vec<PointType>>>,
+    sent: Arc<RwLock<Vec<Point>>>,
     delay: Option<Duration>,
     exit: Arc<AtomicBool>,
 }
@@ -23,10 +24,10 @@ impl MockSendService {
         Self {
             id: name.join(),
             name,
-            send_to: QueueName::new(send_to),
+            send_to: LinkName::from_str(send_to).unwrap(),
             services,
             test_data,
-            sent: Arc::new(Mutex::new(vec![])),
+            sent: Arc::new(RwLock::new(vec![])),
             delay,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -38,7 +39,7 @@ impl MockSendService {
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
         self.sent.clone()
     }
 }
@@ -63,11 +64,11 @@ impl Debug for MockSendService {
     }
 }
 //
-// 
+//
 impl Service for MockSendService {
     //
     //
-    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point_type::PointType> {
+    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -76,7 +77,7 @@ impl Service for MockSendService {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
@@ -93,7 +94,7 @@ impl Service for MockSendService {
                 match txSend.send(point.clone()) {
                     Ok(_) => {
                         trace!("{}.run | send: {:?}", self_id, point);
-                        sent.lock().unwrap().push(point);
+                        sent.write().unwrap().push(point);
                     }
                     Err(err) => {
                         warn!("{}.run | send error: {:?}", self_id, err);

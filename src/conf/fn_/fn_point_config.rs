@@ -1,7 +1,5 @@
-use crate::conf::{
-    point_config::point_config::PointConfig,
-    fn_::fn_conf_kind::FnConfKind,
-};
+use sal_sync::services::entity::point::point_config::PointConfig;
+use crate::conf::fn_::fn_conf_kind::FnConfKind;
 ///
 /// Represents configuration of the point in the NestedFn
 ///  - send-to - Service.Queue where the point will be sent

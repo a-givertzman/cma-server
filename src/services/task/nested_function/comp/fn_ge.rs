@@ -1,12 +1,9 @@
 use log::trace;
 use concat_string::concat_string;
+use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr}}, types::bool::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::{
-        cot::cot::Cot,
-        point::{point::Point, point_type::PointType},
-        types::{bool::Bool, fn_in_out_ref::FnInOutRef},
-    },
+    core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     },
@@ -56,7 +53,7 @@ impl FnOut for FnGe {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input1 = self.input1.borrow_mut().out();     
         let input2 = self.input2.borrow_mut().out();    
         trace!("{}.out | input1: {:?}", self.id, &input1);
@@ -75,8 +72,8 @@ impl FnOut for FnGe {
                     std::cmp::Ordering::Equal => (input1.tx_id(), input1.timestamp()),
                     std::cmp::Ordering::Greater => (input1.tx_id(), input1.timestamp()),
                 };
-                FnResult::Ok(PointType::Bool(
-                    Point::new(
+                FnResult::Ok(Point::Bool(
+                    PointHlr::new(
                         tx_id,
                         &format!("{}.out", self.id),
                         Bool(value),

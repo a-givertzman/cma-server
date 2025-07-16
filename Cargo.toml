@@ -1,6 +1,6 @@
 [package]
 name = "cma-server"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 build = "build.rs"
 
@@ -14,15 +14,14 @@ testing = { git = "https://github.com/a-givertzman/rust-testing.git" }
 # testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
 debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
 api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.0.6" }
+sal-sync = {git = "https://github.com/a-givertzman/rust-sal-sync.git"}
 
 # num = "^0.4"
 # derive-new = "^0.5"
 
 serde = { version = "^1.0", features = ["derive"] }
-erased-serde = "^0.4"
 serde_yaml = "^0.9"
 serde_json = "^1.0"
-typetag = "^0.2"
 
 regex = "^1.10"
 
@@ -31,25 +30,22 @@ rand = "^0.8"
 chrono = "^0.4"
 
 linked-hash-map = "^0.5"
-indexmap = "^2.2"
+indexmap = "^2.5"
 hashers = "^1.0"
 
 # snap7 = "^0.0"
 snap7-sys = "^0.1"
 libc = "^0.2"
 libloading = "^0.8"
-bindgen = "^0.69"
 once_cell = "^1.19"
 
 concat-string = "^1.0"
-const_format = "^0.2"
+concat-in-place = "^1.1"
 
 signal-hook = "^0.3"
 
-lexical = "^6.1"
-
-strum = "0.26.2"
-strum_macros = "0.26.2"
+strum = "^0.26"
+strum_macros = "^0.26"
 
 clap = { version = "^4.5", features = ["derive"] }
 
@@ -60,9 +56,17 @@ clap = { version = "^4.5", features = ["derive"] }
 # winit = "^0.29"
 # hsl = "^0.1"
 
+uid = "^0.1"
+
+rustfft = "^6.2"
+
+derivative = "^2.2"
+
+plotters = "^0.3"
+
 # [[bin]]
 # name = "task_test"
 # path = "src/task_test.rs"
 
 [build-dependencies]
-cc = "^1.0"
+cc = "^1.1"

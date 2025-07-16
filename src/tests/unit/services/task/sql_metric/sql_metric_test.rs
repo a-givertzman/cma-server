@@ -5,14 +5,14 @@ mod sql_metric {
     use log::debug;
     use log::warn;
     use regex::RegexBuilder;
+    use sal_sync::services::entity::{name::Name, point::point::{Point, ToPoint}};
+    use sal_sync::services::retain::retain_conf::RetainConf;
     use std::sync::RwLock;
     use std::sync::{Once, Arc};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::conf::point_config::name::Name;
     use crate::services::task::nested_function::fn_result::FnResult;
     use crate::{
         conf::task_config::TaskConfig,
-        core_::point::point_type::{ToPoint, PointType},
         services::{
             task::task_nodes::TaskNodes, services::Services,
             // queues::queues::Queues,
@@ -46,7 +46,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -82,11 +82,11 @@ mod sql_metric {
                         match out {
                             FnResult::Ok(out) => {
                                 let out_value = match &out {
-                                    PointType::Bool(point) => point.value.to_string(),
-                                    PointType::Int(point) => point.value.to_string(),
-                                    PointType::Real(point) => point.value.to_string(),
-                                    PointType::Double(point) => point.value.to_string(),
-                                    PointType::String(point) => point.value.clone(),
+                                    Point::Bool(point) => point.value.to_string(),
+                                    Point::Int(point) => point.value.to_string(),
+                                    Point::Real(point) => point.value.to_string(),
+                                    Point::Double(point) => point.value.to_string(),
+                                    Point::String(point) => point.value.clone(),
                                 };
                                 debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
                                 assert_eq!(
@@ -119,7 +119,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -155,11 +155,11 @@ mod sql_metric {
                         match out {
                             FnResult::Ok(out) => {
                                 let out_value = match &out {
-                                    PointType::Bool(point) => point.value.to_string(),
-                                    PointType::Int(point) => point.value.to_string(),
-                                    PointType::Real(point) => point.value.to_string(),
-                                    PointType::Double(point) => point.value.to_string(),
-                                    PointType::String(point) => point.value.clone(),
+                                    Point::Bool(point) => point.value.to_string(),
+                                    Point::Int(point) => point.value.to_string(),
+                                    Point::Real(point) => point.value.to_string(),
+                                    Point::Double(point) => point.value.to_string(),
+                                    Point::String(point) => point.value.clone(),
                                 };
                                 debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
                                 let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
@@ -202,7 +202,7 @@ mod sql_metric {
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
         nodes.build_nodes(&self_name, conf, services);
         debug!("taskNodes: {:?}", nodes);
         let test_data = vec![
@@ -238,11 +238,11 @@ mod sql_metric {
                         match out {
                             FnResult::Ok(out) => {
                                 let out_value = match &out {
-                                    PointType::Bool(point) => point.value.to_string(),
-                                    PointType::Int(point) => point.value.to_string(),
-                                    PointType::Real(point) => point.value.to_string(),
-                                    PointType::Double(point) => point.value.to_string(),
-                                    PointType::String(point) => point.value.clone(),
+                                    Point::Bool(point) => point.value.to_string(),
+                                    Point::Int(point) => point.value.to_string(),
+                                    Point::Real(point) => point.value.to_string(),
+                                    Point::Double(point) => point.value.to_string(),
+                                    Point::String(point) => point.value.clone(),
                                 };
                                 debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
                                 let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";

@@ -4,13 +4,21 @@ use concat_string::concat_string;
 use indexmap::IndexMap;
 use log::{info, trace, warn};
 use rand::Rng;
+use sal_sync::services::{
+    entity::{
+        cot::Cot, name::Name, object::Object,
+        point::{
+            point::Point, point_config::PointConfig, point_config_history::PointConfigHistory,
+            point_config_type::PointConfigType, point_hlr::PointHlr, point_tx_id::PointTxId,
+        },
+        status::status::Status,
+    },
+    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
+    types::bool::Bool,
+};
 use serde_json::json;
 use testing::entities::test_value::Value;
-use crate::{
-    conf::point_config::{name::Name, point_config::PointConfig, point_config_history::PointConfigHistory, point_config_type::PointConfigType}, 
-    core_::{cot::cot::Cot, object::object::Object, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::bool::Bool}, 
-    services::{safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services, task::service_cycle::ServiceCycle},
-};
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 use super::producer_service_config::ProducerServiceConfig;
 ///
 /// Service for debuging / testing purposes
@@ -40,22 +48,22 @@ impl ProducerService {
         let mut gen_points = IndexMap::new();
         for point_conf in points {
             match point_conf.type_ {
-                crate::conf::point_config::point_config_type::PointConfigType::Bool => {
+                PointConfigType::Bool => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Int => {
+                PointConfigType::Int => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Real => {
+                PointConfigType::Real => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Double => {
+                PointConfigType::Double => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::String => {
+                PointConfigType::String => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
-                crate::conf::point_config::point_config_type::PointConfigType::Json => {
+                PointConfigType::Json => {
                     gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(parent_id, tx_id, point_conf.name.clone(), &point_conf)));
                 }
             }
@@ -64,7 +72,7 @@ impl ProducerService {
     }
     ///
     /// Writes Point into the log file ./logs/parent/points.log
-    fn log(self_id: &str, parent: &Name, point: &PointType) {
+    fn log(self_id: &str, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -84,7 +92,7 @@ impl Object for ProducerService {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -103,7 +111,7 @@ impl Debug for ProducerService {
 impl Service for ProducerService {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
@@ -208,12 +216,12 @@ impl PointGen {
     }
     ///
     /// Returns Point
-    fn to_point(&self) -> Option<PointType> {
+    fn to_point(&self) -> Option<Point> {
         if self.is_changed {
             trace!("{}.to_point | generating point type '{:?}'...", self.id, self._type);
             match &self._type {
                 PointConfigType::Bool => {
-                    Some(PointType::Bool(Point::new(
+                    Some(Point::Bool(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         Bool(test_data_bool().as_bool()), 
@@ -223,7 +231,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Int => {
-                    Some(PointType::Int(Point::new(
+                    Some(Point::Int(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_int().as_int(), 
@@ -233,7 +241,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Real => {
-                    Some(PointType::Real(Point::new(
+                    Some(Point::Real(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_real().as_real(), 
@@ -243,7 +251,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Double => {
-                    Some(PointType::Double(Point::new(
+                    Some(Point::Double(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_double().as_double(), 
@@ -253,7 +261,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::String => {
-                    Some(PointType::String(Point::new(
+                    Some(Point::String(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         test_data_double().as_double().to_string(), 
@@ -263,7 +271,7 @@ impl PointGen {
                     )))
                 }
                 PointConfigType::Json => {
-                    Some(PointType::String(Point::new(
+                    Some(Point::String(PointHlr::new(
                         self.tx_id, 
                         &self.name, 
                         json!(test_data_double().as_double()).to_string(), 
@@ -293,7 +301,7 @@ impl PointGen {
 impl ParsePoint<Value> for PointGen {
     //
     //
-    fn next(&mut self, value: &Value, timestamp: DateTime<Utc>) -> Option<PointType> {
+    fn next(&mut self, value: &Value, timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_value(value, timestamp);
         match self.to_point() {
             Some(point) => {
@@ -305,7 +313,7 @@ impl ParsePoint<Value> for PointGen {
     }
     //
     //
-    fn next_status(&mut self, status: Status) -> Option<PointType> {
+    fn next_status(&mut self, status: Status) -> Option<Point> {
         self.status = status;
         self.timestamp = Utc::now();
         self.to_point()
@@ -322,10 +330,10 @@ impl ParsePoint<Value> for PointGen {
 pub trait ParsePoint<T> {
     ///
     /// Returns new point parsed from the data slice [bytes] with the given [timestamp] and Status::Ok
-    fn next(&mut self, input: &T, timestamp: DateTime<Utc>) -> Option<PointType>;
+    fn next(&mut self, input: &T, timestamp: DateTime<Utc>) -> Option<Point>;
     ///
     /// Returns new point (prevously parsed) with the given [status]
-    fn next_status(&mut self, status: Status) -> Option<PointType>;
+    fn next_status(&mut self, status: Status) -> Option<Point>;
     ///
     /// Returns true if value or status was updated since last call [addRaw()]
     fn is_changed(&self) -> bool;

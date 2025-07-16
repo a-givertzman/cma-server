@@ -25,7 +25,7 @@ mod slmp_client {
     #[ignore = "Manual test with phisical device"]
     #[test]
     fn read_d() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -124,7 +124,7 @@ mod slmp_client {
     #[ignore = "Manual test with phisical device"]
     #[test]
     fn write_d() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();

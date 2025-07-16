@@ -1,16 +1,19 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex}, thread};
+use egui::mutex::RwLock;
 use log::{info, trace, warn};
-use crate::{
-    conf::point_config::name::Name, core_::{constants::constants::RECV_TIMEOUT, object::object::Object, point::point_type::PointType}, services::service::{service::Service, service_handles::ServiceHandles}
-};
+use sal_sync::services::{entity::{name::Name, object::Object, point::point::Point}, service::{service::Service, service_handles::ServiceHandles}};
+use crate::core_::constants::constants::RECV_TIMEOUT;
+///
+/// Global static counter of FnOut instances
+static COUNT: AtomicUsize = AtomicUsize::new(0);
 ///
 /// 
 pub struct MockRecvService {
     id: String,
     name: Name,
-    rx_send: HashMap<String, Sender<PointType>>,
-    rx_recv: Vec<Receiver<PointType>>,
-    received: Arc<Mutex<Vec<PointType>>>,
+    rx_send: HashMap<String, Sender<Point>>,
+    rx_recv: Mutex<Option<Receiver<Point>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     exit: Arc<AtomicBool>,
 }
@@ -19,13 +22,13 @@ pub struct MockRecvService {
 impl MockRecvService {
     pub fn new(parent: impl Into<String>, rx_queue: &str, recv_limit: Option<usize>) -> Self {
         let name = Name::new(parent, format!("MockRecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
-        let (send, recv) = mpsc::channel::<PointType>();
+        let (send, recv) = mpsc::channel::<Point>();
         Self {
             id: name.join(),
             name,
             rx_send: HashMap::from([(rx_queue.to_string(), send)]),
-            rx_recv: vec![recv],
-            received: Arc::new(Mutex::new(vec![])),
+            rx_recv: Mutex::new(Some(recv)),
+            received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -37,7 +40,7 @@ impl MockRecvService {
     // }
     ///
     /// 
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
 }
@@ -62,11 +65,11 @@ impl Debug for MockRecvService {
     }
 }
 //
-// 
+//
 impl Service for MockRecvService {
     //
     //
-    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point_type::PointType> {
+    fn get_link(&mut self, name: &str) -> std::sync::mpsc::Sender<Point> {
         match self.rx_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -74,11 +77,11 @@ impl Service for MockRecvService {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
-        let in_recv = self.rx_recv.pop().unwrap();
+        let in_recv = self.rx_recv.lock().unwrap().take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.recv_limit.clone();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
@@ -90,7 +93,7 @@ impl Service for MockRecvService {
                         match in_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().push(point);
                                 received_count += 1;
                             }
                             Err(_) => {}
@@ -108,7 +111,7 @@ impl Service for MockRecvService {
                         match in_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(point) => {
                                 trace!("{}.run | received: {:?}", self_id, point);
-                                received.lock().unwrap().push(point);
+                                received.write().push(point);
                             }
                             Err(_) => {}
                         };
@@ -137,6 +140,3 @@ impl Service for MockRecvService {
         self.exit.store(true, Ordering::SeqCst);
     }
 }
-///
-/// Global static counter of FnOut instances
-pub static COUNT: AtomicUsize = AtomicUsize::new(0);

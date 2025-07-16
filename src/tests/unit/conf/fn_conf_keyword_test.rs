@@ -3,14 +3,10 @@
 mod fn_conf_keywd {
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use log::{debug, info};
-    use std::{sync::Once, str::FromStr};
-    use crate::{
-        core_::status::status::Status,
-        conf::fn_::{
-            fn_conf_options::FnConfOptions,
-            fn_conf_keywd::{FnConfKeywd, FnConfKeywdValue, FnConfPointType},
-        },
+    use sal_sync::services::{
+        entity::status::status::Status, task::functions::conf::{fn_conf_keywd::{FnConfKeywd, FnConfKeywdValue, FnConfPointType}, fn_conf_options::FnConfOptions},
     };
+    use std::{sync::Once, str::FromStr};
     ///
     ///
     static INIT: Once = Once::new();
@@ -107,7 +103,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for valid input with options
     #[test]
     fn valid_options() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         debug!("valid_options");

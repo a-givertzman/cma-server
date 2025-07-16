@@ -1,4 +1,3 @@
-#![allow(non_snake_case)]
 #[cfg(test)]
 
 mod tests {
@@ -68,7 +67,6 @@ mod tests {
                             target: ProcessState::Stop,
                         },
                     ],
-
                 },
                 Switch{
                     state: ProcessState::Progress,
@@ -92,7 +90,7 @@ mod tests {
         init_each();
         info!("test_single");
         let (initial, switches) = init_each();
-        let mut switchState: SwitchState<ProcessState, i8> = SwitchState::new(
+        let mut switch_state: SwitchState<ProcessState, i8> = SwitchState::new(
             initial,
             switches,
         );
@@ -121,15 +119,15 @@ mod tests {
             (1, ProcessState::Off),
             (1, ProcessState::Off),
         ];
-        for (value, targetState) in test_data {
-            switchState.add(value);
-            let state = switchState.state();
+        for (value, target_state) in test_data {
+            switch_state.add(value);
+            let state = switch_state.state();
             debug!("value: {:?}   |   state: {:?}", value, state);
-            assert_eq!(state, targetState);
+            assert_eq!(state, target_state);
             if state == ProcessState::Stop {
-                assert_eq!(switchState.is_max(), true);
+                assert_eq!(switch_state.is_max(), true);
             } else {
-                assert_eq!(switchState.is_max(), false);
+                assert_eq!(switch_state.is_max(), false);
             }
         }
     }
@@ -142,7 +140,7 @@ mod tests {
         init_each();
         info!("test_start_step_back");
         let (initial, switches) = init_each();
-        let mut switchState: SwitchState<ProcessState, i8> = SwitchState::new(
+        let mut switch_state: SwitchState<ProcessState, i8> = SwitchState::new(
             initial,
             switches,
         );
@@ -171,11 +169,11 @@ mod tests {
             (1, ProcessState::Off),
             (1, ProcessState::Off),
         ];
-        for (value, targetState) in test_data {
-            switchState.add(value);
-            let state = switchState.state();
+        for (value, target_state) in test_data {
+            switch_state.add(value);
+            let state = switch_state.state();
             debug!("value: {:?}   |   state: {:?}", value, state);
-            assert_eq!(state, targetState);
+            assert_eq!(state, target_state);
         }
     }
     ///
@@ -187,7 +185,7 @@ mod tests {
         init_each();
         info!("test_stot_step_back");
         let (initial, switches) = init_each();
-        let mut switchState: SwitchState<ProcessState, i8> = SwitchState::new(
+        let mut switch_state: SwitchState<ProcessState, i8> = SwitchState::new(
             initial,
             switches,
         );
@@ -216,11 +214,11 @@ mod tests {
             (1, ProcessState::Off),
             (1, ProcessState::Off),
         ];
-        for (value, targetState) in test_data {
-            switchState.add(value);
-            let state = switchState.state();
+        for (value, target_state) in test_data {
+            switch_state.add(value);
+            let state = switch_state.state();
             debug!("value: {:?}   |   state: {:?}", value, state);
-            assert_eq!(state, targetState);
+            assert_eq!(state, target_state);
         }
     }
 }

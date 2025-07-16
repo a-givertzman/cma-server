@@ -1,7 +1,8 @@
 use log::trace;
+use sal_sync::services::entity::point::point::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef},
+    core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -15,7 +16,7 @@ pub struct FnKeepValid {
     id: String,
     kind: FnKind,
     input: FnInOutRef,
-    state: Option<PointType>
+    state: Option<Point>
 }
 //
 // 
@@ -52,7 +53,7 @@ impl FnOut for FnKeepValid {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:?}", self.id, input);
         match input {

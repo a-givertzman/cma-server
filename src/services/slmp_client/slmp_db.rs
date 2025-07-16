@@ -3,19 +3,12 @@ use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use log::{debug, error, trace, warn};
+use sal_sync::services::entity::{name::Name, point::{point::Point, point_config::PointConfig, point_config_filters::PointConfigFilter, point_config_type::PointConfigType}, status::status::Status};
 use crate::{
-    conf::{
-        point_config::{
-            name::Name, point_config::PointConfig, 
-            point_config_filters::PointConfigFilter, 
-            point_config_type::PointConfigType,
-        }, 
-        slmp_client_config::slmp_db_config::SlmpDbConfig,
-    },
+    conf::slmp_client_config::slmp_db_config::SlmpDbConfig,
     core_::{
         filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
         net::connection_status::{ConnectionStatus, SocketState},
-        point::point_type::PointType, status::status::Status,
     },
     services::slmp_client::{
         parse_point::ParsePoint,
@@ -64,7 +57,7 @@ impl SlmpDb {
     }
     ///
     /// Writes Point's to the log file
-    fn log(self_id: &str, parent: &Name, point: &PointType) {
+    fn log(self_id: &str, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -79,7 +72,7 @@ impl SlmpDb {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    pub fn yield_status(&mut self, status: Status, tx_send: &Sender<PointType>) -> Result<(), String> {
+    pub fn yield_status(&mut self, status: Status, tx_send: &Sender<Point>) -> Result<(), String> {
         let mut message = String::new();
         for (_key, parse_point) in &mut self.points {
             if let Some(point) = parse_point.next_status(status) {
@@ -165,7 +158,7 @@ impl SlmpDb {
     ///     - reads data slice from the device (TcpStream),
     ///     - parses raw data into the configured points
     ///     - sends to the [dest] only points with updated value or status
-    pub fn read(&mut self, tcp_stream: &mut TcpStream, dest: &Sender<PointType>) -> Result<(), String> {
+    pub fn read(&mut self, tcp_stream: &mut TcpStream, dest: &Sender<Point>) -> Result<(), String> {
         trace!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset, self.size);
         let read_tcp_stream = BufReader::new(tcp_stream.try_clone().unwrap());
         match self.slmp_packet.read_packet(FrameType::BinReqSt) {
@@ -231,7 +224,7 @@ impl SlmpDb {
     ///
     /// Writes point to the current DB
     /// - Returns Ok() if succeed, Err(message) on fail
-    pub fn write(&mut self, tcp_stream: &mut TcpStream, point: PointType) -> Result<(), String> {
+    pub fn write(&mut self, tcp_stream: &mut TcpStream, point: Point) -> Result<(), String> {
         debug!("{}.write | Writing point: {:?}", self.id, point);
         match self.points.get(&point.name()) {
             Some(parse_point) => {
@@ -335,11 +328,11 @@ impl SlmpDb {
     }
     ///
     ///
-    fn int_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = i64> + Sync + Send> {
+    fn int_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = i64> + Send> {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::new(0, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::new(0i64, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
             None => Box::new(FilterEmpty::new(0)),
@@ -347,7 +340,7 @@ impl SlmpDb {
     }
     ///
     ///
-    fn real_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f32> + Sync + Send> {
+    fn real_filter(conf: Option<PointConfigFilter>) -> Box<dyn Filter<Item = f32> + Send> {
         match conf {
             Some(conf) => {
                 Box::new(

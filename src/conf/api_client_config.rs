@@ -1,8 +1,7 @@
 use log::{trace, debug};
+use sal_sync::services::{conf::conf_tree::ConfTree, entity::name::Name};
 use std::{fs, time::Duration, net::SocketAddr};
-use crate::conf::{conf_tree::ConfTree, service_config::ServiceConfig};
-
-use super::point_config::name::Name;
+use crate::conf::service_config::ServiceConfig;
 ///
 /// creates config from serde_yaml::Value of following format:
 /// ```yaml

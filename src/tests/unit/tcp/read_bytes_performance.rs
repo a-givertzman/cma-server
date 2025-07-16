@@ -2,12 +2,14 @@
 mod socket_read_performance {
     use chrono::{DateTime, Utc};
     use log::{info, debug, error, trace};
+    use sal_sync::services::{
+        entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr},status::status::Status},
+        types::bool::Bool,
+    };
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Read, BufReader, Write}};
     use testing::session::test_session::TestSession;
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
-    use crate::core_::{
-        cot::cot::Cot, net::protocols::jds::jds_define::JDS_END_OF_TRANSMISSION, point::{point::Point, point_type::PointType}, status::status::Status, types::bool::Bool
-    };
+    use crate::core_::net::protocols::jds::jds_define::JDS_END_OF_TRANSMISSION;
     //
     //
     static INIT: Once = Once::new();
@@ -56,7 +58,7 @@ mod socket_read_performance {
                     r#"{{"id": "1", "type": "Bool",  "name": "{}", "value": false,   "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Bool(Point::new(
+                Point::Bool(PointHlr::new(
                     0,
                     name,
                     Bool(false),
@@ -70,7 +72,7 @@ mod socket_read_performance {
                     r#"{{"id": "1", "type": "Bool",  "name": "{}", "value": true,    "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Bool(Point::new(
+                Point::Bool(PointHlr::new(
                     0,
                     name,
                     Bool(true),
@@ -84,7 +86,7 @@ mod socket_read_performance {
                     r#"{{"id": "1", "type": "Int",   "name": "{}", "value": 1,   "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Int(Point::new(
+                Point::Int(PointHlr::new(
                     0,
                     name,
                     1,
@@ -98,7 +100,7 @@ mod socket_read_performance {
                     r#"{{"id": "1", "type": "Int",   "name": "{}", "value": -9223372036854775808,   "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Int(Point::new(
+                Point::Int(PointHlr::new(
                     0,
                     name,
                     -9223372036854775808,
@@ -112,84 +114,84 @@ mod socket_read_performance {
                     r#"{{"id": "1", "type": "Int",   "name": "{}", "value":  9223372036854775807,   "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Int(Point::new(0, name,  9223372036854775807, Status::Ok, Cot::default(), ts))
+                Point::Int(PointHlr::new(0, name,  9223372036854775807, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Real", "name": "{}", "value":  0.0, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Real(Point::new(0, name,  0.0, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(0, name,  0.0, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Real", "name": "{}", "value": -1.1, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Real(Point::new(0, name, -1.1, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(0, name, -1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Real", "name": "{}", "value":  1.1, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Real(Point::new(0, name,  1.1, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(0, name,  1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Real", "name": "{}", "value": -3.4028235e38, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Real(Point::new(0, name, -f32::MAX, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(0, name, -f32::MAX, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Real", "name": "{}", "value":  3.4028235e38, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Real(Point::new(0, name,  f32::MAX, Status::Ok, Cot::default(), ts))
+                Point::Real(PointHlr::new(0, name,  f32::MAX, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Double", "name": "{}", "value":  0.0, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Double(Point::new(0, name,  0.0, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(0, name,  0.0, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Double", "name": "{}", "value": -1.1, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Double(Point::new(0, name, -1.1, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(0, name, -1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Double", "name": "{}", "value":  1.1, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Double(Point::new(0, name,  1.1, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(0, name,  1.1, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Double", "name": "{}", "value": -1.7976931348623157e308, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Double(Point::new(0, name, -1.7976931348623157e308, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(0, name, -1.7976931348623157e308, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "Double", "name": "{}", "value":  1.7976931348623157e308, "status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::Double(Point::new(0, name,  1.7976931348623157e308, Status::Ok, Cot::default(), ts))
+                Point::Double(PointHlr::new(0, name,  1.7976931348623157e308, Status::Ok, Cot::default(), ts))
             ),
             (
                 format!(
                     r#"{{"id": "1", "type": "String","name": "{}", "value": "~!@#$%^&*()_+`1234567890-=","status": 0, "timestamp":"{}"}}"#,
                     name, ts_str(ts),
                 ),
-                PointType::String(Point::new(0, name, "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::default(), ts))
+                Point::String(PointHlr::new(0, name, "~!@#$%^&*()_+`1234567890-=".to_string(), Status::Ok, Cot::default(), ts))
             ),
         ];
         //
@@ -400,7 +402,7 @@ mod socket_read_performance {
     }
     ///
     /// Behaves like a TcpServer
-    fn mock_tcp_server(addr: String, count: usize, test_data: &[(String, PointType)], received: Arc<AtomicUsize>) {
+    fn mock_tcp_server(addr: String, count: usize, test_data: &[(String, Point)], received: Arc<AtomicUsize>) {
         let mut sent = 0;
         let test_data = test_data.to_owned().clone();
         thread::spawn(move || {

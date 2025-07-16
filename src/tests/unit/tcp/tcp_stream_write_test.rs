@@ -1,6 +1,6 @@
+use sal_sync::services::entity::{name::Name, object::Object};
 use crate::{
-    conf::point_config::name::Name,
-    core_::{failure::recv_error::RecvError, object::object::Object},
+    core_::failure::recv_error::RecvError,
     tcp::steam_read::StreamRead,
 };
 #[cfg(test)]
@@ -279,7 +279,7 @@ impl<T> Object for MockStreamRead<T> {
 }
 //
 //
-impl<T: Sync + std::fmt::Debug> StreamRead<T, RecvError> for MockStreamRead<T> {
+impl<T: Send + std::fmt::Debug> StreamRead<T, RecvError> for MockStreamRead<T> {
     fn read(&mut self) -> Result<T, RecvError> {
         match self.buffer.first() {
             Some(_) => Ok(self.buffer.remove(0)),

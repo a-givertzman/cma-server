@@ -2,13 +2,13 @@
 
 mod task_nodes {
     use log::{info, debug, trace, warn};
+    use sal_sync::services::{entity::{name::Name, object::Object, point::point::{Point, ToPoint}}, retain::retain_conf::RetainConf, service::{service::Service, service_handles::ServiceHandles}};
     use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, mpsc::{self, Receiver, Sender}, Arc, Mutex, Once, RwLock}, thread};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{point_config::name::Name, task_config::TaskConfig},
-        core_::{object::object::Object, point::point_type::{PointType, ToPoint}},
+        conf::task_config::TaskConfig,
         services::{
-            safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services,
+            safe_lock::rwlock::SafeLock, services::Services,
             task::{nested_function::{comp::fn_ge, fn_count, fn_kind::FnKind, fn_result::FnResult, sql_metric}, task_nodes::TaskNodes}
         },
     };
@@ -34,7 +34,7 @@ mod task_nodes {
     ///
     #[test]
     fn test() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         println!();
@@ -45,8 +45,8 @@ mod task_nodes {
         let mut task_nodes = TaskNodes::new(self_id);
         let conf = TaskConfig::read(&self_name, path);
         debug!("conf: {:?}", conf);
-        let services = Arc::new(RwLock::new(Services::new(self_id)));
-        let mock_service = Arc::new(Mutex::new(MockService::new(self_id, "queue")));
+        let services = Arc::new(RwLock::new(Services::new(self_id, RetainConf::new(None::<&str>, None))));
+        let mock_service = Arc::new(RwLock::new(MockService::new(self_id, "queue")));
         services.wlock(self_id).insert(mock_service.clone());
         let sql_metric_count = sql_metric::COUNT.load(Ordering::SeqCst);
         let fn_count_count = fn_count::COUNT.load(Ordering::SeqCst);
@@ -101,7 +101,7 @@ mod task_nodes {
 
             ),
         ];
-        mock_service.lock().unwrap().run().unwrap();
+        mock_service.write().unwrap().run().unwrap();
         for (name, value, target_value) in test_data {
             let point = value.to_point(0, name);
             // let inputName = &point.name();
@@ -141,15 +141,15 @@ mod task_nodes {
                 None => panic!("input {:?} - not found in the current taskStuff", &name)
             };
         }
-        mock_service.lock().unwrap().exit();
+        mock_service.read().unwrap().exit();
     }
     ///
     ///
     struct MockService {
         id: String,
         name: Name,
-        links: HashMap<String, Sender<PointType>>,
-        rx_recv: Vec<Receiver<PointType>>,
+        links: HashMap<String, Sender<Point>>,
+        rx_recv: Mutex<Option<Receiver<Point>>>,
         exit: Arc<AtomicBool>,
     }
     //
@@ -164,7 +164,7 @@ mod task_nodes {
                 links: HashMap::from([
                     (link_name.to_string(), send),
                 ]),
-                rx_recv: vec![recv],
+                rx_recv: Mutex::new(Some(recv)),
                 exit: Arc::new(AtomicBool::new(false)),
             }
         }
@@ -194,7 +194,7 @@ mod task_nodes {
     impl Service for MockService {
         //
         //
-        fn get_link(&mut self, name: &str) -> Sender<PointType> {
+        fn get_link(&mut self, name: &str) -> Sender<Point> {
             match self.links.get(name) {
                 Some(send) => send.clone(),
                 None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -202,11 +202,11 @@ mod task_nodes {
         }
         //
         //
-        fn run(&mut self) -> Result<ServiceHandles, String> {
+        fn run(&mut self) -> Result<ServiceHandles<()>, String> {
             info!("{}.run | Starting...", self.id);
             let self_id = self.id.clone();
             let exit = self.exit.clone();
-            let rx_recv = self.rx_recv.pop().unwrap();
+            let rx_recv = self.rx_recv.lock().unwrap().take().unwrap();
             let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
                 loop {
                     match rx_recv.recv() {

@@ -1,14 +1,13 @@
 #[cfg(test)]
 mod fn_threshold {
     use log::{debug, info};
+    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use testing::entities::test_value::Value;
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
-        core_::{
-            point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef,
-        },
+        conf::fn_::fn_config::FnConfig, 
+        core_::types::fn_in_out_ref::FnInOutRef,
         services::task::nested_function::{
             filter::fn_threshold::FnThreshold, fn_::FnOut, fn_input::FnInput,
         }
@@ -53,7 +52,7 @@ mod fn_threshold {
     /// Threshold Int's
     #[test]
     fn fn_threshold_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_int";
         info!("{}", self_id);
@@ -99,7 +98,7 @@ mod fn_threshold {
     /// Threshold Reals's
     #[test]
     fn fn_threshold_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_real";
         info!("{}", self_id);
@@ -145,7 +144,7 @@ mod fn_threshold {
     /// Threshold Double's
     #[test]
     fn fn_threshold_double() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "fn_threshold_double";
         info!("{}", self_id);

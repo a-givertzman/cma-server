@@ -29,7 +29,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn map_in_rv_lock() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         println!();
         let self_id = "test access to map behaind RvLock";
@@ -109,7 +109,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn just_map() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         println!();
         let self_id = "test direct access to map";
@@ -187,7 +187,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn map_in_mutex() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         println!();
         let self_id = "test access to map behaind Mutex";
@@ -267,7 +267,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn matching() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         println!();
         let self_id = "test access values using match";

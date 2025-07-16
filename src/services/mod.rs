@@ -15,17 +15,11 @@ pub mod tcp_client;
 
 pub mod profinet_client;
 
-pub mod queue;
-
 pub mod task;
-
-pub mod service;
 
 pub mod services;
 
 pub mod multi_queue;
-
-pub mod queue_name;
 
 pub mod server;
 
@@ -35,10 +29,10 @@ pub mod safe_lock;
 
 pub mod history;
 
-pub mod retain_point_id;
-
 pub mod cache;
 
 pub mod diagnosis;
 
 pub mod slmp_client;
+
+pub mod udp_client;

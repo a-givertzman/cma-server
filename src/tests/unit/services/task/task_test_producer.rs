@@ -1,19 +1,22 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, warn, info, trace};
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::{point::{Point, ToPoint}, point_config::PointConfig, point_tx_id::PointTxId}},
+    service::{link_name::LinkName, service::Service, service_handles::ServiceHandles},
+};
+use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use testing::entities::test_value::Value;
-use crate::{conf::point_config::{name::Name, point_config::PointConfig}, core_::{object::object::Object, point::{point_tx_id::PointTxId, point_type::{PointType, ToPoint}}}, services::{queue_name::QueueName, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles}, services::Services}};
-
+use crate::services::{safe_lock::rwlock::SafeLock, services::Services};
 ///
 /// 
 pub struct TaskTestProducer {
     id: String,
     name: Name,
-    send_to: QueueName, 
+    send_to: LinkName, 
     cycle: Duration,
     // rxSend: HashMap<String, Sender<PointType>>,
     services: Arc<RwLock<Services>>,
     test_data: Vec<(String, Value)>,
-    sent: Arc<Mutex<Vec<PointType>>>,
+    sent: Arc<RwLock<Vec<Point>>>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -24,18 +27,18 @@ impl TaskTestProducer {
         Self {
             id: name.join(),
             name,
-            send_to: QueueName::new(send_to),
+            send_to: LinkName::from_str(send_to).unwrap(),
             cycle,
             // rxSend: HashMap::new(),
             services,
             test_data: test_data.to_vec(),
-            sent: Arc::new(Mutex::new(vec![])),
+            sent: Arc::new(RwLock::new(vec![])),
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     /// 
-    pub fn sent(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn sent(&self) -> Arc<RwLock<Vec<Point>>> {
         self.sent.clone()
     }
 }
@@ -45,7 +48,7 @@ impl Object for TaskTestProducer {
     fn id(&self) -> &str {
         &self.id
     }
-    fn name(&self) -> crate::conf::point_config::name::Name {
+    fn name(&self) -> Name {
         self.name.clone()
     }
 }
@@ -60,11 +63,11 @@ impl Debug for TaskTestProducer {
     }
 }
 //
-// 
+//
 impl Service for TaskTestProducer {
     //
     // 
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         let self_id = self.id.clone();
         let tx_id = PointTxId::from_str(&self_id);
         let cycle = self.cycle;
@@ -80,8 +83,8 @@ impl Service for TaskTestProducer {
                 let point = value.to_point(tx_id, &name);
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
-                        sent.lock().unwrap().push(point.clone());
-                        trace!("{}.run | sent points: {:?}", self_id, sent.lock().unwrap().len());
+                        sent.write().unwrap().push(point.clone());
+                        trace!("{}.run | sent points: {:?}", self_id, sent.read().unwrap().len());
                     }
                     Err(err) => {
                         warn!("{}.run | Error write to queue: {:?}", self_id, err);
@@ -91,7 +94,7 @@ impl Service for TaskTestProducer {
                     thread::sleep(cycle);
                 }
             }
-            info!("{}.run | All sent: {}", self_id, sent.lock().unwrap().len());
+            info!("{}.run | All sent: {}", self_id, sent.read().unwrap().len());
             // thread::sleep(Duration::from_secs_f32(0.1));
             // debug!("TaskTestProducer({}).run | calculating step - done ({:?})", name, cycle.elapsed());
         });
@@ -109,7 +112,7 @@ impl Service for TaskTestProducer {
     }
     //
     // Returns Vec<PointConfig> of points found in the test_data
-    fn points(&self) -> Vec<crate::conf::point_config::point_config::PointConfig> {
+    fn points(&self) -> Vec<PointConfig> {
         self.test_data
             .iter()
             .map(|(name, value)| {

@@ -1,4 +1,5 @@
-use crate::{conf::point_config::name::Name, core_::{failure::recv_error::RecvError, object::object::Object}, tcp::steam_read::StreamRead};
+use sal_sync::services::entity::{name::Name, object::Object};
+use crate::{core_::failure::recv_error::RecvError, tcp::steam_read::StreamRead};
 use super::{jds_serialize::JdsSerialize, jds_define::JDS_END_OF_TRANSMISSION};
 ///
 /// Converts json string into the bytes
@@ -55,6 +56,3 @@ impl StreamRead<Vec<u8>, RecvError> for JdsEncodeMessage {
         }
     }
 }
-///
-/// 
-unsafe impl Sync for JdsEncodeMessage {}

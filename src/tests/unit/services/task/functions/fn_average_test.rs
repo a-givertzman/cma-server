@@ -2,12 +2,13 @@
 mod fn_average {
     use log::{debug, info};
     use testing::entities::test_value::Value;
+    use sal_sync::services::{entity::point::point::{Point, ToPoint}, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{cell::RefCell, rc::Rc, sync::Once};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
+        conf::fn_::fn_config::FnConfig, 
         core_::{
-            aprox_eq::aprox_eq::AproxEq, point::point_type::{PointType, ToPoint}, types::fn_in_out_ref::FnInOutRef
+            aprox_eq::aprox_eq::AproxEq, types::fn_in_out_ref::FnInOutRef
         },
         services::task::nested_function::{
             fn_::FnOut, fn_average::FnAverage, fn_input::FnInput, fn_result::FnResult
@@ -53,7 +54,7 @@ mod fn_average {
     ///
     #[test]
     fn test_bool() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_bool";
         info!("{}", self_id);
@@ -65,7 +66,7 @@ mod fn_average {
             input.clone(),
         );
         let test_data = vec![
-            (00,    true,  false,     FnResult::<PointType, _>::Err("")),
+            (00,    true,  false,     FnResult::<Point, _>::Err("")),
             (01,    true,  false,     FnResult::Err("")),
             (02,    true,   true,      FnResult::Err("")),
             (03,    true,  false,     FnResult::Err("")),
@@ -104,7 +105,7 @@ mod fn_average {
     ///
     #[test]
     fn test_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_int";
         info!("{}", self_id);
@@ -148,7 +149,7 @@ mod fn_average {
     ///
     #[test]
     fn test_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real";
         info!("{}", self_id);
@@ -192,7 +193,7 @@ mod fn_average {
     /// Real points on input, enable - is variable during the test
     #[test]
     fn test_real_enable() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_real_enable";
         info!("{}", self_id);
@@ -258,7 +259,7 @@ mod fn_average {
     /// Double points on input, enable - is variable during the test
     #[test]
     fn test_double_enable() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         let self_id = "test_double_enable";
         info!("{}", self_id);

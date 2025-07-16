@@ -1,9 +1,10 @@
 #![allow(non_snake_case)]
 #[cfg(test)]
 use log::{debug, info};
+use sal_sync::services::task::functions::conf::fn_conf_keywd::FnConfKeywd;
 use std::{sync::Once, str::FromStr};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::conf::{fn_::fn_conf_keywd::FnConfKeywd, conf_duration::{ConfDuration, ConfDurationUnit}};
+use crate::conf::conf_duration::{ConfDuration, ConfDurationUnit};
 ///
 ///
 static INIT: Once = Once::new();

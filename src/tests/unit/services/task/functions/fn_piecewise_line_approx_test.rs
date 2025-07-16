@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod fn_piecewise_line_approx {
     use log::{debug, info};
+    use sal_sync::services::{entity::point::point::ToPoint, task::functions::conf::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions}};
     use std::{sync::Once, rc::Rc, cell::RefCell};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::fn_::{fn_conf_keywd::FnConfPointType, fn_conf_options::FnConfOptions, fn_config::FnConfig}, 
-        core_::{aprox_eq::aprox_eq::AproxEq, point::point_type::ToPoint, types::fn_in_out_ref::FnInOutRef}, 
+        conf::fn_::fn_config::FnConfig, 
+        core_::{aprox_eq::aprox_eq::AproxEq, types::fn_in_out_ref::FnInOutRef}, 
         services::task::nested_function::{fn_::FnOut, fn_input::FnInput, fn_piecewise_line_approx::FnPiecewiseLineApprox},
     };
     ///
@@ -31,7 +32,7 @@ mod fn_piecewise_line_approx {
     /// Testing FnPiecewiseLineApprox with Int's
     #[test]
     fn line_approx_int() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("line_approx_int");
         let input = init_each("0", FnConfPointType::Int);
@@ -76,7 +77,7 @@ mod fn_piecewise_line_approx {
     /// Testing FnPiecewiseLineApprox with Real's
     #[test]
     fn line_approx_real() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("line_approx_real");
         let input = init_each("0.0", FnConfPointType::Real);
@@ -122,7 +123,7 @@ mod fn_piecewise_line_approx {
     /// Testing FnPiecewiseLineApprox with Double's
     #[test]
     fn line_approx_double() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         info!("line_approx_double");
         let input = init_each("0.0", FnConfPointType::Double);

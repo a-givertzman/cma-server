@@ -1,10 +1,9 @@
+use sal_sync::services::{entity::{cot::Cot, point::{point::Point, point_hlr::PointHlr, point_tx_id::PointTxId}, status::status::Status}, types::bool::Bool};
 use std::sync::{atomic::{AtomicUsize, Ordering}, mpsc::Sender};
 use chrono::Utc;
 use indexmap::IndexMap;
 use log::{debug, error, trace, warn};
-use crate::core_::{
-    cot::cot::Cot, point::{point::Point, point_tx_id::PointTxId, point_type::PointType}, status::status::Status, types::{bool::Bool, fn_in_out_ref::FnInOutRef}
-};
+use crate::core_::types::fn_in_out_ref::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Function | Creates SQL requests on [op-cycle] falling edge:
@@ -21,10 +20,10 @@ pub struct FnRecOpCycleMetric {
     id: String,
     kind: FnKind,
     enable: Option<FnInOutRef>,
-    send_to: Option<Sender<PointType>>,
+    send_to: Option<Sender<Point>>,
     op_cycle: FnInOutRef,
     inputs: IndexMap<String, FnInOutRef>,
-    values: Vec<PointType>,
+    values: Vec<Point>,
     prev: bool,
     rising: bool,
     falling: bool,
@@ -35,7 +34,7 @@ impl FnRecOpCycleMetric {
     ///
     /// Creates new instance of the FnRecOpCycleMetric
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, send_to: Option<Sender<PointType>>, op_cycle: FnInOutRef, inputs: IndexMap<String, FnInOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, send_to: Option<Sender<Point>>, op_cycle: FnInOutRef, inputs: IndexMap<String, FnInOutRef>) -> Self {
         Self { 
             id: format!("{}/FnRecOpCycleMetric{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
@@ -51,7 +50,7 @@ impl FnRecOpCycleMetric {
     }
     ///
     /// Sends Point to the external service if 'send-to' specified
-    fn send(&self, point: &PointType) {
+    fn send(&self, point: &Point) {
         match &self.send_to {
             Some(tx_send) => match tx_send.send(point.clone()) {
                 Ok(_) => {
@@ -92,7 +91,7 @@ impl FnOut for FnRecOpCycleMetric {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let (enable, tx_id, status, cot, timestamp) = match &mut self.enable {
             Some(en) => match en.borrow_mut().out() {
                 FnResult::Ok(en) => (en.to_bool().as_bool().value.0, en.tx_id(), en.status(), en.cot(), en.timestamp()),
@@ -141,25 +140,25 @@ impl FnOut for FnRecOpCycleMetric {
                     FnResult::Ok(input) => {
                         trace!("{}.out | Input '{}': {:?}", self.id, input_name, input.value());
                         let value = match input {
-                            PointType::Bool(mut p) => {
+                            Point::Bool(mut p) => {
                                 p.name = input_name.to_owned();
-                                PointType::Bool(p)
+                                Point::Bool(p)
                             }
-                            PointType::Int(mut p) => {
+                            Point::Int(mut p) => {
                                 p.name = input_name.to_owned();
-                                PointType::Int(p)
+                                Point::Int(p)
                             }
-                            PointType::Real(mut p) => {
+                            Point::Real(mut p) => {
                                 p.name = input_name.to_owned();
-                                PointType::Real(p)
+                                Point::Real(p)
                             }
-                            PointType::Double(mut p) => {
+                            Point::Double(mut p) => {
                                 p.name = input_name.to_owned();
-                                PointType::Double(p)
+                                Point::Double(p)
                             }
-                            PointType::String(mut p) => {
+                            Point::String(mut p) => {
                                 p.name = input_name.to_owned();
-                                PointType::String(p)
+                                Point::String(p)
                             }
                         };
                         self.values.push(value)
@@ -169,8 +168,8 @@ impl FnOut for FnRecOpCycleMetric {
                 }
             }
         }
-        FnResult::Ok(PointType::Bool(
-            Point::new(
+        FnResult::Ok(Point::Bool(
+            PointHlr::new(
                 tx_id,
                 &self.id,
                 Bool(enable),

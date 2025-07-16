@@ -3,7 +3,7 @@
 /// - returns Ok if 'limit' of errors is not exceeded
 /// - returns Err if count of errors >= 'limit'
 pub struct ErrorLimit {
-    value: usize,
+    errors: usize,
     limit: usize,
 }
 //
@@ -12,15 +12,15 @@ impl ErrorLimit {
     ///
     /// Creates new instance of the ErrorLimit wir the [limit]
     pub fn new(limit: usize) -> Self {
-        Self { value: limit, limit }
+        Self { errors: limit, limit }
     }
     ///
     /// Counts errors
     /// - returns Ok if 'limit' of errors is not exceeded
     /// - returns Err if count of errors >= 'limit'
     pub fn add(&mut self) -> Result<(), ()> {
-        if self.value > 0 {
-            self.value -= 1;
+        if self.errors > 0 {
+            self.errors -= 1;
             Ok(())
         } else {
             Err(())
@@ -29,11 +29,16 @@ impl ErrorLimit {
     ///
     /// Reset counter
     pub fn reset(&mut self) {
-        self.value = self.limit;
+        self.errors = self.limit;
     }
     ///
     /// Returns limit (the number of allowed calls add() method)
     pub fn limit(&self) -> usize {
         self.limit
+    }
+    ///
+    /// Returns current number of errors
+    pub fn errors(&self) -> usize {
+        self.errors
     }
 }

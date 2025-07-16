@@ -1,7 +1,8 @@
 use log::trace;
+use sal_sync::services::entity::point::point::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::{point::point_type::PointType, types::fn_in_out_ref::FnInOutRef},
+    core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnInOut, FnIn, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -53,7 +54,7 @@ impl FnOut for FnPow {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         // TODO Mul overflow check
         let input1 = self.input1.borrow_mut().out();
         trace!("{}.out | input1: {:?}", self.id, &input1);

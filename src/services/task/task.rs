@@ -1,16 +1,18 @@
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}},
+    service::{service::Service, service_cycle::ServiceCycle, service_handles::ServiceHandles},
+    subscription::subscription_criteria::SubscriptionCriteria,
+};
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Duration
+    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::Duration,
 };
 use log::{debug, error, info, trace, warn};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::point_type::PointType, constants::constants::RECV_TIMEOUT, object::object::Object, point::point_tx_id::PointTxId},
-    conf::{point_config::{name::Name, point_config::PointConfig}, task_config::TaskConfig}, 
+    core_::constants::constants::RECV_TIMEOUT,
+    conf::task_config::TaskConfig, 
     services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria, safe_lock::SafeLock,
-        service::{service::Service, service_handles::ServiceHandles},
-        services::Services,
-        task::{service_cycle::ServiceCycle, task_nodes::TaskNodes},
+        safe_lock::rwlock::SafeLock, services::Services, task::task_nodes::TaskNodes,
     },
 };
 ///
@@ -21,8 +23,8 @@ use crate::{
 pub struct Task {
     id: String,
     name: Name,
-    in_send: HashMap<String, Sender<PointType>>,
-    rx_recv: Vec<Receiver<PointType>>,
+    in_send: HashMap<String, Sender<Point>>,
+    rx_recv: Mutex<Option<Receiver<Point>>>,
     services: Arc<RwLock<Services>>,
     conf: TaskConfig,
     exit: Arc<AtomicBool>,
@@ -39,7 +41,7 @@ impl Task {
             id: conf.name.join(),
             name: conf.name.clone(),
             in_send: HashMap::from([(conf.rx.clone(), send)]),
-            rx_recv: vec![recv],
+            rx_recv: Mutex::new(Some(recv)),
             services,
             conf,
             exit: Arc::new(AtomicBool::new(false)),
@@ -89,7 +91,7 @@ impl Task {
     }
     ///
     ///
-    fn subscribe(&mut self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<RwLock<Services>>) -> Receiver<PointType> {
+    fn subscribe(&mut self, subscriptions: &Option<(String, Vec<SubscriptionCriteria>)>, services: &Arc<RwLock<Services>>) -> Receiver<Point> {
         match subscriptions {
             Some((service_name, points)) => {
                 let (_, rx_recv) = services.wlock(&self.id).subscribe(
@@ -100,7 +102,10 @@ impl Task {
                 rx_recv
             }
             None => {
-                self.rx_recv.pop().unwrap()
+                match self.rx_recv.lock() {
+                    Ok(mut rx_recv) => rx_recv.take().unwrap(),
+                    Err(err) => panic!("{}.subscribe | self.rx_recv - is not initialized, \n\t error: {:#?}", self.id, err),
+                }
             }
         }
     }
@@ -130,7 +135,7 @@ impl Debug for Task {
 impl Service for Task {
     //
     //
-    fn get_link(&mut self, name: &str) -> Sender<PointType> {
+    fn get_link(&mut self, name: &str) -> Sender<Point> {
         match self.in_send.get(name) {
             Some(send) => send.clone(),
             None => panic!("{}.run | link '{:?}' - not found", self.id, name),
@@ -138,7 +143,7 @@ impl Service for Task {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         trace!("{}.run | Self tx_id: {}", self.id, PointTxId::from_str(&self.id));
         let self_id = self.id.clone();

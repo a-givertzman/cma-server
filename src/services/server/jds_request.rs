@@ -1,18 +1,14 @@
 use std::{collections::HashMap, sync::{Arc, RwLock}, thread, time::Duration};
 use concat_string::concat_string;
 use log::{debug, error, trace, warn};
+use sal_sync::services::{entity::{cot::Cot, name::Name, point::{point::Point, point_config::PointConfig, point_hlr::PointHlr}, status::status::Status}, subscription::subscription_criteria::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
-    conf::point_config::{name::Name, point_config::PointConfig},
     core_::{
         auth::ssh::auth_ssh::AuthSsh,
-        cot::cot::Cot,
         net::protocols::jds::request_kind::RequestKind,
-        point::{point::Point, point_type::PointType},
-        status::status::Status,
     }, services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria,
-        safe_lock::SafeLock,
+        safe_lock::rwlock::SafeLock,
         server::{jds_routes::RouterReply, jds_cnnection::JdsState},
         services::Services,
     }
@@ -24,7 +20,7 @@ impl JdsRequest {
     ///
     /// Detecting kind of the request stored as json string in the incoming point.
     /// Performs the action depending on the Request kind.
-    pub fn handle(parent_id: &str, parent: &Name, tx_id: usize, request: PointType, services: Arc<RwLock<Services>>, shared: Arc<RwLock<Shared>>) -> RouterReply {
+    pub fn handle(parent_id: &str, parent: &Name, tx_id: usize, request: Point, services: Arc<RwLock<Services>>, shared: Arc<RwLock<Shared>>) -> RouterReply {
         let mut shared = shared.write().unwrap();
         let self_id = concat_string!(parent_id, "/JdsRequest");
         let requester_name = &parent.join();
@@ -34,7 +30,7 @@ impl JdsRequest {
                 let (cot, message) = match &shared.auth {
                     crate::services::server::jds_auth::TcpServerAuth::Secret(auth_secret) => {
                         let secret = match request {
-                            PointType::String(request) => request.value,
+                            Point::String(request) => request.value,
                             _ => String::new(),
                         };
                         if secret == auth_secret.token() {
@@ -50,7 +46,7 @@ impl JdsRequest {
                 };
                 RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(Point::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Auth.Secret").join(),
                         message.to_owned(),
@@ -65,7 +61,7 @@ impl JdsRequest {
                 let (cot, message) = match &shared.auth {
                     crate::services::server::jds_auth::TcpServerAuth::Ssh(auth_ssh_path) => {
                         let secret = match request {
-                            PointType::String(request) => request.value,
+                            Point::String(request) => request.value,
                             _ => String::new(),
                         };
                         match AuthSsh::new(&auth_ssh_path.path()).validate(&secret) {
@@ -84,7 +80,7 @@ impl JdsRequest {
                 };
                 RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(Point::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Auth.Ssh").join(),
                         message.to_owned(),
@@ -110,7 +106,7 @@ impl JdsRequest {
                 let points = json!(points).to_string();
                 let reply = RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(Point::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Points").join(),
                         points,
@@ -197,7 +193,7 @@ impl JdsRequest {
                 }
                 let reply = RouterReply::new(
                     None,
-                    Some(PointType::String(Point::new(
+                    Some(Point::String(PointHlr::new(
                         tx_id,
                         &Name::new(parent, "/Subscribe").join(),
                         message,
@@ -221,7 +217,7 @@ impl JdsRequest {
     fn yield_gi(self_id: &str, receiver_name: &str, services: Arc<RwLock<Services>>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared) {
         match services.rlock(self_id).get(cache_service) {
             Some(cache) => {
-                let recv = cache.slock(self_id).gi(receiver_name, points);
+                let recv = cache.rlock(self_id).gi(receiver_name, points);
                 match shared.req_reply_send.pop() {
                     Some(send) => {
                         shared.req_reply_send.push(send.clone());

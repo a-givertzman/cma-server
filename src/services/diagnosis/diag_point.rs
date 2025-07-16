@@ -1,11 +1,8 @@
 use chrono::Utc;
-use crate::{
-    conf::point_config::point_config::PointConfig,
-    core_::{
-        cot::cot::Cot,
-        point::{point::Point, point_type::PointType},
-        status::status::Status,
-    }
+use sal_sync::services::entity::{
+    cot::Cot,
+    point::{point_hlr::PointHlr, point::Point, point_config::PointConfig,},
+    status::status::Status,
 };
 ///
 /// Provides the state for diagnosis Point's
@@ -29,8 +26,8 @@ impl DiagPoint {
     ///
     /// Returns diagnostic Point from value
     ///  - the value is represents the [Status]
-    fn point(&self, value: Status) -> PointType {
-        PointType::Int(Point::new(
+    fn point(&self, value: Status) -> Point {
+        Point::Int(PointHlr::new(
             self.tx_id,
             &self.conf.name,
             i64::from(value),
@@ -41,7 +38,7 @@ impl DiagPoint {
     }
     ///
     /// Returns updated point with
-    pub fn next(&mut self, value: Status) -> Option<PointType> {
+    pub fn next(&mut self, value: Status) -> Option<Point> {
         if value != self.value {
             self.value = value;
             Some(self.point(value))

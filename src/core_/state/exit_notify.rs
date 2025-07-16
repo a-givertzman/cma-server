@@ -68,6 +68,3 @@ impl ExitNotify {
         self.exit_pair.store(false, Ordering::SeqCst);
     }
 }
-//
-//
-unsafe impl Sync for ExitNotify {}

@@ -24,7 +24,7 @@ mod thread_test {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn exiting() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         let self_id = "thread_test";

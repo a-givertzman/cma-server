@@ -1,8 +1,9 @@
 use log::trace;
+use sal_sync::services::{entity::point::{point::Point, point_hlr::PointHlr}, types::type_of::DebugTypeOf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::{point::{point::Point, point_type::PointType}, types::{fn_in_out_ref::FnInOutRef, type_of::DebugTypeOf}},
+    core_::types::fn_in_out_ref::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -53,29 +54,29 @@ impl FnOut for FnToInt {
     }
     //
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let input = self.input.borrow_mut().out();
         trace!("{}.out | input: {:?}", self.id, input);
         match input {
             FnResult::Ok(input) => {
                 let out = match &input {
-                    PointType::Bool(value) => {
+                    Point::Bool(value) => {
                         if value.value.0 {1} else {0}
                     }
-                    PointType::Int(value) => {
+                    Point::Int(value) => {
                         value.value
                     }
-                    PointType::Real(value) => {
+                    Point::Real(value) => {
                         value.value.round() as i64
                     }
-                    PointType::Double(value) => {
+                    Point::Double(value) => {
                         value.value.round() as i64
                     }
                     _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
                 };
                 trace!("{}.out | out: {:?}", self.id, &out);
-                FnResult::Ok(PointType::Int(
-                    Point::new(
+                FnResult::Ok(Point::Int(
+                    PointHlr::new(
                         input.tx_id(),
                         &concat_string!(self.id, ".out"),
                         out,

@@ -1,13 +1,20 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex, RwLock}, thread, time::Duration};
 use log::{debug, error, info, warn};
+use sal_sync::{
+    collections::map::IndexMapFxHasher,
+    services::{
+        entity::{name::Name, object::Object, point::{point::Point, point_config::PointConfig, point_tx_id::PointTxId}, status::status::Status},
+        service::{service::Service, service_handles::ServiceHandles},
+    },
+};
 use testing::stuff::wait::WaitTread;
 use crate::{
-    conf::{diag_keywd::DiagKeywd, point_config::{name::Name, point_config::PointConfig}, slmp_client_config::slmp_client_config::SlmpClientConfig},
+    conf::{diag_keywd::DiagKeywd, slmp_client_config::slmp_client_config::SlmpClientConfig},
     core_::{
-        constants::constants::RECV_TIMEOUT, object::object::Object, point::{point_tx_id::PointTxId, point_type::PointType}, state::exit_notify::ExitNotify, status::status::Status, types::map::IndexMapFxHasher
+        constants::constants::RECV_TIMEOUT, state::exit_notify::ExitNotify,
     },
     services::{
-        diagnosis::diag_point::DiagPoint, safe_lock::SafeLock, service::{service::Service, service_handles::ServiceHandles},
+        diagnosis::diag_point::DiagPoint, safe_lock::rwlock::SafeLock,
         services::Services, slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
     },
     tcp::tcp_client_connect::TcpClientConnect,
@@ -54,7 +61,7 @@ impl SlmpClient {
         diagnosis: &Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
         kewd: &DiagKeywd,
         value: Status,
-        dest: &Sender<PointType>,
+        dest: &Sender<Point>,
     ) {
         match diagnosis.lock() {
             Ok(mut diagnosis) => {
@@ -117,14 +124,16 @@ impl Debug for SlmpClient {
     }
 }
 //
-// 
+//
 impl Service for SlmpClient {
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
+        let tx_id = self.tx_id;
         let conf = self.conf.clone();
+        let services = self.services.clone();
         let diagnosis = self.diagnosis.clone();
         let status = Arc::new(AtomicU32::new(Status::Ok.into()));
         let exit = Arc::new(ExitNotify::new(&self_id, Some(self.exit.clone()), None));
@@ -137,33 +146,33 @@ impl Service for SlmpClient {
             conf.reconnect_cycle,
             Some(self.exit.clone()),
         );
-        let mut slmp_read = SlmpRead::new(
-            &self_id,
-            self.tx_id,
-            // self.name.clone(),
-            conf.clone(),
-            tx_send.clone(),
-            // diagnosis.clone(),
-            status.clone(),
-            exit.clone(),
-        );
-        let mut slmp_write = SlmpWrite::new(
-            &self_id,
-            self.tx_id,
-            // self.name.clone(),
-            conf.clone(),
-            tx_send.clone(),
-            // diagnosis.clone(),
-            self.services.clone(),
-            status,
-            exit.clone(),
-        );
-        Self::yield_diagnosis(&self.id, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
-        Self::yield_diagnosis(&self.id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
         info!("{}.run | Preparing thread...", self_id);
         let handle = thread::Builder::new().name(format!("{}.run", self_id.clone())).spawn(move || {
             info!("{}.run | Preparing thread - ok", self_id);
-            loop {
+            let mut slmp_read = SlmpRead::new(
+                &self_id,
+                tx_id,
+                // self.name.clone(),
+                conf.clone(),
+                tx_send.clone(),
+                // diagnosis.clone(),
+                status.clone(),
+                exit.clone(),
+            );
+            let mut slmp_write = SlmpWrite::new(
+                &self_id,
+                tx_id,
+                // self.name.clone(),
+                conf.clone(),
+                tx_send.clone(),
+                // diagnosis.clone(),
+                services.clone(),
+                status,
+                exit.clone(),
+            );
+            Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
+            Self::yield_diagnosis(&self_id, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
+                loop {
                 info!("{}.run | Connecting...", self_id);
                 exit.reset_pair();
                 match tcp_client_connect.connect() {

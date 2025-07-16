@@ -1,10 +1,14 @@
 use log::{trace, warn};
 use chrono::{DateTime, Utc};
-use crate::{
-    conf::point_config::{point_config::PointConfig, point_config_address::PointConfigAddress, point_config_history::PointConfigHistory, point_config_type::PointConfigType},
-    core_::{cot::cot::Cot, filter::filter::Filter, point::{point::Point, point_type::PointType}, status::status::Status},
-    services::slmp_client::parse_point::ParsePoint,
+use sal_sync::services::entity::{
+    cot::Cot,
+    point::{
+        point::Point, point_config::PointConfig, point_config_address::PointConfigAddress, 
+        point_config_history::PointConfigHistory, point_config_type::PointConfigType, point_hlr::PointHlr,
+    },
+    status::status::Status,
 };
+use crate::{core_::filter::filter::Filter, services::slmp_client::parse_point::ParsePoint};
 ///
 /// Used for parsing configured point from slice of bytes read from device
 #[derive(Debug)]
@@ -13,7 +17,7 @@ pub struct SlmpParseReal {
     pub type_: PointConfigType,
     pub tx_id: usize,
     pub name: String,
-    pub value: Box<dyn Filter<Item = f32> + Sync + Send>,
+    pub value: Box<dyn Filter<Item = f32> + Send>,
     pub status: Status,
     pub offset: Option<u32>,
     pub history: PointConfigHistory,
@@ -34,7 +38,7 @@ impl SlmpParseReal {
         tx_id: usize,
         name: String,
         config: &PointConfig,
-        filter: Box<dyn Filter<Item = f32> + Sync + Send>,
+        filter: Box<dyn Filter<Item = f32> + Send>,
     ) -> SlmpParseReal {
         SlmpParseReal {
             id: format!("SlmpParseReal"),
@@ -76,9 +80,9 @@ impl SlmpParseReal {
     }
     ///
     ///
-    fn to_point(&self) -> Option<PointType> {
+    fn to_point(&self) -> Option<Point> {
         if self.is_changed {
-            Some(PointType::Real(Point::new(
+            Some(Point::Real(PointHlr::new(
                 self.tx_id,
                 &self.name,
                 self.value.value(),
@@ -127,13 +131,13 @@ impl ParsePoint for SlmpParseReal {
     }
     //
     //
-    fn next_simple(&mut self, bytes: &[u8]) -> Option<PointType> {
+    fn next_simple(&mut self, bytes: &[u8]) -> Option<Point> {
         self.add_raw_simple(bytes);
         self.to_point()
     }
     //
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<PointType> {
+    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_raw(bytes, timestamp);
         self.to_point().map(|point| {
             self.is_changed = false;
@@ -142,7 +146,7 @@ impl ParsePoint for SlmpParseReal {
     }
     //
     //
-    fn next_status(&mut self, status: Status) -> Option<PointType> {
+    fn next_status(&mut self, status: Status) -> Option<Point> {
         if self.status != status {
             self.status = status;
             self.timestamp = Utc::now();
@@ -170,10 +174,10 @@ impl ParsePoint for SlmpParseReal {
     }
     //
     //
-    fn to_bytes(&self, point: &PointType) -> Result<Vec<u8>, String> {
+    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
         match point {
-            PointType::Real(point) => Ok(point.value.to_le_bytes().to_vec()),
-            PointType::Double(_) => Ok(point.to_real().as_real().value.to_le_bytes().to_vec()),
+            Point::Real(point) => Ok(point.value.to_le_bytes().to_vec()),
+            Point::Double(_) => Ok(point.to_real().as_real().value.to_le_bytes().to_vec()),
             _ => {
                 let message = format!("{}.write | Point of type 'Real / Double' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
                 warn!("{}", message);

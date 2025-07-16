@@ -1,30 +1,28 @@
 use std::{
-    collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, 
-    mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, Mutex, RwLock}, thread, time::Instant, 
+    collections::HashMap, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, mpsc::{Receiver, RecvTimeoutError, Sender}, Arc, RwLock}, thread, time::Instant, 
 };
 use hashers::fx_hash::FxHasher;
 use log::{debug, error, info, trace, warn};
+use sal_sync::services::{entity::{cot::Cot, name::Name, point::point::Point}, service::service_handles::ServiceHandles, subscription::subscription_criteria::SubscriptionCriteria};
 use serde_json::json;
 use crate::{
-    conf::{point_config::name::Name, tcp_server_config::TcpServerConfig}, 
+    conf::tcp_server_config::TcpServerConfig, 
     core_::{
-        constants::constants::RECV_TIMEOUT, cot::cot::Cot, net::protocols::jds::{
+        constants::constants::RECV_TIMEOUT, net::protocols::jds::{
             jds_decode_message::JdsDecodeMessage, 
             jds_deserialize::JdsDeserialize, 
             jds_encode_message::JdsEncodeMessage, 
             jds_serialize::JdsSerialize,
-        }, point::point_type::PointType 
+        },
     }, 
     services::{
-        multi_queue::subscription_criteria::SubscriptionCriteria, 
-        safe_lock::SafeLock, 
+        safe_lock::rwlock::SafeLock, 
         server::{
             connections::Action, 
             jds_request::JdsRequest, 
             jds_routes::{JdsRoutes, RouterReply}, 
             jds_auth::TcpServerAuth,
         }, 
-        service::service_handles::ServiceHandles, 
         services::Services,
     }, 
     tcp::{tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive},
@@ -64,9 +62,9 @@ pub struct Shared {
     pub subscribe_receiver: String,
     pub jds_state: JdsState,
     pub auth: TcpServerAuth,
-    pub connection_id: String,
+    // pub connection_id: String,
     pub cache: Option<String>,
-    pub req_reply_send: Vec<Sender<PointType>>,
+    pub req_reply_send: Vec<Sender<Point>>,
 }
 
 ///
@@ -103,14 +101,14 @@ impl JdsConnection {
     }
     ///
     /// Main loop of the connection 
-    pub fn run(&mut self) -> Result<ServiceHandles, String> {
+    pub fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let self_name = self.name.clone();
         let conf = self.conf.clone();
         let self_conf_send_to = conf.send_to.clone();
         let receiver_name = Name::new(&self_name, &self.connection_id).join();
-        let subscribe = self_conf_send_to.service().unwrap();
+        let subscribe = self_conf_send_to.service();
         let shared_options: Arc<RwLock<Shared>> = Arc::new(RwLock::new(Shared {
                 subscribe: subscribe.clone(), 
                 subscribe_receiver: receiver_name.clone(), 
@@ -119,7 +117,7 @@ impl JdsConnection {
                     _                   => JdsState::Unknown,
                 }, 
                 auth: conf.auth.clone(),
-                connection_id: self.connection_id.clone(),
+                // connection_id: self.connection_id.clone(),
                 cache: conf.cache.clone(),
                 req_reply_send: vec![],
         }));
@@ -160,7 +158,7 @@ impl JdsConnection {
             let buffered = rx_max_length > 0;
             let mut tcp_read_alive = TcpReadAlive::new(
                 &self_id,
-                Arc::new(Mutex::new(JdsRoutes::new(
+                Box::new(JdsRoutes::new(
                     &self_id,
                     &self_name,
                     services.clone(),
@@ -174,7 +172,7 @@ impl JdsConnection {
                     |parent_id, parent_name, point, services, shared| {
                         let parent_id: String = parent_id;
                         let parent: Name = parent_name;
-                        let point: PointType = point;
+                        let point: Point = point;
                         debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
                         trace!("{}.run | point from socket: \n\t{:?}", parent, point);
                         match point.cot() {
@@ -194,16 +192,16 @@ impl JdsConnection {
                         }
                     },
                     shared_options,
-                ))),
+                )),
                 send,
                 None,
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
             );
-            let tcp_write_alive = TcpWriteAlive::new(
+            let mut tcp_write_alive = TcpWriteAlive::new(
                 &self_id,
                 None,
-                Arc::new(Mutex::new(TcpStreamWrite::new(
+                TcpStreamWrite::new(
                     format!("{}/TcpWriteAlive", self_id),
                     buffered,
                     Some(rx_max_length as usize),
@@ -214,7 +212,7 @@ impl JdsConnection {
                             recv,
                         ),
                     )),
-                ))),
+                ),
                 Some(exit.clone()),
                 Some(exit_pair.clone()),
             );

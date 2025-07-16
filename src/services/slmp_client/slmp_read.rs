@@ -1,21 +1,16 @@
 use std::{
     hash::BuildHasherDefault, net::TcpStream,
-    sync::{atomic::{AtomicU32, Ordering}, mpsc::Sender, Arc, RwLock},
+    sync::{atomic::{AtomicU32, Ordering}, mpsc::Sender, Arc, Mutex},
     thread::{self, JoinHandle}, time::Duration,
 };
 use hashers::fx_hash::FxHasher;
 use indexmap::IndexMap;
 use log::{debug, error, info, trace, warn};
+use sal_sync::{collections::map::IndexMapFxHasher, services::{entity::{point::point::Point, status::status::Status}, service::service_cycle::ServiceCycle}};
 use crate::{
     conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::{
-        failure::errors_limit::ErrorLimit, point::point_type::PointType, state::{change_notify::ChangeNotify, exit_notify::ExitNotify},
-        status::status::Status, types::map::IndexMapFxHasher
-    },
-    services::{
-        slmp_client::slmp_db::SlmpDb,
-        task::service_cycle::ServiceCycle,
-    }
+    core_::{failure::errors_limit::ErrorLimit, state::{change_notify::ChangeNotify, exit_notify::ExitNotify}},
+    services::slmp_client::slmp_db::SlmpDb
 };
 ///
 /// Cyclicaly reads SLMP data ranges (DB's) specified in the [conf]
@@ -26,8 +21,8 @@ pub struct SlmpRead {
     id: String,
     // name: Name,
     conf: SlmpClientConfig,
-    dest: Sender<PointType>,
-    dbs: Arc<RwLock<IndexMapFxHasher<String, SlmpDb>>>,
+    dest: Sender<Point>,
+    dbs: Arc<Mutex<IndexMapFxHasher<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
     status: Arc<AtomicU32>,
     exit: Arc<ExitNotify>,
@@ -40,7 +35,7 @@ impl SlmpRead {
         tx_id: usize,
         // name: Name,
         conf: SlmpClientConfig,
-        dest: Sender<PointType>,
+        dest: Sender<Point>,
         // diagnosis: Arc<Mutex<IndexMapFxHasher<DiagKeywd, DiagPoint>>>,
         status: Arc<AtomicU32>,
         exit: Arc<ExitNotify>,
@@ -53,7 +48,7 @@ impl SlmpRead {
             // name,
             conf,
             dest,
-            dbs: Arc::new(RwLock::new(dbs)),
+            dbs: Arc::new(Mutex::new(dbs)),
             // diagnosis,
             status,
             exit,
@@ -61,7 +56,7 @@ impl SlmpRead {
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    fn yield_status(self_id: &str, status: Status, dbs: &mut IndexMapFxHasher<String, SlmpDb>, dest: &Sender<PointType>) {
+    fn yield_status(self_id: &str, status: Status, dbs: &mut IndexMapFxHasher<String, SlmpDb>, dest: &Sender<Point>) {
         for (db_name, db) in dbs {
             debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
             match db.yield_status(status, dest) {
@@ -108,10 +103,10 @@ impl SlmpRead {
                         ],
                     );
                     let mut cycle = ServiceCycle::new(&self_id, cycle_interval);
-                    let mut dbs = dbs.write().unwrap();
+                    let mut dbs = dbs.lock().unwrap();
                     let mut error_limit = ErrorLimit::new(3);
                     'main: while !exit.get() {
-                        is_connected.add(true, &format!("{}.read | Connection established", self_id));
+                        is_connected.add(true, format!("{}.read | Connection established", self_id));
                         cycle.start();
                         for (db_name, db) in dbs.iter_mut() {
                             trace!("{}.read | SlmpDb '{}' - reading...", self_id, db_name);
@@ -153,7 +148,7 @@ impl SlmpRead {
                         thread::sleep(Duration::from_millis(64));
                     }
                     if status.load(Ordering::SeqCst) != u32::from(Status::Ok) {
-                        let mut dbs = dbs.write().unwrap();
+                        let mut dbs = dbs.lock().unwrap();
                         Self::yield_status(&self_id, Status::Invalid, &mut dbs, &dest);
                     }
                     info!("{}.read | Exit", self_id);

@@ -1,13 +1,17 @@
 use log::{info, trace, warn, debug};
-use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex}, thread, time::Duration};
+use sal_sync::services::{
+    entity::{name::Name, object::Object, point::point::Point},
+    service::{service::Service, service_handles::ServiceHandles},
+};
+use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, RwLock}, thread, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    conf::point_config::name::Name, core_::{
+    core_::{
         net::{
             connection_status::ConnectionStatus,
             protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize},
-        }, object::object::Object, point::point_type::PointType, state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged}
-    }, services::service::{service::Service, service_handles::ServiceHandles}, tcp::tcp_stream_write::OpResult
+        }, state::{switch_state::{Switch, SwitchCondition, SwitchState}, switch_state_changed::SwitchStateChanged}
+    }, tcp::tcp_stream_write::OpResult
 };
 
 
@@ -21,7 +25,7 @@ pub struct EmulatedTcpClientRecv {
     id: String,
     name: Name,
     addr: SocketAddr,
-    received: Arc<Mutex<Vec<PointType>>>,
+    received: Arc<RwLock<Vec<Point>>>,
     recv_limit: Option<usize>,
     must_received: Option<Value>,
     disconnect: Vec<i8>,
@@ -37,7 +41,7 @@ impl EmulatedTcpClientRecv {
             id: name.join(),
             name,
             addr: addr.parse().unwrap(),
-            received: Arc::new(Mutex::new(vec![])),
+            received: Arc::new(RwLock::new(vec![])),
             recv_limit,
             must_received,
             disconnect,
@@ -52,7 +56,7 @@ impl EmulatedTcpClientRecv {
     }
     ///
     ///
-    pub fn received(&self) -> Arc<Mutex<Vec<PointType>>> {
+    pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
     ///
@@ -105,13 +109,13 @@ impl EmulatedTcpClientRecv {
     ///
     pub fn wait_all_received(&self) {
         let recv_limit = self.recv_limit.unwrap_or(0);
-        info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.lock().unwrap().len(), recv_limit);
+        info!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
         loop {
-            if self.received.lock().unwrap().len() >= recv_limit {
+            if self.received.read().unwrap().len() >= recv_limit {
                 break;
             }
             thread::sleep(Duration::from_millis(100));
-            trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.lock().unwrap().len(), recv_limit);
+            trace!("{}.waitAllReceived | wait all beeng received: {}/{}", self.id(), self.received.read().unwrap().len(), recv_limit);
         }
     }
     ///
@@ -157,7 +161,7 @@ impl Debug for EmulatedTcpClientRecv {
 impl Service for EmulatedTcpClientRecv {
     //
     //
-    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<crate::core_::point::point_type::PointType> {
+    fn get_link(&mut self, _name: &str) -> std::sync::mpsc::Sender<Point> {
         panic!("{}.get_link | Does not support static producer", self.id())
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -166,7 +170,7 @@ impl Service for EmulatedTcpClientRecv {
     }
     //
     //
-    fn run(&mut self) -> Result<ServiceHandles, String> {
+    fn run(&mut self) -> Result<ServiceHandles<()>, String> {
         info!("{}.run | Starting...", self.id);
         let self_id = self.id.clone();
         let exit = self.exit.clone();
@@ -202,7 +206,7 @@ impl Service for EmulatedTcpClientRecv {
                                                 match result {
                                                     OpResult::Ok(point) => {
                                                         debug!("{}.run | received: {:?}", self_id, point);
-                                                        received.lock().unwrap().push(point.clone());
+                                                        received.write().unwrap().push(point.clone());
                                                         received_count += 1;
                                                         progress_percent = (received_count as f32) / (recv_limit as f32);
                                                         switch_state.add(progress_percent);
@@ -262,7 +266,7 @@ impl Service for EmulatedTcpClientRecv {
                                             trace!("{}.run | received: {:?}", self_id, result);
                                             match result {
                                                 OpResult::Ok(point) => {
-                                                    received.lock().unwrap().push(point);
+                                                    received.write().unwrap().push(point);
                                                 }
                                                 OpResult::Err(err) => {
                                                     warn!("{}.run | read socket error: {:?}", self_id, err);

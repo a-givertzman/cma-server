@@ -1,10 +1,11 @@
+use sal_sync::services::entity::{name::Name, point::{point::{Point, ToPoint}, point_hlr::PointHlr, point_tx_id::PointTxId}};
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc, RwLock}};
 use indexmap::IndexMap;
 use log::trace;
 use crate::{
-    conf::{fn_::fn_config::FnConfig, point_config::name::Name},
+    conf::fn_::fn_config::FnConfig,
     core_::{
-        format::format::Format, point::{point::Point, point_tx_id::PointTxId, point_type::{PointType, ToPoint}},
+        format::format::Format,
         types::fn_in_out_ref::FnInOutRef,
     },
     services::{
@@ -121,7 +122,7 @@ impl FnOut for SqlMetric {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<PointType, String> {
+    fn out(&mut self) -> FnResult<Point, String> {
         let self_id = self.id.clone();
         for (full_name, (name, sufix)) in &self.sql_names {
             trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
@@ -143,7 +144,7 @@ impl FnOut for SqlMetric {
             };
         }
         trace!("{}.out | sql: {:?}", self_id, self.sql.out());
-        FnResult::Ok(PointType::String(Point::new_string(
+        FnResult::Ok(Point::String(PointHlr::new_string(
             self.tx_id,
             &self.name.join(), 
             self.sql.out(),

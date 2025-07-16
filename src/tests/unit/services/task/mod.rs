@@ -2,8 +2,6 @@ mod functions;
 
 mod sql_metric;
 
-mod service_cycle_test;
-
 mod task_nodes;
 
 mod task_test;

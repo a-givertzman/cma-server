@@ -1,18 +1,27 @@
+use sal_sync::services::{entity::{name::Name, point::point::{Point, ToPoint}}, service::link_name::LinkName, task::functions::conf::fn_conf_keywd::FnConfPointType};
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::{Arc, RwLock}};
 use indexmap::IndexMap;
 use log::{debug, error, trace, warn};
 use crate::{
-    conf::{fn_::{fn_conf_keywd::FnConfPointType, fn_conf_kind::FnConfKind}, point_config::name::Name},
-    core_::{
-        point::point_type::{PointType, ToPoint},
-        types::fn_in_out_ref::FnInOutRef,
-    },
+    conf::fn_::fn_conf_kind::FnConfKind,
+    core_::types::fn_in_out_ref::FnInOutRef,
     services::{
-        queue_name::QueueName, safe_lock::SafeLock, services::Services, task::{
+        safe_lock::rwlock::SafeLock, services::Services,
+        task::{
             nested_function::{
-                comp::{fn_eq::FnEq, fn_ge::FnGe, fn_gt::FnGt, fn_le::FnLe, fn_lt::FnLt, fn_ne::FnNe}, edge_detection::{fn_falling_edge::FnFallingEdge, fn_rising_edge::FnRisingEdge}, export::{fn_export::FnExport, fn_point::FnPoint, fn_to_api_queue::FnToApiQueue}, filter::{fn_filter::FnFilter, fn_smooth::FnSmooth, fn_threshold::FnThreshold}, fn_acc::FnAcc, fn_average::FnAverage, fn_const::FnConst, fn_count::FnCount, fn_debug::FnDebug, fn_input::FnInput, fn_is_changed_value::FnIsChangedValue, fn_keep_valid::FnKeepValid, fn_max::FnMax, fn_piecewise_line_approx::FnPiecewiseLineApprox, fn_point_id::FnPointId, fn_rec_op_cycle_metric::FnRecOpCycleMetric, fn_timer::FnTimer, fn_to_bool::FnToBool, fn_to_double::FnToDouble, fn_to_int::FnToInt, fn_to_real::FnToReal, fn_to_string::FnToString, fn_var::FnVar, functions::Functions, io::fn_retain::FnRetain, ops::{
-                    fn_add::FnAdd, fn_bit_and::FnBitAnd, fn_bit_not::FnBitNot, fn_bit_or::FnBitOr, fn_bit_xor::FnBitXor, fn_div::FnDiv, fn_mul::FnMul, fn_pow::FnPow, fn_sub::FnSub 
-                }, sql_metric::SqlMetric
+                comp::{fn_eq::FnEq, fn_ge::FnGe, fn_gt::FnGt, fn_le::FnLe, fn_lt::FnLt, fn_ne::FnNe},
+                edge_detection::{fn_falling_edge::FnFallingEdge, fn_rising_edge::FnRisingEdge},
+                export::{fn_export::FnExport, fn_point::FnPoint, fn_to_api_queue::FnToApiQueue},
+                filter::{fn_filter::FnFilter, fn_smooth::FnSmooth, fn_threshold::FnThreshold},
+                fn_acc::FnAcc, fn_average::FnAverage, fn_const::FnConst, fn_count::FnCount, fn_debug::FnDebug, fn_input::FnInput,
+                fn_is_changed_value::FnIsChangedValue, fn_keep_valid::FnKeepValid, fn_max::FnMax, fn_piecewise_line_approx::FnPiecewiseLineApprox,
+                fn_point_id::FnPointId, fn_rec_op_cycle_metric::FnRecOpCycleMetric, fn_timer::FnTimer, fn_to_bool::FnToBool, fn_to_double::FnToDouble,
+                fn_to_int::FnToInt, fn_to_real::FnToReal, fn_to_string::FnToString, fn_var::FnVar, functions::Functions, io::fn_retain::FnRetain,
+                ops::{
+                    fn_add::FnAdd, fn_bit_and::FnBitAnd, fn_bit_not::FnBitNot, fn_bit_or::FnBitOr, fn_bit_xor::FnBitXor,
+                    fn_div::FnDiv, fn_mul::FnMul, fn_pow::FnPow, fn_sub::FnSub,
+                },
+                sql_metric::SqlMetric
             },
             task_nodes::TaskNodes,
         }
@@ -102,8 +111,9 @@ impl NestedFn {
                         let queue_name = queue_name.conf.as_str().unwrap();
                         let send_queue = {
                             let services_lock = services.rlock(&self_id);
-                            services_lock.get_link(&QueueName::new(queue_name)).unwrap_or_else(|err| {
-                            panic!("{}.function | services.get_link error: {:#?}", self_id, err);
+                            let link_name = LinkName::from_str(queue_name).unwrap();
+                            services_lock.get_link(&link_name).unwrap_or_else(|err| {
+                                panic!("{}.function | services.get_link error: {:#?}", self_id, err);
                             })
                         };
                         Rc::new(RefCell::new(Box::new(
@@ -280,7 +290,8 @@ impl NestedFn {
                                 };
                                 {
                                     let services_lock = services.rlock(&self_id);
-                                    services_lock.get_link(&QueueName::new(queue_name)).map_or(None, |send| Some(send))
+                                    let link_name = LinkName::from_str(queue_name).unwrap();
+                                    services_lock.get_link(&link_name).map_or(None, |send| Some(send))
                                 }
                             }
                             Err(_) => {
@@ -362,8 +373,9 @@ impl NestedFn {
                             panic!("{}.function | Parameter 'key' - missed in '{}'", self_id, conf.name)
                         ).as_param();
                         let key = key.conf.as_str().unwrap();
+                        let retain_path = services.rlock(&self_id).retain().path.unwrap_or_else(|| panic!("{}.function | Retain: path - missed in Application config", self_id));
                         Rc::new(RefCell::new(Box::new(
-                            FnRetain::new(parent, enable, every_cycle, key, default, input)
+                            FnRetain::new(parent, retain_path, enable, every_cycle, key, default, input)
                         )))
                     }
                     //
@@ -538,7 +550,8 @@ impl NestedFn {
                                 };
                                 {
                                     let services_lock = services.rlock(&self_id);
-                                    services_lock.get_link(&QueueName::new(queue_name)).map_or(None, |send| Some(send))
+                                    let link_name = LinkName::from_str(queue_name).unwrap();
+                                    services_lock.get_link(&link_name).map_or(None, |send| Some(send))
                                 }
                             }
                             Err(_) => {
@@ -695,7 +708,8 @@ impl NestedFn {
                 let services_lock = services.rlock(&self_id);
                 let send_to = match &conf.send_to {
                     Some(send_to) => {
-                        Some(services_lock.get_link(&QueueName::new(send_to)).unwrap_or_else(|err| {
+                        let link_name = LinkName::from_str(send_to).unwrap();
+                        Some(services_lock.get_link(&link_name).unwrap_or_else(|err| {
                             panic!("{}.function | services.get_link error: {:#?}", self_id, err);
                         }))
                     }
@@ -731,7 +745,7 @@ impl NestedFn {
     }
     ///
     ///
-    fn fn_const(parent: &str, value: PointType) -> FnInOutRef {
+    fn fn_const(parent: &str, value: Point) -> FnInOutRef {
         Rc::new(RefCell::new(Box::new(
             FnConst::new(parent, value)
         )))

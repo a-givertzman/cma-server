@@ -1,5 +1,6 @@
 use log::trace;
-use crate::core_::{types::fn_in_out_ref::FnInOutRef, point::point_type::PointType};
+use sal_sync::services::entity::point::point::Point;
+use crate::core_::types::fn_in_out_ref::FnInOutRef;
 ///
 /// Holds Task input and all dipendent variables & outputs
 #[derive(Debug)]
@@ -101,7 +102,7 @@ impl TaskEvalNode {
     }
     ///
     /// Adds new point to the holding input reference
-    pub fn add(&self, point: &PointType) {
+    pub fn add(&self, point: &Point) {
         for input in &self.input {
             input.borrow_mut().add(point);
         }

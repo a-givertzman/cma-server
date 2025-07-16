@@ -23,7 +23,7 @@ mod services {
     #[test]
     #[ignore = "To be implemented and activated later"]
     fn run() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::init(LogLevel::Info, Backtrace::Short);
         init_once();
         init_each();
         let self_id = "app_test";
