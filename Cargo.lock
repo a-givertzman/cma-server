@@ -4,9 +4,9 @@ version = 4
 
 [[package]]
 name = "ab_glyph"
-version = "0.2.30"
+version = "0.2.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e0f4f6fbdc5ee39f2ede9f5f3ec79477271a6d6a2baff22310d51736bda6cea"
+checksum = "e074464580a518d16a7126262fffaaa47af89d4099d4cb403f8ed938ba12ee7d"
 dependencies = [
  "ab_glyph_rasterizer",
  "owned_ttf_parser 0.25.0",
@@ -1757,7 +1757,7 @@ dependencies = [
 [[package]]
 name = "frdm-tools"
 version = "0.0.1"
-source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#ff18660a690a7af3628e1e8faa33e201800e24c9"
+source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#5d828d67f7a7bb4b69a6bc8b882ab2cf30badcf8"
 dependencies = [
  "api-tools 0.2.1",
  "debugging",
@@ -4200,7 +4200,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#59740ebafbfe5f357e1be4ef4807589c2560ab58"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#506734db03429015ece802933012a89669897fd3"
 dependencies = [
  "api-tools 0.0.6",
  "chrono",
