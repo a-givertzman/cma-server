@@ -32,7 +32,7 @@ impl<'a> RopeSlices<'a> {
     ///
     /// Registering new `pos` or/and `load` values,
     /// So new deprecation result can be evaluated, will be passed via `deprication` callback
-    pub fn add(&mut self, pos: Option<Point>, load: Option<Point>) {
+    pub fn eval(&mut self, pos: Option<Point>, load: Option<Point>) {
         match (pos, load) {
             (None, None) => {},
             (None, Some(load)) => for slice in &mut self.slices { slice.add_load(load.clone()) },

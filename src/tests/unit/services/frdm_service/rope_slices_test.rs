@@ -112,7 +112,7 @@ fn new() {
         let pos = pos.map(|val| val.to_point(0, "pos"));
         let load = load.map(|val| val.to_point(0, "load"));
         let time = Instant::now();
-        rope_slices.add(pos, load);
+        rope_slices.eval(pos, load);
         log::debug!("{dbg} | step {step} elapsed: {:?}", time.elapsed());
         assert!(
             result.borrow().iter().enumerate().all(|(ix, r)| {

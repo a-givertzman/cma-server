@@ -176,7 +176,7 @@ impl Service for RopeDeprecationRate {
             loop {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((pos, load)) => {
-                        rope_slices.add(pos, load);
+                        rope_slices.eval(pos, load);
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}
