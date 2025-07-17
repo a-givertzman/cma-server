@@ -1,8 +1,6 @@
 use std::str::FromStr;
-
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name, task::functions::FnConfKind, LinkName};
-
+use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use crate::services::BendingsConf;
 ///
 /// ## The configuration parameters for the rope
@@ -61,18 +59,6 @@ impl RopeConf {
             bendings,
             pos,
             load,
-        }
-    }
-    ///
-    /// Return a type of 
-    fn type_(conf: &FnConfKind) -> String {
-        match conf {
-            FnConfKind::Fn(conf) => format!("{:?}", conf.type_),
-            FnConfKind::Var(conf) => format!("{:?}", conf.type_),
-            FnConfKind::Const(conf) => format!("{:?}", conf.type_),
-            FnConfKind::Point(conf) => format!("{:?}", conf.type_),
-            FnConfKind::PointConf(conf) => format!("{:?}", conf.conf.type_),
-            FnConfKind::Param(conf) => format!("{:?}", conf),
         }
     }
 }

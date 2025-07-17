@@ -5,7 +5,7 @@ use sal_sync::{
     Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::{self, RecvTimeoutError}, Handles},
     thread_pool::Scheduler,
 };
-use crate::services::{RopeDeprecationRateConf, RopeSlice, RopeSlices};
+use crate::services::{RopeDeprecationRateConf, RopeSlices};
 
 ///
 /// ## Rope deprecation rate
@@ -82,7 +82,6 @@ impl Service for RopeDeprecationRate {
         let exit = self.exit.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
-        let handles_clone = self.handles.clone();
         let send_to = services
             .get_link(&conf.send_to)
             .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
@@ -95,7 +94,8 @@ impl Service for RopeDeprecationRate {
         let send2 = send1.clone();
         let services1 = services.clone();
         let pos_point = SubscriptionCriteria::new(conf.rope.pos.link(), Cot::Inf);
-        let handle1 = scheduler.spawn(move || {
+        let mut handles = vec![];
+        let handle = scheduler.spawn(move || {
             let (_, recv_pos) = services1.subscribe(&conf_pos_service, &name1.join(), &[pos_point]);
             loop {
                 match recv_pos.recv_timeout(RECV_TIMEOUT) {
@@ -118,12 +118,13 @@ impl Service for RopeDeprecationRate {
             }
             Ok(())
         });
+        handles.push(handle);
         let dbg2 = dbg.clone();
         let name2 = name.clone();
         let exit2 = exit.clone();
         let services2 = services.clone();
         let load_point = SubscriptionCriteria::new(conf.rope.load.link(), Cot::Inf);
-        let handle2 = scheduler.spawn(move || {
+        let handle = scheduler.spawn(move || {
             let (_, recv_load) = services2.subscribe(&conf_load_service, &name2.join(), &[load_point]);
             loop {
                 match recv_load.recv_timeout(RECV_TIMEOUT) {
@@ -146,6 +147,7 @@ impl Service for RopeDeprecationRate {
             }
             Ok(())
         });
+        handles.push(handle);
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
@@ -214,18 +216,21 @@ impl Service for RopeDeprecationRate {
             log::info!("{dbg}.run | Exit");
             Ok(())
         });
-        match handle {
-            Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.dbg);
-                self.handles.push(handle);
-                Ok(())
-            }
-            Err(err) => {
-                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
-                log::warn!("{}", err);
-                Err(err)
+        handles.push(handle);
+        for handle in handles {
+            match handle {
+                Ok(handle) => {
+                    log::info!("{}.run | Starting - ok", self.dbg);
+                    self.handles.push(handle);
+                }
+                Err(err) => {
+                    let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
+                    log::warn!("{}", err);
+                    return Err(err);
+                }
             }
         }
+        Ok(())
     }
     //
     //

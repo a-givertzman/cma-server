@@ -15,6 +15,7 @@
 //! ```
 //! 
 mod bendings_conf;
+mod crane_conf;
 mod frdm_service_conf;
 mod frdm_service;
 mod rope_conf;
@@ -25,6 +26,7 @@ mod rope_slices;
 mod tables_conf;
 
 pub use bendings_conf::*;
+pub use crane_conf::*;
 pub use frdm_service_conf::*;
 pub use frdm_service::*;
 pub use rope_conf::*;

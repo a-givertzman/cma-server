@@ -13,6 +13,9 @@ use crate::services::{RopeConf, TablesConf};
 ///         defect: public.frdm_defect
 ///         defect-image: public.frdm_defect_image
 ///         deprecation: public.frdm_deprecation
+///     crane:
+///         main-boom-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+///         rotary-boom-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
