@@ -177,30 +177,6 @@ impl Service for RopeDeprecationRate {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((pos, load)) => {
                         rope_slices.add(pos, load);
-                        // match (pos, load) {
-                        //     (None, None) => {},
-                        //     (None, Some(load)) => for slice in &mut slices { slice.add_load(load.clone()) },
-                        //     (Some(pos), None) => for slice in &mut slices { slice.add_pos(pos.clone()) },
-                        //     (Some(pos), Some(load)) => {
-                        //         for slice in &mut slices {
-                        //             slice.add_pos(pos.clone());
-                        //             slice.add_load(load.clone());
-                        //         }
-                        //     }
-                        // }
-                        // for slice in &mut slices {
-                        //     if let Some(deprecation) = slice.deprecation(&conf.rope.bendings) {
-                        //         let sql = format!("update {} set deprecation = deprecation + {}", conf.table, deprecation);
-                        //         let sql = Point::new(
-                        //             tx_id,
-                        //             &Name::new(dbg, "sql").join(),
-                        //             sql,
-                        //         );
-                        //         if let Err(err) = send_to.send(sql) {
-                        //             log::info!("{dbg}.run | Send 'load' error: {:?}", err);
-                        //         }
-                        //     }
-                        // }
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}
