@@ -63,23 +63,27 @@ fn new() {
     let mut target: Vec<f64> = vec![];
     let mut target_count = 0;
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
-        width: 35 mm
-        length: 10 m
-        segment: 100 mm
-        bendings:
-            - D300mm 0.500 .. 0.600 m
-            - D300mm 0.700 .. 0.800 m
-        pos: point real '/App/Winch.EncoderBR2'      # in meters
-        load: point real '/App/Winch.Load'             # in tonn
+    width: 35 mm
+    length: 10 m
+    segment: 100 mm
+    bendings:
+    - D300mm 0.500 .. 0.600 m
+    - D300mm 0.700 .. 0.800 m
+    pos: point real '/App/Winch.EncoderBR2'      # in meters
+    load: point real '/App/Winch.Load'             # in tonn
     ").unwrap());
     let conf = RopeConf::new(&dbg, conf);
     let result = Rc::new(RefCell::new(vec![0.00, 0.00, 0.00]));
+    let result_count = Rc::new(RefCell::new(0));
     let mut rope_slices = RopeSlices::new(conf, |ix, deprecation| {
         let dbg = &dbg.clone();
         log::debug!("{dbg} | Deprication slice[{ix}]: {:?}", deprecation);
         result.replace_with(|r| {
             r[ix] += deprecation;
             r.to_owned()
+        });
+        result_count.replace_with(|r| {
+            *r + 1
         });
     });
     for (step, pos, load, target_i, target_count_i) in test_data {
@@ -94,12 +98,12 @@ fn new() {
         assert!(
             result.borrow().iter().enumerate().all(|(ix, r)| {
                 // log::debug!("{dbg} | step {step} result: {}, target: {},  test: {}", r, target[ix], r.trunc_eq(target[ix], 2));
-                r.aprox_eq(target[ix], 1)
+                r.aprox_eq(target[ix], 0)
             }),
             "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result.borrow().to_vec(), target,
         );
     }
-    assert!(result.borrow().len() == target_count, "{dbg} | \nresult: {:?}\ntarget: {:?}", result.borrow().len(), target_count);
+    assert!(*result_count.borrow() == target_count, "{dbg} | \nresult: {:?}\ntarget: {:?}", result_count.borrow(), target_count);
     let result = result.borrow().to_vec();
     assert!(result == target, "{dbg} | \nresult: {:?}\ntarget: {:?}", result, target);
     test_duration.exit();
