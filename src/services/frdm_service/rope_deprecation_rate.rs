@@ -1,8 +1,11 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
-use frdm_tools::{Eval, EvalMut};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{kernel::state::ChangeNotify, services::{entity::{Cot, Name, Object, Point, PointTxId}, Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::{self, RecvTimeoutError}, Handles}, thread_pool::Scheduler};
-use crate::services::{RopeDeprecationRateConf, RopeSlice};
+use sal_sync::{
+    kernel::state::ChangeNotify, services::{entity::{Cot, Name, Object, Point, PointTxId},
+    Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::{self, RecvTimeoutError}, Handles},
+    thread_pool::Scheduler,
+};
+use crate::services::{RopeDeprecationRateConf, RopeSlice, RopeSlices};
 
 ///
 /// ## Rope deprecation rate
@@ -80,15 +83,18 @@ impl Service for RopeDeprecationRate {
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let handles_clone = self.handles.clone();
+        let send_to = services
+            .get_link(&conf.send_to)
+            .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
         let (send1, recv) = channel::unbounded();
         let dbg1 = dbg.clone();
         let name1 = name.clone();
-        let conf_pos_service = conf.pos.service();
-        let conf_load_service = conf.load.service();
+        let conf_pos_service = conf.rope.pos.service();
+        let conf_load_service = conf.rope.load.service();
         let exit1 = exit.clone();
         let send2 = send1.clone();
         let services1 = services.clone();
-        let pos_point = SubscriptionCriteria::new(conf.pos.link(), Cot::Inf);
+        let pos_point = SubscriptionCriteria::new(conf.rope.pos.link(), Cot::Inf);
         let handle1 = scheduler.spawn(move || {
             let (_, recv_pos) = services1.subscribe(&conf_pos_service, &name1.join(), &[pos_point]);
             loop {
@@ -116,7 +122,7 @@ impl Service for RopeDeprecationRate {
         let name2 = name.clone();
         let exit2 = exit.clone();
         let services2 = services.clone();
-        let load_point = SubscriptionCriteria::new(conf.load.link(), Cot::Inf);
+        let load_point = SubscriptionCriteria::new(conf.rope.load.link(), Cot::Inf);
         let handle2 = scheduler.spawn(move || {
             let (_, recv_load) = services2.subscribe(&conf_load_service, &name2.join(), &[load_point]);
             loop {
@@ -148,31 +154,51 @@ impl Service for RopeDeprecationRate {
                 (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
                 (NotifyState::CameraError,    Box::new(|message| log::error!("{}", message))),
             ]);
-            let mut slices: Vec<RopeSlice> = (0..conf.bendings.len()).map(|slice| {
-                RopeSlice::new()
-            }).collect();
+            // let slices = (conf.rope.length.as_m() / conf.rope.segment.as_m()).ceil() as usize;
+            // let mut slices: Vec<RopeSlice> = (0..slices).map(|slice| {
+            //     RopeSlice::new(slice, &conf.rope.bendings)
+            // }).collect();
+            let conf_table = conf.table.clone();
+            let mut rope_slices = RopeSlices::new(conf.rope, |ix, deprecation| {
+                let dbg = &dbg.clone();
+                let sql = format!("update {} set deprecation = deprecation + {} where id = {ix}", conf_table, deprecation);
+                let sql = Point::new(
+                    tx_id,
+                    &Name::new(dbg, "sql").join(),
+                    sql,
+                );
+                if let Err(err) = send_to.send(sql) {
+                    log::info!("{dbg}.run | Send 'load' error: {:?}", err);
+                }
+            });
             loop {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((pos, load)) => {
-                        match (pos, load) {
-                            (None, None) => {},
-                            (None, Some(load)) => for slice in &mut slices { slice.add_load(load.clone()) },
-                            (Some(pos), None) => for slice in &mut slices { slice.add_pos(pos.clone()) },
-                            (Some(pos), Some(load)) => {
-                                for slice in &mut slices {
-                                    slice.add_pos(pos.clone());
-                                    slice.add_load(load.clone());
-                                }
-                            }
-                        }
-                        for slice in &mut slices {
-                            if let Some(deprication) = slice.deprication() {
-                                let sql = format!("update ", );
-                                // if let Err(err) = send2.send((None, Some(load))) {
-                                //     log::info!("{dbg2}.run | Send 'load' error: {:?}", err);
-                                // }
-                            }
-                        }
+                        rope_slices.add(pos, load);
+                        // match (pos, load) {
+                        //     (None, None) => {},
+                        //     (None, Some(load)) => for slice in &mut slices { slice.add_load(load.clone()) },
+                        //     (Some(pos), None) => for slice in &mut slices { slice.add_pos(pos.clone()) },
+                        //     (Some(pos), Some(load)) => {
+                        //         for slice in &mut slices {
+                        //             slice.add_pos(pos.clone());
+                        //             slice.add_load(load.clone());
+                        //         }
+                        //     }
+                        // }
+                        // for slice in &mut slices {
+                        //     if let Some(deprecation) = slice.deprecation(&conf.rope.bendings) {
+                        //         let sql = format!("update {} set deprecation = deprecation + {}", conf.table, deprecation);
+                        //         let sql = Point::new(
+                        //             tx_id,
+                        //             &Name::new(dbg, "sql").join(),
+                        //             sql,
+                        //         );
+                        //         if let Err(err) = send_to.send(sql) {
+                        //             log::info!("{dbg}.run | Send 'load' error: {:?}", err);
+                        //         }
+                        //     }
+                        // }
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}

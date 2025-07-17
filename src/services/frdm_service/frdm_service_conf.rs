@@ -1,7 +1,7 @@
 use frdm_tools::{camera::CameraConf, conf::FastScanConf};
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use std::{fs, str::FromStr, time::Duration};
-use crate::services::{BendingsConf, RopeConf, TablesConf};
+use crate::services::{RopeConf, TablesConf};
 
 ///
 /// Config for FrdmService format:
@@ -12,11 +12,15 @@ use crate::services::{BendingsConf, RopeConf, TablesConf};
 ///     tables:
 ///         defect: public.frdm_defect
 ///         defect-image: public.frdm_defect_image
-///         deprication: public.frdm_deprication
+///         deprecation: public.frdm_deprecation
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
 ///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///         bendings:           # Rope bloks with diameter, inter and exit
+///               Block Diameter   inter   exit
+///             - D200mm           5.0  .. 5.15 m
+///             - D300mm           7.23 .. 7.30 mm
 ///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
 ///         load: point real '/App/Winch.Load'          # tonn, current rope load 
 ///     fast-scan:
@@ -49,7 +53,6 @@ pub struct FrdmServiceConf {
     pub tables: TablesConf,
     pub cycle: Option<Duration>,
     pub rope: RopeConf,
-    pub bendings: BendingsConf,
     pub fast_scan: FastScanConf,
     pub camera: CameraConf,
     // pub subscribe: ConfSubscribe,
@@ -71,15 +74,12 @@ impl FrdmServiceConf {
         let tables: TablesConf = conf.parse("tables").unwrap();
         log::debug!("{dbg}.new | table defect: {}", tables.defect);
         log::debug!("{dbg}.new | table defect-image: {}", tables.defect_image);
-        log::debug!("{dbg}.new | table deprication: {}", tables.deprication);
+        log::debug!("{dbg}.new | table deprecation: {}", tables.deprecation);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{dbg}.new | cycle: {:?}", cycle);
         let rope = conf.get("rope").expect(&format!("{dbg}.new | 'rope' - not found or wrong configuration"));
         let rope = RopeConf::new(&name, rope);
         log::trace!("{dbg}.new | rope: {:?}", rope);
-        let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong configuration"));
-        let bendings = BendingsConf::new(&name, bendings);
-        log::debug!("{dbg}.new | bendings: {:#?}", bendings);
         let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
         let camera = CameraConf::new(&name, &camera);
         log::debug!("{dbg}.new | camera: {:#?}", camera);
@@ -95,7 +95,6 @@ impl FrdmServiceConf {
             tables,
             cycle,
             rope,
-            bendings,
             fast_scan,
             camera,
             // subscribe,

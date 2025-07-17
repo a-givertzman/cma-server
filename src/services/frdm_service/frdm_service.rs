@@ -110,7 +110,7 @@ impl Service for FrdmService {
         );
         let rope_deprecation = RopeDeprecationRate::new(
             &dbg,
-            RopeDeprecationRateConf::new(&name, conf.rope.pos, conf.rope.load, conf.bendings),
+            RopeDeprecationRateConf::new(&name, conf.rope, conf.send_to.clone(), conf.tables.deprecation),
             services.clone(),
             scheduler,
         );

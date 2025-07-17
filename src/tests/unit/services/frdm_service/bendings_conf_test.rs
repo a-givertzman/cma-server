@@ -2,6 +2,7 @@
 
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
+use sal_sync::services::conf::{ConfDistance, ConfDistanceUnit};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::services::BendingsConf;
@@ -35,22 +36,22 @@ fn new() {
     let test_data = [
         (01,
             vec![
-                serde_yaml::from_str(r"5.0 .. 5.15 m").unwrap(),
-                serde_yaml::from_str(r"7.23 .. 7.30 mm").unwrap(),
+                serde_yaml::from_str(r"D200mm 5.0 .. 5.15 m").unwrap(),
+                serde_yaml::from_str(r"D0.2m 7.23 .. 7.30 mm").unwrap(),
             ],
             vec![
-                5.0..5.15,
-                7.23*0.001..7.3*0.001,
+                (ConfDistance::new(200.0, ConfDistanceUnit::Millimeter), 5.0..5.15),
+                (ConfDistance::new(0.200, ConfDistanceUnit::Meter), 7.23*0.001..7.3*0.001),
             ]
         ),
         (02,
             vec![
-                serde_yaml::from_str(r"-5.0..-5.15m").unwrap(),
-                serde_yaml::from_str(r"-7.23..-7.30km").unwrap(),
+                serde_yaml::from_str(r"D150mm -5.0..-5.15m").unwrap(),
+                serde_yaml::from_str(r"D170mm -7.23..-7.30km").unwrap(),
             ],
             vec![
-                -5.0..-5.15,
-                -7.23*1000.0..-7.3*1000.0,
+                (ConfDistance::new(150.0, ConfDistanceUnit::Millimeter), -5.0..-5.15),
+                (ConfDistance::new(170.0, ConfDistanceUnit::Millimeter), -7.23*1000.0..-7.3*1000.0),
             ]
         ),
     ];

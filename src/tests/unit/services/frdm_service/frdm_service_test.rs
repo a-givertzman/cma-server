@@ -7,7 +7,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree, ServicesConf}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, LinkName, Service, Services}, thread_pool::ThreadPool};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{services::{FrdmService, FrdmServiceConf, RopeConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
+use crate::{services::{BendingsConf, FrdmService, FrdmServiceConf, RopeConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
 
 ///
 ///
@@ -41,6 +41,10 @@ fn run() {
                 width: 35 mm
                 length: 3000m
                 segment: 100 mm
+                bendings:
+                    - D100mm 2.4..2.5 m
+                    - D200mm 2.7..2.9 m
+                    - D300mm 3.1..3.2 m
                 pos: point real '/App/Winch.EncoderBR2'      # in meters
                 load: point real '/App/Winch.Load'             # in tonn
             ").unwrap(),
@@ -48,6 +52,13 @@ fn run() {
                 width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                 length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
                 segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
+                bendings: BendingsConf {
+                    bendings: vec![
+                        (ConfDistance::new(100.0, ConfDistanceUnit::Millimeter), 2.4..2.5),
+                        (ConfDistance::new(200.0, ConfDistanceUnit::Millimeter), 2.7..2.9),
+                        (ConfDistance::new(300.0, ConfDistanceUnit::Millimeter), 3.1..3.2),
+                    ],
+                },
                 pos: LinkName::from_str("/App/Winch.EncoderBR2").unwrap(),
                 load: LinkName::from_str("/App/Winch.Load").unwrap(),
             }
@@ -65,17 +76,17 @@ fn run() {
                 tables:
                     defect: public.frdm_defect
                     defect-image: public.frdm_defect_image
-                    deprication: public.frdm_deprication
+                    deprecation: public.frdm_deprecation
                 rope:
                     width: 35 mm        # Diameter of the rome
                     length: 3000 m      # Total working length of the rope
                     segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                     pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
                     load: point real '/App/Winch.Load'          # tonn, current rope load
-                bendings:
-                    - 2.4..2.5 m
-                    - 2.7..2.9 m
-                    - 3.1..3.2 m
+                    bendings:
+                        - D200mm 2.4..2.5 m
+                        - D200mm 2.7..2.9 m
+                        - D200mm 3.1..3.2 m
                 fast-scan:
                     geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
                 fine-scan:

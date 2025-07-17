@@ -21,6 +21,7 @@ mod rope_conf;
 mod rope_deprecation_rate_conf;
 mod rope_deprecation_rate;
 mod rope_slice;
+mod rope_slices;
 mod tables_conf;
 
 pub use bendings_conf::*;
@@ -30,4 +31,5 @@ pub use rope_conf::*;
 pub use rope_deprecation_rate_conf::*;
 pub use rope_deprecation_rate::*;
 pub use rope_slice::*;
+pub use rope_slices::*;
 pub use tables_conf::*;

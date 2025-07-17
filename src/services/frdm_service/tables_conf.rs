@@ -5,7 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, PartialEq, Clone, Deserialize)]
 pub struct TablesConf {
     pub defect: String,
-    #[serde(rename="defect_image")]
+    #[serde(rename = "defect-image")]
     pub defect_image: String,
-    pub deprication: String,
+    pub deprecation: String,
 }
