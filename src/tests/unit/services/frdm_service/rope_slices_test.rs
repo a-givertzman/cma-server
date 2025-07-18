@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::ConfTree, entity::ToPoint};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::{CraneConf, RopeConf, RopeSlices};
+use crate::services::{CraneConf, RopeSlices};
 
 ///
 ///
@@ -88,9 +88,9 @@ fn new() {
             - D300mm 0.700 .. 0.800 m
         boom:
             main-len: 5.3 m                                        # length of the main boom
-            main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+            main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
             rotary-len: 2.1 m                                      # length of the rotary boom
-            rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+            rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
         rope:
             width: 35 mm            # Diameter of the rome
             length: 10 m            # Total working length of the rope

@@ -51,16 +51,22 @@ fn run() {
                     defect: public.frdm_defect
                     defect-image: public.frdm_defect_image
                     deprecation: public.frdm_deprecation
-                rope:
-                    width: 35 mm        # Diameter of the rome
-                    length: 3000 m      # Total working length of the rope
-                    segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-                    pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
-                    load: point real '/App/Winch.Load'          # tonn, current rope load
+                crane:
                     bendings:
                         - D200mm 2.4..2.5 m
                         - D200mm 2.7..2.9 m
                         - D200mm 3.1..3.2 m
+                    boom:
+                        main-len: 5.3 m                                        # length of the main boom
+                        main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+                        rotary-len: 2.1 m                                      # length of the rotary boom
+                        rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+                    rope:
+                        width: 35 mm        # Diameter of the rome
+                        length: 3000 m      # Total working length of the rope
+                        segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+                        pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
+                        load: point real '/App/Winch.Load'          # tonn, current rope load
                 fast-scan:
                     geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
                 fine-scan:
