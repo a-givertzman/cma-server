@@ -1,6 +1,5 @@
-use std::str::FromStr;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
 use crate::services::{BendingsConf, BoomConf, RopeConf};
 ///
 /// ## The configuration parameters for the rope
@@ -8,8 +7,21 @@ use crate::services::{BendingsConf, BoomConf, RopeConf};
 /// ### Example:
 /// ```yaml
 /// crane:
-///     main-boom-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
-///     rotary-boom-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+///     bendings:           # Rope bloks with diameter, inter and exit
+///           Block Diameter   inter   exit
+///         - D200mm           5.0  .. 5.15 m
+///         - D300mm           7.23 .. 7.30 mm
+///     boom:
+///         main-len: 5.3 m                                        # length of the main boom
+///         main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+///         rotary-len: 2.1 m                                      # length of the rotary boom
+///         rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+///     rope:
+///         width: 35 mm        # Diameter of the rome
+///         length: 3000 m      # Total working length of the rope
+///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
+///         load: point real '/App/Winch.Load'          # tonn, current rope load 
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct CraneConf {
@@ -26,7 +38,7 @@ impl CraneConf {
         let parent = parent.into();
         let me = "CraneConf";
         let dbg = Dbg::new(&parent, me);
-        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        log::debug!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
         let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong configuration"));

@@ -1,6 +1,5 @@
 use sal_sync::services::entity::Point;
-
-use crate::services::{RopeConf, RopeSlice};
+use crate::services::{CraneConf, RopeSlice};
 
 ///
 /// The collection of [RopeSlice]
@@ -8,7 +7,7 @@ use crate::services::{RopeConf, RopeSlice};
 /// - Calculate deprecation for each slice
 pub struct RopeSlices<'a> {
     slices: Vec<RopeSlice>,
-    conf: RopeConf,
+    conf: CraneConf,
     deprecation: Box<dyn Fn(usize, f64) + 'a>,
 }
 //
@@ -17,11 +16,11 @@ impl<'a> RopeSlices<'a> {
     ///
     /// Returns [RopeSlices] new instance
     /// - `deprecation` - Here will be passed evaluated deprecation for each [RopeSlice] with it's index,
-    pub fn new(conf: RopeConf, deprecation: impl Fn(usize, f64) + 'a) -> Self {
-        let slices = (conf.length.as_m() / conf.segment.as_m()).ceil() as usize;
+    pub fn new(conf: CraneConf, deprecation: impl Fn(usize, f64) + 'a) -> Self {
+        let slices = (conf.rope.length.as_m() / conf.rope.segment.as_m()).ceil() as usize;
         Self {
             slices: (0..slices).map(|slice| {
-                let offset = (slice as f64) * conf.segment.as_m();
+                let offset = (slice as f64) * conf.rope.segment.as_m();
                 log::debug!("RopeSlices.new | Slice: {slice}: offset: {}", offset);
                 RopeSlice::new(slice, &conf.bendings, offset)
             }).collect(),

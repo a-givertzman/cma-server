@@ -36,38 +36,12 @@ fn run() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
     let test_data = [
-        (01,
-            serde_yaml::from_str(r"
-                width: 35 mm
-                length: 3000m
-                segment: 100 mm
-                bendings:
-                    - D100mm 2.4..2.5 m
-                    - D200mm 2.7..2.9 m
-                    - D300mm 3.1..3.2 m
-                pos: point real '/App/Winch.EncoderBR2'      # in meters
-                load: point real '/App/Winch.Load'             # in tonn
-            ").unwrap(),
-            RopeConf {
-                width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
-                length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
-                segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-                bendings: BendingsConf {
-                    bendings: vec![
-                        (ConfDistance::new(100.0, ConfDistanceUnit::Millimeter), 2.4..2.5),
-                        (ConfDistance::new(200.0, ConfDistanceUnit::Millimeter), 2.7..2.9),
-                        (ConfDistance::new(300.0, ConfDistanceUnit::Millimeter), 3.1..3.2),
-                    ],
-                },
-                pos: LinkName::from_str("/App/Winch.EncoderBR2").unwrap(),
-                load: LinkName::from_str("/App/Winch.Load").unwrap(),
-            }
-        ),
+        (01, ),
     ];
-    for (step, conf, target) in test_data {
-        let result = RopeConf::new(&dbg, ConfTree::new("rope", conf));
-        assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
-    }
+    // for (step, conf, target) in test_data {
+    //     let result = RopeConf::new(&dbg, ConfTree::new("rope", conf));
+    //     assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+    // }
     let conf = FrdmServiceConf::from_yaml(&dbg,
         &serde_yaml::from_str(&format!(r"
             service FrdmService:

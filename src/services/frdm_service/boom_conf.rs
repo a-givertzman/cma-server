@@ -7,14 +7,16 @@ use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, LinkName}
 /// ### Example:
 /// ```yaml
 /// boom:
+///     main-len: 5.3 m                                        # length of the main boom
 ///     main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+///     rotary-len: 2.1 m                                      # length of the rotary boom
 ///     rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoomConf {
     pub main_len: ConfDistance,
-    pub rotary_len: ConfDistance,
     pub main_angle: LinkName,
+    pub rotary_len: ConfDistance,
     pub rotary_angle: LinkName,
 }
 //

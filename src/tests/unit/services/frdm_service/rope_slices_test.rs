@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::ConfTree, entity::ToPoint};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::{RopeConf, RopeSlices};
+use crate::services::{CraneConf, RopeConf, RopeSlices};
 
 ///
 ///
@@ -82,16 +82,23 @@ fn new() {
     let mut target: Vec<f64> = vec![];
     let mut target_count = 0;
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
-        width: 35 mm
-        length: 10 m
-        segment: 100 mm
-        bendings:
+        bendings:           # Rope bloks with diameter, inter and exit
+              Block Diameter   inter   exit
             - D300mm 0.500 .. 0.600 m
             - D300mm 0.700 .. 0.800 m
+        boom:
+            main-len: 5.3 m                                        # length of the main boom
+            main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+            rotary-len: 2.1 m                                      # length of the rotary boom
+            rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+        rope:
+            width: 35 mm            # Diameter of the rome
+            length: 10 m            # Total working length of the rope
+            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real '/App/Winch.EncoderBR2'      # in meters
             load: point real '/App/Winch.Load'             # in tonn
     ").unwrap());
-    let conf = RopeConf::new(&dbg, conf);
+    let conf = CraneConf::new(&dbg, conf);
     let result = Rc::new(RefCell::new(vec![0.00, 0.00, 0.00]));
     let result_count = Rc::new(RefCell::new(0));
     let mut rope_slices = RopeSlices::new(conf, |ix, deprecation| {

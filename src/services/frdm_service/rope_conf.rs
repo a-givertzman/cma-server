@@ -1,7 +1,6 @@
 use std::str::FromStr;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
-use crate::services::BendingsConf;
+use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, LinkName};
 ///
 /// ## The configuration parameters for the rope
 /// 
@@ -11,10 +10,6 @@ use crate::services::BendingsConf;
 ///     width: 35 mm        # Diameter of the rome
 ///     length: 3000 m      # Total working length of the rope
 ///     segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///     bendings:           # Rope bloks with diameter, inter and exit
-///           Block Diameter   inter   exit
-///         - D200mm           5.0  .. 5.15 m
-///         - D300mm           7.23 .. 7.30 mm
 ///     pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
 ///     load: point real '/App/Winch.Load'          # tonn, current rope load 
 /// ```
@@ -23,7 +18,6 @@ pub struct RopeConf {
     pub width: ConfDistance,
     pub length: ConfDistance,
     pub segment: ConfDistance,
-    pub bendings: BendingsConf,
     pub pos: LinkName,
     pub load: LinkName,
 }
@@ -45,9 +39,6 @@ impl RopeConf {
         log::debug!("{dbg}.new | length: {:?}", length);
         let segment = conf.get_distance("segment").unwrap();
         log::debug!("{dbg}.new | segment: {:?}", segment);
-        let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong configuration"));
-        let bendings = BendingsConf::new(&name, bendings);
-        log::debug!("{dbg}.new | bendings: {:#?}", bendings);
         let pos = LinkName::from_str(&conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name()).unwrap();
         log::debug!("{dbg}.new | pos: {:?}", pos);
         let load = LinkName::from_str(&conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap().name()).unwrap();
@@ -56,7 +47,6 @@ impl RopeConf {
             width,
             length,
             segment,
-            bendings,
             pos,
             load,
         }

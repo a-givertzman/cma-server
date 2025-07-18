@@ -136,7 +136,7 @@ impl Service for RopeDeprecationRate {
             //     RopeSlice::new(slice, &conf.rope.bendings)
             // }).collect();
             let conf_table = conf.table.clone();
-            let mut rope_slices = RopeSlices::new(conf.crane.rope, |ix, deprecation| {
+            let mut rope_slices = RopeSlices::new(conf.crane, |ix, deprecation| {
                 let dbg = &dbg.clone();
                 let sql = format!("update {} set deprecation = deprecation + {} where id = {ix}", conf_table, deprecation);
                 let sql = Point::new(
