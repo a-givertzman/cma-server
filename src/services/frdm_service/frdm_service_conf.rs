@@ -1,7 +1,7 @@
 use frdm_tools::{camera::CameraConf, conf::FastScanConf};
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use std::{fs, str::FromStr, time::Duration};
-use crate::services::{RopeConf, TablesConf};
+use crate::services::{CraneConf, TablesConf};
 
 ///
 /// Config for FrdmService format:
@@ -13,19 +13,20 @@ use crate::services::{RopeConf, TablesConf};
 ///         defect: public.frdm_defect
 ///         defect-image: public.frdm_defect_image
 ///         deprecation: public.frdm_deprecation
-///     boom:
-///         main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to horisontal axis
-///         rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to horisontal axis
-///     rope:
-///         width: 35 mm        # Diameter of the rome
-///         length: 3000 m      # Total working length of the rope
-///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///     crane:
 ///         bendings:           # Rope bloks with diameter, inter and exit
 ///               Block Diameter   inter   exit
 ///             - D200mm           5.0  .. 5.15 m
 ///             - D300mm           7.23 .. 7.30 mm
-///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
-///         load: point real '/App/Winch.Load'          # tonn, current rope load 
+///         boom:
+///             main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to horisontal axis
+///             rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to horisontal axis
+///         rope:
+///             width: 35 mm        # Diameter of the rome
+///             length: 3000 m      # Total working length of the rope
+///             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///             pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
+///             load: point real '/App/Winch.Load'          # tonn, current rope load 
 ///     fast-scan:
 ///         geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
 ///     fine-scan:
@@ -55,10 +56,9 @@ pub struct FrdmServiceConf {
     pub send_to: LinkName,
     pub tables: TablesConf,
     pub cycle: Option<Duration>,
-    pub rope: RopeConf,
+    pub crane: CraneConf,
     pub fast_scan: FastScanConf,
     pub camera: CameraConf,
-    // pub subscribe: ConfSubscribe,
 }
 //
 // 
@@ -80,9 +80,9 @@ impl FrdmServiceConf {
         log::debug!("{dbg}.new | table deprecation: {}", tables.deprecation);
         let cycle = conf.get_duration("cycle").ok();
         log::debug!("{dbg}.new | cycle: {:?}", cycle);
-        let rope = conf.get("rope").expect(&format!("{dbg}.new | 'rope' - not found or wrong configuration"));
-        let rope = RopeConf::new(&name, rope);
-        log::trace!("{dbg}.new | rope: {:?}", rope);
+        let crane = conf.get("crane").expect(&format!("{dbg}.new | 'crane' - not found or wrong configuration"));
+        let crane = CraneConf::new(&name, crane);
+        log::trace!("{dbg}.new | crane: {:?}", crane);
         let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
         let camera = CameraConf::new(&name, &camera);
         log::debug!("{dbg}.new | camera: {:#?}", camera);
@@ -97,10 +97,9 @@ impl FrdmServiceConf {
             send_to,
             tables,
             cycle,
-            rope,
+            crane,
             fast_scan,
             camera,
-            // subscribe,
         }
     }
     ///

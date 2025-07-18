@@ -110,13 +110,12 @@ impl Service for FrdmService {
         );
         let rope_deprecation = RopeDeprecationRate::new(
             &dbg,
-            RopeDeprecationRateConf::new(&name, conf.rope, conf.send_to.clone(), conf.tables.deprecation),
+            RopeDeprecationRateConf::new(&name, conf.crane, conf.send_to.clone(), conf.tables.deprecation),
             services.clone(),
             scheduler,
         );
         let _ = rope_deprecation.run()?;
         log::debug!("{}.run | Preparing thread...", dbg);
-        // *SELF_ID.write() = dbg.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
             let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![

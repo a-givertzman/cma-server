@@ -88,15 +88,20 @@ impl Service for RopeDeprecationRate {
         let (send1, recv) = channel::unbounded();
         let dbg1 = dbg.clone();
         let name1 = name.clone();
-        let conf_pos_service = conf.rope.pos.service();
-        let conf_load_service = conf.rope.load.service();
+        let conf_pos_service = conf.crane.rope.pos.service();
+        let conf_load_service = conf.crane.rope.load.service();
         let exit1 = exit.clone();
         let send2 = send1.clone();
         let services1 = services.clone();
-        let pos_point = SubscriptionCriteria::new(conf.rope.pos.link(), Cot::Inf);
+        let points = [
+            conf.crane.rope.pos.link(),
+            conf.crane.rope.load.link(),
+            conf.crane.boom.main_angle.link(),
+            conf.crane.boom.rotary_angle.link(),
+        ].map(|point| SubscriptionCriteria::new(point, Cot::Inf));
         let mut handles = vec![];
         let handle = scheduler.spawn(move || {
-            let (_, recv_pos) = services1.subscribe(&conf_pos_service, &name1.join(), &[pos_point]);
+            let (_, recv_pos) = services1.subscribe(&conf_pos_service, &name1.join(), &points);
             loop {
                 match recv_pos.recv_timeout(RECV_TIMEOUT) {
                     Ok(pos) => {
@@ -118,36 +123,6 @@ impl Service for RopeDeprecationRate {
             }
             Ok(())
         });
-        handles.push(handle);
-        let dbg2 = dbg.clone();
-        let name2 = name.clone();
-        let exit2 = exit.clone();
-        let services2 = services.clone();
-        let load_point = SubscriptionCriteria::new(conf.rope.load.link(), Cot::Inf);
-        let handle = scheduler.spawn(move || {
-            let (_, recv_load) = services2.subscribe(&conf_load_service, &name2.join(), &[load_point]);
-            loop {
-                match recv_load.recv_timeout(RECV_TIMEOUT) {
-                    Ok(load) => {
-                        if let Err(err) = send2.send((None, Some(load))) {
-                            log::info!("{dbg2}.run | Send 'load' error: {:?}", err);
-                        }
-                    }
-                    Err(err) => match err {
-                        RecvTimeoutError::Timeout => {}
-                        _ => {
-                            log::info!("{dbg2}.run | Recv 'load' error: {:?}", err);
-                            break;
-                        }
-                    },
-                }
-                if exit2.load(Ordering::Acquire) {
-                    break;
-                }
-            }
-            Ok(())
-        });
-        handles.push(handle);
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
@@ -161,7 +136,7 @@ impl Service for RopeDeprecationRate {
             //     RopeSlice::new(slice, &conf.rope.bendings)
             // }).collect();
             let conf_table = conf.table.clone();
-            let mut rope_slices = RopeSlices::new(conf.rope, |ix, deprecation| {
+            let mut rope_slices = RopeSlices::new(conf.crane.rope, |ix, deprecation| {
                 let dbg = &dbg.clone();
                 let sql = format!("update {} set deprecation = deprecation + {} where id = {ix}", conf_table, deprecation);
                 let sql = Point::new(

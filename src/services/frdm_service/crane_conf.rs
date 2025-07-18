@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
-use crate::services::BendingsConf;
+use crate::services::{BendingsConf, BoomConf, RopeConf};
 ///
 /// ## The configuration parameters for the rope
 /// 
@@ -13,11 +13,9 @@ use crate::services::BendingsConf;
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct CraneConf {
-    pub main_boom_len: ConfDistance,
-    pub rotary_boom_len: ConfDistance,
     pub bendings: BendingsConf,
-    pub main_boom_angle: LinkName,
-    pub rotary_boom_angle: LinkName,
+    pub boom: BoomConf,
+    pub rope: RopeConf,
 }
 //
 // 
@@ -31,23 +29,19 @@ impl CraneConf {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
-        let main_boom_len = conf.get_distance("main_boom_len").unwrap();
-        log::debug!("{dbg}.new | main_boom_len: {:?}", main_boom_len);
-        let rotary_boom_len = conf.get_distance("rotary_boom_len").unwrap();
-        log::debug!("{dbg}.new | rotary_boom_len: {:?}", rotary_boom_len);
         let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong configuration"));
         let bendings = BendingsConf::new(&name, bendings);
         log::debug!("{dbg}.new | bendings: {:#?}", bendings);
-        let main_boom_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "main_boom_angle", &mut vec![]).unwrap().name()).unwrap();
-        log::debug!("{dbg}.new | main_boom_angle: {:?}", main_boom_angle);
-        let rotary_boom_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "rotary_boom_angle", &mut vec![]).unwrap().name()).unwrap();
-        log::debug!("{dbg}.new | rotary_boom_angle: {:?}", rotary_boom_angle);
+        let boom = conf.get("boom").expect(&format!("{dbg}.new | 'boom' - not found or wrong configuration"));
+        let boom = BoomConf::new(&name, boom);
+        log::debug!("{dbg}.new | boom: {:#?}", boom);
+        let rope = conf.get("rope").expect(&format!("{dbg}.new | 'rope' - not found or wrong configuration"));
+        let rope = RopeConf::new(&name, rope);
+        log::debug!("{dbg}.new | rope: {:#?}", rope);
         Self {
-            main_boom_len,
-            rotary_boom_len,
             bendings,
-            main_boom_angle,
-            rotary_boom_angle,
+            boom,
+            rope,
         }
     }
 }
