@@ -37,14 +37,14 @@ fn new() {
         (01,
             serde_yaml::from_str(r"
                 bendings:           # Rope bloks with diameter, inter and exit
-                      Block Diameter   inter   exit
+                    # Block Diameter   inter   exit
                     - D200mm           5.0  .. 5.15 m
                     - D300mm           7.23 .. 7.30 mm
                 boom:
                     main-len: 5.3 m                                        # length of the main boom
-                    main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+                    main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
                     rotary-len: 2.1 m                                      # length of the rotary boom
-                    rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+                    rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
                 rope:
                     width: 35 mm        # Diameter of the rome
                     length: 3000 m      # Total working length of the rope

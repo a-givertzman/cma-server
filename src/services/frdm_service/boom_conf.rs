@@ -31,13 +31,13 @@ impl BoomConf {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
-        let main_len = conf.get_distance("main_len").unwrap();
+        let main_len = conf.get_distance("main-len").unwrap();
         log::debug!("{dbg}.new | main_len: {:?}", main_len);
-        let rotary_len = conf.get_distance("rotary_len").unwrap();
+        let rotary_len = conf.get_distance("rotary-len").unwrap();
         log::debug!("{dbg}.new | rotary_len: {:?}", rotary_len);
-        let main_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "main_angle", &mut vec![]).unwrap().name()).unwrap();
+        let main_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "main-angle", &mut vec![]).unwrap().name()).unwrap();
         log::debug!("{dbg}.new | main_angle: {:?}", main_angle);
-        let rotary_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "rotary_angle", &mut vec![]).unwrap().name()).unwrap();
+        let rotary_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "rotary-angle", &mut vec![]).unwrap().name()).unwrap();
         log::debug!("{dbg}.new | rotary_angle: {:?}", rotary_angle);
         Self {
             main_len,

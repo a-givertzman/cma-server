@@ -13,9 +13,9 @@ use crate::services::{BendingsConf, BoomConf, RopeConf};
 ///         - D300mm           7.23 .. 7.30 mm
 ///     boom:
 ///         main-len: 5.3 m                                        # length of the main boom
-///         main-abgle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+///         main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
 ///         rotary-len: 2.1 m                                      # length of the rotary boom
-///         rotary-abgle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+///         rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
@@ -38,7 +38,7 @@ impl CraneConf {
         let parent = parent.into();
         let me = "CraneConf";
         let dbg = Dbg::new(&parent, me);
-        log::debug!("{}.new | conf: {:?}", dbg, conf);
+        log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
         let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong configuration"));
