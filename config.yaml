@@ -44,7 +44,7 @@ service ProfinetClient ied12:
     db db902_panel_controls:
         number: 902
         offset: 0
-        size: 244
+        size: 260
         point Settings.CraneMode.MainMode:
             type: Int
             address:
@@ -227,321 +227,355 @@ service ProfinetClient ied12:
             type: Int
             address:
                 offset: 98
-            comment: 'Положение перехода в режим За бортом, град'
-        point Settings.MainBoom.SpeedDownMaxPos: 
+            comment: "Положение 'За палубой', град"
+        point Settings.MainBoom.PositionMarchingMode: 
             type: Int
             address:
                 offset: 100
+            comment: "Положение 'По походному', град"
+        point Settings.MainBoom.SpeedDownMaxPos: 
+            type: Int
+            address:
+                offset: 102
             comment: 'Позиция понижения скорости, град'
         point Settings.MainBoom.SpeedDownMaxPosFactor: 
             type: Int
             address:
-                offset: 102
+                offset: 104
             comment: 'Ограничение скорости до, %'
         point Settings.MainBoom.SpeedDownMinPos: 
             type: Int
             address:
-                offset: 104
+                offset: 106
             comment: 'Позиция понижение скорости, град'
         point Settings.MainBoom.SpeedDownMinPosFactor: 
             type: Int
             address:
-                offset: 106
+                offset: 108
             comment: 'Ограничение скорости до, %'
         point Settings.MainBoom.Reserv1: 
             type: Int
             address:
-                offset: 108
+                offset: 110
         point Settings.MainBoom.Reserv2: 
             type: Int
             address:
-                offset: 110
+                offset: 112
         point Settings.MainBoom.Reserv3: 
             type: Int
             address:
-                offset: 112
+                offset: 114
         point Settings.RotaryBoom.SpeedDown1PumpFactor: 
             type: Int
             address:
-                offset: 114
+                offset: 116
             comment: 'Замедление скорости на одном насосе, %'
         point Settings.RotaryBoom.SlowSpeedFactor: 
             type: Int
             address:
-                offset: 116
+                offset: 118
             comment: 'Ограничение скорости при медленных видах работ, %'
         point Settings.RotaryBoom.SpeedDown2AxisFactor: 
             type: Int
             address:
-                offset: 118
+                offset: 120
             comment: 'Ограничение скорости при > 2 движ, %'
         point Settings.RotaryBoom.SpeedAccelerationTime: 
             type: Int
             address:
-                offset: 120
+                offset: 122
             comment: 'Время линейного ускорения, ms'
         point Settings.RotaryBoom.SpeedDecelerationTime: 
             type: Int
             address:
-                offset: 122
+                offset: 124
             comment: 'Время линейного замедления, ms'
         point Settings.RotaryBoom.FastStoppingTime: 
             type: Int
             address:
-                offset: 124
+                offset: 126
             comment: 'Время быстрой остановки, ms'
+        point Settings.RotaryBoom.PositionMarchingMode: 
+            type: Int
+            address:
+                offset: 128
+            comment: "Положение 'По походному', град"
         point Settings.RotaryBoom.SpeedDownMaxPos: 
             type: Int
             address:
-                offset: 126
+                offset: 130
             comment: 'Позиция понижения скорости, град'
         point Settings.RotaryBoom.SpeedDownMaxPosFactor: 
             type: Int
             address:
-                offset: 128
+                offset: 132
             comment: 'Ограничение скорости до, %'
         point Settings.RotaryBoom.SpeedDownMinPos: 
             type: Int
             address:
-                offset: 130
+                offset: 134
             comment: 'Позиция понижение скорости, град'
         point Settings.RotaryBoom.SpeedDownMinPosFactor: 
             type: Int
             address:
-                offset: 132
+                offset: 136
             comment: 'Ограничение скорости до, %'
         point Settings.RotaryBoom.Reserv1: 
             type: Int
             address:
-                offset: 134
+                offset: 138
         point Settings.RotaryBoom.Reserv2: 
             type: Int
             address:
-                offset: 136
+                offset: 140
         point Settings.RotaryBoom.Reserv3: 
             type: Int
             address:
-                offset: 138
+                offset: 142
         point Settings.Rotation.SpeedDown1PumpFactor: 
             type: Int
             address:
-                offset: 140
+                offset: 144
             comment: 'Замедление скорости на одном насосе, %'
         point Settings.Rotation.SlowSpeedFactor: 
             type: Int
             address:
-                offset: 142
+                offset: 146
             comment: 'Ограничение скорости при медленных видах работ, %'
         point Settings.Rotation.SpeedDown2AxisFactor: 
             type: Int
             address:
-                offset: 144
+                offset: 148
             comment: 'Ограничение скорости при > 2 движ, %'
         point Settings.Rotation.SpeedAccelerationTime: 
             type: Int
             address:
-                offset: 146
+                offset: 150
             comment: 'Время линейного ускорения, ms'
         point Settings.Rotation.SpeedDecelerationTime: 
             type: Int
             address:
-                offset: 148
+                offset: 152
             comment: 'Время линейного замедления, ms'
         point Settings.Rotation.FastStoppingTime: 
             type: Int
             address:
-                offset: 150
+                offset: 154
             comment: 'Время быстрой остановки, ms'
         point Settings.Rotation.PositionDefault: 
             type: Int
             address:
-                offset: 152
+                offset: 156
             comment: 'Предустановленное положение, град'
         point Settings.Rotation.PositionReset: 
             type: Int
             address:
-                offset: 154
+                offset: 158
             comment: 'Положение сброса, град'
         point Settings.Rotation.PositionOffshore: 
             type: Int
             address:
-                offset: 156
+                offset: 160
             comment: "Положение 'За палубой', град"
         point Settings.Rotation.PositionMarchingMode: 
             type: Int
             address:
-                offset: 158
+                offset: 162
             comment: "Положение 'По походному', град"
         point Settings.Rotation.SpeedDownMaxPos: 
             type: Int
             address:
-                offset: 160
+                offset: 164
             comment: 'Позиция понижения скорости, град'
         point Settings.Rotation.SpeedDownMaxPosFactor: 
             type: Int
             address:
-                offset: 162
+                offset: 166
             comment: 'Ограничение скорости до, %'
         point Settings.Rotation.Reserv1: 
             type: Int
             address:
-                offset: 164
+                offset: 168
         point Settings.Rotation.Reserv2: 
             type: Int
             address:
-                offset: 166
+                offset: 170
         point Settings.Rotation.Reserv3: 
             type: Int
             address:
-                offset: 168
-        point Settings.Winch1.SetRelativeDepth:
-            type: Int
-            address:
-                offset: 170
-        point Settings.Winch1.ResetRelativeDepth:
-            type: Int
-            address:
                 offset: 172
-        point Settings.Winch1.FastStoppingTime:
+        point Settings.Winch1.Mode:
             type: Int
             address:
                 offset: 174
-        point Settings.Winch1.SlowSpeedFactor:
+        point Settings.Winch1.SuspensionType:
             type: Int
             address:
                 offset: 176
-        point Settings.Winch1.SpeedAccelerationTime:
+        point Settings.Winch1.SetRelativeDepth:
             type: Int
             address:
                 offset: 178
-        point Settings.Winch1.SpeedDecelerationTime:
+        point Settings.Winch1.ResetRelativeDepth:
             type: Int
             address:
                 offset: 180
-        point Settings.Winch1.SpeedDown1PumpFactor:
+        point Settings.Winch1.FastStoppingTime:
             type: Int
             address:
                 offset: 182
-        point Settings.Winch1.SpeedDown2AxisFactor:
+        point Settings.Winch1.SlowSpeedFactor:
             type: Int
             address:
                 offset: 184
-        point Settings.Winch1.SpeedDownMaxPos:
+        point Settings.Winch1.SpeedAccelerationTime:
             type: Int
             address:
                 offset: 186
-        point Settings.Winch1.SpeedDownMaxPosFactor:
+        point Settings.Winch1.SpeedDecelerationTime:
             type: Int
             address:
                 offset: 188
-        point Settings.Winch1.SpeedDownMinPos:
+        point Settings.Winch1.SpeedDown1PumpFactor:
             type: Int
             address:
                 offset: 190
-        point Settings.Winch1.SpeedDownMinPosFactor:
+        point Settings.Winch1.SpeedDown2AxisFactor:
             type: Int
             address:
                 offset: 192
-        point Settings.Winch2.SetRelativeDepth:
+        point Settings.Winch1.SpeedDownMaxPos:
             type: Int
             address:
                 offset: 194
-        point Settings.Winch2.ResetRelativeDepth:
+        point Settings.Winch1.SpeedDownMaxPosFactor:
             type: Int
             address:
                 offset: 196
-        point Settings.Winch2.FastStoppingTime:
+        point Settings.Winch1.SpeedDownMinPos:
             type: Int
             address:
                 offset: 198
-        point Settings.Winch2.SlowSpeedFactor:
+        point Settings.Winch1.SpeedDownMinPosFactor:
             type: Int
             address:
                 offset: 200
-        point Settings.Winch2.SpeedAccelerationTime:
+        point Settings.Winch2.Mode:
             type: Int
             address:
                 offset: 202
-        point Settings.Winch2.SpeedDecelerationTime:
+        point Settings.Winch2.SuspensionType:
             type: Int
             address:
                 offset: 204
-        point Settings.Winch2.SpeedDown1PumpFactor:
+        point Settings.Winch2.SetRelativeDepth:
             type: Int
             address:
                 offset: 206
-        point Settings.Winch2.SpeedDown2AxisFactor:
+        point Settings.Winch2.ResetRelativeDepth:
             type: Int
             address:
                 offset: 208
-        point Settings.Winch2.SpeedDownMaxPos:
+        point Settings.Winch2.FastStoppingTime:
             type: Int
             address:
                 offset: 210
-        point Settings.Winch2.SpeedDownMaxPosFactor:
+        point Settings.Winch2.SlowSpeedFactor:
             type: Int
             address:
                 offset: 212
-        point Settings.Winch2.SpeedDownMinPos:
+        point Settings.Winch2.SpeedAccelerationTime:
             type: Int
             address:
                 offset: 214
-        point Settings.Winch2.SpeedDownMinPosFactor:
+        point Settings.Winch2.SpeedDecelerationTime:
             type: Int
             address:
                 offset: 216
-        point Settings.Winch3.SetRelativeDepth:
+        point Settings.Winch2.SpeedDown1PumpFactor:
             type: Int
             address:
                 offset: 218
-        point Settings.Winch3.ResetRelativeDepth:
+        point Settings.Winch2.SpeedDown2AxisFactor:
             type: Int
             address:
                 offset: 220
-        point Settings.Winch3.FastStoppingTime:
+        point Settings.Winch2.SpeedDownMaxPos:
             type: Int
             address:
                 offset: 222
-        point Settings.Winch3.SlowSpeedFactor:
+        point Settings.Winch2.SpeedDownMaxPosFactor:
             type: Int
             address:
                 offset: 224
-        point Settings.Winch3.SpeedAccelerationTime:
+        point Settings.Winch2.SpeedDownMinPos:
             type: Int
             address:
                 offset: 226
-        point Settings.Winch3.SpeedDecelerationTime:
+        point Settings.Winch2.SpeedDownMinPosFactor:
             type: Int
             address:
                 offset: 228
-        point Settings.Winch3.SpeedDown1PumpFactor:
+        point Settings.Winch3.Mode:
             type: Int
             address:
                 offset: 230
-        point Settings.Winch3.SpeedDown2AxisFactor:
+        point Settings.Winch3.SuspensionType:
             type: Int
             address:
                 offset: 232
-        point Settings.Winch3.SpeedDownMaxPos:
+        point Settings.Winch3.SetRelativeDepth:
             type: Int
             address:
                 offset: 234
-        point Settings.Winch3.SpeedDownMaxPosFactor:
+        point Settings.Winch3.ResetRelativeDepth:
             type: Int
             address:
                 offset: 236
-        point Settings.Winch3.SpeedDownMinPos:
+        point Settings.Winch3.FastStoppingTime:
             type: Int
             address:
                 offset: 238
-        point Settings.Winch3.SpeedDownMinPosFactor:
+        point Settings.Winch3.SlowSpeedFactor:
             type: Int
             address:
                 offset: 240
-        point Control.Common.ResetAlarms: 
+        point Settings.Winch3.SpeedAccelerationTime:
             type: Int
             address:
                 offset: 242
+        point Settings.Winch3.SpeedDecelerationTime:
+            type: Int
+            address:
+                offset: 244
+        point Settings.Winch3.SpeedDown1PumpFactor:
+            type: Int
+            address:
+                offset: 246
+        point Settings.Winch3.SpeedDown2AxisFactor:
+            type: Int
+            address:
+                offset: 248
+        point Settings.Winch3.SpeedDownMaxPos:
+            type: Int
+            address:
+                offset: 250
+        point Settings.Winch3.SpeedDownMaxPosFactor:
+            type: Int
+            address:
+                offset: 252
+        point Settings.Winch3.SpeedDownMinPos:
+            type: Int
+            address:
+                offset: 254
+        point Settings.Winch3.SpeedDownMinPosFactor:
+            type: Int
+            address:
+                offset: 256
+        point Control.Common.ResetAlarms: 
+            type: Int
+            address:
+                offset: 258
 
 
 service ProfinetClient ied13:
@@ -1265,6 +1299,10 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 110
+        point Winch1.SuspensionType:
+            type: Int
+            address:
+                offset: 110
         point Winch1.Brake: 
             type: Bool
             address:
@@ -1335,6 +1373,10 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 156
+        point Winch2.SuspensionType:
+            type: Int
+            address:
+                offset: 110
         point Winch2.Brake: 
             type: Bool
             address:
@@ -1405,6 +1447,10 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 202
+        point Winch3.SuspensionType:
+            type: Int
+            address:
+                offset: 110
         point Winch3.Brake: 
             type: Bool
             address:
