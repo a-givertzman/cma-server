@@ -563,7 +563,7 @@ service ProfinetClient ied13:
     db db905_visual_data_fast:
         number: 905
         offset: 0
-        size: 148
+        size: 232
         point Winch1.ValveEV1: 
             type: Bool
             address:
