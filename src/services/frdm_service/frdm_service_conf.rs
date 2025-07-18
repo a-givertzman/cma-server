@@ -15,7 +15,7 @@ use crate::services::{CraneConf, TablesConf};
 ///         deprecation: public.frdm_deprecation
 ///     crane:
 ///         bendings:           # Rope bloks with diameter, inter and exit
-///               Block Diameter   inter   exit
+///             # Block Diameter   inter   exit
 ///             - D200mm           5.0  .. 5.15 m
 ///             - D300mm           7.23 .. 7.30 mm
 ///         boom:

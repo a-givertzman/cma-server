@@ -83,7 +83,7 @@ fn new() {
     let mut target_count = 0;
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         bendings:           # Rope bloks with diameter, inter and exit
-              Block Diameter   inter   exit
+            # Block Diameter   inter   exit
             - D300mm 0.500 .. 0.600 m
             - D300mm 0.700 .. 0.800 m
         boom:
