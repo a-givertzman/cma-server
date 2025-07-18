@@ -49,20 +49,20 @@ fn new() {
                     width: 35 mm        # Diameter of the rome
                     length: 3000 m      # Total working length of the rope
                     segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-                    pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
+                    pos: point real '/App/Winch.EncoderBR2'      # meters, current rope position
                     load: point real '/App/Winch.Load'          # tonn, current rope load 
             ").unwrap(),
             CraneConf {
                 bendings: BendingsConf {
                     bendings: vec![
                         (ConfDistance::new(200.0, ConfDistanceUnit::Millimeter), 5.0..5.15),
-                        (ConfDistance::new(0.200, ConfDistanceUnit::Meter), 7.23*0.001..7.3*0.001),
+                        (ConfDistance::new(300.0, ConfDistanceUnit::Millimeter), 7.23*0.001..7.3*0.001),
                     ],
                 },
                 boom: BoomConf {
-                    main_len: ConfDistance::new(5.3, ConfDistanceUnit::Millimeter),
+                    main_len: ConfDistance::new(5.3, ConfDistanceUnit::Meter),
                     main_angle: LinkName::from_str("App/Load.MainBoomAngle").unwrap(),
-                    rotary_len: ConfDistance::new(2.1, ConfDistanceUnit::Millimeter),
+                    rotary_len: ConfDistance::new(2.1, ConfDistanceUnit::Meter),
                     rotary_angle: LinkName::from_str("App/Load.RotaryBoomAngle").unwrap(),
                 },
                 rope: RopeConf {
