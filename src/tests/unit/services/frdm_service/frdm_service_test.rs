@@ -1,13 +1,11 @@
-use std::{str::FromStr, sync::Arc};
 #[cfg(test)]
-
+use std::sync::Arc;
 use std::{sync::Once, time::Duration};
-use indexmap::IndexMap;
 use sal_core::dbg::Dbg;
-use sal_sync::{services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree, ServicesConf}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, LinkName, Service, Services}, thread_pool::ThreadPool};
+use sal_sync::{services::{conf::{ConfTree, ServicesConf}, Service, Services}, thread_pool::ThreadPool};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{services::{BendingsConf, FrdmService, FrdmServiceConf, RopeConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
+use crate::{services::{FrdmService, FrdmServiceConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
 
 ///
 ///
@@ -35,9 +33,9 @@ fn run() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
-    let test_data = [
-        (01, ),
-    ];
+    // let test_data = [
+    //     (01, ),
+    // ];
     // for (step, conf, target) in test_data {
     //     let result = RopeConf::new(&dbg, ConfTree::new("rope", conf));
     //     assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -81,8 +79,8 @@ fn run() {
                     # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
                     # pixel-format:  Mono8
                     # pixel-format:  BayerRG8
-                    # pixel-format:  QOI_Mono8
-                    pixel-format:  QOI_BayerRG8
+                    pixel-format:  QOI_Mono8
+                    # pixel-format:  QOI_BayerRG8
                     exposure:
                         auto: Off                   # Off / Continuous
                         time: 26000                 # microseconds

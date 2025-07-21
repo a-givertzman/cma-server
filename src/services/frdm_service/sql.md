@@ -1,5 +1,13 @@
 # FRDM (Rope Defects Monitoring)
 
+**frdm_settings**
+key                    |  value
+---------------------- | -------
+defect_slices          |  300000
+deprication_slices     |  600000
+
+
+
 **frdm_defect**
 id  |  defect  |  timestamp  | count | acknowledged | deleted
 
