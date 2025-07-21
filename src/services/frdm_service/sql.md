@@ -3,8 +3,9 @@
 **frdm_settings**
 key                    |  value
 ---------------------- | -------
-defect_slices          |  300000
-deprication_slices     |  600000
+rope_length            |  3000  (m)
+defect_slices          |  30000
+deprication_slices     |  60000
 
 ```sql
 comment on type public.frdm_settings is E''
