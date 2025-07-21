@@ -6,6 +6,14 @@ key                    |  value
 defect_slices          |  300000
 deprication_slices     |  600000
 
+```sql
+comment on type public.frdm_settings is E''
+    'FRDM (Fiber Rope Defects Monitoring) setting parameters'
+create table public.frdm_settings (
+    id                  varchar primary key not null,
+    value               text not null,
+);
+```
 
 
 **frdm_defect**
