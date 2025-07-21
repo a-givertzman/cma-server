@@ -32,7 +32,8 @@ comment on type public.frdm_defect is E''
 create table public.frdm_defect (
     id                  bigserial primary key not null,
     defect              frdm_defect_enum not null,
-    timestamp           timestamp not null,
+    first               timestamp not null,
+    last                timestamp not null
     count               int8 default 0 not null,
     acknowledged        timestamp null,
     deleted             timestamp null,
