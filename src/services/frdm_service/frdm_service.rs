@@ -130,10 +130,11 @@ impl Service for FrdmService {
             let mut camera = Camera::new(conf.camera);
             let camera_stream = camera.stream();
             let defect = GeometryDefect::new(
-                conf.fast_scan.geometry_defect_threshold,
+                conf.scan.fast_scan.geometry_defect_threshold,
                 *Box::new(Mad::new()),
                 EdgeDetection::new(
                     DetectingContoursCv::new(
+                        conf.scan.detecting_contours.clone(),
                         Initial::new(
                             InitialCtx::new(),
                         ),

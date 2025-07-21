@@ -65,10 +65,26 @@ fn run() {
                         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
                         load: point real '/App/Winch.Load'          # tonn, current rope load
-                fast-scan:
-                    geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
-                fine-scan:
-                    no-params: not implemented yet
+                scan:
+                    detecting-contours:
+                        gausian:
+                            kernel-size:
+                                width: 3
+                                heidht: 3
+                            sigma-x: 0.0
+                            sigma-y: 0.0
+                        sobel:
+                            kernel-size: 3
+                            scale: 1.0
+                            delta: 0.0
+                        overlay:
+                            src1-weight: 0.5
+                            src2-weight: 0.5
+                            gamma: 0.0
+                    fast-scan:
+                        geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
+                    fine-scan:
+                        no-params: not implemented yet
                 camera:
                     fps: Max                    # Max / Min / 30.0
                     resolution: 

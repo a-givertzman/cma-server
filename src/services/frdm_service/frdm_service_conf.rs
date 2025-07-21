@@ -26,11 +26,27 @@ use crate::services::{CraneConf, TablesConf};
 ///             length: 3000 m      # Total working length of the rope
 ///             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
 ///             pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
-///             load: point real '/App/Winch.Load'          # tonn, current rope load 
-///     fast-scan:
-///         geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
-///     fine-scan:
-///         no-params: not implemented yet
+///             load: point real '/App/Winch.Load'          # tonn, current rope load
+///     scan:
+///         detecting-contours:
+///             gausian:
+///                 kernel-size:
+///                     width: 3
+///                     heidht: 3
+///                 sigma-x: 0.0
+///                 sigma-y: 0.0
+///             sobel:
+///                 kernel-size: 3
+///                 scale: 1.0
+///                 delta: 0.0
+///             overlay:
+///                 src1-weight: 0.5
+///                 src2-weight: 0.5
+///                 gamma: 0.0
+///         fast-scan:
+///             geometry-defect-threshold: 1.2      # 1.1...1.3, absolute threshold to detect the geometry deffects
+///         fine-scan:
+///             no-params: not implemented yet
 ///     camera:
 ///         fps: Max                    # Max / Min / 30.0
 ///         resolution: 
@@ -57,7 +73,7 @@ pub struct FrdmServiceConf {
     pub tables: TablesConf,
     pub cycle: Option<Duration>,
     pub crane: CraneConf,
-    pub fast_scan: FastScanConf,
+    pub scan: frdm_tools::conf::Conf,
     pub camera: CameraConf,
 }
 //
@@ -86,19 +102,16 @@ impl FrdmServiceConf {
         let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
         let camera = CameraConf::new(&name, &camera);
         log::debug!("{dbg}.new | camera: {:#?}", camera);
-        let fast_scan: ConfTree = conf.get("fast-scan").expect(&format!("{dbg}.new | 'fast-scan' - not found or wrong configuration"));
-        let fast_scan = FastScanConf::new(&name, fast_scan);
-        log::debug!("{dbg}.new | fast-scan: {:?}", fast_scan);
-        let fine_scan: ConfTree = conf.get("fast-scan").expect(&format!("{dbg}.new | 'fine-scan' - not found or wrong configuration"));
-        let fine_scan = FastScanConf::new(&name, fine_scan);
-        log::debug!("{dbg}.new | fine-scan: {:?}", fine_scan);
+        let scan: ConfTree = conf.get("scan").expect(&format!("{dbg}.new | 'scan' - not found or wrong configuration"));
+        let scan = frdm_tools::conf::Conf::new(&name, scan);
+        log::debug!("{dbg}.new | scan: {:?}", scan);
         Self {
             name,
             send_to,
             tables,
             cycle,
             crane,
-            fast_scan,
+            scan,
             camera,
         }
     }
