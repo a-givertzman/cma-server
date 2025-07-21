@@ -74,7 +74,7 @@ pub struct FrdmServiceConf {
     pub cycle: Option<Duration>,
     pub crane: CraneConf,
     pub scan: frdm_tools::conf::Conf,
-    pub camera: CameraConf,
+    pub cameras: Vec<CameraConf>,
 }
 //
 // 
@@ -99,12 +99,21 @@ impl FrdmServiceConf {
         let crane = conf.get("crane").expect(&format!("{dbg}.new | 'crane' - not found or wrong configuration"));
         let crane = CraneConf::new(&name, crane);
         log::trace!("{dbg}.new | crane: {:?}", crane);
-        let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
-        let camera = CameraConf::new(&name, &camera);
-        log::debug!("{dbg}.new | camera: {:#?}", camera);
         let scan: ConfTree = conf.get("scan").expect(&format!("{dbg}.new | 'scan' - not found or wrong configuration"));
         let scan = frdm_tools::conf::Conf::new(&name, scan);
         log::debug!("{dbg}.new | scan: {:?}", scan);
+        let mut cameras = vec![];
+        match conf.sub_nodes() {
+            Some(nodes) => {
+                for camera in nodes.filter(|c| vec!["send-to", "tables", "cycle", "crane", "scan"].contains(&c.key.as_str())) {
+                    // let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
+                    let camera = CameraConf::new(&name, &camera);
+                    log::debug!("{dbg}.new | camera: {:#?}", camera);
+                    cameras.push(camera);
+                }
+            }
+            None => log::warn!("{dbg}.new | No camera configurations"),
+        }
         Self {
             name,
             send_to,
@@ -112,7 +121,7 @@ impl FrdmServiceConf {
             cycle,
             crane,
             scan,
-            camera,
+            cameras,
         }
     }
     ///

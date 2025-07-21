@@ -16,7 +16,6 @@
 //! 
 use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
-use regex::Replacer;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
@@ -127,7 +126,7 @@ impl Service for FrdmService {
             let send_to = services
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-            let mut camera = Camera::new(conf.camera);
+            let mut camera = Camera::new(conf.cameras.first().unwrap().to_owned());
             let camera_stream = camera.stream();
             let defect = GeometryDefect::new(
                 conf.scan.fast_scan.geometry_defect_threshold,
