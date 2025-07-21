@@ -15,7 +15,7 @@
 //! ```
 //! 
 use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
-use frdm_tools::{camera::Camera, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
+use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
 use regex::Replacer;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
@@ -135,8 +135,13 @@ impl Service for FrdmService {
                 EdgeDetection::new(
                     DetectingContoursCv::new(
                         conf.scan.detecting_contours.clone(),
-                        Initial::new(
-                            InitialCtx::new(),
+                        AutoBrightnessAndContrast::new(
+                            conf.scan.detecting_contours.brightness_contrast.histogram_clipping,
+                            AutoGamma::new(
+                                Initial::new(
+                                    InitialCtx::new(),
+                                ),
+                            ),
                         ),
                     ),
                 ),

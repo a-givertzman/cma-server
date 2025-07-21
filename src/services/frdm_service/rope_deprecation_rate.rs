@@ -66,7 +66,7 @@ impl std::fmt::Debug for RopeDeprecationRate {
 enum NotifyState {
     Start,
     Exit,
-    CameraError,
+    SendError,
 }
 //
 // 
@@ -81,77 +81,55 @@ impl Service for RopeDeprecationRate {
         let conf = self.conf.clone();
         let exit = self.exit.clone();
         let services = self.services.clone();
-        let scheduler = self.scheduler.clone();
         let send_to = services
             .get_link(&conf.send_to)
             .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-        let (send1, recv) = channel::unbounded();
-        let dbg1 = dbg.clone();
-        let name1 = name.clone();
-        let conf_pos_service = conf.crane.rope.pos.service();
-        let conf_load_service = conf.crane.rope.load.service();
-        let exit1 = exit.clone();
-        let send2 = send1.clone();
-        let services1 = services.clone();
+        let conf_service = conf.crane.rope.pos.service();
+        let rope_pos_link = conf.crane.rope.pos.link();
+        let rope_load_link = conf.crane.rope.load.link();
+        let boom_main_angle_link = conf.crane.boom.main_angle.link();
+        let boom_rotary_angle_link = conf.crane.boom.rotary_angle.link();
         let points = [
-            conf.crane.rope.pos.link(),
-            conf.crane.rope.load.link(),
-            conf.crane.boom.main_angle.link(),
-            conf.crane.boom.rotary_angle.link(),
+            &rope_pos_link,
+            &rope_load_link,
+            &boom_main_angle_link,
+            &boom_rotary_angle_link,
         ].map(|point| SubscriptionCriteria::new(point, Cot::Inf));
         let mut handles = vec![];
-        let handle = scheduler.spawn(move || {
-            let (_, recv_pos) = services1.subscribe(&conf_pos_service, &name1.join(), &points);
-            loop {
-                match recv_pos.recv_timeout(RECV_TIMEOUT) {
-                    Ok(pos) => {
-                        if let Err(err) = send1.send((Some(pos), None)) {
-                            log::info!("{dbg1}.run | Send 'pos' error: {:?}", err);
-                        }
-                    }
-                    Err(err) => match err {
-                        RecvTimeoutError::Timeout => {}
-                        _ => {
-                            log::info!("{dbg1}.run | Recv 'pos' error: {:?}", err);
-                            break;
-                        }
-                    },
-                }
-                if exit1.load(Ordering::Acquire) {
-                    break;
-                }
-            }
-            Ok(())
-        });
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
-                (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
-                (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
-                (NotifyState::CameraError,    Box::new(|message| log::error!("{}", message))),
-            ]);
-            // let slices = (conf.rope.length.as_m() / conf.rope.segment.as_m()).ceil() as usize;
-            // let mut slices: Vec<RopeSlice> = (0..slices).map(|slice| {
-            //     RopeSlice::new(slice, &conf.rope.bendings)
-            // }).collect();
+            let (_, recv) = services.subscribe(&conf_service, &name.join(), &points);
+            // let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
+            //     (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
+            //     (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
+            //     (NotifyState::SendError,      Box::new(|message| log::error!("{}", message))),
+            // ]);
             let conf_table = conf.table.clone();
             let mut rope_slices = RopeSlices::new(conf.crane, |ix, deprecation| {
                 let dbg = &dbg.clone();
                 let sql = format!("update {} set deprecation = deprecation + {} where id = {ix}", conf_table, deprecation);
-                let sql = Point::new(
-                    tx_id,
-                    &Name::new(dbg, "sql").join(),
-                    sql,
-                );
+                let sql = Point::new(tx_id, &Name::new(dbg, "sql").join(), sql);
                 if let Err(err) = send_to.send(sql) {
-                    log::info!("{dbg}.run | Send 'load' error: {:?}", err);
+                    log::info!("{dbg}.run | Send 'deprecation' error: {:?}", err);
                 }
             });
             loop {
                 match recv.recv_timeout(RECV_TIMEOUT) {
-                    Ok((pos, load)) => {
-                        rope_slices.eval(pos, load);
+                    Ok(point) => {
+                        match point.name() {
+                            name if name.ends_with(&rope_pos_link) => {
+                                rope_slices.eval(Some(point), None);
+                            }
+                            name if name.ends_with(&rope_load_link) => {
+                                rope_slices.eval(None, Some(point));
+                            }
+                            name if name.ends_with(&boom_main_angle_link) => {}
+                            name if name.ends_with(&boom_rotary_angle_link) => {}
+                            _ => log::info!("{dbg}.run | Unknown point name: {:?}", point.name()),
+                        }
+                        // (pos, load)
+                        
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}

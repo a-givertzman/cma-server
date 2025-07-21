@@ -19,14 +19,14 @@ use crate::services::{CraneConf, TablesConf};
 ///             - D200mm           5.0  .. 5.15 m
 ///             - D300mm           7.23 .. 7.30 mm
 ///         boom:
-///             main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to horisontal axis
-///             rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to horisontal axis
+///             main-angle: point real 'App/MultiQueue/Load.MainBoomAngle'        # degrees, current angle of the main boom to horisontal axis
+///             rotary-angle: point real 'App/MultiQueue/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to horisontal axis
 ///         rope:
 ///             width: 35 mm        # Diameter of the rome
 ///             length: 3000 m      # Total working length of the rope
 ///             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///             pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
-///             load: point real '/App/Winch.Load'          # tonn, current rope load
+///             pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position
+///             load: point real 'App/MultiQueue/Winch.Load'          # tonn, current rope load
 ///     scan:
 ///         detecting-contours:
 ///             gausian:
