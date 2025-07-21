@@ -109,7 +109,8 @@ impl FrdmServiceConf {
         let mut cameras = vec![];
         match conf.sub_nodes() {
             Some(nodes) => {
-                for camera in nodes.filter(|c| vec!["send-to", "tables", "cycle", "crane", "scan"].contains(&c.key.as_str())) {
+                for camera in nodes.filter(|c| !vec!["send-to", "tables", "cycle", "crane", "scan"].contains(&c.key.as_str())) {
+                    log::debug!("{dbg}.new | camera: {:#?}", camera);
                     // let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
                     let camera = CameraConf::new(&name, &camera);
                     log::debug!("{dbg}.new | camera: {:#?}", camera);

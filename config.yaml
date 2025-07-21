@@ -13,7 +13,7 @@ services:
 
 service FrdmService:
     cycle: 100 ms
-    send-to: /{dbg}/MockRecvService0.in-queue
+    send-to: /App/ApiClient.in-queue
     tables:
         defect: public.frdm_defect
         defect-image: public.frdm_defect_image
@@ -40,8 +40,6 @@ service FrdmService:
                 no-param: not parameters implemented 
             brightness-contrast:
                 histogram-clipping: 1     # optional histogram clipping, default = 0 %
-            gamma:
-
             gausian:
                 kernel-size:
                     width: 3
