@@ -7,7 +7,7 @@ mod udp_client {
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::udp_client_config::udp_client_conf::UdpClientConf,
+        conf::udp_client_conf::udp_client_conf::UdpClientConf,
         services::{task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient},
         tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig},
     };

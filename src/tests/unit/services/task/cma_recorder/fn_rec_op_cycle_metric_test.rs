@@ -10,7 +10,7 @@ mod cma_recorder {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig,
+        conf::task_conf::TaskConf,
         services::task::{task::Task, task_test_receiver::TaskTestReceiver},
         tests::unit::services::task::task_test_producer::TaskTestProducer,
     };
@@ -53,7 +53,7 @@ mod cma_recorder {
                         path: point/id.json
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::read(&self_name, "./src/tests/unit/services/task/cma_recorder/fn_rec_op_cycle_metric.yaml");
+        let config = TaskConf::read(&self_name, "./src/tests/unit/services/task/cma_recorder/fn_rec_op_cycle_metric.yaml");
         log::trace!("config: {:?}", config);
         log::debug!("Task config points: {:#?}", config.points());
         let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));

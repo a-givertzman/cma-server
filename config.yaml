@@ -34,11 +34,27 @@ service FrdmService:
             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
             load: point real '/App/Winch.Load'          # tonn, current rope load
-    fast-scan:
-        geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
-    fine-scan:
-        no-params: not implemented yet
-    camera:
+    scan:
+        detecting-contours:
+            gausian:
+                kernel-size:
+                    width: 3
+                    height: 3
+                sigma-x: 0.0
+                sigma-y: 0.0
+            sobel:
+                kernel-size: 3
+                scale: 1.0
+                delta: 0.0
+            overlay:
+                src1-weight: 0.5
+                src2-weight: 0.5
+                gamma: 0.0
+        fast-scan:
+            geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
+        fine-scan:
+            no-params: not implemented yet
+    camera Camera1:
         fps: Max                    # Max / Min / 30.0
         resolution: 
             width: 1200
@@ -48,14 +64,15 @@ service FrdmService:
         # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
         # pixel-format:  Mono8
         # pixel-format:  BayerRG8
-        # pixel-format:  QOI_Mono8
-        pixel-format:  QOI_BayerRG8
+        pixel-format:  QOI_Mono8
+        # pixel-format:  QOI_BayerRG8
         exposure:
             auto: Off                   # Off / Continuous
             time: 26000                 # microseconds
         auto-packet-size: true          # StreamAutoNegotiatePacketSize
         channel-packet-size: Max        # Maximizing packet size increases frame rate
         resend-packet: true             # StreamPacketResendEnable
+
 
 service MultiQueue:
     in queue in-queue:

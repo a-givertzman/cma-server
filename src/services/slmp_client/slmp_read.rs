@@ -11,7 +11,7 @@ use sal_sync::{
     services::{entity::{Point, Status}, ServiceCycle}, sync::channel::Sender, thread_pool::{JoinHandle, Scheduler},
 };
 use crate::{
-    conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
+    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
     domain::Mutex,
     services::slmp_client::slmp_db::SlmpDb
 };
@@ -23,7 +23,7 @@ pub struct SlmpRead {
     // tx_id: usize,
     dbg: String,
     // name: Name,
-    conf: SlmpClientConfig,
+    conf: SlmpClientConf,
     dest: Sender<Point>,
     dbs: Arc<Mutex<FxIndexMap<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
@@ -38,7 +38,7 @@ impl SlmpRead {
         parent: impl Into<String>,
         tx_id: usize,
         // name: Name,
-        conf: SlmpClientConfig,
+        conf: SlmpClientConf,
         dest: Sender<Point>,
         // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         status: Arc<AtomicU32>,
@@ -75,7 +75,7 @@ impl SlmpRead {
     }
     ///
     ///
-    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &SlmpClientConfig) -> FxIndexMap<String, SlmpDb> {
+    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &SlmpClientConf) -> FxIndexMap<String, SlmpDb> {
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for (db_name, db_conf) in &conf.dbs {
             log::info!("{}.build_dbs | Configuring SlmpDb: {:?}...", self_id, db_name);

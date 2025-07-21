@@ -8,7 +8,7 @@ use sal_sync::{
     }, sync::{channel::Sender, Handles}, thread_pool::Scheduler
 };
 use crate::{
-    conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
+    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
     domain::{constants::constants::RECV_TIMEOUT, Mutex},
     services::{
         diagnosis::diag_point::DiagPoint,
@@ -25,7 +25,7 @@ pub struct SlmpClient {
     tx_id: usize,
     dbg: Dbg,
     name: Name,
-    conf: SlmpClientConfig,
+    conf: SlmpClientConf,
     services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     scheduler: Scheduler,
@@ -38,7 +38,7 @@ impl SlmpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: SlmpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: SlmpClientConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))

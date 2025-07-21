@@ -7,7 +7,7 @@ mod sql_metric {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::services::task::nested_function::fn_result::FnResult;
     use crate::{
-        conf::task_config::TaskConfig,
+        conf::task_conf::TaskConf,
         services::{
             task::task_nodes::TaskNodes,
             // queues::queues::Queues,
@@ -38,7 +38,7 @@ mod sql_metric {
         let self_name = Name::new("", dbg);
         log::debug!("\n{}", dbg);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_int_test.yaml";
-        let conf = TaskConfig::read(&self_name, path);
+        let conf = TaskConf::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(dbg);
         let tp = ThreadPool::new(dbg, Some(8));
@@ -117,7 +117,7 @@ mod sql_metric {
         let self_name = Name::new("", dbg);
         log::debug!("\n{}", dbg);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_real_test.yaml";
-        let conf = TaskConfig::read(&self_name, path);
+        let conf = TaskConf::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(dbg);
         let tp = ThreadPool::new(dbg, Some(8));
@@ -206,7 +206,7 @@ mod sql_metric {
         let self_name = Name::new("", self_id);
         log::debug!("\n{}", self_id);
         let path = "./src/tests/unit/services/task/sql_metric/sql_metric_double_test.yaml";
-        let conf = TaskConfig::read(&self_name, path);
+        let conf = TaskConf::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
         let mut nodes = TaskNodes::new(self_id);
         let services = Arc::new(Services::new(self_id, ServicesConf::new(

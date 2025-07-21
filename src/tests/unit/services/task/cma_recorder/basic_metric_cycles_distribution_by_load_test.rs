@@ -7,7 +7,7 @@ mod cma_recorder {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{api_client_conf::ApiClientConf, task_config::TaskConfig},
+        conf::{api_client_conf::ApiClientConf, task_conf::TaskConf},
         services::{
             api_cient::api_client::ApiClient,
             task::{task::Task, task_test_receiver::TaskTestReceiver},
@@ -63,7 +63,7 @@ mod cma_recorder {
                         for (key, config) in config.as_mapping().unwrap() {
                             let mut conf = serde_yaml::Mapping::new();
                             conf.insert(key.clone(), config.clone());
-                            let config = TaskConfig::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
+                            let config = TaskConf::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
                             let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
                             services.insert(task.clone());
                             tasks.push(task);

@@ -7,7 +7,7 @@ use std::{env, sync::{Arc, Once}, time::{Duration, Instant}};
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::{
-    conf::task_config::TaskConfig,
+    conf::task_conf::TaskConf,
     services::task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver},
 };
 ///
@@ -41,7 +41,7 @@ fn structure() {
     let iterations = 10;
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
-    let config = TaskConfig::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path);
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
@@ -129,7 +129,7 @@ fn transfer() {
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
     // let path = "./src/tests/unit/task/task_test.yaml";
-    let config = TaskConfig::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path);
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(

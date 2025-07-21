@@ -13,14 +13,14 @@ use sal_sync::{services::{
 }, sync::Handles, thread_pool::Scheduler};
 use serde_json::json;
 use testing::entities::test_value::Value;
-use super::producer_service_config::ProducerServiceConfig;
+use super::producer_service_conf::ProducerServiceConf;
 ///
 /// Service for debuging / testing purposes
 ///  - prodices Point's into the configured service's queue
 pub struct ProducerService {
     dbg: Dbg,
     name: Name,
-    conf: ProducerServiceConfig,
+    conf: ProducerServiceConf,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Handles<()>,
@@ -29,7 +29,7 @@ pub struct ProducerService {
 //
 // 
 impl ProducerService {
-    pub fn new(conf: ProducerServiceConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: ProducerServiceConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me()));
         Self {
             name: conf.name.clone(),

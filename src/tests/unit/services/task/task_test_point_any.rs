@@ -6,7 +6,7 @@ mod task {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig,
+        conf::task_conf::TaskConf,
         services::task::{task::Task, task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver},
     };
     ///
@@ -51,7 +51,7 @@ mod task {
                         sql: "insert into {{table}} (id, value, timestamp) values ({{id}}, {{input1.value}}, {{input1.value}});"
                         input1: point any every
         "#, self_name)).unwrap();
-        let config = TaskConfig::from_yaml(&self_name, &conf);
+        let config = TaskConf::from_yaml(&self_name, &conf);
         log::trace!("config: {:?}", &config);
         let tp = ThreadPool::new(dbg, Some(8));
         let services = Arc::new(Services::new(dbg, ServicesConf::new(

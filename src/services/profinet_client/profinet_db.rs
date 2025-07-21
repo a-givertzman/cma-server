@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use sal_core::error::Error;
 use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
-    conf::profinet_client_config::profinet_db_config::ProfinetDbConfig,
+    conf::profinet_client_conf::profinet_db_conf::ProfinetDbConf,
     domain::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
     services::profinet_client::{
         parse_point::ParsePoint,
@@ -36,7 +36,7 @@ impl ProfinetDb {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [ProfinetDB]
-    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &ProfinetDbConfig) -> Self {
+    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &ProfinetDbConf) -> Self {
         let self_id = format!("{}/ProfinetDb({})", parent_id.into(), conf.name);
         Self {
             dbg: self_id.clone(),
@@ -220,7 +220,7 @@ impl ProfinetDb {
     }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &ProfinetDbConfig) -> IndexMap<String, Box<dyn ParsePoint>> {
+    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &ProfinetDbConf) -> IndexMap<String, Box<dyn ParsePoint>> {
         conf.points.iter().map(|point_conf| {
             match point_conf.type_ {
                 PointConfType::Bool => {

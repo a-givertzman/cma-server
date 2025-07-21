@@ -6,7 +6,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
-    conf::tcp_server_config::TcpServerConfig, 
+    conf::tcp_server_conf::TcpServerConf, 
     domain::{
         constants::constants::RECV_TIMEOUT, net::protocols::jds::{
             jds_decode_message::JdsDecodeMessage, 
@@ -67,7 +67,7 @@ pub struct JdsConnection {
     connection_id: String,
     action_recv: Owner<Receiver<Action>>, 
     services: Arc<Services>,
-    conf: TcpServerConfig,
+    conf: TcpServerConf,
     scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
@@ -79,7 +79,7 @@ impl JdsConnection {
     /// Creates new instance of the [JdsConnection]
     /// - parent - id of the parent
     /// - path - path of the parent
-    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConfig, scheduler: Scheduler, exit: Arc<AtomicBool>) -> Self {
+    pub fn new(parent_id: &Dbg, parent: &Name, connection_id: &str, action_recv: Receiver<Action>, services: Arc<Services>, conf: TcpServerConf, scheduler: Scheduler, exit: Arc<AtomicBool>) -> Self {
         let dbg = Dbg::new(parent_id, format!("JdsConnection/{}", connection_id));
         let name = Name::new(parent, "Jds");
         log::debug!("{}.new | name: {:#?}", dbg, name);

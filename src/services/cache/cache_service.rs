@@ -27,7 +27,7 @@ use sal_sync::{
 use serde::Serialize;
 use serde_json::json;
 use crate::{
-    conf::cache_service_config::CacheServiceConfig,
+    conf::cache_service_conf::CacheServiceConf,
     domain::{constants::constants::RECV_TIMEOUT, FxDashMap},
     services::cache::delay_store::DelyStore
 };
@@ -38,7 +38,7 @@ use crate::{
 pub struct CacheService {
     dbg: Dbg,
     name: Name,
-    conf: CacheServiceConfig,
+    conf: CacheServiceConf,
     services: Arc<Services>,
     cache: FxDashMap<String, Point>,
     scheduler: Scheduler,
@@ -50,7 +50,7 @@ pub struct CacheService {
 impl CacheService {
     ///
     /// Creates new instance of the CacheService
-    pub fn new(conf: CacheServiceConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: CacheServiceConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
@@ -65,7 +65,7 @@ impl CacheService {
     }
     ///
     /// Returns vector of the SubscriptionCriteria by config and list of configured Point's
-    fn subscriptions(&self, conf: &CacheServiceConfig, points: &[PointConf]) -> (String, Vec<SubscriptionCriteria>) {
+    fn subscriptions(&self, conf: &CacheServiceConf, points: &[PointConf]) -> (String, Vec<SubscriptionCriteria>) {
         if conf.subscribe.is_empty() {
             panic!("{}.subscribe | Error. Subscription can`t be empty: {:#?}", self.dbg, conf.subscribe);
         } else {

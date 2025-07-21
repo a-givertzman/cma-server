@@ -6,7 +6,7 @@ mod task_nodes {
     use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Once}, thread::{self}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig, services::task::{nested_function::{
+        conf::task_conf::TaskConf, services::task::{nested_function::{
             fn_kind::FnKind, fn_result::FnResult,
         }, task_nodes::TaskNodes}
     };
@@ -40,7 +40,7 @@ mod task_nodes {
         let self_id = "test";
         let self_name = Name::new("", self_id);
         let mut task_nodes = TaskNodes::new(self_id);
-        let conf = TaskConfig::read(&self_name, path);
+        let conf = TaskConf::read(&self_name, path);
         log::debug!("conf: {:?}", conf);
         let services = Arc::new(Services::new(self_id, ServicesConf::new(
             self_id, 

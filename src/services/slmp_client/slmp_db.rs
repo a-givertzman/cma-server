@@ -4,7 +4,7 @@ use concat_string::concat_string;
 use indexmap::IndexMap;
 use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
-    conf::slmp_client_config::slmp_db_config::SlmpDbConfig,
+    conf::slmp_client_conf::slmp_db_conf::SlmpDbConf,
     domain::{
         filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
         net::connection_status::{ConnectionStatus, SocketState},
@@ -39,7 +39,7 @@ impl SlmpDb {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [SlmpDb]
-    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &SlmpDbConfig) -> Self {
+    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &SlmpDbConf) -> Self {
         let self_id = format!("{}/SlmpDb({})", parent_id.into(), conf.name);
         let slmp_packet = SlmpPacket::new(&self_id, conf.device_code, conf.offset, conf.size);
         Self {
@@ -91,7 +91,7 @@ impl SlmpDb {
     }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &SlmpDbConfig) -> IndexMap<String, Box<dyn ParsePoint>> {
+    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &SlmpDbConf) -> IndexMap<String, Box<dyn ParsePoint>> {
         conf.points.iter().map(|point_conf| {
             match point_conf.type_ {
                 PointConfType::Bool => {

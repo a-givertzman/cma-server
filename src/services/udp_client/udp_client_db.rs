@@ -10,7 +10,7 @@ use sal_sync::{
         Status,
     }, sync::channel::Sender
 };
-use crate::conf::udp_client_config::udp_client_db_config::UdpClientDbConfig;
+use crate::conf::udp_client_conf::udp_client_db_conf::UdpClientDbConf;
 use super::{parse_point::ParsePoint, udp_client::UdpClient, udpc_parse_i16::UdpcParseI16};
 ///
 /// 
@@ -41,7 +41,7 @@ impl UdpClientDb {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [ProfinetDB]
-    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &UdpClientDbConfig, mtu: usize) -> Self {
+    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &UdpClientDbConf, mtu: usize) -> Self {
         let self_id = format!("{}/UdpClientDb({})", parent_id.into(), conf.name);
         Self {
             id: self_id.clone(),
@@ -210,7 +210,7 @@ impl UdpClientDb {
     // }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &UdpClientDbConfig) -> IndexMap<String, Box<dyn ParsePoint>> {
+    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &UdpClientDbConf) -> IndexMap<String, Box<dyn ParsePoint>> {
         conf.points.iter().map(|point_conf| {
             match point_conf.type_ {
                 // PointConfType::Bool => {

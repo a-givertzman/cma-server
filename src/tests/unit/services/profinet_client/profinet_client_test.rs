@@ -6,7 +6,7 @@ mod profinet_client {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
-    use crate::{conf::profinet_client_config::profinet_client_config::ProfinetClientConfig, services::profinet_client::profinet_client::ProfinetClient};
+    use crate::{conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf, services::profinet_client::profinet_client::ProfinetClient};
     ///
     ///
     static INIT: Once = Once::new();
@@ -50,7 +50,7 @@ mod profinet_client {
         let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
         services.insert(mq_service.clone());
         let path = "./src/tests/unit/services/profinet_client/profinet_client.yaml";
-        let conf = ProfinetClientConfig::read(self_name, path);
+        let conf = ProfinetClientConf::read(self_name, path);
         log::debug!("config: {:?}", &conf);
         log::debug!("config points:");
         let client = Arc::new(ProfinetClient::new(conf, services.clone(), tp.scheduler()));

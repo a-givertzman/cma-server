@@ -9,7 +9,7 @@ mod fn_retain {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig,
+        conf::task_conf::TaskConf,
         services::task::{task::Task, task_test_receiver::TaskTestReceiver},
         tests::unit::services::task::task_test_producer::TaskTestProducer
     };
@@ -125,7 +125,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
                 service Task RetainTask:
@@ -267,7 +267,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
                 service Task RetainTask:
@@ -429,7 +429,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(&format!(r"
                 service Task RetainTask:
@@ -594,7 +594,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
                 service Task RetainTask:

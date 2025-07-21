@@ -12,7 +12,7 @@ use sal_sync::{
     }, sync::channel::{RecvTimeoutError, Sender}, thread_pool::{JoinHandle, Scheduler},
 };
 use crate::{
-    conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
+    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
     domain::Mutex,
     services::slmp_client::slmp_db::SlmpDb,
 };
@@ -26,7 +26,7 @@ pub struct SlmpWrite {
     tx_id: usize,
     dbg: String,
     // name: Name,
-    conf: SlmpClientConfig,
+    conf: SlmpClientConf,
     dest: Sender<Point>,
     dbs: Arc<Mutex<FxIndexMap<String, SlmpDb>>>,
     // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
@@ -42,7 +42,7 @@ impl SlmpWrite {
         parent: impl Into<String>,
         tx_id: usize,
         // name: Name,
-        conf: SlmpClientConfig,
+        conf: SlmpClientConf,
         dest: Sender<Point>,
         // diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
         services: Arc<Services>,

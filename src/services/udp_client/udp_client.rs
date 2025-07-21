@@ -37,7 +37,7 @@ use sal_sync::{
     services::{entity::{Name, Object, PointTxId}, Service, ServiceCycle, Services}, sync::Handles, thread_pool::Scheduler,
 };
 use crate::{
-    conf::udp_client_config::udp_client_conf::UdpClientConf,
+    conf::udp_client_conf::udp_client_conf::UdpClientConf,
     domain::RwLock,
 };
 use super::udp_client_db::UdpClientDb;

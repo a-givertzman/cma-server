@@ -6,7 +6,7 @@ mod tcp_server {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues}, session::test_session::TestSession};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::tcp_server_config::TcpServerConfig,
+        conf::tcp_server_conf::TcpServerConf,
         services::{
             server::tcp_server::TcpServer,
             task::{task_test_producer::TaskTestProducer, task_test_receiver::TaskTestReceiver},
@@ -69,7 +69,7 @@ mod tcp_server {
                 send-to: {}/MultiQueue.in-queue
         "#, tcp_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(&self_name, &conf);
+        let conf = TcpServerConf::from_yaml(&self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         let mq_conf = r#"
@@ -167,7 +167,7 @@ mod tcp_server {
                 send-to: {}/MultiQueue.in-queue
         "#, tcp_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(&self_name, &conf);
+        let conf = TcpServerConf::from_yaml(&self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         let mq_conf = format!(r#"

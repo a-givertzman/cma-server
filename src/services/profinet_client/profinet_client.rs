@@ -16,7 +16,7 @@ use sal_sync::{
     sync::{channel::{RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler,
 };
 use crate::{
-    conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
+    conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf,
     domain::{
         constants::constants::RECV_TIMEOUT, Mutex,
     },
@@ -32,7 +32,7 @@ pub struct ProfinetClient {
     tx_id: usize,
     dbg: Dbg,
     name: Name,
-    conf: ProfinetClientConfig,
+    conf: ProfinetClientConf,
     services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     scheduler: Scheduler,
@@ -44,7 +44,7 @@ pub struct ProfinetClient {
 impl ProfinetClient {
     ///
     /// Creates new instance of the ProfinetClient
-    pub fn new(conf: ProfinetClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: ProfinetClientConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))

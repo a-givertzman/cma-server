@@ -12,7 +12,7 @@ mod jds_routes {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once}, thread, time::Duration};
     use crate::{
-        conf::tcp_server_config::TcpServerConfig,
+        conf::tcp_server_conf::TcpServerConf,
         domain::net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind},
         services::server::tcp_server::TcpServer,
         tests::unit::services::{jds_request::mock_service_points::MockServicePoints, mock::mock_recv_service::MockRecvService},
@@ -185,7 +185,7 @@ mod jds_routes {
                 send-to: {}/MultiQueue.in-queue
         "#, tcp_server_addr, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(&self_name, &conf);
+        let conf = TcpServerConf::from_yaml(&self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
@@ -286,7 +286,7 @@ mod jds_routes {
                 send-to: {}/MultiQueue.in-queue
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(self_name, &conf);
+        let conf = TcpServerConf::from_yaml(self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
@@ -443,7 +443,7 @@ mod jds_routes {
                 send-to: {}/MultiQueue.in-queue
         "#, tcp_server_addr, secret, self_name);
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(&self_name, &conf);
+        let conf = TcpServerConf::from_yaml(&self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
@@ -576,7 +576,7 @@ mod jds_routes {
                 send-to: {}/MultiQueue.in-queue
         "#, tcp_addr, self_id);
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let conf = TcpServerConfig::from_yaml(self_name, &conf);
+        let conf = TcpServerConf::from_yaml(self_name, &conf);
         let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
         services.insert(tcp_server.clone());
         println!("{} | TcpServer - ready", self_id);
