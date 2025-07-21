@@ -1734,7 +1734,7 @@ dependencies = [
 [[package]]
 name = "frdm-tools"
 version = "0.0.1"
-source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#ee6f41052c0f46f6b77d189ff2b75e07dfc2866c"
+source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#784e458eec07eda1d994bb5e9146f936180267fb"
 dependencies = [
  "api-tools 0.2.1",
  "debugging",

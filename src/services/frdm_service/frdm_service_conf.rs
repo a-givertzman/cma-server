@@ -29,6 +29,10 @@ use crate::services::{CraneConf, TablesConf};
 ///             load: point real 'App/MultiQueue/Winch.Load'          # tonn, current rope load
 ///     scan:
 ///         detecting-contours:
+///             gamma:
+///                 no-param: not parameters implemented 
+///             brightness-contrast:
+///                 histogram-clipping: 1     # optional histogram clipping, default = 0 %
 ///             gausian:
 ///                 kernel-size:
 ///                     width: 3
