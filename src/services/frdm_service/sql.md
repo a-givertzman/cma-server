@@ -1,6 +1,6 @@
 # FRDM (Rope Defects Monitoring)
 
-**frdm_settings**
+## frdm_settings
 
 key                    |  value
 ---------------------- | -------
@@ -16,9 +16,9 @@ create table public.frdm_settings (
     value               text not null,
 );
 ```
+---
 
-
-**frdm_defect**
+## frdm_defect
 
 id  |  defect  |  timestamp  | count | acknowledged | deleted
 
@@ -50,8 +50,9 @@ create table public.frdm_defect (
     deleted             timestamp null,
 );
 ```
+---
 
-**frdm_defect_image**
+## frdm_defect_image
 
 id | frdm_defect_id | camera_id | path
 
@@ -70,7 +71,7 @@ create trigger clean_frdm_defect_image
     execute procedure clean_frdm_defect_image();
 ```
 
-**frdm_deprecation**
+## frdm_deprecation
 
 id  |  deprecation
 
