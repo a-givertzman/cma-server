@@ -9,11 +9,11 @@ defect_slices          |  30000
 deprication_slices     |  60000
 
 ```sql
+-- FRDM | Setting parameters
 create table public.frdm_settings (
     id                  varchar primary key not null,
     value               text not null
 );
-comment on table public.frdm_settings is 'FRDM (Fiber Rope Defects Monitoring) setting parameters';
 ```
 ---
 
@@ -22,6 +22,9 @@ comment on table public.frdm_settings is 'FRDM (Fiber Rope Defects Monitoring) s
 id  |  defect  |  timestamp  | count | acknowledged | deleted
 
 ```sql
+-- FRDM | Defects type
+-- Enum of geometry defect type`s
+-- containing the position of defect withing a frame';
 create type public.frdm_defect_enum as enum (
     -- Detecting both sides width growing
     'expansion',
@@ -32,11 +35,7 @@ create type public.frdm_defect_enum as enum (
     -- Detecting one side drooping
     'pit'
 );
-comment on type public.frdm_defect_enum is '
-    Enum of geometry defect type`s
-    containing the position of defect withing a frame';
-
-
+-- FRDM | Defects
 create table public.frdm_defect (
     id                  bigint not null,
     defect              frdm_defect_enum not null,
@@ -48,7 +47,6 @@ create table public.frdm_defect (
     deleted             timestamp null,
     PRIMARY KEY (id, defect, camera)
 );
-comment on table public.frdm_defect is 'FRDM (Fiber Rope Defects Monitoring) defects';
 ```
 ---
 
@@ -57,6 +55,7 @@ comment on table public.frdm_defect is 'FRDM (Fiber Rope Defects Monitoring) def
 id | frdm_defect_id | camera_id | path
 
 ```sql
+-- FRDM | Images of the rope defects
 create table public.frdm_defect_image (
     id                  bigserial not null,
     frdm_defect_id      int8 not null,
@@ -65,8 +64,7 @@ create table public.frdm_defect_image (
     created             timestamp default current_timestamp not null,
     PRIMARY KEY (id, frdm_defect_id, camera_id)
 );
-comment on table public.frdm_defect_image is 'FRDM images ';
-
+-- FRDM | Function cleaning the old images keeping 10 imeges per rope slice for each defect tipe
 create or replace function clean_frdm_defect_image() returns trigger as $$
 begin
     delete from public.frdm_defect_image
@@ -79,6 +77,7 @@ begin
    return new;
 end;
 $$ language plpgsql;
+-- FRDM | Trigger for `frdm_defect_image` table to call cleaning oafter each insert
 create trigger clean_frdm_defect_image
     after insert on public.frdm_defect_image
     for each row
@@ -90,12 +89,10 @@ create trigger clean_frdm_defect_image
 id  |  deprecation
 
 ```sql
+-- FRDM | Rope deprecation values
+-- Rope devided for slices, deprecation value calculated for each slice
+-- sliceLingth = ropeLength / slices'
 create table public.frdm_deprecation (
     id                  bigserial primary key not null,
     deprecation         double precision default 0.0 not null	
 );
-comment on table public.frdm_deprecation is '
-    FRDM (Fiber Rope Defects Monitoring) deprecation values
-    Rope devided for slices, deprecation value calculated for each slice
-    sliceLingth = ropeLength / slices'
-```
