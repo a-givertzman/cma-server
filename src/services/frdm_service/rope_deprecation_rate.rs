@@ -1,8 +1,8 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    kernel::state::ChangeNotify, services::{entity::{Cot, Name, Object, Point, PointTxId},
-    Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::{self, RecvTimeoutError}, Handles},
+    services::{entity::{Cot, Name, Object, Point, PointTxId},
+    Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles, Owner},
     thread_pool::Scheduler,
 };
 use crate::services::{RopeDeprecationRateConf, RopeSlices};
@@ -14,10 +14,12 @@ use crate::services::{RopeDeprecationRateConf, RopeSlices};
 ///     - Rope width
 ///     - Block sizes
 ///     - Current rope load
-pub struct RopeDeprecationRate {
+pub struct RopeDeprecationRate<Updates> {
     name: Name,
     txid: usize,
     conf: RopeDeprecationRateConf,
+    ///      rope_pos
+    updates: Owner<Updates>,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
@@ -26,8 +28,8 @@ pub struct RopeDeprecationRate {
 }
 //
 //
-impl RopeDeprecationRate {
-    pub fn new(parent: impl Into<String>, conf: RopeDeprecationRateConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
+impl<Updates> RopeDeprecationRate<Updates> {
+    pub fn new(parent: impl Into<String>, conf: RopeDeprecationRateConf, updates: Updates, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let name = Name::new(parent, "RopeDeprecationRate");
         let txid = PointTxId::from_str(&name.join());
         let dbg = Dbg::new(name.parent(), name.me());
@@ -35,6 +37,7 @@ impl RopeDeprecationRate {
             name,
             txid,
             conf,
+            updates: Owner::new(updates),
             services,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
@@ -45,14 +48,14 @@ impl RopeDeprecationRate {
 }
 //
 //
-impl Object for RopeDeprecationRate {
+impl<Updates> Object for RopeDeprecationRate<Updates> {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
 // 
-impl std::fmt::Debug for RopeDeprecationRate {
+impl<Updates> std::fmt::Debug for RopeDeprecationRate<Updates> {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("RopeDeprecationRate")
@@ -70,7 +73,9 @@ enum NotifyState {
 }
 //
 // 
-impl Service for RopeDeprecationRate {
+impl<Updates> Service for RopeDeprecationRate<Updates> where 
+    Updates: Fn(f64),
+    Updates: Send + Sync + 'static{
     //
     // 
     fn run(&self) -> Result<(), Error> {
@@ -79,8 +84,9 @@ impl Service for RopeDeprecationRate {
         let name = self.name.clone();
         let tx_id = self.txid;
         let conf = self.conf.clone();
-        let exit = self.exit.clone();
+        let updates = self.updates.take().unwrap();
         let services = self.services.clone();
+        let exit = self.exit.clone();
         let send_to = services
             .get_link(&conf.send_to)
             .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
@@ -119,6 +125,7 @@ impl Service for RopeDeprecationRate {
                     Ok(point) => {
                         match point.name() {
                             name if name.ends_with(&rope_pos_link) => {
+                                (updates)(point.to_double().as_double().value);
                                 rope_slices.eval(Some(point), None);
                             }
                             name if name.ends_with(&rope_load_link) => {

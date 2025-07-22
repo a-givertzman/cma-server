@@ -1,5 +1,5 @@
-use frdm_tools::{camera::CameraConf, conf::FastScanConf};
-use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name, LinkName};
+use frdm_tools::camera::CameraConf;
+use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use std::{fs, str::FromStr, time::Duration};
 use crate::services::{CraneConf, TablesConf};
 
@@ -51,6 +51,7 @@ use crate::services::{CraneConf, TablesConf};
 ///             geometry-defect-threshold: 1.2      # 1.1...1.3, absolute threshold to detect the geometry deffects
 ///         fine-scan:
 ///             no-params: not implemented yet
+///     camera-offset: 5.5 m                        # camera position from the begin of the rope (hook side)
 ///     camera:
 ///         fps: Max                    # Max / Min / 30.0
 ///         resolution: 
@@ -69,7 +70,7 @@ use crate::services::{CraneConf, TablesConf};
 ///         auto-packet-size: true          # StreamAutoNegotiatePacketSize
 ///         channel-packet-size: Max        # Maximizing packet size increases frame rate
 ///         resend-packet: true             # StreamPacketResendEnable
-///                         ...
+///```
 #[derive(Debug, PartialEq, Clone)]
 pub struct FrdmServiceConf {
     pub name: Name,
@@ -78,6 +79,7 @@ pub struct FrdmServiceConf {
     pub cycle: Option<Duration>,
     pub crane: CraneConf,
     pub scan: frdm_tools::conf::Conf,
+    pub camera_offset: ConfDistance,
     pub cameras: Vec<CameraConf>,
 }
 //
@@ -105,12 +107,13 @@ impl FrdmServiceConf {
         log::trace!("{dbg}.new | crane: {:?}", crane);
         let scan: ConfTree = conf.get("scan").expect(&format!("{dbg}.new | 'scan' - not found or wrong configuration"));
         let scan = frdm_tools::conf::Conf::new(&name, scan);
-        log::debug!("{dbg}.new | scan: {:?}", scan);
+        log::debug!("{dbg}.new | scan: {:#?}", scan);
+        let camera_offset = conf.get_distance("camera-offset").expect(&format!("{dbg}.new | 'camera-offset' - not found or wrong configuration"));
+        log::debug!("{dbg}.new | camera-offset: {:#?}", camera_offset);
         let mut cameras = vec![];
         match conf.sub_nodes() {
             Some(nodes) => {
                 for camera in nodes.filter(|c| !vec!["send-to", "tables", "cycle", "crane", "scan"].contains(&c.key.as_str())) {
-                    log::debug!("{dbg}.new | camera: {:#?}", camera);
                     // let camera: ConfTree = conf.get("camera").expect(&format!("{dbg}.new | 'camera' - not found or wrong configuration"));
                     let camera = CameraConf::new(&name, &camera);
                     log::debug!("{dbg}.new | camera: {:#?}", camera);
@@ -126,6 +129,7 @@ impl FrdmServiceConf {
             cycle,
             crane,
             scan,
+            camera_offset,
             cameras,
         }
     }

@@ -15,14 +15,14 @@
 //! ```
 //! 
 use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
-use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, Initial, InitialCtx, Mad};
+use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
-    services::{entity::{Name, Object, Point, PointTxId}, Service, Services, RECV_TIMEOUT},
+    services::{conf::{ConfDistance, ConfDistanceUnit}, entity::{Cot, Name, Object, Point, PointTxId}, Service, Services, SubscriptionCriteria, RECV_TIMEOUT},
     sync::Handles, thread_pool::Scheduler,
 };
-use crate::services::{FrdmServiceConf, RopeDeprecationRate, RopeDeprecationRateConf};
+use crate::{domain::RwLock, services::{FrdmServiceConf, RopeDeprecationRate, RopeDeprecationRateConf}};
 ///
 /// FRDM Service (Fiber Rope Defects Monitoring)
 /// 
@@ -95,6 +95,8 @@ impl Service for FrdmService {
         let name = self.name.clone();
         let tx_id = self.tx_id;
         let conf = self.conf.clone();
+        let table_defect = conf.tables.defect.clone();
+        let table_defect_image = conf.tables.defect_image.clone();
         let exit = self.exit.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
@@ -107,9 +109,16 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
+        let (_, rope_pos_recv) = services.subscribe(&conf.crane.rope.pos.service(), &name.join(), &[SubscriptionCriteria::new(conf.crane.rope.pos.link(), Cot::Inf)]);
+        let rope_segment = ConfDistance::new(100.0, ConfDistanceUnit::Millimeter); 
+        let rope_pos = Arc::new(RwLock::new(None::<f64>));
+        let rope_pos_clone = rope_pos.clone();
         let rope_deprecation = RopeDeprecationRate::new(
             &dbg,
             RopeDeprecationRateConf::new(&name, conf.crane, conf.send_to.clone(), conf.tables.deprecation),
+            move |rope_pos: f64| {
+                *rope_pos_clone.write() = Some(rope_pos);
+            },
             services.clone(),
             scheduler,
         );
@@ -151,23 +160,57 @@ impl Service for FrdmService {
                     Ok(handle) => {
                         log::debug!("{dbg}.run | Starting camera - Ok");
                         handles_clone.push(handle);
+                        let camera_id = 0;
                         log::debug!("{dbg}.run | Receiving frames from camera...");
                         'camera: loop {
                             match camera_stream.recv_timeout(RECV_TIMEOUT) {
                                 Ok(frame) => {
-                                    let result = defect.eval(frame);
-                                    let image_id = todo!();
-                                    let defect_image_path = path.join(format!("defect_image/{}.jpeg", image_id));
-                                    let sql = format!(r"begin;
-                                        update {} set {:?}
-                                    commit;", conf.tables.defect, result);
-                                    let point = Point::new(
-                                        tx_id,
-                                        &Name::new(dbg, "sql").join(),
-                                        sql,
-                                    );
-                                    if let Err(err) = send_to.send(point) {
-                                        log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                    match *rope_pos.read() {
+                                        Some(rope_pos) => {
+                                            // Position of the rope under the camera
+                                            let pos = rope_pos + conf.camera_offset.as_m();
+                                            // Index of the current slice located under the camera (from hook)
+                                            let slice_ix = (pos / rope_segment.as_m()).trunc();
+                                            match defect.eval(frame) {
+                                                Ok(ctx) => {
+                                                    let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
+                                                    let defects = geometry_defect_ctx.result;
+                                                    if !defects.is_empty() {
+                                                        defects.iter().for_each(|defect| {
+                                                            let defect_image_path = path.join(format!("defect_image/{}.jpeg", slice_ix));
+                                                            let defect_id = match defect {
+                                                                frdm_tools::GeometryDefectType::Expansion => "expansion",
+                                                                frdm_tools::GeometryDefectType::Compressing => "compressing",
+                                                                frdm_tools::GeometryDefectType::Hill => "hill",
+                                                                frdm_tools::GeometryDefectType::Pit => "pit",
+                                                            };
+                                                            match defect_image_path.into_os_string().into_string() {
+                                                                Ok(image_path) => {
+                                                                    let sql = format!(r"
+                                                                        begin;
+                                                                            insert into {table_defect} (id, defect, first, last, count)
+                                                                                values ({slice_ix}, {defect_id}, current_timestamp, current_timestamp, 1)
+                                                                            on conflict (id, defect) do update 
+                                                                                set (last, count, acknowledged, deleted) = (current_timestamp, count + 1);
+                                                                            insert into {table_defect_image} (frdm_defect_id, camera_id, path)
+                                                                                values ({slice_ix}, {camera_id}, '{image_path}')
+                                                                        commit;
+                                                                    ");
+                                                                    if let Err(err) = send_to.send(Point::new(tx_id, &Name::new(dbg, "sql").join(), sql)) {
+                                                                        log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                                                    }
+                                                                }
+                                                                Err(err) => log::warn!("{dbg}.run | Image path {} error: {:?}", defect_image_path.display(), err),
+                                                            };
+                                                        });
+                                                    }
+                                                }
+                                                Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera.name(), err),
+                                            }
+                                        }
+                                        None => {
+                                            // rope position not received yet
+                                        }
                                     }
                                     if exit.load(Ordering::Acquire) {
                                         camera.exit();

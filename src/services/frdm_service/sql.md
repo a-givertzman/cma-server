@@ -1,6 +1,7 @@
 # FRDM (Rope Defects Monitoring)
 
 **frdm_settings**
+
 key                    |  value
 ---------------------- | -------
 rope_length            |  3000  (m)
@@ -18,6 +19,7 @@ create table public.frdm_settings (
 
 
 **frdm_defect**
+
 id  |  defect  |  timestamp  | count | acknowledged | deleted
 
 ```sql
@@ -39,7 +41,7 @@ create type public.frdm_defect_enum as enum (
 comment on type public.frdm_defect is E''
     'FRDM (Fiber Rope Defects Monitoring) defects'
 create table public.frdm_defect (
-    id                  bigserial primary key not null,
+    id                  bigint primary key not null,
     defect              frdm_defect_enum not null,
     first               timestamp not null,
     last                timestamp not null
@@ -50,6 +52,7 @@ create table public.frdm_defect (
 ```
 
 **frdm_defect_image**
+
 id | frdm_defect_id | camera_id | path
 
 ```sql
@@ -61,9 +64,14 @@ create table public.frdm_defect_image (
     camera_id           int2 not null,
     path                text not null,
 );
+create trigger clean_frdm_defect_image
+    after insert on public.frdm_defect_image
+    for each row
+    execute procedure clean_frdm_defect_image();
 ```
 
 **frdm_deprecation**
+
 id  |  deprecation
 
 ```sql
