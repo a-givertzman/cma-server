@@ -45,7 +45,7 @@ fn run() {
             service FrdmService:
                 cycle: 100 ms
                 send-to: /{dbg}/MockRecvService0.in-queue
-                subscribe: MiltiQueue
+                subscribe: /{dbg}/MultiQueue
                 tables:
                     defect: public.frdm_defect
                     defect-image: public.frdm_defect_image
@@ -57,15 +57,15 @@ fn run() {
                         - D200mm 3.1..3.2 m
                     boom:
                         main-len: 5.3 m                                         # length of the main boom
-                        main-angle: point real '/{dbg}/Load.MainBoomAngle'      # degrees, current angle of the main boom to vertical axis
+                        main-angle: point real 'Load.MainBoomAngle'      # degrees, current angle of the main boom to vertical axis
                         rotary-len: 2.1 m                                       # length of the rotary boom
-                        rotary-angle: point real '/{dbg}/Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
+                        rotary-angle: point real 'Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
                     rope:
                         width: 35 mm        # Diameter of the rome
                         length: 3000 m      # Total working length of the rope
                         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-                        pos: point real '/{dbg}/Winch.EncoderBR2'      # meters, current rope position
-                        load: point real '/{dbg}/Winch.Load'          # tonn, current rope load
+                        pos: point real 'Winch.EncoderBR2'      # meters, current rope position
+                        load: point real 'Winch.Load'          # tonn, current rope load
                 scan:
                     detecting-contours:
                         gamma:
@@ -130,7 +130,7 @@ fn run() {
     let mq_conf = MultiQueueConf::from_yaml(&dbg, &conf);
     let mq = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
     services.insert(mq.clone());
-    let producer = Arc::new(MockSendService::new(&dbg, &format!("/{dbg}/MultiQueue"), services.clone(), test_data, None));
+    let producer = Arc::new(MockSendService::new(&dbg, &format!("/{dbg}/MultiQueue.in-queue"), services.clone(), test_data, None));
     services.insert(producer.clone());
     let receiver = Arc::new(MockRecvService::new(&dbg, &format!("in-queue"), None));
     services.insert(receiver.clone());
