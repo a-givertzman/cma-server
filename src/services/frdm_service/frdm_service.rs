@@ -174,7 +174,7 @@ impl Service for FrdmService {
                                             match defect.eval(frame) {
                                                 Ok(ctx) => {
                                                     let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
-                                                    let defects = geometry_defect_ctx.result;
+                                                    let defects = &geometry_defect_ctx.result;
                                                     if !defects.is_empty() {
                                                         defects.iter().for_each(|defect| {
                                                             let defect_image_path = path.join(format!("defect_image/{}.jpeg", slice_ix));
@@ -184,23 +184,28 @@ impl Service for FrdmService {
                                                                 frdm_tools::GeometryDefectType::Hill => "hill",
                                                                 frdm_tools::GeometryDefectType::Pit => "pit",
                                                             };
-                                                            match defect_image_path.into_os_string().into_string() {
-                                                                Ok(image_path) => {
+                                                            match defect_image_path.as_path().to_str() {
+                                                                Some(image_path) => {
                                                                     let sql = format!(r"
-                                                                        begin;
-                                                                            insert into {table_defect} (id, defect, first, last, count)
-                                                                                values ({slice_ix}, {defect_id}, current_timestamp, current_timestamp, 1)
+                                                                        do $$
+                                                                        begin
+                                                                            insert into {table_defect} (id, defect, first, last, score)
+                                                                                values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
                                                                             on conflict (id, defect) do update 
-                                                                                set (last, count, acknowledged, deleted) = (current_timestamp, count + 1);
-                                                                            insert into {table_defect_image} (frdm_defect_id, camera_id, path)
-                                                                                values ({slice_ix}, {camera_id}, '{image_path}')
-                                                                        commit;
+                                                                                set (last, score) = (current_timestamp, {table_defect}.count + 1);
+                                                                            insert into {table_defect_image} (frdm_defect_id, camera, path)
+                                                                                values ({slice_ix}, {camera_id}, '{image_path}');
+                                                                            EXCEPTION
+                                                                                WHEN others then
+                                                                                    rollback;
+                                                                        end; $$
+                                                                        language plpgsql;
                                                                     ");
                                                                     if let Err(err) = send_to.send(Point::new(tx_id, &Name::new(dbg, "sql").join(), sql)) {
                                                                         log::warn!("{dbg}.run | Send sql error: {:?}", err);
                                                                     }
                                                                 }
-                                                                Err(err) => log::warn!("{dbg}.run | Image path {} error: {:?}", defect_image_path.display(), err),
+                                                                None => log::warn!("{dbg}.run | Wrong image path {}", defect_image_path.display()),
                                                             };
                                                         });
                                                     }
