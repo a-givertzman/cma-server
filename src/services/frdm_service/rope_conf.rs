@@ -22,8 +22,8 @@ pub struct RopeConf {
     /// Rope segmetn length.
     /// Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
     pub segment: ConfDistance,
-    pub pos: LinkName,
-    pub load: LinkName,
+    pub pos: String,
+    pub load: String,
 }
 //
 // 
@@ -43,9 +43,9 @@ impl RopeConf {
         log::debug!("{dbg}.new | length: {:?}", length);
         let segment = conf.get_distance("segment").expect(&format!("{dbg}.new | 'segment' - not found or wrong configuration"));
         log::debug!("{dbg}.new | segment: {:?}", segment);
-        let pos = LinkName::from_str(&conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name()).unwrap();
+        let pos = conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name();
         log::debug!("{dbg}.new | pos: {:?}", pos);
-        let load = LinkName::from_str(&conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap().name()).unwrap();
+        let load = conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap().name();
         log::debug!("{dbg}.new | load: {:?}", load);
         Self {
             width,

@@ -15,9 +15,9 @@ use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, LinkName}
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoomConf {
     pub main_len: ConfDistance,
-    pub main_angle: LinkName,
+    pub main_angle: String,
     pub rotary_len: ConfDistance,
-    pub rotary_angle: LinkName,
+    pub rotary_angle: String,
 }
 //
 // 
@@ -31,13 +31,13 @@ impl BoomConf {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
-        let main_len = conf.get_distance("main-len").unwrap();
+        let main_len = conf.get_distance("main-len").expect(&format!("{dbg}.new | 'main-len' - not found or wrong configuration"));
         log::debug!("{dbg}.new | main_len: {:?}", main_len);
-        let rotary_len = conf.get_distance("rotary-len").unwrap();
+        let rotary_len = conf.get_distance("rotary-len").expect(&format!("{dbg}.new | 'rotary-len' - not found or wrong configuration"));
         log::debug!("{dbg}.new | rotary_len: {:?}", rotary_len);
-        let main_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "main-angle", &mut vec![]).unwrap().name()).unwrap();
+        let main_angle = conf.get_fn_config(&dbg, "main-angle", &mut vec![]).unwrap().name();
         log::debug!("{dbg}.new | main_angle: {:?}", main_angle);
-        let rotary_angle = LinkName::from_str(&conf.get_fn_config(&dbg, "rotary-angle", &mut vec![]).unwrap().name()).unwrap();
+        let rotary_angle = conf.get_fn_config(&dbg, "rotary-angle", &mut vec![]).unwrap().name();
         log::debug!("{dbg}.new | rotary_angle: {:?}", rotary_angle);
         Self {
             main_len,

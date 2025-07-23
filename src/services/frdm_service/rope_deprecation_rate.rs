@@ -92,15 +92,11 @@ impl<Updates> Service for RopeDeprecationRate<Updates> where
             .get_link(&conf.send_to)
             .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
         let conf_service = conf.crane.rope.pos.service();
-        let rope_pos_link = conf.crane.rope.pos.link();
-        let rope_load_link = conf.crane.rope.load.link();
-        let boom_main_angle_link = conf.crane.boom.main_angle.link();
-        let boom_rotary_angle_link = conf.crane.boom.rotary_angle.link();
         let points = [
-            &rope_pos_link,
-            &rope_load_link,
-            &boom_main_angle_link,
-            &boom_rotary_angle_link,
+            &conf.crane.rope.pos,
+            &conf.crane.rope.load,
+            &conf.crane.boom.main_angle,
+            &conf.crane.boom.rotary_angle,
         ].map(|point| SubscriptionCriteria::new(point, Cot::Inf));
         let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
@@ -125,15 +121,15 @@ impl<Updates> Service for RopeDeprecationRate<Updates> where
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
                         match point.name() {
-                            name if name.ends_with(&rope_pos_link) => {
+                            name if name == conf.crane.rope.pos => {
                                 (updates)(point.to_double().as_double().value);
                                 rope_slices.eval(Some(point), None);
                             }
-                            name if name.ends_with(&rope_load_link) => {
+                            name if name == conf.crane.rope.load => {
                                 rope_slices.eval(None, Some(point));
                             }
-                            name if name.ends_with(&boom_main_angle_link) => {}
-                            name if name.ends_with(&boom_rotary_angle_link) => {}
+                            name if name == conf.crane.boom.main_angle => {}
+                            name if name == conf.crane.boom.rotary_angle => {}
                             _ => log::info!("{dbg}.run | Unknown point name: {:?}", point.name()),
                         }
                         // (pos, load)
