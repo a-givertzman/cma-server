@@ -35,6 +35,7 @@ create type public.frdm_defect_enum as enum (
     -- Detecting one side drooping
     'pit'
 );
+
 -- FRDM | Defects
 create table public.frdm_defect (
     id                  bigint not null,
@@ -65,7 +66,7 @@ create table public.frdm_defect_image (
     PRIMARY KEY (id, frdm_defect_id, camera_id)
 );
 
--- Insert or update defect and associated image
+-- FRDM | Insert or update defect and associated image
 do $$
 begin
 	insert into public.frdm_defect (id, defect, first, last, score)
@@ -104,7 +105,7 @@ begin
 end; $$ 
 language plpgsql;
 
--- FRDM | Trigger for `frdm_defect_image` table to call cleaning oafter each insert
+-- FRDM | Trigger for `frdm_defect_image` table to call cleaning after each insert
 create trigger clean_frdm_defect_image
     after insert on public.frdm_defect_image
     for each row
