@@ -1,0 +1,58 @@
+use std::str::FromStr;
+use sal_core::dbg::Dbg;
+use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, LinkName};
+///
+/// ## The configuration parameters for the `DefectDetection`
+/// 
+/// ### Example:
+/// ```yaml
+/// rope:
+///     width: 35 mm        # Diameter of the rome
+///     length: 3000 m      # Total working length of the rope
+///     segment: 100 mm     # Rope segmetn length. Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///     pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
+///     load: point real '/App/Winch.Load'          # tonn, current rope load 
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct DefectDetectionConf {
+    /// Diameter of the rome
+    pub width: ConfDistance,
+    /// Total working length of the rope
+    pub length: ConfDistance,
+    /// Rope segmetn length.
+    /// Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+    pub segment: ConfDistance,
+    pub pos: LinkName,
+    pub load: LinkName,
+}
+//
+// 
+impl DefectDetectionConf {
+    ///
+    /// Returns [DefectDetectionConf] built from `ConfTree`:
+    pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
+        let parent = parent.into();
+        let me = "DefectDetectionConf";
+        let dbg = Dbg::new(&parent, me);
+        log::trace!("{}.new | conf: {:?}", dbg, conf);
+        let name = Name::new(parent, me);
+        log::debug!("{}.new | name: {:?}", dbg, name);
+        let width = conf.get_distance("width").expect(&format!("{dbg}.new | 'width' - not found or wrong configuration"));
+        log::debug!("{dbg}.new | width: {:?}", width);
+        let length = conf.get_distance("length").expect(&format!("{dbg}.new | 'length' - not found or wrong configuration"));
+        log::debug!("{dbg}.new | length: {:?}", length);
+        let segment = conf.get_distance("segment").expect(&format!("{dbg}.new | 'segment' - not found or wrong configuration"));
+        log::debug!("{dbg}.new | segment: {:?}", segment);
+        let pos = LinkName::from_str(&conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name()).unwrap();
+        log::debug!("{dbg}.new | pos: {:?}", pos);
+        let load = LinkName::from_str(&conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap().name()).unwrap();
+        log::debug!("{dbg}.new | load: {:?}", load);
+        Self {
+            width,
+            length,
+            segment,
+            pos,
+            load,
+        }
+    }
+}

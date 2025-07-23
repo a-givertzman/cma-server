@@ -1,11 +1,14 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    services::{entity::{Cot, Name, Object, Point, PointTxId},
+    services::{entity::{Cot, Name, Object, Point},
     Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles, Owner},
     thread_pool::Scheduler,
 };
-use crate::services::{RopeDeprecationRateConf, RopeSlices};
+use crate::{
+    domain::RwLock,
+    services::{RopeDeprecationRateConf, RopeSlices}
+};
 
 ///
 /// ## Rope deprecation rate
@@ -18,7 +21,6 @@ pub struct RopeDeprecationRate<Updates> {
     name: Name,
     txid: usize,
     conf: RopeDeprecationRateConf,
-    ///      rope_pos
     updates: Owner<Updates>,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -29,9 +31,8 @@ pub struct RopeDeprecationRate<Updates> {
 //
 //
 impl<Updates> RopeDeprecationRate<Updates> {
-    pub fn new(parent: impl Into<String>, conf: RopeDeprecationRateConf, updates: Updates, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(parent: impl Into<String>, txid: usize, conf: RopeDeprecationRateConf, updates: Updates, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let name = Name::new(parent, "RopeDeprecationRate");
-        let txid = PointTxId::from_str(&name.join());
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
