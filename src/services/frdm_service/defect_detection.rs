@@ -82,16 +82,12 @@ impl Service for DefectDetection {
         let send_to = services
             .get_link(&conf.send_to)
             .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-        let conf_service = conf.crane.rope.pos.service();
-        let rope_pos_link = conf.crane.rope.pos.link();
-        let rope_load_link = conf.crane.rope.load.link();
-        let boom_main_angle_link = conf.crane.boom.main_angle.link();
-        let boom_rotary_angle_link = conf.crane.boom.rotary_angle.link();
+        let conf_service = conf.subscribe;
         let points = [
-            &rope_pos_link,
-            &rope_load_link,
-            &boom_main_angle_link,
-            &boom_rotary_angle_link,
+            &conf.crane.rope.pos,
+            &conf.crane.rope.load,
+            &conf.crane.boom.main_angle,
+            &conf.crane.boom.rotary_angle,
         ].map(|point| SubscriptionCriteria::new(point, Cot::Inf));
         let rope_pos = self.rope_pos.clone();
         let rope_segment = ConfDistance::new(100.0, ConfDistanceUnit::Millimeter); 

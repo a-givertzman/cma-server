@@ -6,7 +6,6 @@ use sal_sync::{
     thread_pool::Scheduler,
 };
 use crate::{
-    domain::RwLock,
     services::{RopeDeprecationRateConf, RopeSlices}
 };
 
@@ -91,7 +90,6 @@ impl<Updates> Service for RopeDeprecationRate<Updates> where
         let send_to = services
             .get_link(&conf.send_to)
             .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-        let conf_service = conf.crane.rope.pos.service();
         let points = [
             &conf.crane.rope.pos,
             &conf.crane.rope.load,
@@ -102,14 +100,14 @@ impl<Updates> Service for RopeDeprecationRate<Updates> where
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let (_, recv) = services.subscribe(&conf_service, &name.join(), &points);
+            let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &points);
             // let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
             //     (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
             //     (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
             //     (NotifyState::SendError,      Box::new(|message| log::error!("{}", message))),
             // ]);
             let conf_table = conf.table.clone();
-            let mut rope_slices = RopeSlices::new(conf.crane, |ix, deprecation| {
+            let mut rope_slices = RopeSlices::new(conf.crane.clone(), |ix, deprecation| {
                 let dbg = &dbg.clone();
                 let sql = format!("update {} set deprecation = deprecation + {} where id = {ix}", conf_table, deprecation);
                 let sql = Point::new(tx_id, &Name::new(dbg, "sql").join(), sql);

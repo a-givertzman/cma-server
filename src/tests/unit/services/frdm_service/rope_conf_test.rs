@@ -47,8 +47,8 @@ fn new() {
                 width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                 length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
                 segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-                pos: LinkName::from_str("/App/Winch.EncoderBR2").unwrap(),
-                load: LinkName::from_str("/App/Winch.Load").unwrap(),
+                pos: "/App/Winch.EncoderBR2".to_owned(),
+                load: "/App/Winch.Load".to_owned(),
             }
         ),
     ];

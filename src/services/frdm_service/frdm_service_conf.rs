@@ -9,6 +9,7 @@ use crate::services::{CraneConf, TablesConf};
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     send-to: /App/ApiClient.in-queue
+///     subscribe: MultiQueue
 ///     tables:
 ///         defect: public.frdm_defect
 ///         defect-image: public.frdm_defect_image
@@ -75,6 +76,7 @@ use crate::services::{CraneConf, TablesConf};
 pub struct FrdmServiceConf {
     pub name: Name,
     pub send_to: LinkName,
+    pub subscribe: String,
     pub tables: TablesConf,
     pub cycle: Option<Duration>,
     pub crane: CraneConf,
@@ -93,10 +95,12 @@ impl FrdmServiceConf {
         log::trace!("{dbg}.new | conf: {:?}", conf);
         let name = Name::new(parent, me);
         log::debug!("{dbg}.new | name: {:?}", name);
-        let send_to: String = conf.get("send-to").unwrap();
+        let send_to: String = conf.get("send-to").expect(&format!("{dbg}.new | 'send-to' - not found or wrong configuration"));
         let send_to = LinkName::from_str(&send_to).unwrap();
         log::debug!("{dbg}.new | send-to: {}", send_to);
-        let tables: TablesConf = conf.parse("tables").unwrap();
+        let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong configuration"));
+        log::debug!("{dbg}.new | subscribe: {:?}", subscribe);
+        let tables: TablesConf = conf.parse("tables").expect(&format!("{dbg}.new | 'tables' - not found or wrong configuration"));
         log::debug!("{dbg}.new | table defect: {}", tables.defect);
         log::debug!("{dbg}.new | table defect-image: {}", tables.defect_image);
         log::debug!("{dbg}.new | table deprecation: {}", tables.deprecation);
@@ -128,6 +132,7 @@ impl FrdmServiceConf {
         Self {
             name,
             send_to,
+            subscribe,
             tables,
             cycle,
             crane,

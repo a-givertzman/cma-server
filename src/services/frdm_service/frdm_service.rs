@@ -18,8 +18,7 @@ use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    kernel::state::ChangeNotify,
-    services::{conf::{ConfDistance, ConfDistanceUnit}, entity::{Cot, Name, Object, PointTxId}, Service, Services, SubscriptionCriteria},
+    services::{entity::{Cot, Name, Object, PointTxId}, Service, Services, SubscriptionCriteria},
     thread_pool::Scheduler,
 };
 use crate::{domain::RwLock, services::{DefectDetection, FrdmServiceConf, RopeDeprecationRate, RopeDeprecationRateConf}};
@@ -101,13 +100,13 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
-        let (_, rope_pos_recv) = services.subscribe(&conf.crane.rope.pos.service(), &name.join(), &[SubscriptionCriteria::new(conf.crane.rope.pos.link(), Cot::Inf)]);
+        let (_, rope_pos_recv) = services.subscribe(&conf.subscribe, &name.join(), &[SubscriptionCriteria::new(&conf.crane.rope.pos, Cot::Inf)]);
         let rope_pos = Arc::new(RwLock::new(None::<f64>));
         let rope_pos_clone = rope_pos.clone();
         let rope_deprecation = RopeDeprecationRate::new(
             &dbg,
             txid,
-            RopeDeprecationRateConf::new(&name, conf.crane.clone(), conf.send_to.clone(), conf.tables.deprecation.clone()),
+            RopeDeprecationRateConf::new(&name, conf.crane.clone(), conf.send_to.clone(), conf.subscribe.clone(), conf.tables.deprecation.clone()),
             move |rope_pos: f64| {
                 *rope_pos_clone.write() = Some(rope_pos);
             },

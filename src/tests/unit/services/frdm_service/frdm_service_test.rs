@@ -2,10 +2,10 @@
 use std::sync::Arc;
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::{services::{conf::{ConfTree, ServicesConf}, Service, Services}, thread_pool::ThreadPool};
-use testing::stuff::max_test_duration::TestDuration;
+use sal_sync::{services::{conf::{ConfTree, ServicesConf}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
+use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{services::{FrdmService, FrdmServiceConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
+use crate::{services::{FrdmService, FrdmServiceConf}, tests::unit::services::mock::{mock_recv_service::MockRecvService, mock_send_service::MockSendService}};
 
 ///
 ///
@@ -33,9 +33,9 @@ fn run() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
-    // let test_data = [
+    let test_data: Vec<Value> = vec![
     //     (01, ),
-    // ];
+    ];
     // for (step, conf, target) in test_data {
     //     let result = RopeConf::new(&dbg, ConfTree::new("rope", conf));
     //     assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -45,6 +45,7 @@ fn run() {
             service FrdmService:
                 cycle: 100 ms
                 send-to: /{dbg}/MockRecvService0.in-queue
+                subscribe: MiltiQueue
                 tables:
                     defect: public.frdm_defect
                     defect-image: public.frdm_defect_image
@@ -55,10 +56,10 @@ fn run() {
                         - D200mm 2.7..2.9 m
                         - D200mm 3.1..3.2 m
                     boom:
-                        main-len: 5.3 m                                        # length of the main boom
-                        main-angle: point real '/{dbg}/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
-                        rotary-len: 2.1 m                                      # length of the rotary boom
-                        rotary-angle: point real '/{dbg}/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+                        main-len: 5.3 m                                         # length of the main boom
+                        main-angle: point real '/{dbg}/Load.MainBoomAngle'      # degrees, current angle of the main boom to vertical axis
+                        rotary-len: 2.1 m                                       # length of the rotary boom
+                        rotary-angle: point real '/{dbg}/Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
                     rope:
                         width: 35 mm        # Diameter of the rome
                         length: 3000 m      # Total working length of the rope
@@ -120,6 +121,17 @@ fn run() {
     ), Some(tp.scheduler())));
     let frdm = Arc::new(FrdmService::new(conf, services.clone(), tp.scheduler()));
     services.insert(frdm.clone());
+        let conf = serde_yaml::from_str(&format!(r#"
+            service MultiQueue:
+                in queue in-queue:
+                    max-length: 10000
+                send-to:
+        "#)).unwrap();
+    let mq_conf = MultiQueueConf::from_yaml(&dbg, &conf);
+    let mq = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
+    services.insert(mq.clone());
+    let producer = Arc::new(MockSendService::new(&dbg, &format!("/{dbg}/MultiQueue"), services.clone(), test_data, None));
+    services.insert(producer.clone());
     let receiver = Arc::new(MockRecvService::new(&dbg, &format!("in-queue"), None));
     services.insert(receiver.clone());
     services.run().unwrap();
@@ -127,8 +139,12 @@ fn run() {
     frdm.run().unwrap();
     std::thread::sleep(Duration::from_secs(10));
     frdm.exit();
+    producer.exit();
+    mq.exit();
     services.exit();
     frdm.wait().unwrap();
+    producer.wait().unwrap();
+    mq.wait().unwrap();
     services.wait().unwrap();
 
     test_duration.exit();

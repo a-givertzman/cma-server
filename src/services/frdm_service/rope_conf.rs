@@ -1,6 +1,5 @@
-use std::str::FromStr;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, LinkName};
+use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name};
 ///
 /// ## The configuration parameters for the rope
 /// 

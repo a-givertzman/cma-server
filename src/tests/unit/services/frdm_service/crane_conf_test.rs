@@ -1,8 +1,7 @@
 #[cfg(test)]
-use std::str::FromStr;
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit, ConfTree}, LinkName};
+use sal_sync::services::conf::{ConfDistance, ConfDistanceUnit, ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::services::{BendingsConf, BoomConf, CraneConf, RopeConf};
@@ -61,16 +60,16 @@ fn new() {
                 },
                 boom: BoomConf {
                     main_len: ConfDistance::new(5.3, ConfDistanceUnit::Meter),
-                    main_angle: LinkName::from_str("App/Load.MainBoomAngle").unwrap(),
+                    main_angle: "App/Load.MainBoomAngle".to_owned(),
                     rotary_len: ConfDistance::new(2.1, ConfDistanceUnit::Meter),
-                    rotary_angle: LinkName::from_str("App/Load.RotaryBoomAngle").unwrap(),
+                    rotary_angle: "App/Load.RotaryBoomAngle".to_owned(),
                 },
                 rope: RopeConf {
                     width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                     length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
                     segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-                    pos: LinkName::from_str("/App/Winch.EncoderBR2").unwrap(),
-                    load: LinkName::from_str("/App/Winch.Load").unwrap(),
+                    pos: "/App/Winch.EncoderBR2".to_owned(),
+                    load: "/App/Winch.Load".to_owned(),
                 },
             },
         ),
