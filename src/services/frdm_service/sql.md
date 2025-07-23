@@ -106,7 +106,7 @@ end; $$
 language plpgsql;
 
 -- FRDM | Trigger for `frdm_defect_image` table to call cleaning after each insert
-create trigger clean_frdm_defect_image
+create or replace trigger clean_frdm_defect_image
     after insert on public.frdm_defect_image
     for each row
     execute procedure clean_frdm_defect_image();

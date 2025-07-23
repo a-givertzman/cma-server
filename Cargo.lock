@@ -1713,7 +1713,7 @@ dependencies = [
 [[package]]
 name = "frdm-tools"
 version = "0.0.1"
-source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#e3f3c083909a75f6cc5661e799bc98aee2835904"
+source = "git+https://github.com/a-givertzman/frdm-server.git?branch=complex-test#912a92f5afd3828fe00ea4164ccee7827b1346a2"
 dependencies = [
  "api-tools 0.2.1",
  "debugging",
@@ -1736,6 +1736,7 @@ dependencies = [
  "strum 0.27.2 (git+https://github.com/Peternator7/strum)",
  "strum_macros 0.27.2 (git+https://github.com/Peternator7/strum)",
  "testing 0.1.1 (git+https://github.com/a-givertzman/rust-testing.git)",
+ "walkdir",
 ]
 
 [[package]]

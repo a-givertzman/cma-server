@@ -15,7 +15,7 @@
 //! ```
 //! 
 use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
-use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Initial, InitialCtx, Mad};
+use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ChangeNotify,
@@ -54,6 +54,12 @@ impl FrdmService {
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
+    }
+    ///
+    /// Saving camera images to local store and clenong obsoleted images
+    fn save_image(dbg: &Dbg, frame: &Image, path: &Path) -> Result<(), Error> {
+        let path = path.as_os_str().to_str().ok_or(Error::new(dbg, "save_image"))?;
+        frame.save(path)
     }
 }
 //
@@ -101,7 +107,7 @@ impl Service for FrdmService {
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let handles_clone = self.handles.clone();
-        let path = Path::new("./files").join(
+        let storage_path = Path::new("./files").join(
             name.join()
                 .chars()
                 .enumerate()
@@ -171,13 +177,13 @@ impl Service for FrdmService {
                                             let pos = rope_pos + conf.camera_offset.as_m();
                                             // Index of the current slice located under the camera (from hook)
                                             let slice_ix = (pos / rope_segment.as_m()).trunc();
-                                            match defect.eval(frame) {
+                                            match defect.eval(frame.clone()) {
                                                 Ok(ctx) => {
                                                     let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
                                                     let defects = &geometry_defect_ctx.result;
                                                     if !defects.is_empty() {
                                                         defects.iter().for_each(|defect| {
-                                                            let defect_image_path = path.join(format!("defect_image/{}.jpeg", slice_ix));
+                                                            let defect_image_path = storage_path.join(format!("defect_image/{}.jpg", slice_ix));
                                                             let defect_id = match defect {
                                                                 frdm_tools::GeometryDefectType::Expansion => "expansion",
                                                                 frdm_tools::GeometryDefectType::Compressing => "compressing",
@@ -203,6 +209,9 @@ impl Service for FrdmService {
                                                                     ");
                                                                     if let Err(err) = send_to.send(Point::new(tx_id, &Name::new(dbg, "sql").join(), sql)) {
                                                                         log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                                                    }
+                                                                    if let Err(err) = Self::save_image(&dbg, &frame, &defect_image_path) {
+                                                                        log::warn!("{dbg}.run | Save image error: {:?}", err);
                                                                     }
                                                                 }
                                                                 None => log::warn!("{dbg}.run | Wrong image path {}", defect_image_path.display()),
