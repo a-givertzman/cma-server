@@ -1,5 +1,5 @@
 use frdm_tools::camera::CameraConf;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
+use sal_sync::services::{conf::{ConfCustomKeywd, ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
 use std::{fs, str::FromStr, time::Duration};
 use crate::services::{CraneConf, TablesConf};
 
@@ -113,11 +113,13 @@ impl FrdmServiceConf {
         let mut cameras = vec![];
         match conf.sub_nodes() {
             Some(nodes) => {
-                for camera in nodes.filter(|c| !vec!["send-to", "tables", "cycle", "crane", "scan"].contains(&c.key.as_str())) {
-                    if let Ok((_, camera)) = camera.get_by_custom_keywd("", "camera") {
-                        let camera = CameraConf::new(&name, &camera);
-                        log::debug!("{dbg}.new | camera: {:#?}", camera);
-                        cameras.push(camera);
+                for node in nodes {
+                    if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
+                        if keywd.keywd() == "camera" {
+                            let camera = CameraConf::new(&name, &node);
+                            log::debug!("{dbg}.new | camera: {:#?}", camera);
+                            cameras.push(camera);
+                        }
                     }
                 }
             }
