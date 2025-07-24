@@ -9,6 +9,8 @@ default: true
 # Path to configuration file to extend
 extends: null
 
+MD010:
+  code_blocks: false
 # MD013/line-length : Line length : https://github.com/DavidAnson/markdownlint/blob/v0.34.0/doc/md013.md
 MD013:
   # Number of characters

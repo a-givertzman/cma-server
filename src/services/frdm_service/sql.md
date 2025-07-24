@@ -15,6 +15,7 @@ create table public.frdm_settings (
     value               text not null
 );
 ```
+
 ---
 
 ## frdm_defect
@@ -49,6 +50,7 @@ create table public.frdm_defect (
     PRIMARY KEY (id, defect, camera)
 );
 ```
+
 ---
 
 ## frdm_defect_image
