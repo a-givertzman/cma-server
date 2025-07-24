@@ -26,7 +26,6 @@ use crate::{
 
 pub struct App {
     dbg: Dbg,
-    name: Name,
     conf: AppConfig,
 }
 //
@@ -43,7 +42,6 @@ impl App {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             dbg,
-            name: conf.name.clone(),
             conf,
         }
     }
@@ -106,7 +104,7 @@ impl App {
     fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<Services>, scheduler: Scheduler) -> Arc<dyn Service> {
         match node_name {
             Services::API_CLIENT => Arc::new(
-                ApiClient::new(ApiClientConf::new(parent, node_conf), scheduler.clone())
+                ApiClient::new(ApiClientConf::new(parent, node_conf), services, scheduler.clone())
             ),
             Services::MULTI_QUEUE => Arc::new(
                 MultiQueue::new(MultiQueueConf::new(parent, node_conf), services, Some(scheduler.clone()))

@@ -189,9 +189,11 @@ impl Service for ApiClient {
                                                 if let Some(send_to) = &send_to {
                                                     match serde_json::to_string(&reply.data) {
                                                         Ok(reply) => {
-                                                            send_to.send(Point::String(PointHlr::new_string(txid, &point.name, reply)));
+                                                            if let Err(err) = send_to.send(Point::String(PointHlr::new_string(txid, &point.name, reply))) {
+                                                                log::warn!("{}.run | Send API reply error: {:?}", dbg, err);
+                                                            }
                                                         }
-                                                        Err(_) => todo!(),
+                                                        Err(err) => log::warn!("{}.run | Parse API reply error: {:?}", dbg, err),
                                                     }
                                                 }
                                                 buffer.pop_first();

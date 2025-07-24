@@ -1,4 +1,5 @@
 use sal_core::{dbg::Dbg, error::ErrorLimit};
+use sal_sync::services::{conf::{ConfTree, ServicesConf}, Services};
 #[cfg(test)]
 use sal_sync::{services::{entity::ToPoint, Service}, thread_pool::ThreadPool};
 use std::{sync::{Once, Arc}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
@@ -28,23 +29,30 @@ fn basic() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
-    let dbg = "api-client-test";
+    let dbg = Dbg::own("api-client-test");
     println!("\n{}", dbg);
     let path = "./src/tests/unit/services/api_client/api_client.yaml";
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
-    let mut conf = ApiClientConf::read(dbg, path);
+    let mut conf = ApiClientConf::read(&dbg, path);
     // let addr = conf.address.clone();
     // let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
     let addr = "127.0.0.1:3131".to_owned();
     conf.address = addr.parse().unwrap();
-    let tp = ThreadPool::new(dbg, Some(4));
-    let api_client = ApiClient::new(conf, tp.scheduler());
+    let tp = ThreadPool::new(&dbg, Some(4));
+    let services = Arc::new(Services::new(&dbg, ServicesConf::new(
+        &dbg, 
+        ConfTree::empty()//new_root(serde_yaml::from_str(r#"
+        // retain:
+        // "#).unwrap()),
+    ), Some(tp.scheduler())));
+
+    let api_client = ApiClient::new(conf, services, tp.scheduler());
     // let test_duration = Duration::from_secs(10);
     let count = 10;
     let mut state = 0;
     let test_data = RandomTestValues::new(
-        dbg,
+        &dbg,
         vec![
             Value::Int(i64::MIN),
             Value::Int(i64::MAX),
@@ -79,8 +87,9 @@ fn basic() {
     let received = Arc::new(Mutex::new(vec![]));
     let received_ref = received.clone();
     let mut buf = [0; 1024 * 4];
+    let dbg_clone = dbg.clone();
     let receiver_handle = tp.spawn(move || {
-        let dbg = Dbg::new(dbg, "MockTcpServer");
+        let dbg = Dbg::new(dbg_clone, "MockTcpServer");
         let mut received = received_ref.lock();
         let mut message = TcpMessage::new(
             &dbg,

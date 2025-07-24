@@ -95,7 +95,7 @@ fn operating_metric_cycles_distribution_by_load_test() {
             debug: true
         ").unwrap(),
     );
-    let api_client = Arc::new(ApiClient::new(conf, tp.scheduler()));
+    let api_client = Arc::new(ApiClient::new(conf, services.clone(), tp.scheduler()));
     services.insert(api_client.clone());
     let test_data = test_data(dbg);
     let total_count = test_data.len();

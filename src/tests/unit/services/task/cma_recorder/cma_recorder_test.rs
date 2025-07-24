@@ -93,7 +93,7 @@ mod cma_recorder {
                 debug: true
             ").unwrap(),
         );
-        let api_client = Arc::new(ApiClient::new(conf, tp.scheduler()));
+        let api_client = Arc::new(ApiClient::new(conf, services.clone(), tp.scheduler()));
         services.insert(api_client.clone());
         let test_data = test_data(dbg);
         let total_count = test_data.len();

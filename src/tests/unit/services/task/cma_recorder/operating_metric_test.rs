@@ -102,7 +102,7 @@ mod cma_recorder {
                 debug: true
             ").unwrap(),
         );
-        let api_client = Arc::new(ApiClient::new(conf, tp.scheduler()));
+        let api_client = Arc::new(ApiClient::new(conf, services.clone(), tp.scheduler()));
         services.insert(api_client.clone());
         let test_data = vec![
         //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth
