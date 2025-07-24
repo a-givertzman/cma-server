@@ -89,7 +89,8 @@ uid = "~0.1"
 
 derivative = "~2.2"
 
-plotters = "~0.3"
+# plotters = "~0.3"
+plotters = { version = "~0.3", features = ["ab_glyph", "fontconfig-dlopen"] }
 
 [build-dependencies]
 cc = "~1.2"
