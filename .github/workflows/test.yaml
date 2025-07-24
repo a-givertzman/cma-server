@@ -16,6 +16,8 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
         uses: Dovyski/setup-opencv-action@v1.1
+        with:
+          opencv-version: '4.0.0'
         # uses: actions/checkout@v3
 
 
@@ -32,8 +34,6 @@ jobs:
           config: '.github/markdownlint/markdownlint.yaml'
           args: "**/*.md"
       - name: Static analysis | cargo check
-        with:
-          opencv-version: '4.0.0'
         run: |
           cargo check
       - name: Static analysis | cargo clippy
@@ -47,8 +47,6 @@ jobs:
       # - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       # - run: cargo build --release
       - name: Unit tests
-        with:
-          opencv-version: '4.0.0'
         run: |
           cargo test --release -- --show-output
   
