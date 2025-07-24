@@ -15,7 +15,13 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: OpenCV setup
+
+      - name: OpenCV setup | Requesting required pub keys
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 40976EAF437D05B5
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3B4FE6ACC0B21F32
+
+      - name: OpenCV setup | Install
         uses: Dovyski/setup-opencv-action@v1.1
         with:
           opencv-version: '4.0.0'
