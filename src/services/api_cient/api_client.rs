@@ -1,6 +1,6 @@
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service, ServiceCycle}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
+use sal_sync::{services::{entity::{Name, Object, Point, PointHlr, PointTxId}, Service, ServiceCycle, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
@@ -11,18 +11,21 @@ use crate::{
 /// ### Sending data to the API
 /// 
 /// - Holding single input queue
-/// - Received string messages pops from the queue into the end of local buffer
-/// - Sending messages (wrapped into ApiQuery) from the beginning of the buffer
-/// - Sent messages immediately removed from the buffer
+/// - Received string events (containig SQL) pops from the queue into the end of local buffer
+/// - Sending SQL's (wrapped into ApiQuery) from the beginning of the buffer
+/// - Sent SQL's immediately removed from the buffer
+/// - Replies from SQL requests can be returned with same event name, if **`send-to`** is specified
 pub struct ApiClient {
-    dbg: Dbg,
     name: Name,
+    txid: usize,
     recv: Owner<Receiver<Point>>,
     send: HashMap<String, Sender<Point>>,
     conf: ApiClientConf,
+    services: Arc<Services>,
     scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
+    dbg: Dbg,
 }
 //
 // 
@@ -30,18 +33,20 @@ impl ApiClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: ApiClientConf, scheduler: Scheduler) -> Self {
+    pub fn new(conf: ApiClientConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let (send, recv) = channel::unbounded();
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
+            txid: PointTxId::from_str(&conf.name.join()),
             recv: Owner::new(recv),
             send: HashMap::from([(conf.rx.clone(), send)]),
             conf: conf.clone(),
+            services,
             scheduler,
             handles: Handles::new(&dbg),
-            dbg,
             exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
     ///
@@ -127,12 +132,19 @@ impl Service for ApiClient {
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
+        let txid = self.txid;
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let recv = self.recv.take().unwrap();
         let (cyclic, cycle_interval) = match conf.cycle {
             Some(interval) => (interval > Duration::ZERO, interval),
             None => (false, Duration::ZERO),
+        };
+        let send_to = match conf.send_to {
+            Some(send_to) => self.services
+                .get_link(&send_to)
+                .inspect_err(|err| log::warn!("{}.run | Link {} - Not found, error: {}", dbg, send_to.name(), err)).ok(),
+            None => None,
         };
         // let reconnect = if conf.reconnectCycle.is_some() {conf.reconnectCycle.unwrap()} else {Duration::from_secs(3)};
         let _queue_max_length = conf.rx_max_len;
@@ -174,6 +186,14 @@ impl Service for ApiClient {
                                             if reply.has_error() {
                                                 log::warn!("{}.run | API reply has error: {:?}", dbg, reply.error);
                                             } else {
+                                                if let Some(send_to) = &send_to {
+                                                    match serde_json::to_string(&reply.data) {
+                                                        Ok(reply) => {
+                                                            send_to.send(Point::String(PointHlr::new_string(txid, &point.name, reply)));
+                                                        }
+                                                        Err(_) => todo!(),
+                                                    }
+                                                }
                                                 buffer.pop_first();
                                             }
                                         }

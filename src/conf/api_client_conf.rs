@@ -9,7 +9,7 @@ use std::{fs, net::SocketAddr, str::FromStr, time::Duration};
 ///     address: 127.0.0.1:8080
 ///     in queue api-link:
 ///         max-length: 10000
-///     send-to: MultiQueue.queue
+///     send-to: MultiQueue.queue   # Used to return replies from SQL requests
 ///     debug: false                # API debug mode, optional, default false
 /// ```
 #[derive(Debug, PartialEq, Clone)]
@@ -37,7 +37,7 @@ impl ApiClientConf {
     ///     address: 127.0.0.1:8080
     ///     in queue api-link:
     ///         max-length: 10000
-    ///     send-to: MultiQueue.queue
+    ///     send-to: MultiQueue.queue   # Used to return replies from SQL requests
     ///     debug: false                # API debug mode, optional, default false
     /// ```
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
