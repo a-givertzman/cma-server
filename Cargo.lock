@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e074464580a518d16a7126262fffaaa47af89d4099d4cb403f8ed938ba12ee7d"
 dependencies = [
  "ab_glyph_rasterizer",
- "owned_ttf_parser 0.25.0",
+ "owned_ttf_parser 0.25.1",
 ]
 
 [[package]]
@@ -255,7 +255,7 @@ dependencies = [
 [[package]]
 name = "api-tools"
 version = "0.2.1"
-source = "git+https://github.com/a-givertzman/rust-api-tools.git?tag=0.2.1#302124dbf0a5bff673adcc277a759974f5a0a9eb"
+source = "git+https://github.com/a-givertzman/rust-api-tools.git?tag=0.2.1#adb02856b38b855626ead6d5faaa961e86780203"
 dependencies = [
  "chrono",
  "debugging",
@@ -3261,9 +3261,9 @@ dependencies = [
 
 [[package]]
 name = "owned_ttf_parser"
-version = "0.25.0"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22ec719bbf3b2a81c109a4e20b1f129b5566b7dce654bc3872f6a05abf82b2c4"
+checksum = "36820e9051aca1014ddc75770aab4d68bc1e9e632f0f5627c4086bc216fb583b"
 dependencies = [
  "ttf-parser 0.25.1",
 ]
@@ -3649,9 +3649,9 @@ dependencies = [
 
 [[package]]
 name = "prettyplease"
-version = "0.2.35"
+version = "0.2.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "061c1221631e079b26479d25bbf2275bfe5917ae8419cd7e34f13bfc2aa7539a"
+checksum = "ff24dfcda44452b9816fff4cd4227e1bb73ff5a2f1bc1105aa92fb8565ce44d2"
 dependencies = [
  "proc-macro2",
  "syn 2.0.104",
@@ -4509,9 +4509,10 @@ dependencies = [
 [[package]]
 name = "testing"
 version = "0.1.1"
-source = "git+https://github.com/a-givertzman/rust-testing.git?tag=0.1.2#f18b33703e0ff3cef3d2787bc1f361edd1a45f6a"
+source = "git+https://github.com/a-givertzman/rust-testing.git?tag=0.1.2#b1d5d616276a0acfb683a87918ae20a938de1386"
 dependencies = [
  "env_logger",
+ "indexmap 2.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "rand 0.8.5",
 ]
@@ -4519,9 +4520,10 @@ dependencies = [
 [[package]]
 name = "testing"
 version = "0.1.1"
-source = "git+https://github.com/a-givertzman/rust-testing.git#f18b33703e0ff3cef3d2787bc1f361edd1a45f6a"
+source = "git+https://github.com/a-givertzman/rust-testing.git#b1d5d616276a0acfb683a87918ae20a938de1386"
 dependencies = [
  "env_logger",
+ "indexmap 2.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "rand 0.8.5",
 ]

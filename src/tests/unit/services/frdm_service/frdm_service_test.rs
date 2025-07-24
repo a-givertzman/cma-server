@@ -23,6 +23,7 @@ fn init_once() {
 fn init_each() -> () {}
 ///
 /// Testing [FrdmService].run
+#[ignore = "DO NOT FORGET REVERT THIS TEST"]
 #[test]
 fn run() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);

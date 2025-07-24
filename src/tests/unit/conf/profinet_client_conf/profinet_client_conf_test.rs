@@ -31,7 +31,7 @@ fn basic() {
     println!("\n{}", self_id);
     let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
     test_duration.run().unwrap();
-    let path = "./src/tests/unit/conf/profinet_client_config/profinet_client.yaml";
+    let path = "./src/tests/unit/conf/profinet_client_conf/profinet_client.yaml";
     let config = ProfinetClientConf::read(&self_name, path);
     let target_points = [
         // 222
