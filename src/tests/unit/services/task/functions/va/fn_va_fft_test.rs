@@ -12,8 +12,8 @@ use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::{
     domain::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, FnInOutRef},
     services::task::{
-        nested_function::{fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
-        task_test_receiver::TaskTestReceiver,
+        {fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
+        TaskTestReceiver,
     }, tests::unit::services::task::functions::va::plot::{plot, SeriesKind},
 };
 ///

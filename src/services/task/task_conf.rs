@@ -22,13 +22,13 @@ use std::{fs, time::Duration};
 ///                         ...
 #[derive(Debug, PartialEq, Clone)]
 pub struct TaskConf {
-    pub(crate) name: Name,
-    pub(crate) cycle: Option<Duration>,
-    pub(crate) rx: String,
-    pub(crate) rx_max_length: i64,
-    pub(crate) subscribe: ConfSubscribe,
-    pub(crate) nodes: IndexMap<String, FnConfKind>,
-    pub(crate) vars: Vec<String>,
+    pub name: Name,
+    pub cycle: Option<Duration>,
+    pub rx: String,
+    pub rx_max_length: i64,
+    pub subscribe: ConfSubscribe,
+    pub nodes: IndexMap<String, FnConfKind>,
+    pub vars: Vec<String>,
 }
 //
 // 

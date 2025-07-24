@@ -10,8 +10,7 @@ mod cma_recorder {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_conf::TaskConf,
-        services::task::{task::Task, task_test_receiver::TaskTestReceiver},
+        services::task::{Task, TaskConf, TaskTestReceiver},
         tests::unit::services::task::task_test_producer::TaskTestProducer,
     };
     ///

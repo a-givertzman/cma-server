@@ -64,7 +64,7 @@ impl ApiClient {
         }
     }
     ///
-    /// Writing sql string to the TcpStream
+    /// Sending SQL queries to the Database
     fn send(dbg: &Dbg, request: &mut ApiRequest, database: &str, sql: String, keep_alive: bool) -> Result<ApiReply, Error> {
         let error = Error::new(dbg, "send");
         let query = ApiQuery::new(
@@ -163,10 +163,10 @@ impl Service for ApiClient {
                     match buffer.first() {
                         Some(point) => {
                             match point {
-                                Point::Bool(_) => log::warn!("{}.run | Invalid point type 'Bool' in: {:?}", dbg, point),
-                                Point::Int(_) => log::warn!("{}.run | Invalid point type 'Int' in: {:?}", dbg, point),
-                                Point::Real(_) => log::warn!("{}.run | Invalid point type 'Real' in: {:?}", dbg, point),
-                                Point::Double(_) => log::warn!("{}.run | Invalid point type 'Double' in: {:?}", dbg, point),
+                                Point::Bool(_) => log::warn!("{}.run | Invalid point type 'Bool' (expected 'String' containing SQL) in: {:?}", dbg, point),
+                                Point::Int(_) => log::warn!("{}.run | Invalid point type 'Int' (expected 'String' containing SQL) in: {:?}", dbg, point),
+                                Point::Real(_) => log::warn!("{}.run | Invalid point type 'Real' (expected 'String' containing SQL) in: {:?}", dbg, point),
+                                Point::Double(_) => log::warn!("{}.run | Invalid point type 'Double' (expected 'String' containing SQL) in: {:?}", dbg, point),
                                 Point::String(point) => {
                                     let sql = point.value.clone();
                                     match Self::send(&dbg, &mut request, &conf.database, sql, api_keep_alive) {

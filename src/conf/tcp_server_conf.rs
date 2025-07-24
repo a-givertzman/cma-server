@@ -17,16 +17,16 @@ use crate::services::server::jds_auth::TcpServerAuth;
 ///                         ...
 #[derive(Debug, PartialEq, Clone)]
 pub struct TcpServerConf {
-    pub(crate) name: Name,
-    pub(crate) cycle: Option<Duration>,
-    pub(crate) address: SocketAddr,
-    pub(crate) reconnect_cycle: Option<Duration>,
-    pub(crate) keep_timeout: Duration,
-    pub(crate) auth: TcpServerAuth,
-    pub(crate) rx: String,
-    pub(crate) rx_max_len: i64,
-    pub(crate) send_to: LinkName,//String,
-    pub(crate) cache: Option<String>,
+    pub name: Name,
+    pub cycle: Option<Duration>,
+    pub address: SocketAddr,
+    pub reconnect_cycle: Option<Duration>,
+    pub keep_timeout: Duration,
+    pub auth: TcpServerAuth,
+    pub rx: String,
+    pub rx_max_len: i64,
+    pub send_to: LinkName,//String,
+    pub cache: Option<String>,
 }
 //
 // 

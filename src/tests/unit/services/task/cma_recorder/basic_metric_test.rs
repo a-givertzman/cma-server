@@ -11,10 +11,10 @@ mod cma_recorder {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{api_client_conf::ApiClientConf, task_conf::TaskConf},
+        conf::api_client_conf::ApiClientConf,
         services::{
             api_cient::api_client::ApiClient,
-            task::{task::Task, task_test_receiver::TaskTestReceiver},
+            task::{Task, TaskConf, TaskTestReceiver},
         },
         tests::unit::services::task::task_test_producer::TaskTestProducer,
     };

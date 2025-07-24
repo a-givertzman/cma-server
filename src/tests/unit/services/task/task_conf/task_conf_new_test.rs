@@ -4,9 +4,7 @@ use indexmap::IndexMap;
 use sal_sync::services::{conf::ConfTree, entity::Name, ConfSubscribe, task::functions::{FnConfKind, FnConfig, FnConfPointType, FnConfOptions}};
 use std::{sync::Once, time::Duration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::conf::{
-    task_conf::TaskConf
-};
+use crate::services::task::TaskConf;
 ///
 ///
 static INIT: Once = Once::new();

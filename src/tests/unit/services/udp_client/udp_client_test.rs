@@ -8,7 +8,7 @@ mod udp_client {
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
         conf::udp_client_conf::udp_client_conf::UdpClientConf,
-        services::{task::task_test_receiver::TaskTestReceiver, udp_client::udp_client::UdpClient},
+        services::{task::TaskTestReceiver, udp_client::udp_client::UdpClient},
         tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig},
     };
     ///

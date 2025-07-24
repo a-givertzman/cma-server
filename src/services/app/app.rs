@@ -13,14 +13,14 @@ use crate::{
     conf::{
         api_client_conf::ApiClientConf, app::app_config::AppConfig, cache_service_conf::CacheServiceConf,
         profinet_client_conf::profinet_client_conf::ProfinetClientConf,
-        slmp_client_conf::slmp_client_conf::SlmpClientConf, task_conf::TaskConf,
+        slmp_client_conf::slmp_client_conf::SlmpClientConf,
         tcp_client_conf::TcpClientConf, tcp_server_conf::TcpServerConf
     }, services::{
         api_cient::api_client::ApiClient, cache::cache_service::CacheService,
         history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf},
         profinet_client::profinet_client::ProfinetClient,
         server::tcp_server::TcpServer,
-        slmp_client::slmp_client::SlmpClient, task::task::Task, tcp_client::tcp_client::TcpClient, FrdmService, FrdmServiceConf,
+        slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient, FrdmService, FrdmServiceConf,
     }
 };
 

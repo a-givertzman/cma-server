@@ -10,17 +10,17 @@ use std::{fs, net::SocketAddr, str::FromStr, time::Duration};
 ///     in queue link:
 ///         max-length: 10000
 ///     send-to: MultiQueue.queue
-///                         ...
+/// ```
 #[derive(Debug, PartialEq, Clone)]
 pub struct TcpClientConf {
-    pub(crate) name: Name,
-    pub(crate) address: SocketAddr,
-    pub(crate) cycle: Option<Duration>,
-    pub(crate) reconnect_cycle: Option<Duration>,
-    pub(crate) rx: String,
-    pub(crate) rx_buffered: bool,
-    pub(crate) rx_max_len: i64,
-    pub(crate) send_to: LinkName,
+    pub name: Name,
+    pub address: SocketAddr,
+    pub cycle: Option<Duration>,
+    pub reconnect_cycle: Option<Duration>,
+    pub rx: String,
+    pub rx_buffered: bool,
+    pub rx_max_len: i64,
+    pub send_to: LinkName,
 }
 //
 // 
@@ -36,7 +36,7 @@ impl TcpClientConf {
     ///         buffered: true
     ///         max-length: 10000
     ///     send-to: MultiQueue.queue
-    ///                     ...
+    /// ```
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> TcpClientConf {
         let me = conf.sufix_or(conf.name().unwrap());
         let dbg = format!("TcpClientConf({})", me);
