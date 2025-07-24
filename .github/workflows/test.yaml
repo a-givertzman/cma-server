@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v2
         # uses: actions/checkout@v3
 
-      # - name: OpenCV setup | Requesting required pub keys
+      # - name: OpenCV lib setup | Requesting required pub keys
       #   run: |
       #     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 40976EAF437D05B5
       #     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3B4FE6ACC0B21F32
@@ -26,12 +26,16 @@ jobs:
       #   with:
       #     opencv-version: '4.12.0'
 
-      - name: Cache OpenCV
-        uses: UrielCh/opencv-cache-action@V1
-        with:
-          branch: 4.x
-          BUILD_LIST: core,imgproc,imgcodecs,highgui,features2d,photo,gapi #videoio,python3,ml,calib3d,video,objdetect,dnn,
-          NO_CONTRIB: ''
+      - name: OpenCV lib setup
+        run: |
+          sudo apt install -y libopencv-dev clang libclang-dev
+
+      # - name: OpenCV Cache setup 
+      #   uses: UrielCh/opencv-cache-action@V1
+      #   with:
+      #     branch: 4.x
+      #     BUILD_LIST: core,imgproc,imgcodecs,highgui,features2d,photo,gapi #videoio,python3,ml,calib3d,video,objdetect,dnn,
+      #     NO_CONTRIB: ''
 
 
 
