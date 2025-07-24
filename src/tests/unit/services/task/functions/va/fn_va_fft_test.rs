@@ -51,7 +51,7 @@ fn empty_filter() {
     let self_name = Name::new("", dbg);
     let tx_id = PointTxId::from_str(&dbg);
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(30));
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(60));
     test_duration.run().unwrap();
     let test_data = [
         // sampl_freq   fft_size    ffts    target
