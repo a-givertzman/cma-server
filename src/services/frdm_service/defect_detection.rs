@@ -2,7 +2,7 @@ use std::{path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfDistance, ConfDistanceUnit}, entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::Handles, thread_pool::Scheduler};
-use crate::{domain::{constants::constants::RECV_TIMEOUT, RwLock}, services::{api_cient::api_client::ApiClient, FrdmServiceConf}};
+use crate::{domain::{constants::constants::RECV_TIMEOUT, RwLock}, services::FrdmServiceConf};
 
 ///
 /// Dects defect on the frames coming from the camera

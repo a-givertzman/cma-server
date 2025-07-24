@@ -99,9 +99,8 @@ fn valid() {
         ])
     };
     log::trace!("dir: {:?}", env::current_dir());
-    let path = "./src/tests/unit/conf/task_config/task_config_test.yaml";
+    let path = "src/tests/unit/services/task/task_conf/task_config_test.yaml";
     let result = TaskConf::read(&self_name, path);
     log::trace!("fnConfig: {:?}", result);
     assert_eq!(result, target, "\nresult: {:?}, \ntarget: {:?}", result, target);
 }
-

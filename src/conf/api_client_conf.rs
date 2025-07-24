@@ -22,7 +22,7 @@ pub struct ApiClientConf {
     pub reconnect_cycle: Option<Duration>,
     pub rx: String,
     pub rx_max_len: i64,
-    pub send_to: LinkName,
+    pub send_to: Option<LinkName>,
     pub debug: bool,
 }
 //
@@ -59,9 +59,9 @@ impl ApiClientConf {
         log::debug!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
         let (rx, rx_max_len) = conf.get_in_queue().unwrap();
         log::debug!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_len);
-        let send_to: String = conf.get("send-to").unwrap();
-        let send_to = LinkName::from_str(&send_to).unwrap();
-        log::debug!("{}.new | send-to: {}", dbg, send_to);
+        let send_to: Option<String> = conf.get("send-to");
+        let send_to = send_to.map(|send_to| LinkName::from_str(&send_to).unwrap());
+        log::debug!("{}.new | send-to: {:?}", dbg, send_to);
         let debug: bool = conf.get("debug").unwrap_or(false);
         log::debug!("{}.new | debug: {:?}", dbg, debug);
         Self {
@@ -79,6 +79,7 @@ impl ApiClientConf {
     }
     ///
     /// creates config from serde_yaml::Value of following format:
+    #[allow(unused)]
     pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> Self {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
@@ -91,6 +92,7 @@ impl ApiClientConf {
     }
     ///
     /// reads config from path
+    #[allow(unused)]
     pub fn read(parent: impl Into<String>, path: &str) -> ApiClientConf {
         match fs::read_to_string(path) {
             Ok(yaml_string) => {
