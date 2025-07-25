@@ -4,10 +4,10 @@ use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration
 };
 use crate::{
-    conf::tcp_server_conf::TcpServerConf,
     domain::{constants::constants::RECV_TIMEOUT},
     services::server::{
-        connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection
+        connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection,
+        TcpServerConf,
     },
 };
 ///

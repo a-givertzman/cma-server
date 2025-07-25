@@ -6,7 +6,6 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
-    conf::tcp_server_conf::TcpServerConf, 
     domain::{
         constants::constants::RECV_TIMEOUT, net::protocols::jds::{
             jds_decode_message::JdsDecodeMessage, 
@@ -16,8 +15,8 @@ use crate::{
         }, RwLock,
     }, 
     services::server::{
-            connections::Action, jds_auth::TcpServerAuth, jds_request::JdsRequest, jds_routes::{JdsRoutes, RouterReply}
-        }, 
+        connections::Action, jds_auth::TcpServerAuth, jds_request::JdsRequest, jds_routes::{JdsRoutes, RouterReply}, TcpServerConf,
+    }, 
     tcp::{tcp_read_alive::TcpReadAlive, tcp_stream_write::TcpStreamWrite, tcp_write_alive::TcpWriteAlive},
 };
 

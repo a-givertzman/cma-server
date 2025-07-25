@@ -3194,8 +3194,8 @@ checksum = "a4895175b425cb1f87721b59f0f286c2092bd4af812243672510e1ac53e2e0ad"
 
 [[package]]
 name = "opencv"
-version = "0.95.0"
-source = "git+https://github.com/twistedfall/opencv-rust#31850617cbb5205974db7c01a3c8553ab7224a12"
+version = "0.95.1"
+source = "git+https://github.com/twistedfall/opencv-rust#5ee7bc66001f28ff341167e9507338f2a0cc534f"
 dependencies = [
  "cc",
  "dunce",
@@ -3214,7 +3214,7 @@ dependencies = [
 [[package]]
 name = "opencv-binding-generator"
 version = "0.97.0"
-source = "git+https://github.com/twistedfall/opencv-rust#31850617cbb5205974db7c01a3c8553ab7224a12"
+source = "git+https://github.com/twistedfall/opencv-rust#5ee7bc66001f28ff341167e9507338f2a0cc534f"
 dependencies = [
  "clang",
  "clang-sys",
@@ -4061,7 +4061,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#917b179738584dcf2cffad9043816aad9a619c60"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#2ef940e0b8646ffc64890eb46ad4e6c5f9509b8f"
 dependencies = [
  "api-tools 0.0.6",
  "chrono",

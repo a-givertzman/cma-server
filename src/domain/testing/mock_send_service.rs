@@ -1,27 +1,27 @@
 use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point, ToPoint}, LinkName, Service, Services}, sync::{channel::Sender, Handles}};
+use sal_sync::{services::{entity::{Name, Object, Point, PointTxId, ToPoint}, LinkName, Service, Services}, sync::{channel::Sender, Handles}, thread_pool::Scheduler};
 use testing::entities::test_value::Value;
-
 use crate::domain::RwLock;
 ///
 ///
 pub struct MockSendService {
-    dbg: Dbg,
     name: Name,
     send_to: LinkName,
     services: Arc<Services>,
     test_data: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
     delay: Option<Duration>,
+    scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
+    dbg: Dbg,
 }
 //
 // 
 impl MockSendService {
     #[allow(unused)]
-    pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, delay: Option<Duration>) -> Self {
+    pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, delay: Option<Duration>, scheduler: Scheduler) -> Self {
         let name = Name::new(parent, format!("MockSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
@@ -31,9 +31,10 @@ impl MockSendService {
             test_data,
             sent: Arc::new(RwLock::new(vec![])),
             delay,
+            scheduler,
             handles: Handles::new(&dbg),
-            dbg,
             exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
     ///
@@ -87,7 +88,9 @@ impl Service for MockSendService {
     //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
-        let self_id = self.dbg.clone();
+        let dbg = self.dbg.clone();
+        let txid = PointTxId::from_str(&self.name.join());
+        let name = self.name.join();
         let exit = self.exit.clone();
         let tx_send = self.services.get_link(&self.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
@@ -95,17 +98,17 @@ impl Service for MockSendService {
         let test_data = self.test_data.clone();
         let sent = self.sent.clone();
         let delay = self.delay.clone();
-        let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
-            log::info!("{}.run | Preparing thread - ok", self_id);
-            for value in test_data {
-                let point = value.to_point(0,&format!("{}/test", self_id));
+        let handle = self.scheduler.spawn(move || {
+            log::info!("{}.run | Preparing thread - ok", dbg);
+            for (ix, value) in test_data.iter().enumerate() {
+                let point = value.to_point(txid, &format!("{name}/Test.val-{ix}"));
                 match tx_send.send(point.clone()) {
                     Ok(_) => {
-                        log::trace!("{}.run | send: {:?}", self_id, point);
+                        log::trace!("{}.run | send: {:?}", dbg, point);
                         sent.write().push(point);
                     }
                     Err(err) => {
-                        log::warn!("{}.run | send error: {:?}", self_id, err);
+                        log::warn!("{}.run | send error: {:?}", dbg, err);
                     }
                 }
                 if exit.load(Ordering::SeqCst) {
@@ -118,6 +121,7 @@ impl Service for MockSendService {
                     None => {}
                 }
             }
+            Ok(())
         });
         match handle {
             Ok(handle) => {

@@ -75,7 +75,7 @@ enum NotifyState {
 // 
 impl<Updates> Service for RopeDeprecationRate<Updates> where 
     Updates: Fn(f64),
-    Updates: Send + Sync + 'static{
+    Updates: Send + Sync + 'static {
     //
     // 
     fn run(&self) -> Result<(), Error> {

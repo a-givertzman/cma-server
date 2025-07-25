@@ -1,8 +1,5 @@
 use sal_core::dbg::Dbg;
-use sal_sync::{services::{
-    conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf,
-    Service, Services,
-}, thread_pool::{Scheduler, ThreadPool}};
+use sal_sync::{services::Services, thread_pool::{Scheduler, ThreadPool}};
 use std::{path::Path, process::exit, sync::Arc, thread, time::Duration};
 use libc::{
     SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGQUIT, SIGTERM, SIGUSR1, SIGUSR2,
@@ -10,20 +7,12 @@ use libc::{
 };
 use signal_hook::iterator::Signals;
 use crate::{
-    conf::{
-        api_client_conf::ApiClientConf, app::app_config::AppConfig, cache_service_conf::CacheServiceConf,
-        profinet_client_conf::profinet_client_conf::ProfinetClientConf,
-        slmp_client_conf::slmp_client_conf::SlmpClientConf,
-        tcp_client_conf::TcpClientConf, tcp_server_conf::TcpServerConf
-    }, services::{
-        api_cient::api_client::ApiClient, cache::cache_service::CacheService,
-        history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf},
-        profinet_client::profinet_client::ProfinetClient,
-        server::tcp_server::TcpServer,
-        slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient, FrdmService, FrdmServiceConf,
-    }
+    conf::app::app_config::AppConfig,services::ServicesFactory
+    
 };
 
+///
+/// The entry point of the `CMA-Server` application
 pub struct App {
     dbg: Dbg,
     conf: AppConfig,
@@ -32,8 +21,8 @@ pub struct App {
 // 
 impl App {
     ///
-    /// Creates new instance of the ReatinBuffer
-    ///     - path - path to the application configuration
+    /// Creates [App] new instance
+    /// - `path` - path to the application configuration
     pub fn new(path: Vec<impl AsRef<Path>>) -> Self {
         path.iter().for_each(|p| {
             log::info!("App.run | Configuration path: '{}'", p.as_ref().display());
@@ -55,13 +44,14 @@ impl App {
         let thread_pool = ThreadPool::new(&dbg, conf.tread_pool);
         let services = Arc::new(Services::new(&dbg, conf.services.clone(), Some(thread_pool.scheduler())));
         log::info!("{dbg}.run |     Configuring services...");
+        let services_factory = ServicesFactory::new(&self_name);
         for (node_keywd, node_conf) in conf.nodes {
             let node_name = node_keywd.name();
-            let node_sufix = node_keywd.sufix();
+            let node_sufix = node_keywd.title();
             log::info!("{dbg}.run |         Configuring service: {}({})...", node_name, node_sufix);
             log::trace!("{dbg}.run |         Config: {:#?}", node_conf);
             services.insert(
-                Self::build_service(&dbg, &self_name, &node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler()),
+                services_factory.service(&node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler()),
             );
             log::info!("{dbg}.run |         Configuring service: {}({}) - ok\n", node_name, node_sufix);
         }
@@ -99,45 +89,6 @@ impl App {
         log::info!("{dbg}.run | Application exit - Ok\n");
         Ok(())
     }    
-    ///
-    /// Returns service by it's name
-    fn build_service(dbg: &Dbg, parent: &Name, node_name: &str, node_sufix: &str, node_conf: ConfTree, services: Arc<Services>, scheduler: Scheduler) -> Arc<dyn Service> {
-        match node_name {
-            Services::API_CLIENT => Arc::new(
-                ApiClient::new(ApiClientConf::new(parent, node_conf), services, scheduler.clone())
-            ),
-            Services::MULTI_QUEUE => Arc::new(
-                MultiQueue::new(MultiQueueConf::new(parent, node_conf), services, Some(scheduler.clone()))
-            ),
-            Services::PROFINET_CLIENT => Arc::new(
-                ProfinetClient::new(ProfinetClientConf::new(parent, node_conf), services, scheduler.clone())
-            ),
-            Services::TASK => Arc::new(
-                Task::new(TaskConf::new(parent, node_conf), services.clone(), scheduler.clone())
-            ),
-            Services::TCP_CLIENT => Arc::new(
-                TcpClient::new(TcpClientConf::new(parent, node_conf), services.clone(), scheduler.clone())
-            ),
-            Services::TCP_SERVER => Arc::new(
-                TcpServer::new(TcpServerConf::new(parent, node_conf), services.clone(), scheduler.clone())
-            ),
-            Services::PRODUCER_SERVICE => Arc::new(
-                ProducerService::new(ProducerServiceConf::new(parent, node_conf), services.clone(), scheduler.clone())
-            ),
-            Services::CACHE_SERVICE => Arc::new(
-                CacheService::new(CacheServiceConf::new(parent, node_conf), services.clone(), scheduler.clone())
-            ),
-            Services::SLMP_CLIENT => Arc::new(
-                SlmpClient::new(SlmpClientConf::new(parent, node_conf), services, scheduler.clone())
-            ),
-            "FrdmService" => Arc::new(
-                FrdmService::new(FrdmServiceConf::new(parent, node_conf), services, scheduler.clone())
-            ),
-            _ => {
-                panic!("{}.build_service | Unknown service: {}({})", dbg, node_name, node_sufix);
-            }
-        }
-    }
     ///
     /// Listening for signals from the operating system
     fn listen_sys_signals(dbg: Dbg, services: Arc<Services>, scheduler: Scheduler) {

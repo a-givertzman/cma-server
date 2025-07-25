@@ -21,5 +21,7 @@ pub mod slmp_client;
 pub mod task;
 pub mod tcp_client;
 pub mod udp_client;
+mod services_factory;
 
 pub use frdm_service::*;
+pub use services_factory::*;

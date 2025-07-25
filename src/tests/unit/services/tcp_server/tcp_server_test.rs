@@ -6,9 +6,8 @@ mod tcp_server {
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues}, session::test_session::TestSession};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::tcp_server_conf::TcpServerConf,
         services::{
-            server::tcp_server::TcpServer,
+            server::{TcpServerConf, TcpServer},
             task::{TaskTestProducer, TaskTestReceiver},
         },
         tests::unit::services::tcp_server::{emulated_tcp_client_recv::EmulatedTcpClientRecv, emulated_tcp_client_send::EmulatedTcpClientSend},
