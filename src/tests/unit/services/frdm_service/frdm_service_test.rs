@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{domain::testing::{SendService, SendServiceConf}, services::{FrdmService, FrdmServiceConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
+use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, services::{FrdmService, FrdmServiceConf}};
 
 ///
 ///
@@ -145,7 +145,15 @@ fn run() {
         tp.scheduler(),
     ));
     services.insert(producer.clone());
-    let receiver = Arc::new(MockRecvService::new(&dbg, &format!("in-queue"), None));
+    let conf = serde_yaml::from_str(&format!(r#"
+        service RecvService RecvService:
+            in queue in-queue:
+                max-length: 10000
+    "#)).unwrap();
+    let receiver = Arc::new(RecvService::new(
+        &dbg,
+        RecvServiceConf::from_yaml(&dbg, &conf),
+    ));
     services.insert(receiver.clone());
     services.run().unwrap();
     receiver.run().unwrap();

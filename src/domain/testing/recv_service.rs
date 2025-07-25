@@ -1,74 +1,70 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
-use crate::domain::{constants::constants::RECV_TIMEOUT, RwLock};
+use crate::domain::{constants::constants::RECV_TIMEOUT, testing::RecvServiceConf, RwLock};
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(0);
 ///
 /// 
-pub struct MockRecvService {
+pub struct RecvService {
     dbg: Dbg,
     name: Name,
+    conf: RecvServiceConf,
     in_queue: HashMap<String, Sender<Point>>,
     recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
-    recv_limit: Option<usize>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
 // 
-impl MockRecvService {
+impl RecvService {
     ///
     /// - `in_queue` - The name if link to send to
     /// - `recv_limit` - Service will exit after received specified number of events
-    pub fn new(parent: impl Into<String>, in_queue: &str, recv_limit: Option<usize>) -> Self {
-        let name = Name::new(parent, format!("MockRecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+    pub fn new(parent: impl Into<String>, conf: RecvServiceConf) -> Self {
+        let name = Name::new(parent, format!("RecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = channel::unbounded();
         let dbg = Dbg::new(name.parent(), name.me());
+        let in_queue = HashMap::from([(conf.in_queue.clone(), send)]);
         Self {
             name,
-            in_queue: HashMap::from([(in_queue.to_string(), send)]),
+            conf,
+            in_queue,
             recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
-            recv_limit,
             handles: Handles::new(&dbg),
             dbg,
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
-    /// 
-    // pub fn id(&self) -> String {
-    //     self.id.clone()
-    // }
-    ///
-    /// 
+    /// Returns `Vec` of received values
     pub fn received(&self) -> Arc<RwLock<Vec<Point>>> {
         self.received.clone()
     }
 }
 //
 // 
-impl Object for MockRecvService {
+impl Object for RecvService {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
 // 
-impl Debug for MockRecvService {
+impl Debug for RecvService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("MockRecvService")
+            .debug_struct("RecvService")
             .field("id", &self.dbg)
             .finish()
     }
 }
 //
 //
-impl Service for MockRecvService {
+impl Service for RecvService {
     //
     //
     fn get_link(&self, name: &str) -> Sender<Point> {
@@ -85,7 +81,7 @@ impl Service for MockRecvService {
         let exit = self.exit.clone();
         let recv = self.recv.take().unwrap();
         let received = self.received.clone();
-        let recv_limit = self.recv_limit.clone();
+        let recv_limit = self.conf.recv_limit.clone();
         let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             match recv_limit {
