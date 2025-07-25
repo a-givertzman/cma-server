@@ -34,7 +34,7 @@ impl ServicesFactory {
         }
     }
     ///
-    /// Returns service new instance by it's name
+    /// ## Returns service new instance by it's name
     /// - `kind` - The kind of the service
     /// - `name` - The name of the service
     /// - `conf` - The conf of the service
@@ -45,6 +45,9 @@ impl ServicesFactory {
     /// # keywd |     kind      |     name
     /// service     ApiClient       ApiClient-1
     /// ```
+    /// 
+    /// ### Panics
+    /// - if specified service `name` is not supported
     pub fn service(&self, kind: impl Into<String>, name: &str, conf: ConfTree, services: Arc<Services>, scheduler: Scheduler) -> Arc<dyn Service> {
         let kind = &kind.into();
         match kind.as_ref() {

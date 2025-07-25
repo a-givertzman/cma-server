@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{domain::testing::MockSendService, services::{FrdmService, FrdmServiceConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
+use crate::{domain::testing::{SendService, SendServiceConf}, services::{FrdmService, FrdmServiceConf}, tests::unit::services::mock::mock_recv_service::MockRecvService};
 
 ///
 ///
@@ -131,12 +131,17 @@ fn run() {
     let mq_conf = MultiQueueConf::from_yaml(&dbg, &conf);
     let mq = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
     services.insert(mq.clone());
-    let producer = Arc::new(MockSendService::new(
+    let conf = serde_yaml::from_str(&format!(r#"
+        service MultiQueue:
+            send-to:/{dbg}/MultiQueue.in-queue
+    "#)).unwrap();
+    let conf = SendServiceConf::from_yaml(&dbg, &conf);
+    let producer = Arc::new(SendService::new(
         &dbg,
-        &format!("/{dbg}/MultiQueue.in-queue"),
-        services.clone(),
+        conf,
+        // &format!("/{dbg}/MultiQueue.in-queue"),
         test_data,
-        None,
+        services.clone(),
         tp.scheduler(),
     ));
     services.insert(producer.clone());

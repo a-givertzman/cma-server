@@ -1,17 +1,16 @@
-use std::{fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point, PointTxId, ToPoint}, LinkName, Service, Services}, sync::{channel::Sender, Handles}, thread_pool::Scheduler};
+use sal_sync::{services::{entity::{Name, Object, Point, PointTxId, ToPoint}, Service, ServiceCycle, Services}, sync::{channel::Sender, Handles}, thread_pool::Scheduler};
 use testing::entities::test_value::Value;
-use crate::domain::RwLock;
+use crate::domain::{testing::SendServiceConf, RwLock};
 ///
-///
-pub struct MockSendService {
+/// Service simply sends specified `events` into the specified `send-to` link and exits
+pub struct SendService {
     name: Name,
-    send_to: LinkName,
+    conf: SendServiceConf,
     services: Arc<Services>,
-    test_data: Vec<Value>,
+    events: Vec<Value>,
     sent: Arc<RwLock<Vec<Point>>>,
-    delay: Option<Duration>,
     scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
@@ -19,18 +18,21 @@ pub struct MockSendService {
 }
 //
 // 
-impl MockSendService {
+impl SendService {
+    ///
+    /// Returns [SendService] new instance
+    /// - `send_to` - Service name to send specified `events` to
+    /// - `events` - [Value]'s will be sent to the specified in the `send_to` service
     #[allow(unused)]
-    pub fn new(parent: impl Into<String>, send_to: &str, services: Arc<Services>, test_data: Vec<Value>, delay: Option<Duration>, scheduler: Scheduler) -> Self {
-        let name = Name::new(parent, format!("MockSendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
+    pub fn new(parent: impl Into<String>, conf: SendServiceConf, events: Vec<Value>, services: Arc<Services>, scheduler: Scheduler) -> Self {
+        let name = Name::new(parent, format!("SendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
-            send_to: LinkName::from_str(send_to).unwrap(),
+            conf,
             services,
-            test_data,
+            events,
             sent: Arc::new(RwLock::new(vec![])),
-            delay,
             scheduler,
             handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
@@ -57,24 +59,24 @@ impl MockSendService {
 }
 //
 // 
-impl Object for MockSendService {
+impl Object for SendService {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
 // 
-impl Debug for MockSendService {
+impl Debug for SendService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("MockSendService")
+            .debug_struct("SendService")
             .field("id", &self.dbg)
             .finish()
     }
 }
 //
 //
-impl Service for MockSendService {
+impl Service for SendService {
     //
     //
     fn get_link(&self, _name: &str) -> Sender<Point> {
@@ -92,17 +94,17 @@ impl Service for MockSendService {
         let txid = PointTxId::from_str(&self.name.join());
         let name = self.name.join();
         let exit = self.exit.clone();
-        let tx_send = self.services.get_link(&self.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
-        });
-        let test_data = self.test_data.clone();
+        let send_to = self.services.get_link(&self.conf.send_to)
+            .map_err(|err| format!("{}.run | services.get_link error: {:#?}", self.dbg, err)).unwrap();
+        let events = self.events.clone();
         let sent = self.sent.clone();
-        let delay = self.delay.clone();
+        let interval = self.conf.cycle.clone();
+        let cycle = interval.map(|interval| ServiceCycle::new(&name, interval));
         let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
-            for (ix, value) in test_data.iter().enumerate() {
+            for (ix, value) in events.iter().enumerate() {
                 let point = value.to_point(txid, &format!("{name}/Test.val-{ix}"));
-                match tx_send.send(point.clone()) {
+                match send_to.send(point.clone()) {
                     Ok(_) => {
                         log::trace!("{}.run | send: {:?}", dbg, point);
                         sent.write().push(point);
@@ -114,11 +116,8 @@ impl Service for MockSendService {
                 if exit.load(Ordering::SeqCst) {
                     break;
                 }
-                match delay {
-                    Some(duration) => {
-                        thread::sleep(duration);
-                    }
-                    None => {}
+                if let Some(cycle) = &cycle {
+                    cycle.wait();
                 }
             }
             Ok(())

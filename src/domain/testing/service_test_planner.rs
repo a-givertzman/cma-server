@@ -1,9 +1,10 @@
 use std::{str::FromStr, sync::{atomic::AtomicBool, Arc}};
 use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Point}, LinkName, Service, Services}, thread_pool::{Scheduler, ThreadPool}};
+use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, LinkName, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
+use testing::entities::test_value::Value;
 
-use crate::services::ServicesFactory;
+use crate::{domain::testing::{SendService, SendServiceConf}, services::ServicesFactory};
 
 ///
 /// Makes easier to orgenise test of Srvice
@@ -21,6 +22,7 @@ pub struct ServiceTestPlanner<InspectEachSent> {
     tp: ThreadPool,
     services: Arc<Services>,
     tasks: Arc<DashMap<String, Arc<dyn Service>>>,
+    events: Owner<Vec<Vec<Value>>>,
     // exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
@@ -37,11 +39,14 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
         conf: ConfTree,
         inspect_each_sent: InspectEachSent,
         services: Arc<Services>,
+        mut events: Vec<Vec<Value>>,
     ) -> Self {
         let parent = parent.into();
         let name = Name::new(&parent, "ServiceTestPlanner");
         let dbg = Dbg::new(&parent, name.me());
-        let tp = ThreadPool::new(parent, Some(12));
+        let tread_pool = conf.get("tread_pool").map(|v: u64| v as usize);
+        let tp = ThreadPool::new(parent, tread_pool);
+        events.reverse();
         Self {
             name,
             conf,
@@ -50,6 +55,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
             tp,
             services,
             tasks: Arc::new(DashMap::new()),
+            events: Owner::new(events),
             // exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
@@ -64,14 +70,14 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "run");
-        let tread_pool = self.conf.get("tread_pool").map(|v: u64| v as usize);
         let services = self.conf.get("services").expect(&format!("{dbg}.run | `services` not foind in the config or has wrong value"));
         let services = ServicesConf::new(&dbg, services);
         let services = Arc::new(Services::new(&dbg, services, Some(self.tp.scheduler())));
+        let mut send_events = self.events.take().expect(&format!("{dbg}.run | `events` vant be empty, Vec<Vec<Value>> expected"));
         match self.conf.sub_nodes() {
             Some(nodes) => {
-                let tp = ThreadPool::new(&dbg, tread_pool);
                 let services_factory = ServicesFactory::new(&self.name);
+                let mut send_services = vec![];
                 let mut services_order = vec![];
                 for conf in nodes {
                     match ConfKeywd::from_str(&conf.key) {
@@ -82,10 +88,40 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                         (Ok(node_name), Ok(node_title)) => {
                                             log::info!("{dbg}.run | Configuring service: {} '{}'...", node_name, node_title);
                                             log::trace!("{dbg}.run | Config: {:#?}", conf);
-                                            let service = services_factory.service(&node_name, &node_title, conf, services.clone(), tp.scheduler());
-                                            self.tasks.insert(service.name().join(), service.clone());
-                                            services_order.push(service.name().join());
-                                            services.insert(service);
+                                            match node_name.as_str() {
+                                                "SendService" => {
+                                                    let conf = SendServiceConf::new(&self.name, conf);
+                                                    let events = match send_events.pop() {
+                                                        Some(events) => events,
+                                                        None => return Err(
+                                                            error.err(&format!("{dbg}.run | SendService [{}] out of avialeble 'events' ({}), SendService's and 'events' should have same size", send_services.len() + 1, send_events.len())),
+                                                        ),
+                                                    };
+                                                    let service = Arc::new(SendService::new(
+                                                        &self.name,
+                                                        conf,
+                                                        events,
+                                                        services.clone(),
+                                                        self.tp.scheduler(),
+                                                    ));
+                                                    self.tasks.insert(service.name().join(), service.clone());
+                                                    send_services.push(service.clone());
+                                                    services.insert(service);
+                                                }
+                                                "RecvService" => {}
+                                                _ => {
+                                                    let service = services_factory.service(
+                                                        &node_name,
+                                                        &node_title,
+                                                        conf,
+                                                        services.clone(),
+                                                        self.tp.scheduler(),
+                                                    );
+                                                    self.tasks.insert(service.name().join(), service.clone());
+                                                    services_order.push(service.name().join());
+                                                    services.insert(service);
+                                                }
+                                            }
                                             log::info!("{dbg}.run | Configuring service: {} '{}' - ok\n", node_name, node_title);
                                         }
                                         (Ok(name), Err(err)) => log::warn!("{dbg}.run | Service '{name}' config `Title` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
@@ -112,7 +148,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
             }
             None => Err(error.err(format!("{dbg}.run | Empty or wrong config: {:#?}", self.conf))),
         }
-        // let prodocer = MockSendService::new(parent,
+        // let prodocer = SendService::new(parent,
         //     send_to: self.p,
         //     services,
         //     test_data,
@@ -140,6 +176,9 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
             if let Err(err) = service.wait() {
                 errors.push(err);
             }
+        }
+        if let Err(err) = self.tp.join() {
+            errors.push(err);
         }
         errors
             .is_empty()
