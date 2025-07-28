@@ -1,9 +1,10 @@
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}};
+use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use crate::domain::{constants::constants::RECV_TIMEOUT, testing::RecvServiceConf, RwLock};
 ///
 /// Global static counter of FnOut instances
+#[allow(unused)]
 static COUNT: AtomicUsize = AtomicUsize::new(0);
 ///
 /// 
@@ -21,9 +22,12 @@ pub struct RecvService {
 //
 // 
 impl RecvService {
-    ///
-    /// - `in_queue` - The name if link to send to
-    /// - `recv_limit` - Service will exit after received specified number of events
+    /// 
+    /// - `conf` - [RecvServiceConf]:
+    ///     - `in-queue` - The name of link of incoming events
+    ///     - `recv_limit` - Service will exit after received specified number of events
+    ///         - if not specified, then exit after [RecvService]`.exit` called
+#[allow(unused)]
     pub fn new(parent: impl Into<String>, conf: RecvServiceConf, scheduler: Scheduler) -> Self {
         let name = Name::new(parent, format!("RecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = channel::unbounded();

@@ -5,7 +5,6 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::ConfTree, entity::ToPoint};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-
 use crate::domain::testing::ServiceTestPlanner;
 ///
 ///
@@ -24,27 +23,28 @@ fn init_each() -> () {}
 ///
 /// Testing such functionality / behavior
 #[test]
-fn functionality() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+fn run() {
+    DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = Dbg::own("functionality");
+    let dbg = Dbg::own("ServiceTestPlanner-test");
     log::debug!("\n{dbg}");
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
     let conf = ConfTree::new_root(
         serde_yaml::from_str(&format!(r"
+            thread-pool: 12
             services:
                 retain:
-                    path: assets/retain/
+                    path: assets/testing/retain/
                     point:
                         path: point/id.json
-                        api:
-                            table: public.tags
-                            address: 0.0.0.0:8080
-                            auth_token: 123!@#
-                            database: crane_data_server
+                        # api:
+                        #     table: public.tags
+                        #     address: 0.0.0.0:8080
+                        #     auth_token: 123!@#
+                        #     database: crane_data_server
 
             service MultiQueue:
                 in queue in-queue:
@@ -52,7 +52,7 @@ fn functionality() {
                 send-to:
 
             service SendService SendService0:
-                send-to:/{dbg}/MultiQueue.in-queue
+                send-to: /{dbg}/MultiQueue.in-queue
 
             service RecvService RecvService0:
                 in queue in-queue:

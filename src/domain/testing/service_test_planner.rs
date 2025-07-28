@@ -39,7 +39,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     /// - `events` - Vector of pairs: (event-name, event-value)
     pub fn new(
         parent: impl Into<String>,
-        conf: ConfTree,
+        mut conf: ConfTree,
         inspect_each_sent: InspectEachSent,
         event_builder: impl Fn(usize, usize, &str, &Value) -> Point + Send + Sync + 'static,
         events: Vec<Vec<(impl Into<String>, Value)>>,
@@ -47,11 +47,13 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
         let parent = parent.into();
         let name = Name::new(&parent, "ServiceTestPlanner");
         let dbg = Dbg::new(&parent, name.me());
-        let tread_pool = conf.get("tread_pool").map(|v: u64| v as usize);
-        let tp = ThreadPool::new(parent, tread_pool);
+        let tread_pool = conf.get("thread-pool").map(|v: u64| v as usize);
+        let _ = conf.remove("thread-pool");
+        let tp = ThreadPool::new(&parent, tread_pool);
         let services = conf.get("services").expect(&format!("{dbg}.run | `services` not foind in the config or has wrong value"));
-        let services = ServicesConf::new(&dbg, services);
-        let services = Arc::new(Services::new(&dbg, services, Some(tp.scheduler())));
+        let _ = conf.remove("services");
+        let services = ServicesConf::new(&parent, services);
+        let services = Arc::new(Services::new(&parent, services, Some(tp.scheduler())));
         let events: Vec<Vec<(String, Value)>> = events
             .into_iter()
             .map(|events| {
@@ -82,7 +84,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
         let mut send_events = self.events.take().expect(&format!("{dbg}.run | `events` vant be empty, Vec<Vec<Value>> expected"));
         match self.conf.sub_nodes() {
             Some(nodes) => {
-                let services_factory = ServicesFactory::new(&self.name);
+                let services_factory = ServicesFactory::new(&Name::new(self.name.parent(), ""));
                 let mut send_services = vec![];
                 let mut recv_services = vec![];
                 let mut services_order = vec![];
@@ -97,7 +99,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                             log::trace!("{dbg}.run | Config: {:#?}", conf);
                                             match node_name.as_str() {
                                                 "SendService" => {
-                                                    let conf = SendServiceConf::new(&self.name, conf);
+                                                    let conf = SendServiceConf::new(self.name.parent(), conf);
                                                     let events = match send_events.pop() {
                                                         Some(events) => events,
                                                         None => return Err(
@@ -106,7 +108,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                                     };
                                                     let event_builder = self.event_builder.clone();
                                                     let service = Arc::new(SendService::new(
-                                                        &self.name,
+                                                        self.name.parent(),
                                                         conf,
                                                         Some(move |txid, ix, point_name: &str, val: &Value| {
                                                             let point = (event_builder)(txid, ix, point_name, val);
@@ -122,9 +124,9 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                                     self.services.insert(service);
                                                 }
                                                 "RecvService" => {
-                                                    let conf = RecvServiceConf::new(&self.name, conf);
+                                                    let conf = RecvServiceConf::new(self.name.parent(), conf);
                                                     let service = Arc::new(RecvService::new(
-                                                        &self.name,
+                                                        self.name.parent(),
                                                         conf,
                                                         self.tp.scheduler(),
                                                     ));
@@ -142,6 +144,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                                     );
                                                     self.tasks.insert(service.name().join(), service.clone());
                                                     services_order.push(service.name().join());
+                                                    log::info!("{dbg}.run | Configuring service: {} - ok\n", service.name());
                                                     self.services.insert(service);
                                                 }
                                             }
@@ -160,6 +163,14 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                         Err(err) => return Err(error.pass_with(format!("{dbg}.run | Unsupported keword '{}' in config: {:#?}", conf.key, conf), err)),
                     }
                 }
+                log::info!("{dbg}.run | Starting receivers...");
+                for recv in recv_services {
+                    if let Err(err) = recv.run() {
+                        return Err(error.pass_with("Eror to start service", err));
+                    }
+                }
+                log::info!("{dbg}.run | Starting receivers - Ok");
+                log::info!("{dbg}.run | Starting services...");
                 for key in services_order.iter() {
                     if let Some(service) = self.tasks.get(key) {
                         if let Err(err) = service.run() {
@@ -167,6 +178,14 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                         }
                     }
                 }
+                log::info!("{dbg}.run | Starting services - Ok");
+                log::info!("{dbg}.run | Starting senders...");
+                for send in send_services {
+                    if let Err(err) = send.run() {
+                        return Err(error.pass_with("Eror to start service", err));
+                    }
+                }
+                log::info!("{dbg}.run | Starting senders - Ok");
                 Ok(())
             }
             None => Err(error.err(format!("{dbg}.run | Empty or wrong config: {:#?}", self.conf))),

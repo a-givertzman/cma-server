@@ -2,9 +2,9 @@ use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
 use std::fs;
 
 ///
-/// Config for SendService format:
+/// Config for [RecvService] format:
 /// ```yaml
-/// service SendService SendService1:
+/// service RecvService RecvService1:
 ///     recv-limit: 100
 ///     in queue in-queue:
 ///         max-length: 10000
