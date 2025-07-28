@@ -1,9 +1,8 @@
-use std::{str::FromStr, sync::{atomic::AtomicBool, Arc}};
+use std::{str::FromStr, sync::Arc};
 use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, LinkName, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
+use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point, PointTxId, ToPoint}, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
 use testing::entities::test_value::Value;
-
 use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, services::ServicesFactory};
 
 ///
@@ -17,13 +16,12 @@ use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendSer
 pub struct ServiceTestPlanner<InspectEachSent> {
     name: Name,
     conf: ConfTree,
-    produce_to: LinkName,
     inspect_each_sent: InspectEachSent,
     tp: ThreadPool,
     services: Arc<Services>,
     tasks: Arc<DashMap<String, Arc<dyn Service>>>,
-    events: Owner<Vec<Vec<Value>>>,
-    // exit: Arc<AtomicBool>,
+    event_builder: Arc<Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync>>,
+    events: Owner<Vec<Vec<(String, Value)>>>,
     dbg: Dbg,
 }
 //
@@ -33,30 +31,41 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     ///
     /// Crteates [ServiceTestPlanner] new instance
     /// - `conf` - Yaml configuration containing all staff
+    /// - `event_builder` - `Fn(txid: usize, ix: usize, val: &Value) -> Point`, where
+    ///     - `txid` - Current [SendService] `Point`'s txid
+    ///     - `ix` - Index of the `Value` in the `events`
+    ///     - `name` - point name in the `events`
+    ///     - `val` - Current value from `events`, to be sent as returned `Point`
+    /// - `events` - Vector of pairs: (event-name, event-value)
     pub fn new(
         parent: impl Into<String>,
-        produce_to: LinkName,
         conf: ConfTree,
         inspect_each_sent: InspectEachSent,
-        services: Arc<Services>,
-        mut events: Vec<Vec<Value>>,
+        event_builder: impl Fn(usize, usize, &str, &Value) -> Point + Send + Sync + 'static,
+        events: Vec<Vec<(impl Into<String>, Value)>>,
     ) -> Self {
         let parent = parent.into();
         let name = Name::new(&parent, "ServiceTestPlanner");
         let dbg = Dbg::new(&parent, name.me());
         let tread_pool = conf.get("tread_pool").map(|v: u64| v as usize);
         let tp = ThreadPool::new(parent, tread_pool);
-        events.reverse();
+        let services = conf.get("services").expect(&format!("{dbg}.run | `services` not foind in the config or has wrong value"));
+        let services = ServicesConf::new(&dbg, services);
+        let services = Arc::new(Services::new(&dbg, services, Some(tp.scheduler())));
+        let events: Vec<Vec<(String, Value)>> = events
+            .into_iter()
+            .map(|events| {
+                events.into_iter().rev().map(|(name, value)| (name.into(), value)).collect()
+            }).collect();
         Self {
             name,
             conf,
-            produce_to,
             inspect_each_sent,
             tp,
             services,
             tasks: Arc::new(DashMap::new()),
+            event_builder: Arc::new(Box::new(event_builder)),
             events: Owner::new(events),
-            // exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
     }
@@ -70,9 +79,6 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "run");
-        let services = self.conf.get("services").expect(&format!("{dbg}.run | `services` not foind in the config or has wrong value"));
-        let services = ServicesConf::new(&dbg, services);
-        let services = Arc::new(Services::new(&dbg, services, Some(self.tp.scheduler())));
         let mut send_events = self.events.take().expect(&format!("{dbg}.run | `events` vant be empty, Vec<Vec<Value>> expected"));
         match self.conf.sub_nodes() {
             Some(nodes) => {
@@ -98,16 +104,22 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                                             error.err(&format!("{dbg}.run | SendService [{}] out of avialeble 'events' ({}), SendService's and 'events' should have same size", send_services.len() + 1, send_events.len())),
                                                         ),
                                                     };
+                                                    let event_builder = self.event_builder.clone();
                                                     let service = Arc::new(SendService::new(
                                                         &self.name,
                                                         conf,
+                                                        Some(move |txid, ix, point_name: &str, val: &Value| {
+                                                            let point = (event_builder)(txid, ix, point_name, val);
+                                                            // val.to_point(txid, point_name)
+                                                            point
+                                                        }),
                                                         events,
-                                                        services.clone(),
+                                                        self.services.clone(),
                                                         self.tp.scheduler(),
                                                     ));
                                                     self.tasks.insert(service.name().join(), service.clone());
                                                     send_services.push(service.clone());
-                                                    services.insert(service);
+                                                    self.services.insert(service);
                                                 }
                                                 "RecvService" => {
                                                     let conf = RecvServiceConf::new(&self.name, conf);
@@ -118,19 +130,19 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                                     ));
                                                     self.tasks.insert(service.name().join(), service.clone());
                                                     recv_services.push(service.clone());
-                                                    services.insert(service);
+                                                    self.services.insert(service);
                                                 }
                                                 _ => {
                                                     let service = services_factory.service(
                                                         &node_name,
                                                         &node_title,
                                                         conf,
-                                                        services.clone(),
+                                                        self.services.clone(),
                                                         self.tp.scheduler(),
                                                     );
                                                     self.tasks.insert(service.name().join(), service.clone());
                                                     services_order.push(service.name().join());
-                                                    services.insert(service);
+                                                    self.services.insert(service);
                                                 }
                                             }
                                             log::info!("{dbg}.run | Configuring service: {} '{}' - ok\n", node_name, node_title);
@@ -173,7 +185,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     /// like std::thread::JoinHandle - may panic on some platforms
     /// if a thread attempts to join itself or otherwise may
     /// create a deadlock with joining threads.
-    fn wait(&self) -> Result<(), Error> {
+    pub fn wait(&self) -> Result<(), Error> {
         let mut errors = vec![];
         for item in self.tasks.iter() {
             let service = item.value();
@@ -195,7 +207,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     /// Checks if the Service has finished running.
     /// 
     /// To finish the Service call exit
-    fn is_finished(&self) -> bool {
+    pub fn is_finished(&self) -> bool {
         let mut is_finished = false;
         for item in self.tasks.iter() {
             let service = item.value();
@@ -206,7 +218,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     ///
     /// Sends "exit" signal to all service's 
     /// for complettelly stop execution
-    fn exit(&self) {
+    pub fn exit(&self) {
         // self.exit.store(true, Ordering::Release);
         for item in self.tasks.iter() {
             let service = item.value();

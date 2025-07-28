@@ -9,7 +9,8 @@ pub struct SendService {
     name: Name,
     conf: SendServiceConf,
     services: Arc<Services>,
-    events: Vec<Value>,
+    event_builder: Option<Arc<Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync>>>,
+    events: Vec<(String, Value)>,
     sent: Arc<RwLock<Vec<Point>>>,
     scheduler: Scheduler,
     handles: Handles<()>,
@@ -18,20 +19,37 @@ pub struct SendService {
 }
 //
 // 
-impl SendService {
+impl SendService { 
+    // EventBuilder: Fn(&Value) -> Point + Send + Sync + 'static {
     ///
     /// Returns [SendService] new instance
     /// - `send_to` - Service name to send specified `events` to
-    /// - `events` - [Value]'s will be sent to the specified in the `send_to` service
+    /// - `event_builder` - `Fn(txid: usize, ix: usize, val: &Value) -> Point`, where
+    ///     - `txid` - Current [SendService] `Point`'s txid
+    ///     - `ix` - Index of the `Value` in the `events`
+    ///     - `name` - The `name` of the current `value` from `events`
+    ///     - `val` - Current value from `events`, to be sent as returned `Point`
+    /// - `events` - [Value]'s will be sent with associated `name`'s to the specified in the `send_to` service
     #[allow(unused)]
-    pub fn new(parent: impl Into<String>, conf: SendServiceConf, events: Vec<Value>, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        conf: SendServiceConf,
+        event_builder: Option<impl Fn(usize, usize, &str, &Value) -> Point + Send + Sync + 'static>,
+        events: Vec<(impl Into<String>, Value)>,
+        services: Arc<Services>,
+        scheduler: Scheduler,
+    ) -> Self {
         let name = Name::new(parent, format!("SendService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
             conf,
             services,
-            events,
+            event_builder: event_builder.map(|b| {
+                let b: Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync> = Box::new(b);
+                Arc::new(b)
+            }),
+            events: events.into_iter().map(|(n, v)| (n.into(), v)).collect(),
             sent: Arc::new(RwLock::new(vec![])),
             scheduler,
             handles: Handles::new(&dbg),
@@ -94,6 +112,7 @@ impl Service for SendService {
         let txid = PointTxId::from_str(&self.name.join());
         let name = self.name.join();
         let exit = self.exit.clone();
+        let event_builder = self.event_builder.clone();
         let send_to = self.services.get_link(&self.conf.send_to)
             .map_err(|err| format!("{}.run | services.get_link error: {:#?}", self.dbg, err)).unwrap();
         let events = self.events.clone();
@@ -102,8 +121,11 @@ impl Service for SendService {
         let cycle = interval.map(|interval| ServiceCycle::new(&name, interval));
         let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
-            for (ix, value) in events.iter().enumerate() {
-                let point = value.to_point(txid, &format!("{name}/Test.val-{ix}"));
+            for (ix, (point_name, value)) in events.iter().enumerate() {
+                let point = match &event_builder {
+                    Some(builder) => (builder)(txid, ix, point_name, value),
+                    None => value.to_point(txid, &format!("{name}/Test.val-{ix}")),
+                };
                 match send_to.send(point.clone()) {
                     Ok(_) => {
                         log::trace!("{}.run | send: {:?}", dbg, point);

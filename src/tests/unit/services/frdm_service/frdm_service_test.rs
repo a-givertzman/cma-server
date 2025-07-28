@@ -2,7 +2,7 @@
 use std::sync::Arc;
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::{services::{conf::{ConfTree, ServicesConf}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
+use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Point, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, services::{FrdmService, FrdmServiceConf}};
@@ -34,7 +34,7 @@ fn run() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
-    let test_data: Vec<Value> = vec![
+    let test_data: Vec<(&str, Value)> = vec![
     //     (01, ),
     ];
     // for (step, conf, target) in test_data {
@@ -132,7 +132,7 @@ fn run() {
     let mq = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
     services.insert(mq.clone());
     let conf = serde_yaml::from_str(&format!(r#"
-        service MultiQueue:
+        service SendService:
             send-to:/{dbg}/MultiQueue.in-queue
     "#)).unwrap();
     let conf = SendServiceConf::from_yaml(&dbg, &conf);
@@ -140,6 +140,7 @@ fn run() {
         &dbg,
         conf,
         // &format!("/{dbg}/MultiQueue.in-queue"),
+        None::<Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync + 'static>>,
         test_data,
         services.clone(),
         tp.scheduler(),
