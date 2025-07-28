@@ -161,6 +161,7 @@ fn reject() {
     let receiver = Arc::new(RecvService::new(
         dbg,
         RecvServiceConf::from_yaml(dbg, &conf),
+        tp.scheduler(),
     ));
     services.insert(receiver.clone());
     println!("{} | RecvService - ready", dbg);
@@ -271,6 +272,7 @@ fn request_auth_secret() {
     let receiver = Arc::new(RecvService::new(
         dbg,
         RecvServiceConf::from_yaml(dbg, &conf),
+        tp.scheduler(),
     ));
     services.insert(receiver.clone());
     println!("{} | RecvService - ready", dbg);
@@ -438,6 +440,7 @@ fn request_points() {
     let receiver = Arc::new(RecvService::new(
         dbg,
         RecvServiceConf::from_yaml(dbg, &conf),
+        tp.scheduler(),
     ));
     services.insert(receiver.clone());
     println!("{} | RecvService - ready", dbg);
@@ -664,6 +667,7 @@ fn auth_ssh() {
     let receiver = Arc::new(RecvService::new(
         dbg,
         RecvServiceConf::from_yaml(dbg, &conf),
+        tp.scheduler(),
     ));
     services.insert(receiver.clone());
     println!("{} | RecvService - ready", dbg);

@@ -4,7 +4,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, LinkName, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
 use testing::entities::test_value::Value;
 
-use crate::{domain::testing::{SendService, SendServiceConf}, services::ServicesFactory};
+use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, services::ServicesFactory};
 
 ///
 /// Makes easier to orgenise test of Srvice
@@ -78,6 +78,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
             Some(nodes) => {
                 let services_factory = ServicesFactory::new(&self.name);
                 let mut send_services = vec![];
+                let mut recv_services = vec![];
                 let mut services_order = vec![];
                 for conf in nodes {
                     match ConfKeywd::from_str(&conf.key) {
@@ -108,7 +109,17 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                                                     send_services.push(service.clone());
                                                     services.insert(service);
                                                 }
-                                                "RecvService" => {}
+                                                "RecvService" => {
+                                                    let conf = RecvServiceConf::new(&self.name, conf);
+                                                    let service = Arc::new(RecvService::new(
+                                                        &self.name,
+                                                        conf,
+                                                        self.tp.scheduler(),
+                                                    ));
+                                                    self.tasks.insert(service.name().join(), service.clone());
+                                                    recv_services.push(service.clone());
+                                                    services.insert(service);
+                                                }
                                                 _ => {
                                                     let service = services_factory.service(
                                                         &node_name,
@@ -148,13 +159,6 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
             }
             None => Err(error.err(format!("{dbg}.run | Empty or wrong config: {:#?}", self.conf))),
         }
-        // let prodocer = SendService::new(parent,
-        //     send_to: self.p,
-        //     services,
-        //     test_data,
-        //     delay,
-        //     self.tp.scheduler(),
-        // )
     }
     ///
     /// Starts service's main loop in the [ThreadPool]

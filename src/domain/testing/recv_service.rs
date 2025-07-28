@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use crate::domain::{constants::constants::RECV_TIMEOUT, testing::RecvServiceConf, RwLock};
 ///
 /// Global static counter of FnOut instances
@@ -14,6 +14,7 @@ pub struct RecvService {
     in_queue: HashMap<String, Sender<Point>>,
     recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
+    scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
@@ -23,7 +24,7 @@ impl RecvService {
     ///
     /// - `in_queue` - The name if link to send to
     /// - `recv_limit` - Service will exit after received specified number of events
-    pub fn new(parent: impl Into<String>, conf: RecvServiceConf) -> Self {
+    pub fn new(parent: impl Into<String>, conf: RecvServiceConf, scheduler: Scheduler) -> Self {
         let name = Name::new(parent, format!("RecvService{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let (send, recv) = channel::unbounded();
         let dbg = Dbg::new(name.parent(), name.me());
@@ -34,6 +35,7 @@ impl RecvService {
             in_queue,
             recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
+            scheduler,
             handles: Handles::new(&dbg),
             dbg,
             exit: Arc::new(AtomicBool::new(false)),
@@ -82,7 +84,7 @@ impl Service for RecvService {
         let recv = self.recv.take().unwrap();
         let received = self.received.clone();
         let recv_limit = self.conf.recv_limit.clone();
-        let handle = thread::Builder::new().name(format!("{}.run", dbg)).spawn(move || {
+        let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             match recv_limit {
                 Some(recv_limit) => {
@@ -119,6 +121,7 @@ impl Service for RecvService {
                     }
                 }
             }
+            Ok(())
         });
         match handle {
             Ok(handle) => {

@@ -153,6 +153,7 @@ fn run() {
     let receiver = Arc::new(RecvService::new(
         &dbg,
         RecvServiceConf::from_yaml(&dbg, &conf),
+        tp.scheduler(),
     ));
     services.insert(receiver.clone());
     services.run().unwrap();
