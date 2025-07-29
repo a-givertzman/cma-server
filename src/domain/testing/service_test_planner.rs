@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point, PointTxId, ToPoint}, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
+use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
 use testing::entities::test_value::Value;
 use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, services::ServicesFactory};
 
@@ -13,21 +13,22 @@ use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendSer
 /// - Provides to inspect of all received test events
 /// - Stops and await specified services in the reverse order
 /// 
-pub struct ServiceTestPlanner<InspectEachSent> {
+pub struct ServiceTestPlanner {
     name: Name,
     conf: ConfTree,
-    inspect_each_sent: InspectEachSent,
     tp: ThreadPool,
     services: Arc<Services>,
     tasks: Arc<DashMap<String, Arc<dyn Service>>>,
     event_builder: Arc<Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync>>,
     events: Owner<Vec<Vec<(String, Value)>>>,
+    inspect_each_sent: Vec<Arc<Box<dyn Fn(&Point) + Send + Sync>>>,
+    inspect_each_received: Vec<Arc<Box<dyn Fn(&Vec<Point>) + Send + Sync>>>,
+    inspect_all_received: Arc<Box<dyn Fn(Vec<Vec<Point>>) + Send + Sync>>,
     dbg: Dbg,
 }
 //
 //
-impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where 
-    InspectEachSent: Fn(Point) + Send + Sync + 'static {
+impl ServiceTestPlanner {
     ///
     /// Crteates [ServiceTestPlanner] new instance
     /// - `conf` - Yaml configuration containing all staff
@@ -37,12 +38,17 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
     ///     - `name` - point name in the `events`
     ///     - `val` - Current value from `events`, to be sent as returned `Point`
     /// - `events` - Vector of pairs: (event-name, event-value)
+    /// - `each_sent` - Inspect each sent event
+    /// - `each_received` - Inspect each receiver finished, planner finished successfully only if each returns `Ok`
+    /// - `all_received` - Inspect all receivers finished, planner finished successfully only if returns `Ok`
     pub fn new(
         parent: impl Into<String>,
         mut conf: ConfTree,
-        inspect_each_sent: InspectEachSent,
         event_builder: impl Fn(usize, usize, &str, &Value) -> Point + Send + Sync + 'static,
         events: Vec<Vec<(impl Into<String>, Value)>>,
+        each_sent: Vec<impl Fn(&Point) + Send + Sync + 'static>,
+        each_received: Vec<impl Fn(&Vec<Point>) + Send + Sync + 'static>,
+        all_received: impl Fn(Vec<Vec<Point>>) + Send + Sync + 'static,
     ) -> Self {
         let parent = parent.into();
         let name = Name::new(&parent, "ServiceTestPlanner");
@@ -62,12 +68,20 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
         Self {
             name,
             conf,
-            inspect_each_sent,
             tp,
             services,
             tasks: Arc::new(DashMap::new()),
             event_builder: Arc::new(Box::new(event_builder)),
             events: Owner::new(events),
+            inspect_each_sent: each_sent.into_iter().map(|f| {
+                let f: Arc<Box<dyn Fn(&Point) + Send + Sync>> = Arc::new(Box::new(f));
+                f
+            }).collect(),
+            inspect_each_received: each_received.into_iter().map(|f| {
+                let f: Arc<Box<dyn Fn(&Vec<Point>) + Send + Sync>> = Arc::new(Box::new(f));
+                f
+            }).collect(),
+            inspect_all_received: Arc::new(Box::new(all_received)),
             dbg,
         }
     }
@@ -164,7 +178,7 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                     }
                 }
                 log::info!("{dbg}.run | Starting receivers...");
-                for recv in recv_services {
+                for recv in &recv_services {
                     if let Err(err) = recv.run() {
                         return Err(error.pass_with("Eror to start service", err));
                     }
@@ -186,6 +200,19 @@ impl<InspectEachSent> ServiceTestPlanner<InspectEachSent> where
                     }
                 }
                 log::info!("{dbg}.run | Starting senders - Ok");
+                let mut all_received = vec![];
+                log::info!("{dbg}.run | Waiting receivers...");
+                for (rcv_ix, recv) in recv_services.iter().enumerate() {
+                    if let Err(err) = recv.wait() {
+                        return Err(error.pass_with("Eror to start service", err));
+                    }
+                    let received = recv.received().read().clone();
+                    (self.inspect_each_received[rcv_ix])(&received);
+                    all_received.push(received);
+                }
+                log::info!("{dbg}.run | Waiting receivers - Ok");
+                (self.inspect_all_received)(all_received);
+                log::info!("{dbg}.run | All done");
                 Ok(())
             }
             None => Err(error.err(format!("{dbg}.run | Empty or wrong config: {:#?}", self.conf))),

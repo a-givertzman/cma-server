@@ -2,7 +2,7 @@
 
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::ConfTree, entity::ToPoint};
+use sal_sync::services::{conf::ConfTree, entity::{Point, ToPoint}};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::domain::testing::ServiceTestPlanner;
@@ -55,6 +55,9 @@ fn run() {
                 send-to: /{dbg}/MultiQueue.in-queue
 
             service RecvService RecvService0:
+                in queue in-queue:
+                    max-length: 10000
+            service RecvService RecvService1:
                 in queue in-queue:
                     max-length: 10000
 
@@ -136,13 +139,15 @@ fn run() {
         let result = val + 1;
         assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     }
-    let planner_dbg = dbg.clone();
+    let builder_dbg = dbg.clone();
+    let each_sent_dbg = dbg.clone();
+    let each_received_dbg = dbg.clone();
+    let all_received_dbg = dbg.clone();
     let planner = ServiceTestPlanner::new(
         &dbg,
         conf,
-        |event| {},
         move |txid, ix, name: &str, event: &Value| {
-            let dbg = planner_dbg.clone();
+            let dbg = builder_dbg.clone();
             log::debug!("{dbg} | test event {ix}: '{name}'");
             event.to_point(txid, name)
         },
@@ -157,6 +162,25 @@ fn run() {
                 ("Int6", Value::Int(6)),
             ],
         ],
+        vec![
+            move |event: &Point| {
+                let dbg = each_sent_dbg.clone();
+                log::debug!("{dbg} | Sent event: {:?}", event.name());
+            },
+        ],
+        (0..1).map(|ix| {
+            let dbg = each_received_dbg.clone();
+            move |received: &Vec<Point>| {    // RecvService0
+                log::debug!("{dbg} | Receiver{ix} received: {:?}", received);
+            }
+        }).collect(),
+        move |received: Vec<Vec<Point>>| {
+            let dbg = all_received_dbg.clone();
+            log::debug!("{dbg} | All received:");
+            for (ix, recvd) in received.iter().enumerate() {
+                log::debug!("{dbg} | Received[{ix}]: {:?}", recvd);
+            }
+        },
     );
     planner.run().unwrap();
     planner.wait().unwrap();
