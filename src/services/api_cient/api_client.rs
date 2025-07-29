@@ -1,6 +1,6 @@
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point, PointHlr, PointTxId}, Service, ServiceCycle, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
+use sal_sync::{services::{entity::{Cot, Name, Object, Point, PointHlr, PointTxId, Status}, Service, ServiceCycle, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{
@@ -184,20 +184,44 @@ impl Service for ApiClient {
                                     match Self::send(&dbg, &mut request, &conf.database, sql, api_keep_alive) {
                                         Ok(reply) => {
                                             if reply.has_error() {
-                                                log::warn!("{}.run | API reply has error: {:?}", dbg, reply.error);
-                                            } else {
                                                 if let Some(send_to) = &send_to {
-                                                    match serde_json::to_string(&reply.data) {
+                                                    match serde_json::to_string(&reply.error) {
                                                         Ok(reply) => {
-                                                            if let Err(err) = send_to.send(Point::String(PointHlr::new_string(txid, &point.name, reply))) {
+                                                            if let Err(err) = send_to.send(Point::String(PointHlr::new(
+                                                                txid,
+                                                                &point.name,
+                                                                reply,
+                                                                Status::Ok,
+                                                                Cot::ReqErr,
+                                                                chrono::Utc::now(),
+                                                            ))) {
                                                                 log::warn!("{}.run | Send API reply error: {:?}", dbg, err);
                                                             }
                                                         }
                                                         Err(err) => log::warn!("{}.run | Parse API reply error: {:?}", dbg, err),
                                                     }
                                                 }
-                                                buffer.pop_first();
+                                                log::warn!("{}.run | API reply has error: {:?}", dbg, reply.error);
+                                            } else {
+                                                if let Some(send_to) = &send_to {
+                                                    match serde_json::to_string(&reply.data) {
+                                                        Ok(reply) => {
+                                                            if let Err(err) = send_to.send(Point::String(PointHlr::new(
+                                                                txid,
+                                                                &point.name,
+                                                                reply,
+                                                                Status::Ok,
+                                                                Cot::ReqCon,
+                                                                chrono::Utc::now(),
+                                                            ))) {
+                                                                log::warn!("{}.run | Send API reply error: {:?}", dbg, err);
+                                                            }
+                                                        }
+                                                        Err(err) => log::warn!("{}.run | Parse API reply error: {:?}", dbg, err),
+                                                    }
+                                                }
                                             }
+                                            buffer.pop_first();
                                         }
                                         Err(err) => {
                                             log::warn!("{}.run | Error: {:?}", dbg, err);
