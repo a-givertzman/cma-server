@@ -4061,7 +4061,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#7ff098958a8b1193e7b53f989e626cefbfc30826"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#980f1e21577cf56760fffd5dbec8389b7dc03aad"
 dependencies = [
  "api-tools 0.0.6",
  "chrono",
@@ -4521,7 +4521,7 @@ dependencies = [
 [[package]]
 name = "testing"
 version = "0.1.1"
-source = "git+https://github.com/a-givertzman/rust-testing.git?tag=0.1.2#b1d5d616276a0acfb683a87918ae20a938de1386"
+source = "git+https://github.com/a-givertzman/rust-testing.git?tag=0.1.2#67aea1abec45d8b0e178ad7a4c1ee9679f595ceb"
 dependencies = [
  "env_logger",
  "indexmap 2.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4532,7 +4532,7 @@ dependencies = [
 [[package]]
 name = "testing"
 version = "0.1.1"
-source = "git+https://github.com/a-givertzman/rust-testing.git#b1d5d616276a0acfb683a87918ae20a938de1386"
+source = "git+https://github.com/a-givertzman/rust-testing.git#67aea1abec45d8b0e178ad7a4c1ee9679f595ceb"
 dependencies = [
  "env_logger",
  "indexmap 2.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
