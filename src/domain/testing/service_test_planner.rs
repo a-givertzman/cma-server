@@ -115,7 +115,10 @@ impl ServiceTestPlanner {
                                                 "SendService" => {
                                                     let conf = SendServiceConf::new(self.name.parent(), conf);
                                                     let events = match send_events.pop() {
-                                                        Some(events) => events,
+                                                        Some(mut events) => {
+                                                            events.reverse();
+                                                            events
+                                                        }
                                                         None => return Err(
                                                             error.err(&format!("{dbg}.run | SendService [{}] out of avialeble 'events' ({}), SendService's and 'events' should have same size", send_services.len() + 1, send_events.len())),
                                                         ),

@@ -103,8 +103,12 @@ fn run() {
         ],
         (0..1).map(|ix| {
             let dbg = each_received_dbg.clone();
+            let events = events[ix].clone();
             move |received: &Vec<Point>| {    // RecvService0
-                log::debug!("{dbg} | Receiver{ix} received: {:#?}", received);
+                let result: Vec<(String, Value)> = received.iter().map(|p| (p.name(), p.value())).collect();
+                log::debug!("{dbg} | Receiver{ix} result: {:#?}", result);
+                let target: Vec<(String, Value)> = events.iter().map(|(name, val)| (name.to_string(), val.to_owned())).collect();
+                assert!(result == target, "{dbg} | Receiver{} \nresult: {:?}\ntarget: {:?}", ix, result, target);
             }
         }).collect(),
         move |received: Vec<Vec<Point>>| {
