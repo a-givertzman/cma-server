@@ -114,7 +114,9 @@ impl Service for FrdmService {
         );
         rope_deprecation.run()?;
         self.tasks.insert(rope_deprecation.name().join(), Arc::new(rope_deprecation));
+        log::info!("{}.run | Camera's configured: {}", self.dbg, conf.cameras.len());
         for (camera_id, camera) in conf.cameras.iter().enumerate() {
+            log::info!("{}.run | Camera '{}'", self.dbg, camera.name);
             let defect_detection = DefectDetection::new(&name,
                 txid,
                 DefectDetectionConf::new(

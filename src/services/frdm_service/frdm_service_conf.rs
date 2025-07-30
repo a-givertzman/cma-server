@@ -125,8 +125,10 @@ impl FrdmServiceConf {
         match conf.sub_nodes() {
             Some(nodes) => {
                 for node in nodes {
+                    log::debug!("{dbg}.new | camera: {:#?}", node.key);
+                    log::debug!("{dbg}.new | camera: {:#?}", ConfCustomKeywd::from_str(&node.key));
                     if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
-                        if keywd.keywd() == "camera" {
+                        if keywd.name() == "camera" {
                             let camera = CameraConf::new(&name, &node);
                             log::debug!("{dbg}.new | camera: {:#?}", camera);
                             cameras.push(camera);

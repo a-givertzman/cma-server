@@ -23,7 +23,6 @@ fn init_once() {
 fn init_each() -> () {}
 ///
 /// Testing [FrdmService].run
-#[ignore = "DO NOT FORGET REVERT THIS TEST"]
 #[test]
 fn run() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -45,7 +44,7 @@ fn run() {
         &serde_yaml::from_str(&format!(r"
             service FrdmService:
                 cycle: 100 ms
-                send-to: /{dbg}/MockRecvService0.in-queue
+                send-to: /{dbg}/RecvService0.in-queue
                 subscribe: /{dbg}/MultiQueue
                 tables:
                     defect: public.frdm_defect
@@ -63,11 +62,12 @@ fn run() {
                         rotary-angle: point real 'Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
                     rope:
                         width: 35 mm        # Diameter of the rome
-                        length: 3000 m      # Total working length of the rope
+                        length: 300 m      # Total working length of the rope
                         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                         pos: point real 'Winch.EncoderBR2'      # meters, current rope position
                         load: point real 'Winch.Load'          # tonn, current rope load
                 scan:
+                    segment: 100 mm     # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
                     detecting-contours:
                         gamma:
                             no-param: not parameters implemented 
@@ -98,12 +98,20 @@ fn run() {
                         width: 1200
                         height: 800
                     index: 0
-                    # address: 192.168.10.12:2020
-                    # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
-                    # pixel-format:  Mono8
-                    # pixel-format:  BayerRG8
                     pixel-format:  QOI_Mono8
-                    # pixel-format:  QOI_BayerRG8
+                    exposure:
+                        auto: Off                   # Off / Continuous
+                        time: 26000                 # microseconds
+                    auto-packet-size: true          # StreamAutoNegotiatePacketSize
+                    channel-packet-size: Max        # Maximizing packet size increases frame rate
+                    resend-packet: true             # StreamPacketResendEnable
+                camera Camera2:
+                    fps: Max                    # Max / Min / 30.0
+                    resolution: 
+                        width: 1200
+                        height: 800
+                    index: 0
+                    pixel-format:  QOI_Mono8
                     exposure:
                         auto: Off                   # Off / Continuous
                         time: 26000                 # microseconds
@@ -133,7 +141,7 @@ fn run() {
     services.insert(mq.clone());
     let conf = serde_yaml::from_str(&format!(r#"
         service SendService:
-            send-to:/{dbg}/MultiQueue.in-queue
+            send-to: /{dbg}/MultiQueue.in-queue
     "#)).unwrap();
     let conf = SendServiceConf::from_yaml(&dbg, &conf);
     let producer = Arc::new(SendService::new(

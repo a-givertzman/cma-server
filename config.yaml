@@ -35,6 +35,7 @@ service FrdmService:
             pos: point int '/App/Winch.EncoderBR2'           # meters, current rope position
             load: point real '/App/Winch.Load'               # tonn, current rope load
     scan:
+        segment: 100 mm     # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
         detecting-contours:
             gamma:
                 no-param: not parameters implemented 

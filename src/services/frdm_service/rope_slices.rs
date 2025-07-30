@@ -21,7 +21,7 @@ impl<'a> RopeSlices<'a> {
         Self {
             slices: (0..slices).map(|slice| {
                 let offset = (slice as f64) * conf.rope.segment.as_m();
-                log::debug!("RopeSlices.new | Slice: {slice}: offset: {}", offset);
+                log::debug!("RopeSlices.new | Slice: {slice}: offset: {:.2}", offset);
                 RopeSlice::new(slice, &conf.bendings, offset)
             }).collect(),
             conf,
