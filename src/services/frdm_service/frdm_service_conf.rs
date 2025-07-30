@@ -118,19 +118,17 @@ impl FrdmServiceConf {
         log::trace!("{dbg}.new | crane: {:?}", crane);
         let scan: ConfTree = conf.get("scan").expect(&format!("{dbg}.new | 'scan' - not found or wrong configuration"));
         let scan = frdm_tools::conf::Conf::new(&name, scan);
-        log::debug!("{dbg}.new | scan: {:#?}", scan);
+        log::trace!("{dbg}.new | scan: {:#?}", scan);
         let camera_offset = conf.get_distance("camera-offset").expect(&format!("{dbg}.new | 'camera-offset' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | camera-offset: {:#?}", camera_offset);
+        log::debug!("{dbg}.new | camera-offset: {:?}", camera_offset);
         let mut cameras = vec![];
         match conf.sub_nodes() {
             Some(nodes) => {
                 for node in nodes {
-                    log::debug!("{dbg}.new | camera: {:#?}", node.key);
-                    log::debug!("{dbg}.new | camera: {:#?}", ConfCustomKeywd::from_str(&node.key));
                     if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
                         if keywd.name() == "camera" {
                             let camera = CameraConf::new(&name, &node);
-                            log::debug!("{dbg}.new | camera: {:#?}", camera);
+                            log::trace!("{dbg}.new | camera: {:#?}", camera);
                             cameras.push(camera);
                         }
                     }

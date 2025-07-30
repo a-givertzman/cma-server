@@ -116,7 +116,7 @@ impl Service for DefectDetection {
     //
     // 
     fn run(&self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.dbg);
+        log::info!("{}.run | Starting {}[{}]...", self.dbg, self.conf.camera.name, self.conf.camera_id);
         let dbg = self.dbg.clone();
         let name = self.name.clone();
         let txid = self.txid;
@@ -139,7 +139,7 @@ impl Service for DefectDetection {
             let send_to = services
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-            let mut camera = Camera::new(conf.camera);
+            let mut camera = Camera::new(conf.camera.clone());
             let camera_stream = camera.stream();
             let defect = GeometryDefect::new(
                 conf.scan.fast_scan.geometry_defect_threshold,
@@ -257,7 +257,7 @@ impl Service for DefectDetection {
                         }
                     }
                     Err(err) => {
-                        log::info!("{dbg}.run | Camera error: {:?}", err);
+                        log::info!("{dbg}.run | Camera '{}' error: {:?}", conf.camera.name, err);
                     }
                 }
             }

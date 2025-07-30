@@ -43,13 +43,13 @@ impl CraneConf {
         log::debug!("{}.new | name: {:?}", dbg, name);
         let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong configuration"));
         let bendings = BendingsConf::new(&name, bendings);
-        log::debug!("{dbg}.new | bendings: {:#?}", bendings);
+        log::trace!("{dbg}.new | bendings: {:#?}", bendings);
         let boom = conf.get("boom").expect(&format!("{dbg}.new | 'boom' - not found or wrong configuration"));
         let boom = BoomConf::new(&name, boom);
-        log::debug!("{dbg}.new | boom: {:#?}", boom);
+        log::trace!("{dbg}.new | boom: {:#?}", boom);
         let rope = conf.get("rope").expect(&format!("{dbg}.new | 'rope' - not found or wrong configuration"));
         let rope = RopeConf::new(&name, rope);
-        log::debug!("{dbg}.new | rope: {:#?}", rope);
+        log::trace!("{dbg}.new | rope: {:#?}", rope);
         Self {
             bendings,
             boom,
