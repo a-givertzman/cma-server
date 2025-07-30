@@ -3,7 +3,7 @@ use chrono::Datelike;
 use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfDistance, ConfDistanceUnit}, entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::Handles, thread_pool::Scheduler};
-use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, RwLock, Sender}, services::DefectDetectionConf};
+use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, RwLock, Sender}, services::{DefectDetectionConf, RopeSegment}};
 
 ///
 /// Dects defect on the frames coming from the camera
@@ -128,7 +128,7 @@ impl Service for DefectDetection {
         let table_defect = conf.tables.defect.clone();
         let table_defect_image = conf.tables.defect_image.clone();
         let rope_pos = self.rope_pos.clone();
-        let rope_segment = ConfDistance::new(100.0, ConfDistanceUnit::Millimeter); 
+        // let rope_segment = ConfDistance::new(100.0, ConfDistanceUnit::Millimeter); 
         let handles_clone = self.handles.clone();
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
@@ -158,6 +158,7 @@ impl Service for DefectDetection {
                     ),
                 ),
             );
+            let rope = RopeSegment::new(&name, conf.clone());
             'main: loop {
                 log::debug!("{dbg}.run | Starting camera...");
                 match camera.read() {
@@ -170,65 +171,65 @@ impl Service for DefectDetection {
                                 Ok(frame) => {
                                     match *rope_pos.read() {
                                         Some(rope_pos) => {
-                                            // Position of the rope under the camera
+                                            // Position of the rope under the camera, meter
                                             let pos = rope_pos + conf.camera_offset.as_m();
-                                            // Index of the current slice located under the camera (from hook)
-                                            let slice_ix = (pos / rope_segment.as_m()).trunc();
-                                            match defect.eval(frame.clone()) {
-                                                Ok(ctx) => {
-                                                    let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
-                                                    let defects = &geometry_defect_ctx.result;
-                                                    if !defects.is_empty() {
-                                                        defects.iter().for_each(|defect| {
-
-                                                            let defect_id = match defect {
-                                                                frdm_tools::GeometryDefectType::Expansion => "expansion",
-                                                                frdm_tools::GeometryDefectType::Compressing => "compressing",
-                                                                frdm_tools::GeometryDefectType::Hill => "hill",
-                                                                frdm_tools::GeometryDefectType::Pit => "pit",
-                                                            };
-                                                            let now = chrono::Utc::now();
-                                                            let img_name = format!("{:0>2}-{:0>2}-{:0>4}_{defect_id}.jpg", now.day(), now.month(), now.year());
-                                                            let img_path = storage_path.join(format!("{slice_ix}")).join(img_name);
-                                                            match img_path.as_path().to_str() {
-                                                                Some(img_path) => {
-                                                                    let sql = format!(r"
-                                                                        do $$
-                                                                        begin
-                                                                            insert into {table_defect} (id, defect, first, last, score)
-                                                                                values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
-                                                                            on conflict (id, defect) do update 
-                                                                                set (last, score) = (current_timestamp, {table_defect}.count + 1);
-                                                                            insert into {table_defect_image} (frdm_defect_id, camera, path)
-                                                                                values ({slice_ix}, {camera_id}, '{img_path}');
-                                                                            exception
-                                                                                when others then
-                                                                                    rollback;
-                                                                        end; $$
-                                                                        language plpgsql;
-                                                                    ");
-                                                                    if let Err(err) = send_to.send(Point::new(txid, &sql_point_name, sql)) {
-                                                                        log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                            if let Some(slice_ix) = rope.segment_index(pos) {
+                                                match defect.eval(frame.clone()) {
+                                                    Ok(ctx) => {
+                                                        let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
+                                                        let defects = &geometry_defect_ctx.result;
+                                                        if !defects.is_empty() {
+                                                            defects.iter().for_each(|defect| {
+    
+                                                                let defect_id = match defect {
+                                                                    frdm_tools::GeometryDefectType::Expansion => "expansion",
+                                                                    frdm_tools::GeometryDefectType::Compressing => "compressing",
+                                                                    frdm_tools::GeometryDefectType::Hill => "hill",
+                                                                    frdm_tools::GeometryDefectType::Pit => "pit",
+                                                                };
+                                                                let now = chrono::Utc::now();
+                                                                let img_name = format!("{:0>2}-{:0>2}-{:0>4}_{defect_id}.jpg", now.day(), now.month(), now.year());
+                                                                let img_path = storage_path.join(format!("{slice_ix}")).join(img_name);
+                                                                match img_path.as_path().to_str() {
+                                                                    Some(img_path) => {
+                                                                        let sql = format!(r"
+                                                                            do $$
+                                                                            begin
+                                                                                insert into {table_defect} (id, defect, first, last, score)
+                                                                                    values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
+                                                                                on conflict (id, defect) do update 
+                                                                                    set (last, score) = (current_timestamp, {table_defect}.count + 1);
+                                                                                insert into {table_defect_image} (frdm_defect_id, camera, path)
+                                                                                    values ({slice_ix}, {camera_id}, '{img_path}');
+                                                                                exception
+                                                                                    when others then
+                                                                                        rollback;
+                                                                            end; $$
+                                                                            language plpgsql;
+                                                                        ");
+                                                                        if let Err(err) = send_to.send(Point::new(txid, &sql_point_name, sql)) {
+                                                                            log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                                                        }
+                                                                        if let Err(err) = Self::save_image(
+                                                                            &dbg,
+                                                                            txid,
+                                                                            &send_to,
+                                                                            &api_reply,
+                                                                            defect_id,
+                                                                            camera_id,
+                                                                            &frame,
+                                                                            &img_path,
+                                                                        ) {
+                                                                            log::warn!("{dbg}.run | Save image error: {:?}", err);
+                                                                        }
                                                                     }
-                                                                    if let Err(err) = Self::save_image(
-                                                                        &dbg,
-                                                                        txid,
-                                                                        &send_to,
-                                                                        &api_reply,
-                                                                        defect_id,
-                                                                        camera_id,
-                                                                        &frame,
-                                                                        &img_path,
-                                                                    ) {
-                                                                        log::warn!("{dbg}.run | Save image error: {:?}", err);
-                                                                    }
-                                                                }
-                                                                None => log::warn!("{dbg}.run | Wrong image path {}", img_path.display()),
-                                                            };
-                                                        });
+                                                                    None => log::warn!("{dbg}.run | Wrong image path {}", img_path.display()),
+                                                                };
+                                                            });
+                                                        }
                                                     }
+                                                    Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera.name(), err),
                                                 }
-                                                Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera.name(), err),
                                             }
                                         }
                                         None => {

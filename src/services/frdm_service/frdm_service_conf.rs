@@ -29,7 +29,8 @@ use crate::services::{CraneConf, TablesConf};
 ///             pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position
 ///             load: point real 'App/MultiQueue/Winch.Load'           # tonn, current rope load
 ///     scan:
-///         segment: 100 mm     # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
+///         segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
+///         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
 ///         detecting-contours:
 ///             gamma:
 ///                 no-param: not parameters implemented 
