@@ -18,12 +18,12 @@ use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    services::{entity::{Cot, Name, Object, PointTxId}, Service, Services, SubscriptionCriteria},
+    services::{entity::{Name, Object, PointTxId}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::{domain::RwLock, services::{DefectDetection, FrdmServiceConf, RopeDeprecationRate, RopeDeprecationRateConf}};
+use crate::{domain::RwLock, services::{DefectDetection, DefectDetectionConf, FrdmServiceConf, RopeDeprecationRate, RopeDeprecationRateConf}};
 ///
-/// FRDM Service (Fiber Rope Defects Monitoring)
+/// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
     name: Name,
     txid: usize,
@@ -100,7 +100,6 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
-        let (_, rope_pos_recv) = services.subscribe(&conf.subscribe, &name.join(), &[SubscriptionCriteria::new(&conf.crane.rope.pos, Cot::Inf)]);
         let rope_pos = Arc::new(RwLock::new(None::<f64>));
         let rope_pos_clone = rope_pos.clone();
         let rope_deprecation = RopeDeprecationRate::new(
@@ -115,9 +114,26 @@ impl Service for FrdmService {
         );
         rope_deprecation.run()?;
         self.tasks.insert(rope_deprecation.name().join(), Arc::new(rope_deprecation));
-        let defect_detection = DefectDetection::new(&name, txid, conf, storage_path, rope_pos, services, scheduler);
-        defect_detection.run()?; 
-        self.tasks.insert(defect_detection.name().join(), Arc::new(defect_detection));
+        for (camera_id, camera) in conf.cameras.iter().enumerate() {
+            let defect_detection = DefectDetection::new(&name,
+                txid,
+                DefectDetectionConf::new(
+                    &name,
+                    conf.send_to.clone(),
+                    conf.tables.clone(),
+                    camera_id,
+                    conf.camera_offset.clone(),
+                    camera.to_owned(),
+                    conf.scan.clone(),
+                ),
+                storage_path.clone(),
+                rope_pos.clone(),
+                services.clone(),
+                scheduler.clone(),
+            );
+            defect_detection.run()?; 
+            self.tasks.insert(defect_detection.name().join(), Arc::new(defect_detection));
+        }
         Ok(())
     }
     //

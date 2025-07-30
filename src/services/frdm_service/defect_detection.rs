@@ -3,14 +3,14 @@ use chrono::Datelike;
 use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfDistance, ConfDistanceUnit}, entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::Handles, thread_pool::Scheduler};
-use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, RwLock, Sender}, services::FrdmServiceConf};
+use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, RwLock, Sender}, services::DefectDetectionConf};
 
 ///
 /// Dects defect on the frames coming from the camera
 pub struct DefectDetection {
     name: Name,
     txid: usize,
-    conf: FrdmServiceConf,
+    conf: DefectDetectionConf,
     starage_path: PathBuf,
     rope_pos: Arc<RwLock<Option<f64>>>,
     services: Arc<Services>,
@@ -27,7 +27,7 @@ impl DefectDetection {
     pub fn new(
         parent: impl Into<String>,
         txid: usize,
-        conf: FrdmServiceConf,
+        conf: DefectDetectionConf,
         starage_path: impl AsRef<Path>,
         rope_pos: Arc<RwLock<Option<f64>>>,
         services: Arc<Services>,
@@ -121,6 +121,7 @@ impl Service for DefectDetection {
         let name = self.name.clone();
         let txid = self.txid;
         let conf = self.conf.clone();
+        let camera_id = self.conf.camera_id;
         let services = self.services.clone();
         let exit = self.exit.clone();
         let storage_path = self.starage_path.clone();
@@ -138,7 +139,7 @@ impl Service for DefectDetection {
             let send_to = services
                 .get_link(&conf.send_to)
                 .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
-            let mut camera = Camera::new(conf.cameras.first().unwrap().to_owned());
+            let mut camera = Camera::new(conf.camera);
             let camera_stream = camera.stream();
             let defect = GeometryDefect::new(
                 conf.scan.fast_scan.geometry_defect_threshold,
@@ -163,7 +164,6 @@ impl Service for DefectDetection {
                     Ok(handle) => {
                         log::debug!("{dbg}.run | Starting camera - Ok");
                         handles_clone.push(handle);
-                        let camera_id = 0;
                         log::debug!("{dbg}.run | Receiving frames from camera...");
                         'camera: loop {
                             match camera_stream.recv_timeout(RECV_TIMEOUT) {

@@ -1,6 +1,7 @@
-use std::str::FromStr;
+use frdm_tools::camera::CameraConf;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, LinkName};
+use sal_sync::services::{conf::ConfDistance, entity::Name, LinkName};
+use crate::services::TablesConf;
 ///
 /// ## The configuration parameters for the `DefectDetection`
 /// 
@@ -15,44 +16,46 @@ use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name, LinkName}
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct DefectDetectionConf {
-    /// Diameter of the rome
-    pub width: ConfDistance,
-    /// Total working length of the rope
-    pub length: ConfDistance,
-    /// Rope segmetn length.
-    /// Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-    pub segment: ConfDistance,
-    pub pos: LinkName,
-    pub load: LinkName,
+    pub name: Name,
+    /// ApiClient input queue name, to communicate with the database
+    pub send_to: LinkName,
+    /// Names of the database tables used for storing defects and it's images 
+    pub tables: TablesConf,
+    /// id of the exact camera to used inthe sql database and folder name 
+    pub camera_id: usize,
+    /// Camera position from the begin of the rope (hook side)
+    pub camera_offset: ConfDistance,
+    pub camera: CameraConf,
+    /// Configuration parameters for defect detection algorithms
+    pub scan: frdm_tools::conf::Conf,
 }
 //
 // 
 impl DefectDetectionConf {
     ///
     /// Returns [DefectDetectionConf] built from `ConfTree`:
-    pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        send_to: LinkName,
+        tables: TablesConf,
+        camera_id: usize,
+        camera_offset: ConfDistance,
+        camera: CameraConf,
+        scan: frdm_tools::conf::Conf
+    ) -> Self {
         let parent = parent.into();
         let me = "DefectDetectionConf";
         let dbg = Dbg::new(&parent, me);
-        log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, name);
-        let width = conf.get_distance("width").expect(&format!("{dbg}.new | 'width' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | width: {:?}", width);
-        let length = conf.get_distance("length").expect(&format!("{dbg}.new | 'length' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | length: {:?}", length);
-        let segment = conf.get_distance("segment").expect(&format!("{dbg}.new | 'segment' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | segment: {:?}", segment);
-        let pos = LinkName::from_str(&conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name()).unwrap();
-        log::debug!("{dbg}.new | pos: {:?}", pos);
-        let load = LinkName::from_str(&conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap().name()).unwrap();
-        log::debug!("{dbg}.new | load: {:?}", load);
+        log::debug!("{dbg}.new | name: {:?}", name);
         Self {
-            width,
-            length,
-            segment,
-            pos,
-            load,
+            name,
+            send_to,
+            tables,
+            camera_id,
+            camera_offset,
+            camera,
+            scan,
         }
     }
 }

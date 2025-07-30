@@ -1,6 +1,6 @@
 use frdm_tools::camera::CameraConf;
 use sal_sync::services::{conf::{ConfCustomKeywd, ConfDistance, ConfTree, ConfTreeGet}, entity::Name, LinkName};
-use std::{fs, str::FromStr, time::Duration};
+use std::{fs, str::FromStr};
 use crate::services::{CraneConf, TablesConf};
 
 ///
@@ -8,8 +8,8 @@ use crate::services::{CraneConf, TablesConf};
 /// ```yaml
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
-///     send-to: /App/ApiClient.in-queue
-///     subscribe: MultiQueue
+///     send-to: /App/ApiClient.in-queue                               # ApiClient input queue name, to communicate with the database
+///     subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///     tables:
 ///         defect: public.frdm_defect
 ///         defect-image: public.frdm_defect_image
@@ -27,8 +27,9 @@ use crate::services::{CraneConf, TablesConf};
 ///             length: 3000 m      # Total working length of the rope
 ///             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
 ///             pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position
-///             load: point real 'App/MultiQueue/Winch.Load'          # tonn, current rope load
+///             load: point real 'App/MultiQueue/Winch.Load'           # tonn, current rope load
 ///     scan:
+///         segment: 100 mm     # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
 ///         detecting-contours:
 ///             gamma:
 ///                 no-param: not parameters implemented 
@@ -75,13 +76,19 @@ use crate::services::{CraneConf, TablesConf};
 #[derive(Debug, PartialEq, Clone)]
 pub struct FrdmServiceConf {
     pub name: Name,
+    // pub cycle: Option<Duration>,
+    /// ApiClient input queue name, to communicate with the database
     pub send_to: LinkName,
+    /// Service name, to subscribe for rope positin and crane angles event's
     pub subscribe: String,
     pub tables: TablesConf,
-    pub cycle: Option<Duration>,
+    /// Crane configuration parameters
     pub crane: CraneConf,
+    /// Configuration parameters for defect detection algorithms
     pub scan: frdm_tools::conf::Conf,
+    /// Camera position from the begin of the rope (hook side)
     pub camera_offset: ConfDistance,
+    /// Configurations of number of used cameras
     pub cameras: Vec<CameraConf>,
 }
 //
@@ -104,8 +111,8 @@ impl FrdmServiceConf {
         log::debug!("{dbg}.new | table defect: {}", tables.defect);
         log::debug!("{dbg}.new | table defect-image: {}", tables.defect_image);
         log::debug!("{dbg}.new | table deprecation: {}", tables.deprecation);
-        let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{dbg}.new | cycle: {:?}", cycle);
+        // let cycle = conf.get_duration("cycle").ok();
+        // log::debug!("{dbg}.new | cycle: {:?}", cycle);
         let crane = conf.get("crane").expect(&format!("{dbg}.new | 'crane' - not found or wrong configuration"));
         let crane = CraneConf::new(&name, crane);
         log::trace!("{dbg}.new | crane: {:?}", crane);
@@ -134,7 +141,7 @@ impl FrdmServiceConf {
             send_to,
             subscribe,
             tables,
-            cycle,
+            // cycle,
             crane,
             scan,
             camera_offset,
