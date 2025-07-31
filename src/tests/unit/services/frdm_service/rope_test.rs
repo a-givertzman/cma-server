@@ -1,14 +1,11 @@
-use std::sync::Arc;
 #[cfg(test)]
-
+use std::sync::Arc;
 use std::{sync::Once, time::{Duration, Instant}};
-use frdm_tools::{arena::{ChannelPacketSize, Exposure, ExposureAuto, FrameRate, PixelFormat}, camera::{CameraConf, CameraResolution}, conf::{Conf, DetectingContoursConf, FastScanConf, FineScanConf}};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfDistanceUnit}, entity::Name, LinkName};
+use sal_sync::services::conf::{ConfDistance, ConfDistanceUnit};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-
-use crate::{domain::RwLock, services::{DefectDetectionConf, Rope, TablesConf}};
+use crate::{domain::RwLock, services::Rope};
 ///
 ///
 static INIT: Once = Once::new();
@@ -35,56 +32,34 @@ fn rope_pos() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    let conf = DefectDetectionConf::new(
-        &dbg,
-        LinkName::new("MultiQueue", "in-queue"),
-        TablesConf {
-            defect: "".to_owned(),
-            defect_image: "".to_owned(),
-            deprecation: "".to_owned(),
-        },
-        0,
-        ConfDistance::new(0.0, ConfDistanceUnit::Millimeter),
-        CameraConf {
-            name: Name::new(&dbg, ""),
-            fps: FrameRate::Min,
-            resolution: CameraResolution { width: 1920, height: 1200 },
-            index: None,
-            address: None,
-            pixel_format: PixelFormat::Mono8,
-            exposure: Exposure { auto: ExposureAuto::Continuous, time: 0.0 },
-            auto_packet_size: false,
-            channel_packet_size: ChannelPacketSize::Min,
-            resend_packet: false,
-        },
-        Conf {
-            segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-            segment_threshold: ConfDistance::new(5.0, ConfDistanceUnit::Millimeter),
-            detecting_contours: DetectingContoursConf::default(),
-            fast_scan: FastScanConf::default(),
-            fine_scan: FineScanConf::default(),
-        },
-    );
     let pos = Arc::new(RwLock::new(None::<f64>));
-    let rope = Rope::new(&dbg, conf, pos.clone());
+    // Camera position from the begin of the rope (hook side), meters
+    let camera_offset = 3.5;
+    let rope = Rope::new(
+        &dbg,
+        ConfDistance::new(camera_offset, ConfDistanceUnit::Meter),
+        ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
+        ConfDistance::new(5.0, ConfDistanceUnit::Millimeter),
+        pos.clone(),
+    );
     let test_data = [
         //       rope-pos(m)
-        (01,     0.000,          Some(0)),
-        (02,     0.001,          Some(0)),
-        (03,     0.004,          Some(0)),
-        (04,     0.005,          None),
-        (05,     0.010,          None),
-        (06,     0.050,          None),
-        (10,     0.095,          None),
-        (11,     0.096,          Some(1)),
-        (12,     0.100,          Some(1)),
-        (13,     0.101,          Some(1)),
-        (14,     0.104,          Some(1)),
-        (15,     0.105,          None),
-        (16,     0.106,          None),
-        (17,     0.195,          None),
-        (18,     0.196,          Some(2)),
-        (19,     0.200,          Some(2)),
+        (01,     0.000 + camera_offset,          Some(0)),
+        (02,     0.001 + camera_offset,          Some(0)),
+        (03,     0.004 + camera_offset,          Some(0)),
+        (04,     0.005 + camera_offset,          None),
+        (05,     0.010 + camera_offset,          None),
+        (06,     0.050 + camera_offset,          None),
+        (10,     0.095 + camera_offset,          None),
+        (11,     0.096 + camera_offset,          Some(1)),
+        (12,     0.100 + camera_offset,          Some(1)),
+        (13,     0.101 + camera_offset,          Some(1)),
+        (14,     0.104 + camera_offset,          Some(1)),
+        (15,     0.105 + camera_offset,          None),
+        (16,     0.106 + camera_offset,          None),
+        (17,     0.195 + camera_offset,          None),
+        (18,     0.196 + camera_offset,          Some(2)),
+        (19,     0.200 + camera_offset,          Some(2)),
     ];
     for (step, rope_pos, segment_index) in test_data {
         let time = Instant::now();

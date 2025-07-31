@@ -1,18 +1,16 @@
 use std::sync::Arc;
 use sal_core::dbg::Dbg;
-use sal_sync::services::entity::Name;
-use crate::{domain::RwLock, services::DefectDetectionConf};
+use sal_sync::services::conf::ConfDistance;
+use crate::domain::RwLock;
 
 ///
 /// Rope representation
 /// - Current rope position
 /// - Segmentation of the rope
 pub struct Rope {
-    name: Name,
     camera_offset: f64,
     segment: f64,
     segment_threshold: f64,
-    conf: DefectDetectionConf,
     pos: Arc<RwLock<Option<f64>>>,
     dbg: Dbg,
 }
@@ -21,15 +19,12 @@ pub struct Rope {
 impl Rope {
     ///
     /// Returns [RopeSegment] new instance
-    pub fn new(parent: impl Into<String>, conf: DefectDetectionConf, pos: Arc<RwLock<Option<f64>>>,) -> Self {
-        let name = Name::new(parent, "Rope");
-        let dbg = Dbg::new(name.parent(), name.me());
+    pub fn new(parent: impl Into<String>, camera_offset: ConfDistance, segment: ConfDistance, segment_threshold: ConfDistance, pos: Arc<RwLock<Option<f64>>>,) -> Self {
+        let dbg = Dbg::new(parent, "Rope");
         Self {
-            name,
-            camera_offset: conf.camera_offset.as_mm(),
-            segment: conf.scan.segment.as_mm(),
-            segment_threshold: conf.scan.segment_threshold.as_mm(),
-            conf,
+            camera_offset: camera_offset.as_mm(),
+            segment: segment.as_mm(),
+            segment_threshold: segment_threshold.as_mm(),
             pos,
             dbg,
         }

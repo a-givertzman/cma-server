@@ -109,19 +109,24 @@ impl Service for FrdmService {
         log::info!("{}.run | Camera's configured: {}", self.dbg, conf.cameras.len());
         for (camera_id, camera) in conf.cameras.iter().enumerate() {
             log::info!("{}.run | Camera '{}'", self.dbg, camera.name);
-            let defect_detection_conf = DefectDetectionConf::new(
+            let rope = Arc::new(Rope::new(
                 &name,
-                conf.send_to.clone(),
-                conf.tables.clone(),
-                camera_id,
-                conf.camera_offset.clone(),
-                camera.to_owned(),
-                conf.scan.clone(),
-            );
-            let rope = Arc::new(Rope::new(&name, defect_detection_conf.clone(), rope_pos.clone()));
+                conf.camera_offset,
+                conf.scan.segment,
+                conf.scan.segment_threshold,
+                rope_pos.clone(),
+            ));
             let defect_detection = DefectDetection::new(&name,
                 txid,
-                defect_detection_conf,
+                DefectDetectionConf::new(
+                    &name,
+                    conf.send_to.clone(),
+                    conf.tables.clone(),
+                    camera_id,
+                    conf.camera_offset,
+                    camera.to_owned(),
+                    conf.scan.clone(),
+                ),
                 storage_path.clone(),
                 rope.clone(),
                 services.clone(),
