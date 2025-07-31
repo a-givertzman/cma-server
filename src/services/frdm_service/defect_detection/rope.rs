@@ -55,10 +55,11 @@ impl Rope {
                 let ix = slices.round();
                 // Current rope pos Delta in relation to exact segment position
                 let delta = (slices - ix).abs() * self.segment;
-                log::debug!("{}.segment_index | pos: {:.4} ({:.2}) m, slices: {:.4},  delta: {:.4}", self.dbg, pos, pos * 1000.0, slices, delta);
                 if delta < self.segment_threshold {
+                    log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Use slice {ix}", self.dbg, pos, pos * 0.001, slices, delta);
                     Some(ix as usize)
                 } else {
+                    log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Skip", self.dbg, pos, pos * 0.001, slices, delta);
                     None
                 }
             }

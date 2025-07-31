@@ -27,7 +27,7 @@ fn init_each() -> () {}
 /// Testing [Rope].pos()
 #[test]
 fn rope_pos() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::init(LogLevel::Trace, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
