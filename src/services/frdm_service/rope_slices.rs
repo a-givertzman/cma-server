@@ -18,10 +18,11 @@ impl<'a> RopeSlices<'a> {
     /// - `deprecation` - Here will be passed evaluated deprecation for each [RopeSlice] with it's index,
     pub fn new(conf: CraneConf, deprecation: impl Fn(usize, f64) + 'a) -> Self {
         let slices = (conf.rope.length.as_m() / conf.rope.segment.as_m()).ceil() as usize;
+        log::trace!("RopeSlices.new | Rope: {} m, slices: {slices}, devided by {:.2} mm", conf.rope.length.as_m(), conf.rope.segment.as_mm());
         Self {
             slices: (0..slices).map(|slice| {
                 let offset = (slice as f64) * conf.rope.segment.as_m();
-                log::debug!("RopeSlices.new | Slice: {slice}: offset: {:.2}", offset);
+                log::trace!("RopeSlices.new | Slice: {slice}: offset: {:.2}", offset);
                 RopeSlice::new(slice, &conf.bendings, offset)
             }).collect(),
             conf,

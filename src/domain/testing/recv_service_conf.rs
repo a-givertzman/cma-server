@@ -28,7 +28,7 @@ impl RecvServiceConf {
         let name = Name::new(parent, me);
         log::debug!("{dbg}.new | name: {:?}", name);
         let recv_limit: Option<u64> = conf.get("recv-limit");
-        log::debug!("{}.new | recv-limit: {:#?}", dbg, recv_limit);
+        log::debug!("{}.new | recv-limit: {:?}", dbg, recv_limit);
         let (recv, recv_length) = conf.get_in_queue().unwrap();
         log::debug!("{}.new | recv: {},\tmax-length: {:?}", dbg, recv, recv_length);
         Self {
