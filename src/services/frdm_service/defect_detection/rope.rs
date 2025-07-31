@@ -9,6 +9,9 @@ use crate::{domain::RwLock, services::DefectDetectionConf};
 /// - Segmentation of the rope
 pub struct Rope {
     name: Name,
+    camera_offset: f64,
+    segment: f64,
+    segment_threshold: f64,
     conf: DefectDetectionConf,
     pos: Arc<RwLock<Option<f64>>>,
     dbg: Dbg,
@@ -23,6 +26,9 @@ impl Rope {
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
+            camera_offset: conf.camera_offset.as_mm(),
+            segment: conf.scan.segment.as_mm(),
+            segment_threshold: conf.scan.segment_threshold.as_mm(),
             conf,
             pos,
             dbg,
@@ -41,10 +47,17 @@ impl Rope {
         // Index of the current slice located under the camera (from hook)
         match *self.pos.read() {
             Some(pos) => {
-                let pos = pos + self.conf.camera_offset.as_m();
-                let slice_ix = pos / self.conf.scan.segment.as_m();
-                if slice_ix.fract() < self.conf.scan.segment_threshold.as_m() {
-                    Some(slice_ix.trunc() as usize)
+                // rope pos in millimeters
+                let pos = pos * 1000.0 + self.camera_offset;
+                // Slices under current pos
+                let slices = pos / self.segment;
+                // Slice index under current pos
+                let ix = slices.round();
+                // Current rope pos Delta in relation to exact segment position
+                let delta = (slices - ix).abs() * self.segment;
+                log::debug!("{}.segment_index | pos: {:.4} ({:.2}) m, slices: {:.4},  delta: {:.4}", self.dbg, pos, pos * 1000.0, slices, delta);
+                if delta < self.segment_threshold {
+                    Some(ix as usize)
                 } else {
                     None
                 }

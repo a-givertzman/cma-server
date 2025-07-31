@@ -59,7 +59,7 @@ fn rope_pos() {
         },
         Conf {
             segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-            segment_threshold: ConfDistance::new(10.0, ConfDistanceUnit::Millimeter),
+            segment_threshold: ConfDistance::new(5.0, ConfDistanceUnit::Millimeter),
             detecting_contours: DetectingContoursConf::default(),
             fast_scan: FastScanConf::default(),
             fine_scan: FineScanConf::default(),
@@ -68,10 +68,23 @@ fn rope_pos() {
     let pos = Arc::new(RwLock::new(None::<f64>));
     let rope = Rope::new(&dbg, conf, pos.clone());
     let test_data = [
-        //       rope-pos
-        (01,     0.0,       None),
-        (02,     0.1,       None),
-        (03,     0.2,       None),
+        //       rope-pos(m)
+        (01,     0.000,          Some(0)),
+        (02,     0.001,          Some(0)),
+        (03,     0.004,          Some(0)),
+        (04,     0.005,          None),
+        (05,     0.010,          None),
+        (06,     0.050,          None),
+        (10,     0.095,          None),
+        (11,     0.096,          Some(1)),
+        (12,     0.100,          Some(1)),
+        (13,     0.101,          Some(1)),
+        (14,     0.104,          Some(1)),
+        (15,     0.105,          Some(1)),
+        (16,     0.106,          None),
+        (17,     0.195,          None),
+        (18,     0.196,          Some(2)),
+        (19,     0.200,          Some(2)),
     ];
     for (step, rope_pos, segment_index) in test_data {
         pos.write().replace(rope_pos);
