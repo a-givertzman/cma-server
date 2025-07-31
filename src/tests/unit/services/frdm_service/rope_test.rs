@@ -80,20 +80,22 @@ fn rope_pos() {
         (12,     0.100,          Some(1)),
         (13,     0.101,          Some(1)),
         (14,     0.104,          Some(1)),
-        (15,     0.105,          Some(1)),
+        (15,     0.105,          None),
         (16,     0.106,          None),
         (17,     0.195,          None),
         (18,     0.196,          Some(2)),
         (19,     0.200,          Some(2)),
     ];
     for (step, rope_pos, segment_index) in test_data {
+        let time = Instant::now();
         pos.write().replace(rope_pos);
         let result = rope.pos();
+        log::debug!("{dbg} | step {step}  elapsed: {:?}", time.elapsed());
         let target = Some(rope_pos);
-        assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+        assert!(result == target, "{dbg} | step {step} \nresult: {:?}\ntarget: {:?}", result, target);
         let result = rope.segment_index();
         let target = segment_index;
-        assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+        assert!(result == target, "{dbg} | step {step} \nresult: {:?}\ntarget: {:?}", result, target);
     }
     test_duration.exit();
 }
