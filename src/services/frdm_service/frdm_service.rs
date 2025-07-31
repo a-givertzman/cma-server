@@ -21,7 +21,7 @@ use sal_sync::{
     services::{entity::{Name, Object, PointTxId}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::{domain::RwLock, services::{DefectDetection, DefectDetectionConf, FrdmServiceConf, RopeDeprecationRate, RopeDeprecationRateConf}};
+use crate::{domain::RwLock, services::{DefectDetection, DefectDetectionConf, FrdmServiceConf, Rope, RopeDeprecationRate, RopeDeprecationRateConf}};
 ///
 /// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
@@ -71,14 +71,6 @@ impl std::fmt::Debug for FrdmService {
             .finish()
     }
 }
-///
-/// Used for logging
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum NotifyState {
-    Start,
-    Exit,
-    CameraError,
-}
 //
 //
 impl Service for FrdmService {
@@ -117,19 +109,21 @@ impl Service for FrdmService {
         log::info!("{}.run | Camera's configured: {}", self.dbg, conf.cameras.len());
         for (camera_id, camera) in conf.cameras.iter().enumerate() {
             log::info!("{}.run | Camera '{}'", self.dbg, camera.name);
+            let defect_detection_conf = DefectDetectionConf::new(
+                &name,
+                conf.send_to.clone(),
+                conf.tables.clone(),
+                camera_id,
+                conf.camera_offset.clone(),
+                camera.to_owned(),
+                conf.scan.clone(),
+            );
+            let rope = Arc::new(Rope::new(&name, defect_detection_conf.clone(), rope_pos.clone()));
             let defect_detection = DefectDetection::new(&name,
                 txid,
-                DefectDetectionConf::new(
-                    &name,
-                    conf.send_to.clone(),
-                    conf.tables.clone(),
-                    camera_id,
-                    conf.camera_offset.clone(),
-                    camera.to_owned(),
-                    conf.scan.clone(),
-                ),
+                defect_detection_conf,
                 storage_path.clone(),
-                rope_pos.clone(),
+                rope.clone(),
                 services.clone(),
                 scheduler.clone(),
             );

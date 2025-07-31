@@ -35,8 +35,8 @@
 //! - Граница между сегментами задается с допустимой погрешность `segment-threshold`
 mod defect_detection_conf;
 mod defect_detection;
-mod rope_segment;
+mod rope;
 
 pub use defect_detection_conf::*;
 pub use defect_detection::*;
-pub use rope_segment::*;
+pub use rope::*;
