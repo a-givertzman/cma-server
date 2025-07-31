@@ -1713,7 +1713,7 @@ dependencies = [
 [[package]]
 name = "frdm-tools"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/frdm-server.git?tag=0.1.0#a33702968d93d9317470ae094f16a85bdbf6ce9b"
+source = "git+https://github.com/a-givertzman/frdm-server.git?tag=0.1.0#a2aabec668b4d97001280ca98986129d81bf4108"
 dependencies = [
  "api-tools 0.2.1",
  "debugging",
@@ -4061,7 +4061,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#74c8738c83c92cf002a4672cfaa3afd1baac8e02"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#089f44c9e24b59cdecfeb66d0d889934324ea5d5"
 dependencies = [
  "api-tools 0.0.6",
  "chrono",

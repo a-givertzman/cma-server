@@ -128,7 +128,6 @@ impl Service for DefectDetection {
         let table_defect = conf.tables.defect.clone();
         let table_defect_image = conf.tables.defect_image.clone();
         let rope = self.rope.clone();
-        // let rope_segment = ConfDistance::new(100.0, ConfDistanceUnit::Millimeter); 
         let handles_clone = self.handles.clone();
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
@@ -177,7 +176,6 @@ impl Service for DefectDetection {
                                                     let defects = &geometry_defect_ctx.result;
                                                     if !defects.is_empty() {
                                                         defects.iter().for_each(|defect| {
-
                                                             let defect_id = match defect {
                                                                 frdm_tools::GeometryDefectType::Expansion => "expansion",
                                                                 frdm_tools::GeometryDefectType::Compressing => "compressing",
@@ -229,35 +227,31 @@ impl Service for DefectDetection {
                                             }
                                         }
                                         None => {
-                                            // rope position not received yet
+                                            // Rope pos is not under exact rope segment or rope position not received yet
                                         }
-                                    }
-                                    if exit.load(Ordering::Acquire) {
-                                        camera.exit();
-                                        break 'main;
                                     }
                                 }
                                 Err(err) => {
                                     match err {
                                         crate::domain::RecvTimeoutError::Timeout => {}
                                         _ => {
-                                            camera.exit();
                                             break 'camera;
                                         }
                                     }
                                 }
                             }
                             if exit.load(Ordering::Acquire) {
-                                camera.exit();
                                 break 'main;
                             }
                         }
+                        camera.exit();
                     }
                     Err(err) => {
                         log::info!("{dbg}.run | Camera '{}' error: {:?}", conf.camera.name, err);
                     }
                 }
             }
+            camera.exit();
             log::info!("{dbg}.run | Exit");
             Ok(())
         });

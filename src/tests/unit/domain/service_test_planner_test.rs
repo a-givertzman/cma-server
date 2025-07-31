@@ -1,6 +1,5 @@
 #[cfg(test)]
-
-use std::{sync::Once, time::{Duration, Instant}};
+use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::ConfTree, entity::{Point, ToPoint}};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
@@ -65,9 +64,6 @@ fn run() {
                     - /{dbg}/RecvService0.in-queue
                     - /{dbg}/RecvService1.in-queue
 
-            service SendService SendService0:
-                send-to: /{dbg}/MultiQueue.in-queue
-
             service RecvService RecvService0:
                 in queue in-queue:
                     max-length: 10000
@@ -76,6 +72,9 @@ fn run() {
                 in queue in-queue:
                     max-length: 10000
                 recv-limit: {recv_limit0}
+
+            service SendService SendService0:
+                send-to: /{dbg}/MultiQueue.in-queue
         ")).unwrap(),
     );
     // for (step, val, target) in test_data {
@@ -101,19 +100,19 @@ fn run() {
                 log::debug!("{dbg} | Sent event: {:?}", event.name());
             },
         ],
-        (0..1).map(|ix| {
+        (0..=1).map(|ix| {
             let dbg = each_received_dbg.clone();
-            let events = events[ix].clone();
-            move |received: &Vec<Point>| {    // RecvService0
+            let events = events.first().unwrap().clone();
+            move |received: &Vec<Point>| {
                 let result: Vec<(String, Value)> = received.iter().map(|p| (p.name(), p.value())).collect();
-                log::debug!("{dbg} | Receiver{ix} result: {:#?}", result);
+                log::debug!("{dbg} | Receiver{ix} result: {:?}", result);
                 let target: Vec<(String, Value)> = events.iter().map(|(name, val)| (name.to_string(), val.to_owned())).collect();
                 assert!(result == target, "{dbg} | Receiver{} \nresult: {:?}\ntarget: {:?}", ix, result, target);
             }
         }).collect(),
         move |received: Vec<Vec<Point>>| {
             let dbg = all_received_dbg.clone();
-            log::debug!("{dbg} | All received:");
+            log::debug!("{dbg} | All received");
             for (ix, recvd) in received.iter().enumerate() {
                 log::debug!("{dbg} | Received[{ix}]: {:?}", recvd);
             }

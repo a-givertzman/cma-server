@@ -1,5 +1,4 @@
-use std::{str::FromStr, sync::Arc};
-use dashmap::DashMap;
+use std::{str::FromStr, sync::Arc, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
 use testing::entities::test_value::Value;
@@ -12,13 +11,12 @@ use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendSer
 /// - Provides to inspect of each received test event
 /// - Provides to inspect of all received test events
 /// - Stops and await specified services in the reverse order
-/// 
+#[allow(unused)]
 pub struct ServiceTestPlanner {
     name: Name,
     conf: ConfTree,
     tp: ThreadPool,
     services: Arc<Services>,
-    tasks: Arc<DashMap<String, Arc<dyn Service>>>,
     event_builder: Arc<Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync>>,
     events: Owner<Vec<Vec<(String, Value)>>>,
     inspect_each_sent: Vec<Arc<Box<dyn Fn(&Point) + Send + Sync>>>,
@@ -41,6 +39,7 @@ impl ServiceTestPlanner {
     /// - `each_sent` - Inspect each sent event
     /// - `each_received` - Inspect each receiver finished, planner finished successfully only if each returns `Ok`
     /// - `all_received` - Inspect all receivers finished, planner finished successfully only if returns `Ok`
+    #[allow(unused)]
     pub fn new(
         parent: impl Into<String>,
         mut conf: ConfTree,
@@ -70,7 +69,6 @@ impl ServiceTestPlanner {
             conf,
             tp,
             services,
-            tasks: Arc::new(DashMap::new()),
             event_builder: Arc::new(Box::new(event_builder)),
             events: Owner::new(events),
             inspect_each_sent: each_sent.into_iter().map(|f| {
@@ -87,11 +85,13 @@ impl ServiceTestPlanner {
     }
     ///
     /// Returns [Scheduler] from internal [ThreadPool]
+    #[allow(unused)]
     pub fn scheduler(&self) -> Scheduler {
         self.tp.scheduler()
     }
     ///
     /// Starts all service's to perform a test
+    #[allow(unused)]
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "run");
@@ -136,7 +136,6 @@ impl ServiceTestPlanner {
                                                         self.services.clone(),
                                                         self.tp.scheduler(),
                                                     ));
-                                                    self.tasks.insert(service.name().join(), service.clone());
                                                     send_services.push(service.clone());
                                                     self.services.insert(service);
                                                 }
@@ -147,7 +146,6 @@ impl ServiceTestPlanner {
                                                         conf,
                                                         self.tp.scheduler(),
                                                     ));
-                                                    self.tasks.insert(service.name().join(), service.clone());
                                                     recv_services.push(service.clone());
                                                     self.services.insert(service);
                                                 }
@@ -159,7 +157,6 @@ impl ServiceTestPlanner {
                                                         self.services.clone(),
                                                         self.tp.scheduler(),
                                                     );
-                                                    self.tasks.insert(service.name().join(), service.clone());
                                                     services_order.push(service.name().join());
                                                     log::info!("{dbg}.run | Configuring service: {} - ok\n", service.name());
                                                     self.services.insert(service);
@@ -180,34 +177,24 @@ impl ServiceTestPlanner {
                         Err(err) => return Err(error.pass_with(format!("{dbg}.run | Unsupported keword '{}' in config: {:#?}", conf.key, conf), err)),
                     }
                 }
-                log::info!("{dbg}.run | Starting receivers...");
-                for recv in &recv_services {
-                    if let Err(err) = recv.run() {
-                        return Err(error.pass_with("Eror to start service", err));
-                    }
-                }
-                log::info!("{dbg}.run | Starting receivers - Ok");
+                assert!(recv_services.len() == self.inspect_each_received.len(), "{dbg}.run | RecvService's [{}] and each_received's [{}] - are not equals", recv_services.len(), self.inspect_each_received.len());
                 log::info!("{dbg}.run | Starting services...");
-                for key in services_order.iter() {
-                    if let Some(service) = self.tasks.get(key) {
-                        if let Err(err) = service.run() {
-                            return Err(error.pass_with("Eror to start service", err));
-                        }
+                self.services.run()?;
+                std::thread::sleep(Duration::from_millis(50));
+                let services = self.services.all();
+                let services_len = services.len();
+                for (ix, (key, service)) in services.into_iter().enumerate() {
+                    if let Err(err) = service.run() {
+                        return Err(error.pass_with(format!("Eror to start service '{key}' {ix} of {services_len}"), err));
                     }
+                    std::thread::sleep(Duration::from_millis(50));
                 }
                 log::info!("{dbg}.run | Starting services - Ok");
-                log::info!("{dbg}.run | Starting senders...");
-                for send in send_services {
-                    if let Err(err) = send.run() {
-                        return Err(error.pass_with("Eror to start service", err));
-                    }
-                }
-                log::info!("{dbg}.run | Starting senders - Ok");
                 let mut all_received = vec![];
                 log::info!("{dbg}.run | Waiting receivers...");
                 for (rcv_ix, recv) in recv_services.iter().enumerate() {
                     if let Err(err) = recv.wait() {
-                        return Err(error.pass_with("Eror to start service", err));
+                        return Err(error.pass_with(format!("Eror to wait service '{}'", recv.name()), err));
                     }
                     let received = recv.received().read().clone();
                     (self.inspect_each_received[rcv_ix])(&received);
@@ -215,6 +202,12 @@ impl ServiceTestPlanner {
                 }
                 log::info!("{dbg}.run | Waiting receivers - Ok");
                 (self.inspect_all_received)(all_received);
+                log::info!("{dbg}.run | Stoping services...");
+                for (key, service) in self.services.all() {
+                    service.exit();
+                }
+                self.services.exit();
+                log::info!("{dbg}.run | Starting services - Ok");
                 log::info!("{dbg}.run | All done");
                 Ok(())
             }
@@ -234,12 +227,13 @@ impl ServiceTestPlanner {
     /// like std::thread::JoinHandle - may panic on some platforms
     /// if a thread attempts to join itself or otherwise may
     /// create a deadlock with joining threads.
+    #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "wait");
         let mut errors = vec![];
-        for item in self.tasks.iter() {
-            let service = item.value();
+        for (key, service) in self.services.all() {
             if let Err(err) = service.wait() {
-                errors.push(err);
+                errors.push(error.pass_with(format!("Eror to wait service '{key}'"), err));
             }
         }
         if let Err(err) = self.tp.join() {
@@ -256,10 +250,10 @@ impl ServiceTestPlanner {
     /// Checks if the Service has finished running.
     /// 
     /// To finish the Service call exit
+    #[allow(unused)]
     pub fn is_finished(&self) -> bool {
         let mut is_finished = false;
-        for item in self.tasks.iter() {
-            let service = item.value();
+        for (_, service) in self.services.all() {
             is_finished = is_finished & service.is_finished();
         }
         is_finished
@@ -267,10 +261,10 @@ impl ServiceTestPlanner {
     ///
     /// Sends "exit" signal to all service's 
     /// for complettelly stop execution
+    #[allow(unused)]
     pub fn exit(&self) {
         // self.exit.store(true, Ordering::Release);
-        for item in self.tasks.iter() {
-            let service = item.value();
+        for (_, service) in self.services.all() {
             service.exit();
         }
     }    

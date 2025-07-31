@@ -63,14 +63,14 @@ impl<Updates> std::fmt::Debug for RopeDeprecationRate<Updates> {
             .finish()
     }
 }
-///
-/// Used for logging
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum NotifyState {
-    Start,
-    Exit,
-    SendError,
-}
+// ///
+// /// Used for logging
+// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+// enum NotifyState {
+//     Start,
+//     Exit,
+//     SendError,
+// }
 //
 // 
 impl<Updates> Service for RopeDeprecationRate<Updates> where 

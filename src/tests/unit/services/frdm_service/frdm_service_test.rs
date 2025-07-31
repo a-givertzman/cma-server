@@ -1,12 +1,10 @@
 #[cfg(test)]
-use std::sync::Arc;
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Point, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
+use sal_sync::services::{conf::ConfTree, entity::{Point, ToPoint}};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, services::{FrdmService, FrdmServiceConf}};
-
+use crate::domain::testing::ServiceTestPlanner;
 ///
 ///
 static INIT: Once = Once::new();
@@ -22,29 +20,68 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [FrdmService].run
+/// Testing such functionality / behavior
 #[test]
 fn run() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = Dbg::own("new");
-    log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
+    let dbg = Dbg::own("FrdmService-test");
+    log::debug!("\n{dbg}");
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
-    let test_data: Vec<(&str, Value)> = vec![
-    //     (01, ),
+    let events = vec![
+        vec![   // SendService0
+            ("Winch.RopePos", Value::Int(0)),           // EncoderBR0
+            ("Winch.Load", Value::Int(1)),
+            ("Load.MainBoomAngle", Value::Int(2)),
+            ("Load.RotaryBoomAngle", Value::Int(3)),
+            ("Int4", Value::Int(4)),
+            ("Int5", Value::Int(5)),
+            ("Int6", Value::Int(6)),
+        ],
     ];
-    // for (step, conf, target) in test_data {
-    //     let result = RopeConf::new(&dbg, ConfTree::new("rope", conf));
-    //     assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
-    // }
-    let conf = FrdmServiceConf::from_yaml(&dbg,
-        &serde_yaml::from_str(&format!(r"
+    let recv_limit0 = 0;    //events[0].len();
+    let conf = ConfTree::new_root(
+        serde_yaml::from_str(&format!(r"
+            thread-pool: 12
+            services:
+                retain:
+                    path: assets/testing/retain/
+                    point:
+                        path: point/id.json
+                        # api:
+                        #     table: public.tags
+                        #     address: 0.0.0.0:8080
+                        #     auth_token: 123!@#
+                        #     database: crane_data_server
+
+            service MultiQueue:
+                in queue in-queue:
+                    max-length: 10000
+                send-to:
+                    # - /{dbg}/RecvService0.in-queue
+                    # - /{dbg}/RecvService1.in-queue
+
+            service ApiClient:
+                cycle: 100 ms
+                reconnect: 1 s  # default 3 s
+                address: 127.0.0.1:8080
+                database: crane_data_server
+                in queue in-queue:
+                    max-length: 10000
+                auth_token: 123!@#
+                # debug: true
+
+            service RecvService RecvService0:
+                in queue in-queue:
+                    max-length: 10000
+                recv-limit: {recv_limit0}
+
             service FrdmService:
                 cycle: 100 ms
-                send-to: /{dbg}/RecvService0.in-queue
+                send-to: /{dbg}/ApiClient.in-queue
                 subscribe: /{dbg}/MultiQueue
                 tables:
                     defect: public.frdm_defect
@@ -62,12 +99,13 @@ fn run() {
                         rotary-angle: point real 'Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
                     rope:
                         width: 35 mm        # Diameter of the rome
-                        length: 300 m      # Total working length of the rope
+                        length: 3000 m      # Total working length of the rope
                         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-                        pos: point real 'Winch.EncoderBR2'      # meters, current rope position
+                        pos: point real 'Winch.RopePos'      # meters, current rope position
                         load: point real 'Winch.Load'          # tonn, current rope load
                 scan:
-                    segment: 100 mm     # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
+                    segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
+                    segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
                     detecting-contours:
                         gamma:
                             no-param: not parameters implemented 
@@ -98,85 +136,65 @@ fn run() {
                         width: 1200
                         height: 800
                     index: 0
+                    # address: 192.168.10.12:2020
+                    # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
+                    # pixel-format:  Mono8
+                    # pixel-format:  BayerRG8
                     pixel-format:  QOI_Mono8
+                    # pixel-format:  QOI_BayerRG8
                     exposure:
                         auto: Off                   # Off / Continuous
                         time: 26000                 # microseconds
                     auto-packet-size: true          # StreamAutoNegotiatePacketSize
                     channel-packet-size: Max        # Maximizing packet size increases frame rate
                     resend-packet: true             # StreamPacketResendEnable
-                camera Camera2:
-                    fps: Max                    # Max / Min / 30.0
-                    resolution: 
-                        width: 1200
-                        height: 800
-                    index: 0
-                    pixel-format:  QOI_Mono8
-                    exposure:
-                        auto: Off                   # Off / Continuous
-                        time: 26000                 # microseconds
-                    auto-packet-size: true          # StreamAutoNegotiatePacketSize
-                    channel-packet-size: Max        # Maximizing packet size increases frame rate
-                    resend-packet: true             # StreamPacketResendEnable
+
+            service SendService SendService0:
+                send-to: /{dbg}/MultiQueue.in-queue
         ")).unwrap(),
     );
-    log::trace!("config: {:?}", &conf);
-    let tp = ThreadPool::new(&dbg, Some(8));
-    let services = Arc::new(Services::new(&dbg, ServicesConf::new(
-        &dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-        retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
-    let frdm = Arc::new(FrdmService::new(conf, services.clone(), tp.scheduler()));
-    services.insert(frdm.clone());
-    let conf = serde_yaml::from_str(&format!(r#"
-        service MultiQueue:
-            in queue in-queue:
-                max-length: 10000
-            send-to:
-    "#)).unwrap();
-    let mq_conf = MultiQueueConf::from_yaml(&dbg, &conf);
-    let mq = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
-    services.insert(mq.clone());
-    let conf = serde_yaml::from_str(&format!(r#"
-        service SendService:
-            send-to: /{dbg}/MultiQueue.in-queue
-    "#)).unwrap();
-    let conf = SendServiceConf::from_yaml(&dbg, &conf);
-    let producer = Arc::new(SendService::new(
+    // for (step, val, target) in test_data {
+    //     let result = val + 1;
+    //     assert!(result == target, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+    // }
+    let builder_dbg = dbg.clone();
+    let each_sent_dbg = dbg.clone();
+    let each_received_dbg = dbg.clone();
+    let all_received_dbg = dbg.clone();
+    let planner = ServiceTestPlanner::new(
         &dbg,
         conf,
-        // &format!("/{dbg}/MultiQueue.in-queue"),
-        None::<Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync + 'static>>,
-        test_data,
-        services.clone(),
-        tp.scheduler(),
-    ));
-    services.insert(producer.clone());
-    let conf = serde_yaml::from_str(&format!(r#"
-        service RecvService RecvService:
-            in queue in-queue:
-                max-length: 10000
-    "#)).unwrap();
-    let receiver = Arc::new(RecvService::new(
-        &dbg,
-        RecvServiceConf::from_yaml(&dbg, &conf),
-        tp.scheduler(),
-    ));
-    services.insert(receiver.clone());
-    services.run().unwrap();
-    receiver.run().unwrap();
-    frdm.run().unwrap();
-    std::thread::sleep(Duration::from_secs(10));
-    frdm.exit();
-    producer.exit();
-    mq.exit();
-    services.exit();
-    frdm.wait().unwrap();
-    producer.wait().unwrap();
-    mq.wait().unwrap();
-    services.wait().unwrap();
-
+        move |txid, ix, name: &str, event: &Value| {
+            let dbg = builder_dbg.clone();
+            log::debug!("{dbg} | test event {ix}: '{name}'");
+            event.to_point(txid, name)
+        },
+        events.clone(),
+        vec![
+            move |event: &Point| {
+                let dbg = each_sent_dbg.clone();
+                log::debug!("{dbg} | Sent event: {:?}", event.name());
+            },
+        ],
+        (0..=1).map(|ix| {
+            let dbg = each_received_dbg.clone();
+            let events = events.first().unwrap().clone();
+            move |received: &Vec<Point>| {
+                let result: Vec<(String, Value)> = received.iter().map(|p| (p.name(), p.value())).collect();
+                log::debug!("{dbg} | Receiver{ix} result: {:?}", result);
+                let target: Vec<(String, Value)> = events.iter().map(|(name, val)| (name.to_string(), val.to_owned())).collect();
+                assert!(result == target, "{dbg} | Receiver{} \nresult: {:?}\ntarget: {:?}", ix, result, target);
+            }
+        }).collect(),
+        move |received: Vec<Vec<Point>>| {
+            let dbg = all_received_dbg.clone();
+            log::debug!("{dbg} | All received");
+            for (ix, recvd) in received.iter().enumerate() {
+                log::debug!("{dbg} | Received[{ix}]: {:?}", recvd);
+            }
+        },
+    );
+    planner.run().unwrap();
+    planner.wait().unwrap();
     test_duration.exit();
 }

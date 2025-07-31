@@ -20,7 +20,9 @@ use crate::services::{CraneConf, TablesConf};
 ///             - D200mm           5.0  .. 5.15 m
 ///             - D300mm           7.23 .. 7.30 mm
 ///         boom:
+///             main-len: 5.3 m                                         # length of the main boom
 ///             main-angle: point real 'App/MultiQueue/Load.MainBoomAngle'        # degrees, current angle of the main boom to horisontal axis
+///             rotary-len: 2.1 m                                       # length of the rotary boom
 ///             rotary-angle: point real 'App/MultiQueue/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to horisontal axis
 ///         rope:
 ///             width: 35 mm        # Diameter of the rome
