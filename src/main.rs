@@ -8,6 +8,7 @@ use crate::domain::cli::cli::Cli;
 mod tests;
 mod domain;
 mod conf;
+mod infra;
 mod services;
 mod tcp;
 

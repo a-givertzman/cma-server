@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use sal_core::dbg::Dbg;
 use sal_sync::{services::{conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::Scheduler};
-use crate::{conf::{api_client_conf::ApiClientConf, cache_service_conf::CacheServiceConf, profinet_client_conf::profinet_client_conf::ProfinetClientConf, slmp_client_conf::slmp_client_conf::SlmpClientConf, tcp_client_conf::TcpClientConf}, services::{api_cient::api_client::ApiClient, cache::cache_service::CacheService, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient, FrdmService, FrdmServiceConf}};
+use crate::{conf::{cache_service_conf::CacheServiceConf, profinet_client_conf::profinet_client_conf::ProfinetClientConf, slmp_client_conf::slmp_client_conf::SlmpClientConf, tcp_client_conf::TcpClientConf}, services::{ApiClient, cache::cache_service::CacheService, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient, ApiClientConf, FrdmService, FrdmServiceConf}};
 
 ///
 /// Creates the service's by the  name

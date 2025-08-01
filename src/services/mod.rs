@@ -10,7 +10,7 @@
 //! ```
 ///
 pub mod app;
-pub mod api_cient;
+mod api_cient;
 pub mod cache;
 pub mod diagnosis;
 mod frdm_service;
@@ -23,5 +23,6 @@ pub mod tcp_client;
 pub mod udp_client;
 mod services_factory;
 
+pub use api_cient::*;
 pub use frdm_service::*;
 pub use services_factory::*;
