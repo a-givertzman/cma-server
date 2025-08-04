@@ -6,7 +6,7 @@ key                    |  value
 ---------------------- | -------
 rope_length            |  3000  (m)
 defect_slices          |  30000
-deprication_slices     |  60000
+deprecation_slices     |  60000
 
 ```sql
 -- FRDM | Setting parameters

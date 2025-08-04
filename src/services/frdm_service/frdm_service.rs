@@ -88,7 +88,7 @@ impl Service for FrdmService {
         );
         let rope_deprecation = Arc::new(RopeDeprecation::new(
             &self.name,
-            conf.rope_deprication,
+            conf.rope_deprecation,
             services.clone(),
             scheduler.clone(),
         ));
@@ -100,9 +100,9 @@ impl Service for FrdmService {
                 let rope = Arc::new(Rope::new(
                     &self.name,
                     conf_rope_defect.camera_offset,
-                    conf_rope_defect.defect_detection.segment,
-                    conf_rope_defect.defect_detection.segment_threshold,
-                    rope_deprecation.rope_pos(),
+                    conf_rope_defect.segment,
+                    conf_rope_defect.segment_threshold,
+                    rope_deprecation.clone(),
                 ));
                 for conf_rope_defect in &conf.rope_defect {
                     log::info!("{}.run | Camera '{}'", self.dbg, conf_rope_defect.camera.name);

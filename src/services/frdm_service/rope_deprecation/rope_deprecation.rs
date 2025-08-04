@@ -1,11 +1,11 @@
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use std::sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     services::{entity::{Cot, Name, Object},
     Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
-use crate::{domain::RwLock, infra::ApiClient, services::frdm_service::{RopeDeprecationConf, RopeSlices}};
+use crate::{infra::ApiClient, services::frdm_service::{RopeDeprecationConf, RopeSlices}};
 
 ///
 /// ## Rope deprecation rate
@@ -17,7 +17,8 @@ use crate::{domain::RwLock, infra::ApiClient, services::frdm_service::{RopeDepre
 pub struct RopeDeprecation {
     name: Name,
     conf: RopeDeprecationConf,
-    rope_pos: Arc<RwLock<Option<f64>>>,
+    rope_pos: Arc<AtomicUsize>,
+    rope_pos_ok: Arc<AtomicBool>,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
@@ -40,7 +41,8 @@ impl RopeDeprecation {
         Self {
             name,
             conf,
-            rope_pos: Arc::new(RwLock::new(None::<f64>)),
+            rope_pos: Arc::new(AtomicUsize::new(0)),
+            rope_pos_ok: Arc::new(AtomicBool::new(false)),
             services,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
@@ -50,8 +52,11 @@ impl RopeDeprecation {
     }
     ///
     /// Returns current rope pos
-    pub fn rope_pos(&self) -> Arc<RwLock<Option<f64>>> {
-        self.rope_pos.clone()
+    pub fn rope_pos(&self) -> Option<f64> {
+        match self.rope_pos_ok.load(Ordering::Acquire) {
+            true => Some(self.rope_pos.load(Ordering::Acquire) as f64),
+            false => None,
+        }
     }
 }
 //
@@ -91,6 +96,7 @@ impl Service for RopeDeprecation where {
         let conf = self.conf.clone();
         // let updates = self.updates.take().unwrap();
         let rope_pos = self.rope_pos.clone();
+        let rope_pos_ok = self.rope_pos_ok.clone();
         let services = self.services.clone();
         let exit = self.exit.clone();
         let points = [
@@ -98,7 +104,11 @@ impl Service for RopeDeprecation where {
             &conf.crane.rope.load,
             &conf.crane.boom.main_angle,
             &conf.crane.boom.rotary_angle,
-        ].map(|point| SubscriptionCriteria::new(point, Cot::Inf));
+        ].map(|point| {
+            let subscription = SubscriptionCriteria::new(point, Cot::Inf);
+            log::debug!("{dbg}.run | Subscription: {:?}", subscription);
+            subscription
+        });
         let api_client = ApiClient::new(&name, conf.api.clone(), self.scheduler.clone());
         let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
@@ -111,7 +121,7 @@ impl Service for RopeDeprecation where {
             //     (NotifyState::SendError,      Box::new(|message| log::error!("{}", message))),
             // ]);
             let conf_table = conf.table.clone();
-            let mut rope_slices = RopeSlices::new(conf.crane.clone(), |ix, deprecation| {
+            let mut rope_slices = RopeSlices::new(&name, conf.crane.clone(), |ix, deprecation| {
                 let dbg = &dbg.clone();
                 let sql = format!("update {} set deprecation = deprecation + {} where id = {ix}", conf_table, deprecation);
                 api_client.fetch(sql).then(
@@ -124,20 +134,26 @@ impl Service for RopeDeprecation where {
             loop {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
+                        log::info!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
                         match point.name() {
                             name if name == conf.crane.rope.pos => {
-                                *rope_pos.write() = Some(point.to_double().as_double().value);
+                                log::info!("{dbg}.run | Received rope pos: {:.4?} m", point.to_double().as_double().value);
+                                rope_pos.store(point.to_double().as_double().value.round() as usize, Ordering::Release);
+                                rope_pos_ok.store(true, Ordering::Release);
                                 rope_slices.eval(Some(point), None);
                             }
                             name if name == conf.crane.rope.load => {
+                                log::info!("{dbg}.run | Received rope load: {:.4?} tonn", point.to_double().as_double().value);
                                 rope_slices.eval(None, Some(point));
                             }
-                            name if name == conf.crane.boom.main_angle => {}
-                            name if name == conf.crane.boom.rotary_angle => {}
+                            name if name == conf.crane.boom.main_angle => {
+                                log::info!("{dbg}.run | Received boom.main_angle: {:.4?}", point.to_double().as_double().value);
+                            }
+                            name if name == conf.crane.boom.rotary_angle => {
+                                log::info!("{dbg}.run | Received boom.rotary_angle: {:.4?}", point.to_double().as_double().value);
+                            }
                             _ => log::info!("{dbg}.run | Unknown point name: {:?}", point.name()),
                         }
-                        // (pos, load)
-                        
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}

@@ -1,13 +1,13 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
-use crate::{infra::ApiClientConf, services::frdm_service::crane_conf::CraneConf};
+use crate::{infra::ApiClientConf, services::frdm_service::CraneConf};
 
 ///
 /// ## Config for RopeDeprecation
 /// 
 /// ### Conf example
 /// ```yaml
-/// rope_deprication:
+/// rope-deprecation:
 ///     table: 'public.frdm_deprecation'
 ///     subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///     crane:

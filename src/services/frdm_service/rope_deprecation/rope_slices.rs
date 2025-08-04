@@ -1,3 +1,4 @@
+use sal_core::dbg::Dbg;
 use sal_sync::services::entity::Point;
 use crate::services::frdm_service::{CraneConf, RopeSlice};
 
@@ -16,13 +17,14 @@ impl<'a> RopeSlices<'a> {
     ///
     /// Returns [RopeSlices] new instance
     /// - `deprecation` - Here will be passed evaluated deprecation for each [RopeSlice] with it's index,
-    pub fn new(conf: CraneConf, deprecation: impl Fn(usize, f64) + 'a) -> Self {
+    pub fn new(parent: impl Into<String>, conf: CraneConf, deprecation: impl Fn(usize, f64) + 'a) -> Self {
+        let dbg = Dbg::new(parent, "RopeSlices");
         let slices = (conf.rope.length.as_m() / conf.rope.segment.as_m()).ceil() as usize;
-        log::trace!("RopeSlices.new | Rope: {} m, slices: {slices}, devided by {:.2} mm", conf.rope.length.as_m(), conf.rope.segment.as_mm());
+        log::debug!("{dbg}.new | Rope: {} m, slices: {slices}, devided by {:.2} mm", conf.rope.length.as_m(), conf.rope.segment.as_mm());
         Self {
             slices: (0..slices).map(|slice| {
                 let offset = (slice as f64) * conf.rope.segment.as_m();
-                log::trace!("RopeSlices.new | Slice: {slice}: offset: {:.2}", offset);
+                log::trace!("{dbg}.new | Slice: {slice}: offset: {:.2}", offset);
                 RopeSlice::new(slice, &conf.bendings, offset)
             }).collect(),
             conf,

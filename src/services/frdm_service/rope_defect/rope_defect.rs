@@ -1,4 +1,4 @@
-use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}};
+use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use chrono::Datelike;
 use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, GeometryDefectType, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
@@ -91,8 +91,10 @@ impl RopeDefect {
         api_client: &ApiClient,
     ) {
         // Position of the rope under the camera, meter
+        let rope_pos = rope.pos_at_camera();
         match rope.segment_index() {
             Some(slice_ix) => {
+                log::warn!("{dbg}.defect_detection | Analizing rope at: {:.1?} mm ({:.3?} m)...", rope_pos.map(|pos| pos.to_string()).unwrap_or("-".to_owned()), rope_pos.map(|pos| (pos * 0.001).to_string() ).unwrap_or("-".to_owned()));
                 match defect.eval(frame.clone()) {
                     Ok(ctx) => {
                         let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
@@ -152,6 +154,7 @@ impl RopeDefect {
                 }
             }
             None => {
+                log::warn!("{dbg}.defect_detection | Rope pos not received");
                 // Rope pos is not under exact rope segment or rope position not received yet
             }
         }
@@ -231,6 +234,7 @@ impl Service for RopeDefect {
                             &storage_path,
                             &api_client,
                         );
+                        std::thread::sleep(Duration::from_millis(100));
                     }
                 }
                 None => {

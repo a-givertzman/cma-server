@@ -12,7 +12,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         address: "0.0.0.0:8080",
 ///         auth_token: "123!@#",
 ///         database: "cma",
-///     rope_defect:
+///     rope-defect:
 ///         tables:
 ///             defect: 'public.frdm_defect'
 ///             defect-image: 'public.frdm_defect_image'
@@ -61,7 +61,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         channel-packet-size: Max        # Maximizing packet size increases frame rate
 ///         resend-packet: true             # StreamPacketResendEnable
 /// 
-///     rope_deprication:
+///     rope-deprecation:
 ///         table: 'public.frdm_deprecation'
 ///         subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///         crane:
@@ -90,7 +90,7 @@ pub struct FrdmServiceConf {
     /// The configuration parameters for the `RopeDefect`
     pub rope_defect: Vec<RopeDefectConf>,
     /// The Config parameters for `RopeDeprecation`
-    pub rope_deprication: RopeDeprecationConf,
+    pub rope_deprecation: RopeDeprecationConf,
 }
 //
 // 
@@ -105,9 +105,9 @@ impl FrdmServiceConf {
         log::debug!("{dbg}.new | name: {:?}", name);
         let api: ApiClientConf = conf.parse("api").expect(&format!("{dbg}.new | 'api' - not found or wrong configuration"));
         log::debug!("{dbg}.new | api: {:#?}", api);
-        let rope_deprication: ConfTree = conf.get("rope-deprication").expect(&format!("{dbg}.new | 'rope-deprication' - not found or wrong configuration"));
-        let rope_deprication = RopeDeprecationConf::new(&name, rope_deprication, api.clone());
-        log::trace!("{dbg}.new | rope-deprication: {:#?}", rope_deprication);
+        let rope_deprecation: ConfTree = conf.get("rope-deprecation").expect(&format!("{dbg}.new | 'rope-deprecation' - not found or wrong configuration"));
+        let rope_deprecation = RopeDeprecationConf::new(&name, rope_deprecation, api.clone());
+        log::trace!("{dbg}.new | rope-deprecation: {:#?}", rope_deprecation);
         let mut camera_id = 0;
         let mut rope_defect = vec![];
         match conf.sub_nodes() {
@@ -132,7 +132,7 @@ impl FrdmServiceConf {
             name,
             api,
             rope_defect,
-            rope_deprication,
+            rope_deprecation,
         }
     }
     ///

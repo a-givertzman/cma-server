@@ -187,7 +187,7 @@ impl ServiceTestPlanner {
                     if let Err(err) = service.run() {
                         return Err(error.pass_with(format!("Eror to start service '{key}' {ix} of {services_len}"), err));
                     }
-                    std::thread::sleep(Duration::from_millis(50));
+                    std::thread::sleep(Duration::from_millis(500));
                 }
                 log::info!("{dbg}.run | Starting services - Ok");
                 let mut all_received = vec![];
@@ -202,12 +202,6 @@ impl ServiceTestPlanner {
                 }
                 log::info!("{dbg}.run | Waiting receivers - Ok");
                 (self.inspect_all_received)(all_received);
-                log::info!("{dbg}.run | Stoping services...");
-                for (key, service) in self.services.all() {
-                    service.exit();
-                }
-                self.services.exit();
-                log::info!("{dbg}.run | Starting services - Ok");
                 log::info!("{dbg}.run | All done");
                 Ok(())
             }
@@ -267,5 +261,6 @@ impl ServiceTestPlanner {
         for (_, service) in self.services.all() {
             service.exit();
         }
-    }    
+        self.services.exit();
+    }
 }

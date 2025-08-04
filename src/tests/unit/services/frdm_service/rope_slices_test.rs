@@ -101,7 +101,7 @@ fn new() {
     let conf = CraneConf::new(&dbg, conf);
     let result = Rc::new(RefCell::new(vec![0.00, 0.00, 0.00]));
     let result_count = Rc::new(RefCell::new(0));
-    let mut rope_slices = RopeSlices::new(conf, |ix, deprecation| {
+    let mut rope_slices = RopeSlices::new(&dbg, conf, |ix, deprecation| {
         let dbg = &dbg.clone();
         log::debug!("{dbg} | Deprication slice[{ix}]: {:?}", deprecation);
         result.replace_with(|r| {
