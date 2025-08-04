@@ -19,8 +19,11 @@ pub struct Rope {
 impl Rope {
     ///
     /// Returns [RopeSegment] new instance
-    /// - pos - Position of the rope, meters
-    pub fn new(parent: impl Into<String>, camera_offset: ConfDistance, segment: ConfDistance, segment_threshold: ConfDistance, pos: Arc<RwLock<Option<f64>>>,) -> Self {
+    /// - `camera_offset` - Camera position from the begin of the rope (hook side)
+    /// - `segment` - Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
+    /// - `segment_threshold` - Acceptable camera position error in relation to exact segment position
+    /// - `pos` - Position of the rope, meters
+    pub fn new(parent: impl Into<String>, camera_offset: ConfDistance, segment: ConfDistance, segment_threshold: ConfDistance, pos: Arc<RwLock<Option<f64>>>) -> Self {
         let dbg = Dbg::new(parent, "Rope");
         Self {
             camera_offset: camera_offset.as_mm(),

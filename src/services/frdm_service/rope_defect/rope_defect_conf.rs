@@ -13,7 +13,7 @@ pub struct RopeDefectConf {
     pub tables: TablesConf,
     /// Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
     pub segment: ConfDistance,
-    /// Acceptable camera position error in relation to exact segment position 
+    /// Acceptable camera position error in relation to exact segment position
     pub segment_threshold: ConfDistance,
     /// Camera position from the begin of the rope (hook side)
     pub camera_offset: ConfDistance,
