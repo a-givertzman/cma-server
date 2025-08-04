@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::ConfTree, entity::ToPoint};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::{CraneConf, RopeSlices};
+use crate::services::frdm_service::{CraneConf, RopeSlices};
 
 ///
 ///

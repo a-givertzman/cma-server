@@ -1,5 +1,5 @@
 use sal_sync::services::entity::Point;
-use crate::services::{CraneConf, RopeSlice};
+use crate::services::frdm_service::{CraneConf, RopeSlice};
 
 ///
 /// The collection of [RopeSlice]

@@ -18,15 +18,14 @@ use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    services::{entity::{Name, Object, PointTxId}, Service, Services},
+    services::{entity::{Name, Object}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::{domain::RwLock, services::{DefectDetection, DefectDetectionConf, FrdmServiceConf, Rope, RopeDeprecationRate, RopeDeprecationRateConf}};
+use crate::services::frdm_service::{RopeDefect, FrdmServiceConf, Rope, RopeDeprecation};
 ///
 /// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
     name: Name,
-    txid: usize,
     conf: FrdmServiceConf,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -40,11 +39,9 @@ impl FrdmService {
     ///
     /// Crteates [FrdmService] new instance
     pub fn new(conf: FrdmServiceConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
-        let tx_id = PointTxId::from_str(&conf.name.join());
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
-            txid: tx_id,
             conf,
             services,
             scheduler,
@@ -80,7 +77,6 @@ impl Service for FrdmService {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let name = self.name.clone();
-        let txid = self.txid;
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
@@ -92,44 +88,30 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
-        let rope_pos = Arc::new(RwLock::new(None::<f64>));
-        let rope_pos_clone = rope_pos.clone();
-        let rope_deprecation = RopeDeprecationRate::new(
-            &dbg,
-            txid,
-            RopeDeprecationRateConf::new(&name, conf.crane.clone(), conf.send_to.clone(), conf.subscribe.clone(), conf.tables.deprecation.clone()),
-            move |rope_pos: f64| {
-                *rope_pos_clone.write() = Some(rope_pos);
-            },
+        let rope_deprecation = Arc::new(RopeDeprecation::new(
+            &name,
+            conf.rope_deprication,
+            // RopeDeprecationConf::new(&name, conf.crane.clone(), conf.send_to.clone(), conf.subscribe.clone(), conf.tables.deprecation.clone()),
             services.clone(),
             scheduler.clone(),
-        );
+        ));
         rope_deprecation.run()?;
-        self.tasks.insert(rope_deprecation.name().join(), Arc::new(rope_deprecation));
-        log::info!("{}.run | Camera's configured: {}", self.dbg, conf.cameras.len());
-        for (camera_id, camera) in conf.cameras.iter().enumerate() {
-            log::info!("{}.run | Camera '{}'", self.dbg, camera.name);
+        self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
+        log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.len());
+        for rope_defect_conf in &conf.rope_defect {
+            log::info!("{}.run | Camera '{}'", self.dbg, rope_defect_conf.camera.name);
             let rope = Arc::new(Rope::new(
                 &name,
-                conf.camera_offset,
-                conf.scan.segment,
-                conf.scan.segment_threshold,
-                rope_pos.clone(),
+                rope_defect_conf.camera_offset,
+                rope_defect_conf.defect_detection.segment,
+                rope_defect_conf.defect_detection.segment_threshold,
+                rope_deprecation.rope_pos(),
             ));
-            let defect_detection = DefectDetection::new(&name,
-                txid,
-                DefectDetectionConf::new(
-                    &name,
-                    conf.send_to.clone(),
-                    conf.tables.clone(),
-                    camera_id,
-                    conf.camera_offset,
-                    camera.to_owned(),
-                    conf.scan.clone(),
-                ),
+            let defect_detection = RopeDefect::new(
+                &name,
+                rope_defect_conf.to_owned(),
                 storage_path.clone(),
                 rope.clone(),
-                services.clone(),
                 scheduler.clone(),
             );
             defect_detection.run()?; 

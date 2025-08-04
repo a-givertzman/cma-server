@@ -33,10 +33,12 @@
 //!     - Пересчитываем и получаем положение сегмента оносительно положения камеры
 //! - В моменты когда камера проходит границу между соседними сегментами, берем кадр с камеры и считаем дефекты
 //! - Граница между сегментами задается с допустимой погрешность `segment-threshold`
-mod defect_detection_conf;
-mod defect_detection;
+mod rope_defect_conf;
+mod rope_defect;
 mod rope;
+mod tables_conf;
 
-pub use defect_detection_conf::*;
-pub use defect_detection::*;
+pub use rope_defect_conf::*;
+pub use rope_defect::*;
 pub use rope::*;
+use tables_conf::*;

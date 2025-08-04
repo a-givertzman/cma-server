@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::{ConfDistance, ConfDistanceUnit};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::BendingsConf;
+use crate::services::frdm_service::BendingsConf;
 
 ///
 ///

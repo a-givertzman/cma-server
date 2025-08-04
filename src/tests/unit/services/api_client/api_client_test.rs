@@ -151,7 +151,7 @@ fn basic() {
                                                             obj.get("authToken").unwrap().as_str().unwrap().to_string(),
                                                             obj.get("id").unwrap().as_str().unwrap().to_string(),
                                                             obj.get("keepAlive").unwrap().as_bool().unwrap(),
-                                                            "".into(),
+                                                            "",
                                                             vec![],
                                                         );
                                                         let bytes = message.build(&reply.as_bytes(), id.0);

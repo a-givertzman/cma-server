@@ -11,9 +11,9 @@
 ///
 pub mod app;
 mod api_cient;
-pub mod cache;
+mod cache;
 pub mod diagnosis;
-mod frdm_service;
+pub mod frdm_service;
 pub mod history;
 pub mod profinet_client;
 pub mod server;
@@ -24,5 +24,5 @@ pub mod udp_client;
 mod services_factory;
 
 pub use api_cient::*;
-pub use frdm_service::*;
+pub use cache::*;
 pub use services_factory::*;

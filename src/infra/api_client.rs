@@ -1,9 +1,12 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
-use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}, error::api_error::ApiError};
+use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
+use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object}, future::{Future, Sink}, Service}, sync::{channel::{self, RecvTimeoutError}, Handles, Owner}, thread_pool::Scheduler};
 use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, Sender}, infra::ApiClientConf};
-
+///
+/// API Reply
+type Reply = Result<Vec<IndexMap<String, serde_json::Value>>, Error>;
 ///
 /// ## Direct access to the [API-Server](https://github.com/a-givertzman/api-server)
 ///
@@ -17,8 +20,8 @@ pub struct ApiClient {
     name: Name,
     conf: ApiClientConf,
     // request: Arc<RwL ApiRequest,
-    send: Sender<(String, Sink<ApiReply>)>,
-    recv: Owner<Receiver<(String, Sink<ApiReply>)>>,
+    send: Sender<(String, Sink<Reply>)>,
+    recv: Owner<Receiver<(String, Sink<Reply>)>>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
     exit: Arc<AtomicBool>,
@@ -46,18 +49,12 @@ impl ApiClient {
     }
     ///
     /// Performs an API request with the parameters specified in the constructor
-    fn fetch(&self, sql: impl Into<String>) -> Future<ApiReply> {
+    pub fn fetch(&self, sql: impl Into<String>) -> Future<Result<Vec<IndexMap<String, serde_json::Value>>, Error>> {
         let sql = sql.into();
         let (result, sink) = Future::new();
         if let Err(err) = self.send.send((sql.clone(), sink.clone())) {
             sink.add(
-                ApiReply::error(
-                    &self.conf.auth_token,
-                    "not sampled",
-                    true,
-                    sql,
-                    ApiError::new(format!("{}.fetch | Send query error: {}", self.dbg, err), ""),
-                )
+                Err(Error::new(&self.dbg, "fetch").pass_with("Send query error", err.to_string()))
             );
         }
         result
@@ -88,31 +85,19 @@ impl Service for ApiClient {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((sql, sink)) => {
                         match request.fetch_with(
-                            &ApiQuery::new(ApiQueryKind::Sql(ApiQuerySql::new(&conf.database, "")), true),
+                            &ApiQuery::new(ApiQueryKind::Sql(ApiQuerySql::new(&conf.database, sql)), true),
                             true,
                         ) {
                             Ok(reply) => {
                                 match serde_json::from_slice(&reply) {
                                     Ok(reply) => {
                                         let reply: ApiReply = reply;
-                                        sink.add(reply);
+                                        sink.add(Ok(reply.data));
                                     }
-                                    Err(err) => sink.add(ApiReply::error(
-                                        &conf.auth_token,
-                                        "not sampled",
-                                        true,
-                                        sql,
-                                        ApiError::new(error.pass_with("Deserialize reply error", err.to_string()).to_string(), ""),
-                                    )),
+                                    Err(err) => sink.add(Err(error.pass_with("Deserialize reply error", err.to_string()))),
                                 }
                             }
-                            Err(err) => sink.add(ApiReply::error(
-                                &conf.auth_token,
-                                "not sampled",
-                                true,
-                                sql,
-                                ApiError::new(error.pass_with("Fetch error", err.to_string()).to_string(), ""),
-                            )),
+                            Err(err) => sink.add(Err(error.pass_with("Fetch error", err.to_string()))),
                         }
                     }
                     Err(err) => match err {

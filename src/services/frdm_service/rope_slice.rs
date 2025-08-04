@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::entity::Point;
-use crate::services::BendingsConf;
+use crate::services::frdm_service::BendingsConf;
 
 /// 
 /// A atomic part of a rope, used for rope deprecation rate calculation.

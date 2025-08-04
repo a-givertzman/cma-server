@@ -1,19 +1,17 @@
-use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
+use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use chrono::Datelike;
 use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::Handles, thread_pool::Scheduler};
-use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, Sender}, services::{DefectDetectionConf, Rope}};
+use sal_sync::{services::{entity::{Name, Object}, Service}, sync::Handles, thread_pool::Scheduler};
+use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::rope_defect::{Rope, RopeDefectConf}};
 
 ///
 /// Dects defect on the frames coming from the camera
-pub struct DefectDetection {
+pub struct RopeDefect {
     name: Name,
-    txid: usize,
-    conf: DefectDetectionConf,
+    conf: RopeDefectConf,
     starage_path: PathBuf,
     rope: Arc<Rope>,
-    services: Arc<Services>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
     exit: Arc<AtomicBool>,
@@ -21,27 +19,23 @@ pub struct DefectDetection {
 }
 //
 //
-impl DefectDetection {
+impl RopeDefect {
     ///
-    /// Crteates [DefectDetection] new instance
+    /// Crteates [RopeDefect] new instance
     pub fn new(
         parent: impl Into<String>,
-        txid: usize,
-        conf: DefectDetectionConf,
+        conf: RopeDefectConf,
         starage_path: impl AsRef<Path>,
         rope: Arc<Rope>,
-        services: Arc<Services>,
         scheduler: Scheduler,
     ) -> Self {
-        let name = Name::new(parent, "DefectDetection");
+        let name = Name::new(parent, "RopeDefect");
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
-            txid,
             conf,
             starage_path: starage_path.as_ref().join("rope-defects"),
             rope,
-            services,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
             exit: Arc::new(AtomicBool::new(false)),
@@ -51,103 +45,86 @@ impl DefectDetection {
     ///
     /// Saving camera images to local store
     /// and clenong obsoleted images
-    fn save_image(dbg: &Dbg, txid: usize, send_to: &Sender<Point>, api_reply: &Receiver<Point>, defect_id: &str, camera_id: usize, frame: &Image, img_path: &str) -> Result<(), Error> {
-        let error = Error::new(dbg, "save_image");
+    fn save_image(dbg: &Dbg, api_client: &ApiClient, defect_id: &str, camera_id: usize, frame: &Image, img_path: &str) -> Result<(), Error> {
+        // let error = Error::new(dbg, "save_image");
         let sql = format!(r"select * from clean_frdm_defect_image({defect_id}, {camera_id})");
-        if let Err(err) = send_to.send(Point::new(txid, &Name::new(dbg, "FRDM | SQL | Clean images").join(), sql.clone())) {
-            log::warn!("{dbg}.save_image | Send sql error: {:?}", err);
-        }
-        match api_reply.recv_timeout(Duration::from_millis(300)) {
-            Ok(reply) => {
-                match reply.cot() {
-                    Cot::ReqCon => {
-                        match serde_json::from_str(&reply.to_string().as_string().value) {
-                            Ok(reply) => {
-                                let reply: Vec<String> = reply;
-                                for path in reply {
-                                    if let Err(err) = fs::remove_file(&path) {
-                                        log::warn!("{dbg}.save_image | Delete image '{path}' error: {:?}", err);
+        api_client.fetch(&sql).then(
+            |reply| match reply {
+                Ok(reply) => {
+                    for entry in reply {
+                        match entry.get("path") {
+                            Some(path) => {
+                                match serde_json::from_value(path.to_owned()) {
+                                    Ok(path) => {
+                                        let path: String = path;
+                                        if let Err(err) = fs::remove_file(&path) {
+                                            log::warn!("{dbg}.save_image | Delete image '{path}' error: {:?}", err);
+                                        }
+                                    }
+                                    Err(err) => {
+                                        log::warn!("{dbg}.save_image | Deserialize path '{path}' error: {:?}", err);
                                     }
                                 }
                             }
-                            Err(err) => {
-                                let err = error.pass_with(format!("Error parse Sql '{}'", reply.to_string().as_string().value), err.to_string());
-                                log::warn!("{err}");
-                            }
+                            None => log::warn!("{dbg}.save_image | Field 'path' not found in sql reply: {:#?}", entry),
                         }
                     }
-                    Cot::ReqErr => {
-                        let err = error.pass_with(format!("Sql '{sql}' error"), reply.to_string().as_string().value);
-                        log::warn!("{err}");
-                    }
-                    _ => {
-                        let err = error.err(format!("Sql '{sql}' unsupported '{:?}' ", reply.cot()));
-                        log::warn!("{err}");
-                    }
                 }
-            }
-            Err(err) => {
-                log::warn!("{dbg}.save_image | Send sql error: {:?}", err);
-            }
-        }
+                Err(err) => log::warn!("{dbg}.save_image | Sql error: {:?}", err),
+            },
+            |err| log::warn!("{dbg}.save_image | Error: {:?}", err),
+        );
         frame.save(img_path)
     }
 }
 //
 //
-impl Object for DefectDetection {
+impl Object for RopeDefect {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
 // 
-impl std::fmt::Debug for DefectDetection {
+impl std::fmt::Debug for RopeDefect {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("DefectDetection")
+            .debug_struct("RopeDefect")
             .field("dbg", &self.dbg)
             .finish()
     }
 }
 //
 // 
-impl Service for DefectDetection {
+impl Service for RopeDefect {
     //
     // 
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting {}[{}]...", self.dbg, self.conf.camera.name, self.conf.camera_id);
         let dbg = self.dbg.clone();
         let name = self.name.clone();
-        let txid = self.txid;
         let conf = self.conf.clone();
         let camera_id = self.conf.camera_id;
-        let services = self.services.clone();
         let exit = self.exit.clone();
         let storage_path = self.starage_path.clone();
         let table_defect = conf.tables.defect.clone();
         let table_defect_image = conf.tables.defect_image.clone();
         let rope = self.rope.clone();
+        let api_client = ApiClient::new(&name, conf.api, self.scheduler.clone());
         let handles_clone = self.handles.clone();
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let sql_point_name = &Name::new(dbg, "FRDM | SQL | Defect").join();
-            let api_points = [Cot::ReqCon, Cot::ReqErr].map(|cot| SubscriptionCriteria::new(sql_point_name, cot));
-            let (_, api_reply) = services.subscribe(&conf.send_to.service(), &name.join(), &api_points);
-            let send_to = services
-                .get_link(&conf.send_to)
-                .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
             let mut camera = Camera::new(conf.camera.clone());
             let camera_stream = camera.stream();
             let defect = GeometryDefect::new(
-                conf.scan.fast_scan.geometry_defect_threshold,
+                conf.defect_detection.fast_scan.geometry_defect_threshold,
                 *Box::new(Mad::new()),
                 EdgeDetection::new(
                     DetectingContoursCv::new(
-                        conf.scan.detecting_contours.clone(),
+                        conf.defect_detection.detecting_contours.clone(),
                         AutoBrightnessAndContrast::new(
-                            conf.scan.detecting_contours.brightness_contrast.histogram_clipping,
+                            conf.defect_detection.detecting_contours.brightness_contrast.histogram_clipping,
                             AutoGamma::new(
                                 Initial::new(
                                     InitialCtx::new(),
@@ -202,21 +179,23 @@ impl Service for DefectDetection {
                                                                         end; $$
                                                                         language plpgsql;
                                                                     ");
-                                                                    if let Err(err) = send_to.send(Point::new(txid, &sql_point_name, sql)) {
-                                                                        log::warn!("{dbg}.run | Send sql error: {:?}", err);
-                                                                    }
-                                                                    if let Err(err) = Self::save_image(
-                                                                        &dbg,
-                                                                        txid,
-                                                                        &send_to,
-                                                                        &api_reply,
-                                                                        defect_id,
-                                                                        camera_id,
-                                                                        &frame,
-                                                                        &img_path,
-                                                                    ) {
-                                                                        log::warn!("{dbg}.run | Save image error: {:?}", err);
-                                                                    }
+                                                                    api_client.fetch(sql).then(
+                                                                        |_| {
+                                                                            if let Err(err) = Self::save_image(
+                                                                                &dbg,
+                                                                                &api_client,
+                                                                                defect_id,
+                                                                                camera_id,
+                                                                                &frame,
+                                                                                &img_path,
+                                                                            ) {
+                                                                                log::warn!("{dbg}.run | Save image error: {:?}", err);
+                                                                            }
+                                                                        },
+                                                                        |err| {
+                                                                            log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                                                        },
+                                                                    );
                                                                 }
                                                                 None => log::warn!("{dbg}.run | Wrong image path {}", img_path.display()),
                                                             };
