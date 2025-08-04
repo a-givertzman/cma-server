@@ -1,6 +1,6 @@
 use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use chrono::Datelike;
-use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, Image, Initial, InitialCtx, Mad};
+use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, GeometryDefectType, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object}, Service}, sync::Handles, thread_pool::Scheduler};
 use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::rope_defect::{Rope, RopeDefectConf}};
@@ -76,6 +76,86 @@ impl RopeDefect {
         );
         frame.save(img_path)
     }
+    ///
+    /// Defect detection
+    fn defect_detection(
+        dbg: &Dbg,
+        frame: Image,
+        defect: &GeometryDefect,
+        rope: &Rope,
+        camera_name: &str,
+        camera_id: usize,
+        table_defect: &str,
+        table_defect_image: &str,
+        storage_path: &PathBuf,
+        api_client: &ApiClient,
+    ) {
+        // Position of the rope under the camera, meter
+        match rope.segment_index() {
+            Some(slice_ix) => {
+                match defect.eval(frame.clone()) {
+                    Ok(ctx) => {
+                        let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
+                        let defects = &geometry_defect_ctx.result;
+                        if !defects.is_empty() {
+                            defects.iter().for_each(|defect| {
+                                let defect_id = match defect {
+                                    GeometryDefectType::Expansion => "expansion",
+                                    GeometryDefectType::Compressing => "compressing",
+                                    GeometryDefectType::Hill => "hill",
+                                    GeometryDefectType::Pit => "pit",
+                                };
+                                let now = chrono::Utc::now();
+                                let img_name = format!("{:0>2}-{:0>2}-{:0>4}_{defect_id}.jpg", now.day(), now.month(), now.year());
+                                let img_path = storage_path.join(format!("{slice_ix}")).join(img_name);
+                                match img_path.as_path().to_str() {
+                                    Some(img_path) => {
+                                        let sql = format!(r"
+                                            do $$
+                                            begin
+                                                insert into {table_defect} (id, defect, first, last, score)
+                                                    values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
+                                                on conflict (id, defect) do update 
+                                                    set (last, score) = (current_timestamp, {table_defect}.count + 1);
+                                                insert into {table_defect_image} (frdm_defect_id, camera, path)
+                                                    values ({slice_ix}, {camera_id}, '{img_path}');
+                                                exception
+                                                    when others then
+                                                        rollback;
+                                            end; $$
+                                            language plpgsql;
+                                        ");
+                                        api_client.fetch(sql).then(
+                                            |_| {
+                                                if let Err(err) = Self::save_image(
+                                                    &dbg,
+                                                    &api_client,
+                                                    defect_id,
+                                                    camera_id,
+                                                    &frame,
+                                                    &img_path,
+                                                ) {
+                                                    log::warn!("{dbg}.run | Save image error: {:?}", err);
+                                                }
+                                            },
+                                            |err| {
+                                                log::warn!("{dbg}.run | Send sql error: {:?}", err);
+                                            },
+                                        );
+                                    }
+                                    None => log::warn!("{dbg}.run | Wrong image path {}", img_path.display()),
+                                };
+                            });
+                        }
+                    }
+                    Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera_name, err),
+                }
+            }
+            None => {
+                // Rope pos is not under exact rope segment or rope position not received yet
+            }
+        }
+    }
 }
 //
 //
@@ -115,8 +195,6 @@ impl Service for RopeDefect {
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let mut camera = Camera::new(conf.camera.clone());
-            let camera_stream = camera.stream();
             let defect = GeometryDefect::new(
                 conf.defect_detection.fast_scan.geometry_defect_threshold,
                 *Box::new(Mad::new()),
@@ -134,103 +212,75 @@ impl Service for RopeDefect {
                     ),
                 ),
             );
-            'main: loop {
-                log::debug!("{dbg}.run | Starting camera...");
-                match camera.read() {
-                    Ok(handle) => {
-                        log::debug!("{dbg}.run | Starting camera - Ok");
-                        handles_clone.push(handle);
-                        log::debug!("{dbg}.run | Receiving frames from camera...");
-                        'camera: loop {
-                            match camera_stream.recv_timeout(RECV_TIMEOUT) {
-                                Ok(frame) => {
-                                    // Position of the rope under the camera, meter
-                                    match rope.segment_index() {
-                                        Some(slice_ix) => {
-                                            match defect.eval(frame.clone()) {
-                                                Ok(ctx) => {
-                                                    let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
-                                                    let defects = &geometry_defect_ctx.result;
-                                                    if !defects.is_empty() {
-                                                        defects.iter().for_each(|defect| {
-                                                            let defect_id = match defect {
-                                                                frdm_tools::GeometryDefectType::Expansion => "expansion",
-                                                                frdm_tools::GeometryDefectType::Compressing => "compressing",
-                                                                frdm_tools::GeometryDefectType::Hill => "hill",
-                                                                frdm_tools::GeometryDefectType::Pit => "pit",
-                                                            };
-                                                            let now = chrono::Utc::now();
-                                                            let img_name = format!("{:0>2}-{:0>2}-{:0>4}_{defect_id}.jpg", now.day(), now.month(), now.year());
-                                                            let img_path = storage_path.join(format!("{slice_ix}")).join(img_name);
-                                                            match img_path.as_path().to_str() {
-                                                                Some(img_path) => {
-                                                                    let sql = format!(r"
-                                                                        do $$
-                                                                        begin
-                                                                            insert into {table_defect} (id, defect, first, last, score)
-                                                                                values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
-                                                                            on conflict (id, defect) do update 
-                                                                                set (last, score) = (current_timestamp, {table_defect}.count + 1);
-                                                                            insert into {table_defect_image} (frdm_defect_id, camera, path)
-                                                                                values ({slice_ix}, {camera_id}, '{img_path}');
-                                                                            exception
-                                                                                when others then
-                                                                                    rollback;
-                                                                        end; $$
-                                                                        language plpgsql;
-                                                                    ");
-                                                                    api_client.fetch(sql).then(
-                                                                        |_| {
-                                                                            if let Err(err) = Self::save_image(
-                                                                                &dbg,
-                                                                                &api_client,
-                                                                                defect_id,
-                                                                                camera_id,
-                                                                                &frame,
-                                                                                &img_path,
-                                                                            ) {
-                                                                                log::warn!("{dbg}.run | Save image error: {:?}", err);
-                                                                            }
-                                                                        },
-                                                                        |err| {
-                                                                            log::warn!("{dbg}.run | Send sql error: {:?}", err);
-                                                                        },
-                                                                    );
-                                                                }
-                                                                None => log::warn!("{dbg}.run | Wrong image path {}", img_path.display()),
-                                                            };
-                                                        });
-                                                    }
-                                                }
-                                                Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera.name(), err),
-                                            }
-                                        }
-                                        None => {
-                                            // Rope pos is not under exact rope segment or rope position not received yet
-                                        }
-                                    }
-                                }
-                                Err(err) => {
-                                    match err {
-                                        crate::domain::RecvTimeoutError::Timeout => {}
-                                        _ => {
-                                            break 'camera;
-                                        }
-                                    }
-                                }
-                            }
-                            if exit.load(Ordering::Acquire) {
-                                break 'main;
-                            }
-                        }
-                        camera.exit();
-                    }
-                    Err(err) => {
-                        log::info!("{dbg}.run | Camera '{}' error: {:?}", conf.camera.name, err);
+            let mut camera = Camera::new(conf.camera.clone());
+            let camera_name = camera.name().join();
+            match &conf.camera.from_path {
+                Some(path) => {
+                    log::info!("{dbg}.run | Starting camera from path '{path}'...");
+                    let frames = camera.from_images(path)?;
+                    for frame in frames {
+                        Self::defect_detection(
+                            dbg,
+                            frame,
+                            &defect,
+                            &rope,
+                            &camera_name,
+                            camera_id,
+                            &table_defect,
+                            &table_defect_image,
+                            &storage_path,
+                            &api_client,
+                        );
                     }
                 }
+                None => {
+                    let camera_stream = camera.stream();
+                    'main: loop {
+                        log::debug!("{dbg}.run | Starting camera...");
+                        match camera.read() {
+                            Ok(handle) => {
+                                log::debug!("{dbg}.run | Starting camera - Ok");
+                                handles_clone.push(handle);
+                                log::debug!("{dbg}.run | Receiving frames from camera...");
+                                'camera: loop {
+                                    match camera_stream.recv_timeout(RECV_TIMEOUT) {
+                                        Ok(frame) => {
+                                            Self::defect_detection(
+                                                dbg,
+                                                frame,
+                                                &defect,
+                                                &rope,
+                                                &camera_name,
+                                                camera_id,
+                                                &table_defect,
+                                                &table_defect_image,
+                                                &storage_path,
+                                                &api_client,
+                                            );
+                                        }
+                                        Err(err) => {
+                                            match err {
+                                                crate::domain::RecvTimeoutError::Timeout => {}
+                                                _ => {
+                                                    break 'camera;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if exit.load(Ordering::Acquire) {
+                                        break 'main;
+                                    }
+                                }
+                                camera.exit();
+                            }
+                            Err(err) => {
+                                log::info!("{dbg}.run | Camera '{}' error: {:?}", conf.camera.name, err);
+                            }
+                        }
+                    }
+                    camera.exit();
+                }
             }
-            camera.exit();
             log::info!("{dbg}.run | Exit");
             Ok(())
         });
