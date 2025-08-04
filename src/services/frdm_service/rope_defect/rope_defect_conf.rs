@@ -4,6 +4,40 @@ use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Na
 use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_conf::TablesConf};
 ///
 /// ## The configuration parameters for the `RopeDefect`
+/// 
+/// ### Conf example
+/// ```yaml
+/// rope_defect:
+///     tables:
+///         defect: 'public.frdm_defect'
+///         defect-image: 'public.frdm_defect_image'
+///     segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
+///     segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
+///     camera-offset: 5.5 m                        # camera position from the begin of the rope (hook side)
+///     defect-detection:
+///         gamma:
+///             no-param: not parameters implemented 
+///         brightness-contrast:
+///             histogram-clipping: 1     # optional histogram clipping, default = 0 %
+///         gausian:
+///             kernel-size:
+///                 width: 3
+///                 heidht: 3
+///             sigma-x: 0.0
+///             sigma-y: 0.0
+///         sobel:
+///             kernel-size: 3
+///             scale: 1.0
+///             delta: 0.0
+///         overlay:
+///             src1-weight: 0.5
+///             src2-weight: 0.5
+///             gamma: 0.0
+///         fast-scan:
+///             geometry-defect-threshold: 1.2      # 1.1...1.3, absolute threshold to detect the geometry deffects
+///         fine-scan:
+///             no-params: not implemented yet
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct RopeDefectConf {
     pub name: Name,

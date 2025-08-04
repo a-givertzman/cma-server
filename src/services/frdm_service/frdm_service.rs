@@ -75,13 +75,11 @@ impl Service for FrdmService {
     // 
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
-        let dbg = self.dbg.clone();
-        let name = self.name.clone();
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let storage_path = Path::new("./files").join(
-            name.join()
+            self.name.join()
                 .chars()
                 .enumerate()
                 .filter(|(ix, ch)| !((*ix == 0) & (*ch == '/')))
@@ -89,33 +87,37 @@ impl Service for FrdmService {
                 .collect::<String>()
         );
         let rope_deprecation = Arc::new(RopeDeprecation::new(
-            &name,
+            &self.name,
             conf.rope_deprication,
-            // RopeDeprecationConf::new(&name, conf.crane.clone(), conf.send_to.clone(), conf.subscribe.clone(), conf.tables.deprecation.clone()),
             services.clone(),
             scheduler.clone(),
         ));
         rope_deprecation.run()?;
         self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
-        log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.len());
-        for rope_defect_conf in &conf.rope_defect {
-            log::info!("{}.run | Camera '{}'", self.dbg, rope_defect_conf.camera.name);
-            let rope = Arc::new(Rope::new(
-                &name,
-                rope_defect_conf.camera_offset,
-                rope_defect_conf.defect_detection.segment,
-                rope_defect_conf.defect_detection.segment_threshold,
-                rope_deprecation.rope_pos(),
-            ));
-            let defect_detection = RopeDefect::new(
-                &name,
-                rope_defect_conf.to_owned(),
-                storage_path.clone(),
-                rope.clone(),
-                scheduler.clone(),
-            );
-            defect_detection.run()?; 
-            self.tasks.insert(defect_detection.name().join(), Arc::new(defect_detection));
+        match conf.rope_defect.first() {
+            Some(conf_rope_defect) => {
+                log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.len());
+                let rope = Arc::new(Rope::new(
+                    &self.name,
+                    conf_rope_defect.camera_offset,
+                    conf_rope_defect.defect_detection.segment,
+                    conf_rope_defect.defect_detection.segment_threshold,
+                    rope_deprecation.rope_pos(),
+                ));
+                for conf_rope_defect in &conf.rope_defect {
+                    log::info!("{}.run | Camera '{}'", self.dbg, conf_rope_defect.camera.name);
+                    let defect_detection = RopeDefect::new(
+                        &self.name,
+                        conf_rope_defect.to_owned(),
+                        storage_path.clone(),
+                        rope.clone(),
+                        scheduler.clone(),
+                    );
+                    defect_detection.run()?; 
+                    self.tasks.insert(defect_detection.name().join(), Arc::new(defect_detection));
+                }
+            }
+            None => log::warn!("{}.run | No Camera's configured", self.dbg),
         }
         Ok(())
     }

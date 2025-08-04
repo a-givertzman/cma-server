@@ -4,6 +4,29 @@ use crate::{infra::ApiClientConf, services::frdm_service::crane_conf::CraneConf}
 
 ///
 /// ## Config for RopeDeprecation
+/// 
+/// ### Conf example
+/// ```yaml
+/// rope_deprication:
+///     table: 'public.frdm_deprecation'
+///     subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
+///     crane:
+///         bendings:           # Rope bloks with diameter, inter and exit
+///             # Block Diameter   inter   exit
+///             - D200mm           5.0  .. 5.15 m
+///             - D300mm           7.23 .. 7.30 mm
+///         boom:
+///             main-len: 5.3 m                                         # length of the main boom
+///             main-angle: point real 'App/MultiQueue/Load.MainBoomAngle'        # degrees, current angle of the main boom to horisontal axis
+///             rotary-len: 2.1 m                                       # length of the rotary boom
+///             rotary-angle: point real 'App/MultiQueue/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to horisontal axis
+///         rope:
+///             width: 35 mm        # Diameter of the rome
+///             length: 3000 m      # Total working length of the rope
+///             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///             pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position
+///             load: point real 'App/MultiQueue/Winch.Load'           # tonn, current rope load
+/// ```
 #[derive(Debug, PartialEq, Clone)]
 pub struct RopeDeprecationConf {
     pub name: Name,
