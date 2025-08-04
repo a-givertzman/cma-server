@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfDistance;
-use crate::{domain::RwLock, services::frdm_service::RopeDeprecation};
+use crate::services::frdm_service::RopeDeprecation;
 
 ///
 /// Rope representation
@@ -35,14 +35,14 @@ impl Rope {
         }
     }
     ///
-    /// Returns cerrent rope position (mm) if already received, else `None`
+    /// Returns cerrent rope position (mm)
     pub fn pos(&self) -> Option<f64> {
-        self.pos.rope_pos().map(|pos| pos * 1000.0)
+        self.pos.rope_pos()
     }
     ///
-    /// Returns cerrent rope position (mm) under camera if already received, else `None`
+    /// Returns cerrent rope position (mm) under the camera
     pub fn pos_at_camera(&self) -> Option<f64> {
-        self.pos.rope_pos().map(|pos| pos * 1000.0 + self.camera_offset)
+        self.pos.rope_pos().map(|pos| pos + self.camera_offset)
     }
     ///
     /// Returns segment index from 0, 
@@ -53,7 +53,7 @@ impl Rope {
         match self.pos.rope_pos() {
             Some(pos) => {
                 // rope pos in millimeters
-                let pos = pos * 1000.0 + self.camera_offset;
+                let pos = pos + self.camera_offset;
                 // Slices under current pos
                 let slices = pos / self.segment;
                 // Slice index under current pos

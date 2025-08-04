@@ -91,10 +91,13 @@ impl RopeDefect {
         api_client: &ApiClient,
     ) {
         // Position of the rope under the camera, meter
+        let rope_pos = rope.pos();
+        log::warn!("{dbg}.defect_detection | Rope at: {:.2?} mm ({:.3?} m)...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0));
         let rope_pos = rope.pos_at_camera();
+        log::warn!("{dbg}.defect_detection | Rope under camera at: {:.2?} mm ({:.3?} m)...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0));
         match rope.segment_index() {
             Some(slice_ix) => {
-                log::warn!("{dbg}.defect_detection | Analizing rope at: {:.1?} mm ({:.3?} m)...", rope_pos.map(|pos| pos.to_string()).unwrap_or("-".to_owned()), rope_pos.map(|pos| (pos * 0.001).to_string() ).unwrap_or("-".to_owned()));
+                log::warn!("{dbg}.defect_detection | Analizing rope at: {:.2?} mm ({:.3?} m)...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0));
                 match defect.eval(frame.clone()) {
                     Ok(ctx) => {
                         let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
@@ -154,7 +157,7 @@ impl RopeDefect {
                 }
             }
             None => {
-                log::warn!("{dbg}.defect_detection | Rope pos not received");
+                log::warn!("{dbg}.defect_detection | Rope pos not under segment or not received");
                 // Rope pos is not under exact rope segment or rope position not received yet
             }
         }

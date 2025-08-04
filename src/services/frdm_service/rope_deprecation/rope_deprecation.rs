@@ -51,10 +51,10 @@ impl RopeDeprecation {
         }
     }
     ///
-    /// Returns current rope pos
+    /// Returns current rope pos, mm
     pub fn rope_pos(&self) -> Option<f64> {
-        match self.rope_pos_ok.load(Ordering::Acquire) {
-            true => Some(self.rope_pos.load(Ordering::Acquire) as f64),
+        match self.rope_pos_ok.load(Ordering::SeqCst) {
+            true => Some(self.rope_pos.load(Ordering::SeqCst) as f64),
             false => None,
         }
     }
@@ -138,8 +138,10 @@ impl Service for RopeDeprecation where {
                         match point.name() {
                             name if name == conf.crane.rope.pos => {
                                 log::info!("{dbg}.run | Received rope pos: {:.4?} m", point.to_double().as_double().value);
-                                rope_pos.store(point.to_double().as_double().value.round() as usize, Ordering::Release);
-                                rope_pos_ok.store(true, Ordering::Release);
+                                let pos = (point.to_double().as_double().value * 1000.0).round() as usize;
+                                log::info!("{dbg}.run | Received rope pos: {:.4?} mm", pos);
+                                rope_pos.store(pos, Ordering::SeqCst);
+                                rope_pos_ok.store(true, Ordering::SeqCst);
                                 rope_slices.eval(Some(point), None);
                             }
                             name if name == conf.crane.rope.load => {

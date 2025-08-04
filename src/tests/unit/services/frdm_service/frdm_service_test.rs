@@ -93,7 +93,7 @@ fn run() {
                         defect-image: 'public.frdm_defect_image'
                     segment: 100 mm                       # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
                     segment-threshold: 5 mm               # Acceptable camera position error in relation to exact segment position 
-                    camera-offset: 5.5 m                  # camera position from the begin of the rope (hook side)
+                    camera-offset: 0.0 m                  # camera position from the begin of the rope (hook side)
                     defect-detection:
                         detecting-contours:
                             gamma:
