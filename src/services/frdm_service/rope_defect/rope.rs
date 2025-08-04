@@ -19,6 +19,7 @@ pub struct Rope {
 impl Rope {
     ///
     /// Returns [RopeSegment] new instance
+    /// - pos - Position of the rope, meters
     pub fn new(parent: impl Into<String>, camera_offset: ConfDistance, segment: ConfDistance, segment_threshold: ConfDistance, pos: Arc<RwLock<Option<f64>>>,) -> Self {
         let dbg = Dbg::new(parent, "Rope");
         Self {
@@ -31,9 +32,9 @@ impl Rope {
     }
     ///
     /// Returns cerrent rope position if already received, else `None`
-    pub fn pos(&self) -> Option<f64> {
-        *self.pos.read()
-    }
+    // pub fn pos(&self) -> Option<f64> {
+    //     *self.pos.read()
+    // }
     ///
     /// Returns segment index from 0, 
     /// - `pos` - camera position from the begining of the rope (hook side) in meters
@@ -50,7 +51,7 @@ impl Rope {
                 let ix = slices.round();
                 // Current rope pos Delta in relation to exact segment position
                 let delta = (slices - ix).abs() * self.segment;
-                if delta < self.segment_threshold {
+                if delta <= self.segment_threshold {
                     log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Use slice {ix}", self.dbg, pos, pos * 0.001, slices, delta);
                     Some(ix as usize)
                 } else {

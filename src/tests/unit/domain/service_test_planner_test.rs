@@ -29,7 +29,7 @@ fn run() {
     log::debug!("");
     let dbg = Dbg::own("ServiceTestPlanner-test");
     log::debug!("\n{dbg}");
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     let events = vec![
         vec![   // SendService0

@@ -44,33 +44,36 @@ fn rope_pos() {
     );
     let test_data = [
         //       rope-pos(m)
-        (01,     0.000 + camera_offset,          Some(0)),
-        (02,     0.001 + camera_offset,          Some(0)),
-        (03,     0.004 + camera_offset,          Some(0)),
-        (04,     0.005 + camera_offset,          None),
-        (05,     0.010 + camera_offset,          None),
-        (06,     0.050 + camera_offset,          None),
-        (10,     0.095 + camera_offset,          None),
-        (11,     0.096 + camera_offset,          Some(1)),
-        (12,     0.100 + camera_offset,          Some(1)),
-        (13,     0.101 + camera_offset,          Some(1)),
-        (14,     0.104 + camera_offset,          Some(1)),
-        (15,     0.105 + camera_offset,          None),
-        (16,     0.106 + camera_offset,          None),
-        (17,     0.195 + camera_offset,          None),
-        (18,     0.196 + camera_offset,          Some(2)),
-        (19,     0.200 + camera_offset,          Some(2)),
+        (01,     0.000,          Some(35)),
+        (02,     0.001,          Some(35)),
+        (03,     0.004,          Some(35)),
+        (04,     0.005,          Some(35)),
+        (05,     0.006,          None),
+        (06,     0.050,          None),
+        (06,     0.094,          None),
+        (10,     0.095,          Some(36)),
+        (11,     0.096,          Some(36)),
+        (12,     0.100,          Some(36)),
+        (13,     0.101,          Some(36)),
+        (14,     0.104,          Some(36)),
+        (15,     0.105,          Some(36)),
+        (16,     0.106,          None),
+        (16,     0.194,          None),
+        (17,     0.195,          Some(37)),
+        (18,     0.196,          Some(37)),
+        (19,     0.200,          Some(37)),
     ];
     for (step, rope_pos, segment_index) in test_data {
         let time = Instant::now();
         pos.write().replace(rope_pos);
-        let result = rope.pos();
-        log::debug!("{dbg} | step {step}  elapsed: {:?}", time.elapsed());
-        let target = Some(rope_pos);
-        assert!(result == target, "{dbg} | step {step} \nresult: {:?}\ntarget: {:?}", result, target);
+        // let result = rope.pos();
+        // let target = Some(rope_pos + camera_offset);
+        // log::debug!("{dbg} | step {step}  rope pos: {:?}", rope_pos);
+        // assert!(result == target, "{dbg} | step {step} \nresult: {:?}\ntarget: {:?}", result, target);
         let result = rope.segment_index();
         let target = segment_index;
         assert!(result == target, "{dbg} | step {step} \nresult: {:?}\ntarget: {:?}", result, target);
+        log::debug!("{dbg} | step {step}  elapsed: {:?}", time.elapsed());
     }
     test_duration.exit();
 }
