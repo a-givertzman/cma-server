@@ -90,7 +90,7 @@ fn run() {
                 wait-started: 10 ms
                 cycle: 100 ms
                 api:
-                    address: 127.0.0.1:8080
+                    address: 0.0.0.0:8081
                     auth_token: "123!@#"
                     database: cma
                 rope-defect:
@@ -193,8 +193,8 @@ fn run() {
         },
     );
     planner.run().unwrap();
-    // std::thread::sleep(Duration::from_millis(3_000));
-    // planner.exit();
+    std::thread::sleep(Duration::from_millis(2_000));
+    planner.exit();
     planner.wait().unwrap();
     test_duration.exit();
 }

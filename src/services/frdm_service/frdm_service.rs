@@ -103,7 +103,7 @@ impl Service for FrdmService {
                     conf_rope_defect.camera_offset,
                     conf_rope_defect.segment,
                     conf_rope_defect.segment_threshold,
-                    rope_deprecation.clone(),
+                    rope_deprecation,
                 ));
                 for conf_rope_defect in &conf.rope_defect {
                     log::info!("{}.run | Camera '{}'", self.dbg, conf_rope_defect.camera.name);

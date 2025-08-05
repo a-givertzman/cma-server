@@ -207,6 +207,7 @@ impl Service for RopeDefect {
         let table_defect_image = conf.tables.defect_image.clone();
         let rope = self.rope.clone();
         let api_client = ApiClient::new(&name, conf.api, self.scheduler.clone());
+        api_client.run()?;
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
         let handles_clone = self.handles.clone();
