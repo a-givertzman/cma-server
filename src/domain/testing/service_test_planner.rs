@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
 use testing::entities::test_value::Value;
-use crate::{domain::testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, services::ServicesFactory};
+use crate::{domain::{testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, RwLock}, services::ServicesFactory};
 
 ///
 /// Makes easier to orgenise test of Srvice
@@ -17,6 +17,7 @@ pub struct ServiceTestPlanner {
     conf: ConfTree,
     tp: ThreadPool,
     services: Arc<Services>,
+    services_order: Arc<RwLock<Vec<String>>>,
     event_builder: Arc<Box<dyn Fn(usize, usize, &str, &Value) -> Point + Send + Sync>>,
     events: Owner<Vec<Vec<(String, Value)>>>,
     inspect_each_sent: Vec<Arc<Box<dyn Fn(&Point) + Send + Sync>>>,
@@ -53,10 +54,8 @@ impl ServiceTestPlanner {
         let name = Name::new(&parent, "ServiceTestPlanner");
         let dbg = Dbg::new(&parent, name.me());
         let tread_pool = conf.get("thread-pool").map(|v: u64| v as usize);
-        let _ = conf.remove("thread-pool");
         let tp = ThreadPool::new(&parent, tread_pool);
         let services = conf.get("services").expect(&format!("{dbg}.run | `services` not foind in the config or has wrong value"));
-        let _ = conf.remove("services");
         let services = ServicesConf::new(&parent, services);
         let services = Arc::new(Services::new(&parent, services, Some(tp.scheduler())));
         let events: Vec<Vec<(String, Value)>> = events
@@ -69,6 +68,7 @@ impl ServiceTestPlanner {
             conf,
             tp,
             services,
+            services_order: Arc::new(RwLock::new(vec![])),
             event_builder: Arc::new(Box::new(event_builder)),
             events: Owner::new(events),
             inspect_each_sent: each_sent.into_iter().map(|f| {
@@ -95,13 +95,13 @@ impl ServiceTestPlanner {
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "run");
-        let mut send_events = self.events.take().expect(&format!("{dbg}.run | `events` vant be empty, Vec<Vec<Value>> expected"));
+        let mut send_events = self.events.take().expect(&format!("{dbg}.run | `events` cant be empty, Vec<Vec<Value>> expected"));
+        log::info!("{dbg}.run | Reading configuring...");
         match self.conf.sub_nodes() {
             Some(nodes) => {
                 let services_factory = ServicesFactory::new(&Name::new(self.name.parent(), ""));
                 let mut send_services = vec![];
                 let mut recv_services = vec![];
-                let mut services_order = vec![];
                 for conf in nodes {
                     match ConfKeywd::from_str(&conf.key) {
                         Ok(keywd) => {
@@ -136,6 +136,7 @@ impl ServiceTestPlanner {
                                                         self.services.clone(),
                                                         self.tp.scheduler(),
                                                     ));
+                                                    self.services_order.write().push(service.name().join());
                                                     send_services.push(service.clone());
                                                     self.services.insert(service);
                                                 }
@@ -146,6 +147,7 @@ impl ServiceTestPlanner {
                                                         conf,
                                                         self.tp.scheduler(),
                                                     ));
+                                                    self.services_order.write().push(service.name().join());
                                                     recv_services.push(service.clone());
                                                     self.services.insert(service);
                                                 }
@@ -157,8 +159,8 @@ impl ServiceTestPlanner {
                                                         self.services.clone(),
                                                         self.tp.scheduler(),
                                                     );
-                                                    services_order.push(service.name().join());
                                                     log::info!("{dbg}.run | Configuring service: {} - ok\n", service.name());
+                                                    self.services_order.write().push(service.name().join());
                                                     self.services.insert(service);
                                                 }
                                             }
@@ -169,25 +171,31 @@ impl ServiceTestPlanner {
                                         (Err(err), Err(_)) => log::warn!("{dbg}.run | Service config `Name` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
                                     }
                                 }
-                                _ => {
-                                    return Err(error.err(format!("{dbg}.run | Node kind '{:?}' - Is not allowed in the root of the config, 'service' expected", keywd)));
-                                }
+                                _ => {}
                             }
                         }
-                        Err(err) => return Err(error.pass_with(format!("{dbg}.run | Unsupported keword '{}' in config: {:#?}", conf.key, conf), err)),
+                        Err(err) => {},
                     }
                 }
                 assert!(recv_services.len() == self.inspect_each_received.len(), "{dbg}.run | RecvService's [{}] and each_received's [{}] - are not equals", recv_services.len(), self.inspect_each_received.len());
+                log::info!("{dbg}.run | Services order:");
+                for k in self.services_order.read().clone() {
+                    log::info!("{dbg}.run |    {k}");
+                }
                 log::info!("{dbg}.run | Starting services...");
                 self.services.run()?;
                 std::thread::sleep(Duration::from_millis(50));
-                let services = self.services.all();
-                let services_len = services.len();
-                for (ix, (key, service)) in services.into_iter().enumerate() {
-                    if let Err(err) = service.run() {
-                        return Err(error.pass_with(format!("Eror to start service '{key}' {ix} of {services_len}"), err));
+                let services_len = self.services.all().len();
+                for (ix, key) in self.services_order.read().clone().iter().enumerate() {
+                    match self.services.get(key) {
+                        Some(service) => {
+                            if let Err(err) = service.run() {
+                                return Err(error.pass_with(format!("Eror to start service '{key}' {ix} of {services_len}"), err));
+                            }
+                        }
+                        None => return Err(error.err(format!("Service '{key}' {ix} of {services_len} - is not found"))),
                     }
-                    std::thread::sleep(Duration::from_millis(500));
+                    // std::thread::sleep(Duration::from_millis(500));
                 }
                 log::info!("{dbg}.run | Starting services - Ok");
                 let mut all_received = vec![];
@@ -225,9 +233,14 @@ impl ServiceTestPlanner {
     pub fn wait(&self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "wait");
         let mut errors = vec![];
-        for (key, service) in self.services.all() {
-            if let Err(err) = service.wait() {
-                errors.push(error.pass_with(format!("Eror to wait service '{key}'"), err));
+        for key in self.services_order.read().clone() {
+            match self.services.get(&key) {
+                Some(service) => {
+                    if let Err(err) = service.wait() {
+                        errors.push(error.pass_with(format!("Eror to wait service '{key}'"), err));
+                    }
+                }
+                None => panic!("{}", error.err(format!("Service '{key}' - is not found"))),
             }
         }
         if let Err(err) = self.tp.join() {

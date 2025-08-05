@@ -1,3 +1,4 @@
+use std::time::Duration;
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
 use crate::{infra::ApiClientConf, services::frdm_service::CraneConf};
@@ -8,6 +9,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::CraneConf};
 /// ### Conf example
 /// ```yaml
 /// rope-deprecation:
+///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///     table: 'public.frdm_deprecation'
 ///     subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///     crane:
@@ -30,6 +32,8 @@ use crate::{infra::ApiClientConf, services::frdm_service::CraneConf};
 #[derive(Debug, PartialEq, Clone)]
 pub struct RopeDeprecationConf {
     pub name: Name,
+    /// Next service will wait until current completely started plus specified time, optional
+    pub wait_started: Option<Duration>,
     /// API access parameters
     pub api: ApiClientConf,
     /// Names of the database table used for storing rope deprecation values
@@ -52,6 +56,8 @@ impl RopeDeprecationConf {
         log::trace!("{dbg}.new | conf: {:?}", conf);
         let name = Name::new(parent, me);
         log::debug!("{dbg}.new | name: {:?}", name);
+        let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
+        log::debug!("{}.new | wait-started: {:?}", dbg, wait_started);
         let table = conf.get("table").expect(&format!("{dbg}.new | 'table' - not found or wrong configuration"));
         log::debug!("{dbg}.new | table: {:?}", table);
         let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong configuration"));
@@ -61,6 +67,7 @@ impl RopeDeprecationConf {
         log::trace!("{dbg}.new | crane: {:?}", crane);
         Self {
             name,
+            wait_started,
             api,
             table,
             subscribe,

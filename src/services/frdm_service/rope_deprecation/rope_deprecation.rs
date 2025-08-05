@@ -1,8 +1,7 @@
 use std::sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    services::{entity::{Cot, Name, Object},
-    Service, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles},
+    services::{entity::{Cot, Name, Object}, Service, ServiceWaiting, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
 use crate::{infra::ApiClient, services::frdm_service::{RopeDeprecationConf, RopeSlices}};
@@ -17,6 +16,7 @@ use crate::{infra::ApiClient, services::frdm_service::{RopeDeprecationConf, Rope
 pub struct RopeDeprecation {
     name: Name,
     conf: RopeDeprecationConf,
+    /// rope position, mm
     rope_pos: Arc<AtomicUsize>,
     rope_pos_ok: Arc<AtomicBool>,
     services: Arc<Services>,
@@ -36,7 +36,7 @@ impl RopeDeprecation {
         services: Arc<Services>,
         scheduler: Scheduler,
     ) -> Self {
-        let name = Name::new(parent, "RopeDeprecationRate");
+        let name = Name::new(parent, "RopeDeprecation");
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
@@ -71,7 +71,7 @@ impl Object for RopeDeprecation {
 impl std::fmt::Debug for RopeDeprecation {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("RopeDeprecationRate")
+            .debug_struct("RopeDeprecation")
             .field("dbg", &self.dbg)
             .finish()
     }
@@ -94,6 +94,8 @@ impl Service for RopeDeprecation where {
         let dbg = self.dbg.clone();
         let name = self.name.clone();
         let conf = self.conf.clone();
+        let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
+        let service_release = service_waiting.release();
         // let updates = self.updates.take().unwrap();
         let rope_pos = self.rope_pos.clone();
         let rope_pos_ok = self.rope_pos_ok.clone();
@@ -106,7 +108,7 @@ impl Service for RopeDeprecation where {
             &conf.crane.boom.rotary_angle,
         ].map(|point| {
             let subscription = SubscriptionCriteria::new(point, Cot::Inf);
-            log::debug!("{dbg}.run | Subscription: {:?}", subscription);
+            log::trace!("{dbg}.run | Subscription: {:?}", subscription);
             subscription
         });
         let api_client = ApiClient::new(&name, conf.api.clone(), self.scheduler.clone());
@@ -131,16 +133,15 @@ impl Service for RopeDeprecation where {
                     },
                 );
             });
+            service_release.add(Ok(()));
             loop {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
-                        log::info!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
+                        log::trace!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
                         match point.name() {
                             name if name == conf.crane.rope.pos => {
                                 log::info!("{dbg}.run | Received rope pos: {:.4?} m", point.to_double().as_double().value);
-                                let pos = (point.to_double().as_double().value * 1000.0).round() as usize;
-                                log::info!("{dbg}.run | Received rope pos: {:.4?} mm", pos);
-                                rope_pos.store(pos, Ordering::SeqCst);
+                                rope_pos.store((point.to_double().as_double().value * 1000.0).round() as usize, Ordering::SeqCst);
                                 rope_pos_ok.store(true, Ordering::SeqCst);
                                 rope_slices.eval(Some(point), None);
                             }
@@ -175,7 +176,6 @@ impl Service for RopeDeprecation where {
         for handle in handles {
             match handle {
                 Ok(handle) => {
-                    log::info!("{}.run | Starting - ok", self.dbg);
                     self.handles.push(handle);
                 }
                 Err(err) => {
@@ -185,7 +185,15 @@ impl Service for RopeDeprecation where {
                 }
             }
         }
-        Ok(())
+        let r = match conf.wait_started {
+            Some(_) => {
+                log::info!("{}.run | Waiting while starting...", self.dbg);
+                service_waiting.wait()
+            }
+            None => Ok(()),
+        };
+        log::info!("{}.run | Starting - ok", self.dbg);
+        r
     }
     //
     //

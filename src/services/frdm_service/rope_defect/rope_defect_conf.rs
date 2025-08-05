@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use frdm_tools::camera::CameraConf;
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
@@ -8,6 +10,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_co
 /// ### Conf example
 /// ```yaml
 /// rope-defect:
+///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///     tables:
 ///         defect: 'public.frdm_defect'
 ///         defect-image: 'public.frdm_defect_image'
@@ -41,6 +44,8 @@ use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_co
 #[derive(Debug, Clone, PartialEq)]
 pub struct RopeDefectConf {
     pub name: Name,
+    /// Next service will wait until current completely started plus specified time, optional
+    pub wait_started: Option<Duration>,
     /// API configuration parametes
     pub api: ApiClientConf,
     /// Names of the database tables used for storing defects and it's images 
@@ -77,6 +82,8 @@ impl RopeDefectConf {
         let dbg = Dbg::new(&parent, me);
         let name = Name::new(parent, me);
         log::debug!("{dbg}.new | name: {:?}", name);
+        let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
+        log::debug!("{}.new | wait-started: {:?}", dbg, wait_started);
         let tables = conf.parse("tables").expect(&format!("{dbg}.new | 'tables' - not found or wrong configuration"));
         log::debug!("{dbg}.new | tables: {:?}", tables);
         let segment = conf.get_distance("segment").expect(&format!("{dbg}.new | 'segment' - not found or wrong configuration"));
@@ -90,6 +97,7 @@ impl RopeDefectConf {
         log::trace!("{dbg}.new | defect-detection: {:#?}", defect_detection);
         Self {
             name,
+            wait_started,
             api,
             tables,
             segment,

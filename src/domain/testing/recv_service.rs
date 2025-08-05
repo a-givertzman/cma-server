@@ -87,7 +87,7 @@ impl Service for RecvService {
         let exit = self.exit.clone();
         let recv = self.recv.take().unwrap();
         let received = self.received.clone();
-        let recv_limit = self.conf.recv_limit.clone();
+        let recv_limit = self.conf.recv_limit;
         let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             match recv_limit {

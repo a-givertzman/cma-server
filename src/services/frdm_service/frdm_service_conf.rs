@@ -1,6 +1,6 @@
 use frdm_tools::camera::CameraConf;
 use sal_sync::services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::Name};
-use std::{fs, str::FromStr};
+use std::{fs, str::FromStr, time::Duration};
 use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefectConf, rope_deprecation::RopeDeprecationConf}};
 
 ///
@@ -8,6 +8,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 /// ```yaml
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
+///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///     api:
 ///         address: "0.0.0.0:8080",
 ///         auth_token: "123!@#",
@@ -84,6 +85,8 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 #[derive(Debug, PartialEq, Clone)]
 pub struct FrdmServiceConf {
     pub name: Name,
+    /// Next service will wait until current completely started plus specified time, optional
+    pub wait_started: Option<Duration>,
     // pub cycle: Option<Duration>,
     /// API configuration parametes
     pub api: ApiClientConf,
@@ -103,6 +106,8 @@ impl FrdmServiceConf {
         log::trace!("{dbg}.new | conf: {:?}", conf);
         let name = Name::new(parent, me);
         log::debug!("{dbg}.new | name: {:?}", name);
+        let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
+        log::debug!("{}.new | wait-started: {:?}", dbg, wait_started);
         let api: ApiClientConf = conf.parse("api").expect(&format!("{dbg}.new | 'api' - not found or wrong configuration"));
         log::debug!("{dbg}.new | api: {:#?}", api);
         let rope_deprecation: ConfTree = conf.get("rope-deprecation").expect(&format!("{dbg}.new | 'rope-deprecation' - not found or wrong configuration"));
@@ -130,6 +135,7 @@ impl FrdmServiceConf {
         }
         Self {
             name,
+            wait_started,
             api,
             rope_defect,
             rope_deprecation,

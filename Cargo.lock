@@ -239,21 +239,6 @@ dependencies = [
 
 [[package]]
 name = "api-tools"
-version = "0.0.6"
-source = "git+https://github.com/a-givertzman/rust-api-tools.git?tag=0.1.1#e7c72798e012074bb8c80bcbb8c5d00f39afab6b"
-dependencies = [
- "debugging",
- "env_logger",
- "indexmap 2.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "log",
- "postgres",
- "serde",
- "serde_json",
- "testing 0.0.2",
-]
-
-[[package]]
-name = "api-tools"
 version = "0.2.1"
 source = "git+https://github.com/a-givertzman/rust-api-tools.git?tag=0.2.1#bc6f110125c98b491d71fef591ebe12da8908d2f"
 dependencies = [
@@ -857,7 +842,7 @@ dependencies = [
 name = "cma-server"
 version = "0.1.3"
 dependencies = [
- "api-tools 0.2.1",
+ "api-tools",
  "cc",
  "chrono",
  "circular-buffer",
@@ -1715,7 +1700,7 @@ name = "frdm-tools"
 version = "0.1.0"
 source = "git+https://github.com/a-givertzman/frdm-server.git?tag=0.1.0#f9210230164632f47fce1e6d98b48eeb18078dc4"
 dependencies = [
- "api-tools 0.2.1",
+ "api-tools",
  "debugging",
  "env_logger",
  "hashers 1.0.1 (git+https://github.com/tmmcguire/hashers)",
@@ -4061,9 +4046,9 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#19ac590305f0db62b4900a297ac23ac182daee40"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#46aa96321d29560053cda893f30bd505df5cd248"
 dependencies = [
- "api-tools 0.0.6",
+ "api-tools",
  "chrono",
  "coco",
  "concat-in-place",
@@ -4506,16 +4491,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "testing"
-version = "0.0.2"
-source = "git+https://github.com/a-givertzman/rust-testing.git?tag=0.0.2#b810ec56855f8793167255a26fe3d89450ca3039"
-dependencies = [
- "env_logger",
- "log",
- "rand 0.8.5",
 ]
 
 [[package]]
@@ -6118,9 +6093,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec"
-version = "0.11.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a05eb080e015ba39cc9e23bbe5e7fb04d5fb040350f99f34e338d5fdd294428"
+checksum = "bdbb9122ea75b11bf96e7492afb723e8a7fbe12c67417aa95e7e3d18144d37cd"
 dependencies = [
  "yoke",
  "zerofrom",

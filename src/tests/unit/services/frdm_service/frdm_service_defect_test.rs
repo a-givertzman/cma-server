@@ -51,6 +51,9 @@ fn run() {
             ("Winch.RopePos", Value::Real(0.195)),  // 57
             ("Winch.RopePos", Value::Real(0.196)),  // 57
             ("Winch.RopePos", Value::Real(0.200)),  // 57
+            ("Winch.RopePos", Value::Real(0.201)),  // 57
+            ("Winch.RopePos", Value::Real(0.203)),  // 57
+            ("Winch.RopePos", Value::Real(0.204)),  // 57
             // ("Winch.Load", Value::Int(1)),
             // ("Load.MainBoomAngle", Value::Int(2)),
             // ("Load.RotaryBoomAngle", Value::Int(3)),
@@ -59,7 +62,7 @@ fn run() {
             // ("Int6", Value::Int(6)),
         ],
     ];
-    let recv_limit0 = events.len() + 1;    //events[0].len();
+    let recv_limit0 = events[0].len();    //events[0].len();
     let conf = ConfTree::new_root(
         serde_yaml::from_str(&format!(r#"
             thread-pool: 12
@@ -70,6 +73,7 @@ fn run() {
                         path: point/id.json
 
             service MultiQueue:
+                wait-started: 10 ms
                 in queue in-queue:
                     max-length: 10000
                 send-to:
@@ -82,12 +86,14 @@ fn run() {
                 recv-limit: {recv_limit0}
 
             service FrdmService:
+                wait-started: 10 ms
                 cycle: 100 ms
                 api:
                     address: 127.0.0.1:8080
                     auth_token: "123!@#"
                     database: cma
                 rope-defect:
+                    wait-started: 10 ms
                     tables:
                         defect: 'public.frdm_defect'
                         defect-image: 'public.frdm_defect_image'
@@ -134,6 +140,7 @@ fn run() {
                     channel-packet-size: Max        # Maximizing packet size increases frame rate
                     resend-packet: true             # StreamPacketResendEnable
                 rope-deprecation:
+                    wait-started: 10 ms
                     table: public.frdm_deprecation
                     subscribe: /{dbg}/MultiQueue    # Service name, to subscribe for rope positin and crane angles event's
                     crane:
@@ -170,8 +177,8 @@ fn run() {
         conf,
         move |txid, ix, name: &str, event: &Value| {
             let dbg = builder_dbg.clone();
-            log::debug!("{dbg}.event_builder | test event {ix}: '{name}'");
-            std::thread::sleep(Duration::from_millis(500));
+            log::debug!("{dbg}.event_builder | test event {ix}: '{name}': {:?}", event);
+            std::thread::sleep(Duration::from_millis(300));
             event.to_point(txid, name)
         },
         events.clone(),
@@ -186,7 +193,7 @@ fn run() {
             let events = events.first().unwrap().clone();
             move |received: &Vec<Point>| {
                 let result: Vec<(String, Value)> = received.iter().map(|p| (p.name(), p.value())).collect();
-                log::debug!("{dbg} | Receiver{ix} result: {:?}", result);
+                log::debug!("{dbg} | Receiver{ix} result: {:?}", result.len());
                 let target: Vec<(String, Value)> = events.iter().map(|(name, val)| (name.to_string(), val.to_owned())).collect();
                 // assert!(result == target, "{dbg} | Receiver{} \nresult: {:?}\ntarget: {:?}", ix, result, target);
             }
@@ -195,13 +202,13 @@ fn run() {
             let dbg = all_received_dbg.clone();
             log::debug!("{dbg} | All received");
             for (ix, recvd) in received.iter().enumerate() {
-                log::debug!("{dbg} | Received[{ix}]: {:?}", recvd);
+                log::debug!("{dbg} | Received[{ix}]: {:?}", recvd.len());
             }
         },
     );
     planner.run().unwrap();
-    std::thread::sleep(Duration::from_millis(10_000));
-    planner.exit();
+    std::thread::sleep(Duration::from_millis(3_000));
+    // planner.exit();
     planner.wait().unwrap();
     test_duration.exit();
 }

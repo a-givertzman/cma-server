@@ -93,6 +93,7 @@ impl Service for FrdmService {
             scheduler.clone(),
         ));
         rope_deprecation.run()?;
+        log::info!("{}.run | RopeDeprecation ready", self.dbg);
         self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
         match conf.rope_defect.first() {
             Some(conf_rope_defect) => {
@@ -119,6 +120,8 @@ impl Service for FrdmService {
             }
             None => log::warn!("{}.run | No Camera's configured", self.dbg),
         }
+        log::info!("{}.run | RopeDefect's ready", self.dbg);
+        log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())
     }
     //
@@ -133,7 +136,10 @@ impl Service for FrdmService {
         }
         errors
             .is_empty()
-            .then(|| ())
+            .then(|| {
+                log::info!("{}.run | Exit", self.dbg);
+                ()
+            })
             .ok_or(
                 Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err)))
             )
