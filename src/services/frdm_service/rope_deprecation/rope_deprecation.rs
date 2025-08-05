@@ -140,20 +140,24 @@ impl Service for RopeDeprecation where {
                         log::trace!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
                         match point.name() {
                             name if name == conf.crane.rope.pos => {
-                                log::info!("{dbg}.run | Received rope pos: {:.4?} m", point.to_double().as_double().value);
-                                rope_pos.store((point.to_double().as_double().value * 1000.0).round() as usize, Ordering::SeqCst);
+                                let pos = point.to_double().as_double().value;
+                                log::info!("{dbg}.run | Received rope pos: {:.4?} m", pos);
+                                rope_pos.store((pos * 1000.0).round() as usize, Ordering::SeqCst);
                                 rope_pos_ok.store(true, Ordering::SeqCst);
-                                rope_slices.eval(Some(point), None);
+                                rope_slices.eval(Some(pos), None);
                             }
                             name if name == conf.crane.rope.load => {
-                                log::info!("{dbg}.run | Received rope load: {:.4?} tonn", point.to_double().as_double().value);
-                                rope_slices.eval(None, Some(point));
+                                let load = point.to_double().as_double().value;
+                                log::info!("{dbg}.run | Received rope load: {:.4?} tonn", load);
+                                rope_slices.eval(None, Some(load));
                             }
                             name if name == conf.crane.boom.main_angle => {
-                                log::info!("{dbg}.run | Received boom.main_angle: {:.4?}", point.to_double().as_double().value);
+                                let main_angle = point.to_double().as_double().value;
+                                log::info!("{dbg}.run | Received boom.main_angle: {:.4?}", main_angle);
                             }
                             name if name == conf.crane.boom.rotary_angle => {
-                                log::info!("{dbg}.run | Received boom.rotary_angle: {:.4?}", point.to_double().as_double().value);
+                                let rotary_angle = point.to_double().as_double().value;
+                                log::info!("{dbg}.run | Received boom.rotary_angle: {:.4?}", rotary_angle);
                             }
                             _ => log::info!("{dbg}.run | Unknown point name: {:?}", point.name()),
                         }

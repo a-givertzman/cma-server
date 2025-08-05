@@ -1,5 +1,4 @@
 use sal_core::dbg::Dbg;
-use sal_sync::services::entity::Point;
 use crate::services::frdm_service::{CraneConf, RopeSlice};
 
 ///
@@ -34,15 +33,15 @@ impl<'a> RopeSlices<'a> {
     ///
     /// Registering new `pos` or/and `load` values,
     /// So new deprecation result can be evaluated, will be passed via `deprication` callback
-    pub fn eval(&mut self, pos: Option<Point>, load: Option<Point>) {
+    pub fn eval(&mut self, pos: Option<f64>, load: Option<f64>) {
         match (pos, load) {
             (None, None) => {},
-            (None, Some(load)) => for slice in &mut self.slices { slice.add_load(load.clone()) },
-            (Some(pos), None) => for slice in &mut self.slices { slice.add_pos(pos.clone()) },
+            (None, Some(load)) => for slice in &mut self.slices { slice.add_load(load) },
+            (Some(pos), None) => for slice in &mut self.slices { slice.add_pos(pos) },
             (Some(pos), Some(load)) => {
                 for slice in &mut self.slices {
-                    slice.add_pos(pos.clone());
-                    slice.add_load(load.clone());
+                    slice.add_pos(pos);
+                    slice.add_load(load);
                 }
             }
         }

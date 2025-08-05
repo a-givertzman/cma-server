@@ -2,7 +2,7 @@
 use std::cell::RefCell;
 use std::{rc::Rc, sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::ConfTree, entity::ToPoint};
+use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::services::frdm_service::{CraneConf, RopeSlices};
@@ -53,7 +53,7 @@ fn new() {
     // 
     let test_data = [
         //                                       rope slices deprecetion
-        //    pos         load                   slice[0]  slice[1]  slice[2]  count of dep's
+        //    pos, m       load, tonn      slice[0]  slice[1]  slice[2]  count of dep's
         (01,  Some(0.50),  None     ,      vec![ 0.00,     0.00,     0.00],     0),
         (02,  None      ,  Some(1.0),      vec![ 3.33,     0.00,     3.33],     2),
         (03,  Some(0.51),  None     ,      vec![ 3.33,     0.00,     3.33],     2),
@@ -116,8 +116,6 @@ fn new() {
         target = target_i;
         target_count = target_count_i;
         log::debug!("{dbg} | step {step}  pos: {:?},  load: {:?}", pos, load);
-        let pos = pos.map(|val| val.to_point(0, "pos"));
-        let load = load.map(|val| val.to_point(0, "load"));
         let time = Instant::now();
         rope_slices.eval(pos, load);
         log::debug!("{dbg} | step {step} elapsed: {:?}", time.elapsed());

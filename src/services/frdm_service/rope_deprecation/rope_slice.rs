@@ -1,5 +1,4 @@
 use sal_core::dbg::Dbg;
-use sal_sync::services::entity::Point;
 use crate::services::frdm_service::BendingsConf;
 
 /// 
@@ -37,22 +36,22 @@ impl RopeSlice {
         self.ix
     }
     ///
-    /// Registering new `pos` value, 
+    /// Registering new `pos` value (meter),
     /// So new deprecation result can be evaluated
-    pub fn add_pos(&mut self, val: Point) {
-        self.pos = Some(val.to_double().as_double().value);
+    pub fn add_pos(&mut self, val: f64) {
+        self.pos = Some(val);
         self.changed = Some(());
     }
     ///
-    /// Registering new `load` value, 
+    /// Registering new `load` value (tonn),
     /// So new deprecation result can be evaluated
-    pub fn add_load(&mut self, val: Point) {
-        self.load = Some(val.to_double().as_double().value);
+    pub fn add_load(&mut self, val: f64) {
+        self.load = Some(val);
         self.changed = Some(());
     }
     ///
     /// Evaluates [RopeSlice] deprecation, returns `Some` if was added `pos` or `load`
-    /// - can be evaluated only once per new `pos` or `load`, else returns `None`
+    /// - can be evaluated only once per new `pos` (meter) or `load` (tonn), else returns `None`
     pub fn deprecation(&mut self, bendings: &BendingsConf) -> Option<f64> {
         match self.changed {
             Some(_) => {

@@ -193,7 +193,7 @@ fn run() {
         },
     );
     planner.run().unwrap();
-    std::thread::sleep(Duration::from_millis(3_000));
+    // std::thread::sleep(Duration::from_millis(3_000));
     // planner.exit();
     planner.wait().unwrap();
     test_duration.exit();
