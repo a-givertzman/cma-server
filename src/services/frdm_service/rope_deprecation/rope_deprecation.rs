@@ -19,6 +19,7 @@ pub struct RopeDeprecation {
     /// rope position, mm
     rope_pos: Arc<AtomicUsize>,
     rope_pos_ok: Arc<AtomicBool>,
+    api_client: Arc<ApiClient>,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
@@ -38,11 +39,13 @@ impl RopeDeprecation {
     ) -> Self {
         let name = Name::new(parent, "RopeDeprecation");
         let dbg = Dbg::new(name.parent(), name.me());
+        let api_client = Arc::new(ApiClient::new(&name, conf.api.clone(), scheduler.clone()));
         Self {
             name,
             conf,
             rope_pos: Arc::new(AtomicUsize::new(0)),
             rope_pos_ok: Arc::new(AtomicBool::new(false)),
+            api_client,
             services,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
@@ -112,7 +115,7 @@ impl Service for RopeDeprecation where {
             subscription
         });
         let scheduler = self.scheduler.clone();
-        let api_client = Arc::new(ApiClient::new(&name, conf.api.clone(), self.scheduler.clone()));
+        let api_client = self.api_client.clone();   // Arc::new(ApiClient::new(&name, conf.api.clone(), self.scheduler.clone()));
         api_client.run()?;
         let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
@@ -128,7 +131,6 @@ impl Service for RopeDeprecation where {
             let mut rope_slices = RopeSlices::new(&name, conf.crane.clone(), |ix, deprecation| {
                 let dbg = &dbg.clone();
                 log::warn!("{dbg}.run | Deprecation om slice {}: {:?}", ix, deprecation);
-                
                 let sql = format!(r"
                     insert into {conf_table} (id, deprecation)
                         values ({ix}, {deprecation})
@@ -229,7 +231,8 @@ impl Service for RopeDeprecation where {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handles.wait()
+        self.handles.wait()?;
+        self.api_client.wait()
     }
     //
     //
@@ -240,5 +243,6 @@ impl Service for RopeDeprecation where {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
+        self.api_client.exit();
     }    
 }

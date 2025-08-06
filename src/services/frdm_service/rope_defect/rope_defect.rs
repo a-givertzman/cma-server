@@ -12,6 +12,7 @@ pub struct RopeDefect {
     conf: RopeDefectConf,
     starage_path: PathBuf,
     rope: Arc<Rope>,
+    api_client: Arc<ApiClient>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
     exit: Arc<AtomicBool>,
@@ -31,11 +32,13 @@ impl RopeDefect {
     ) -> Self {
         let name = Name::new(parent, "RopeDefect");
         let dbg = Dbg::new(name.parent(), name.me());
+        let api_client = Arc::new(ApiClient::new(&name, conf.api.clone(), scheduler.clone()));
         Self {
             name,
             conf,
             starage_path: starage_path.as_ref().join("rope-defects"),
             rope,
+            api_client,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
             exit: Arc::new(AtomicBool::new(false)),
@@ -206,7 +209,7 @@ impl Service for RopeDefect {
         let table_defect = conf.tables.defect.clone();
         let table_defect_image = conf.tables.defect_image.clone();
         let rope = self.rope.clone();
-        let api_client = ApiClient::new(&name, conf.api, self.scheduler.clone());
+        let api_client = self.api_client.clone();
         api_client.run()?;
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
@@ -332,7 +335,8 @@ impl Service for RopeDefect {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handles.wait()
+        self.handles.wait()?;
+        self.api_client.wait()
     }
     //
     //
@@ -343,5 +347,6 @@ impl Service for RopeDefect {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-    }    
+        self.api_client.exit();
+    }
 }
