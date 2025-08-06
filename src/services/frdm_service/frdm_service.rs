@@ -57,17 +57,28 @@ impl FrdmService {
         let defect_slices = (rope_length / self.conf.rope_defect.segment.as_m()).round() as usize;
         let deprecation_slices = (rope_length / self.conf.rope_deprecation.crane.rope.segment.as_m()).round() as usize;
         let _ = self.scheduler.spawn(move || {
+            log::debug!("{dbg}.update_db_settings | Updating db settings...");
             let sql = format!(r"
-                insert into {table} (id, value) values
-                    ('winch{winch}-rope_length', {rope_length})
-                    ('winch{winch}-defect_slices', {defect_slices})
-                    ('winch{winch}-deprecation_slices', {deprecation_slices})
+                do $$
+                begin
+                    insert into {table} (id, value) values ('winch{winch}-rope_length', {rope_length})
+                    on conflict (id) do
+                        update set value = {rope_length} where {table}.id = 'winch{winch}-rope_length';
+                    insert into {table} (id, value) values ('winch{winch}-defect_slices', {defect_slices})
+                    on conflict (id) do
+                        update set value = {defect_slices} where {table}.id = 'winch{winch}-defect_slices';
+                    insert into {table} (id, value) values ('winch{winch}-deprecation_slices', {deprecation_slices})
+                    on conflict (id) do
+                        update set value = {deprecation_slices} where {table}.id = 'winch{winch}-deprecation_slices';
+                end; $$
+                language plpgsql;
             ");
             log::trace!("{dbg}.update_db_settings | Fetching sql: {:?}", sql);
             loop {
                 match api_client.fetch(&sql).wait() {
                     Ok(reply) => {
                         if reply.is_ok() {
+                            log::debug!("{dbg}.update_db_settings | Updating db settings - Ok {:?}", reply.unwrap());
                             break;
                         }
                         log::warn!("{dbg}.update_db_settings | Sql reply: {:?}", reply);

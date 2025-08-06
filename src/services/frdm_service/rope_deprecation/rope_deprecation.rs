@@ -129,8 +129,7 @@ impl Service for RopeDeprecation where {
                 let dbg = &dbg.clone();
                 log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", ix, deprecation);
                 let sql = format!(r"
-                    insert into {conf_table} (id, deprecation)
-                        values ({ix}, {deprecation})
+                    insert into {conf_table} (id, deprecation) values ({ix}, {deprecation})
                     on conflict (id) do update 
                         set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {ix};
                 ");
