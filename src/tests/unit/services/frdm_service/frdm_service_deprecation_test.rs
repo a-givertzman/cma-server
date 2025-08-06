@@ -33,29 +33,31 @@ fn run() {
     test_duration.run().unwrap();
     let events = vec![
         vec![   // SendService0
-            ("Winch.RopePos", Value::Real(0.000)),  // 55          // EncoderBR0
-            ("Winch.RopePos", Value::Real(0.001)),  // 55
-            ("Winch.RopePos", Value::Real(0.004)),  // 55
-            ("Winch.Load", Value::Real(0.9)),
-            ("Winch.RopePos", Value::Real(0.005)),  // 55
-            ("Winch.RopePos", Value::Real(0.006)),
-            ("Winch.RopePos", Value::Real(0.050)),
-            ("Winch.RopePos", Value::Real(0.094)),
-            ("Winch.RopePos", Value::Real(0.095)),  // 56
-            ("Winch.RopePos", Value::Real(0.096)),  // 56
+            ("Winch.RopePos", Value::Real(0.500)),  // 55          // EncoderBR0
+            ("Winch.Load", Value::Real(1.0)),
+            ("Winch.RopePos", Value::Real(0.510)),  // 55
+            ("Winch.RopePos", Value::Real(0.520)),  // 55
+            ("Winch.RopePos", Value::Real(0.530)),  // 55
+            ("Winch.RopePos", Value::Real(0.540)),
+            ("Winch.RopePos", Value::Real(0.550)),
+            ("Winch.RopePos", Value::Real(0.560)),
+            ("Winch.RopePos", Value::Real(0.570)),  // 56
+            ("Winch.RopePos", Value::Real(0.580)),  // 56
+            ("Winch.RopePos", Value::Real(0.590)),  // 56
+            ("Winch.RopePos", Value::Real(0.600)),  // 56
+            ("Winch.RopePos", Value::Real(0.610)),  // 56
+            ("Winch.RopePos", Value::Real(0.620)),  // 56
+            ("Winch.RopePos", Value::Real(0.630)),
+            ("Winch.RopePos", Value::Real(0.640)),
+            ("Winch.RopePos", Value::Real(0.650)),  // 57
+            ("Winch.RopePos", Value::Real(0.660)),  // 57
+            ("Winch.RopePos", Value::Real(0.670)),  // 57
+            ("Winch.RopePos", Value::Real(0.680)),  // 57
+            ("Winch.RopePos", Value::Real(0.690)),  // 57
+            ("Winch.RopePos", Value::Real(0.700)),  // 57
+            ("Winch.RopePos", Value::Real(0.710)),  // 57
+            ("Winch.RopePos", Value::Real(0.720)),  // 57
             ("Winch.Load", Value::Real(1.1)),
-            ("Winch.RopePos", Value::Real(0.100)),  // 56
-            ("Winch.RopePos", Value::Real(0.101)),  // 56
-            ("Winch.RopePos", Value::Real(0.104)),  // 56
-            ("Winch.RopePos", Value::Real(0.105)),  // 56
-            ("Winch.RopePos", Value::Real(0.106)),
-            ("Winch.RopePos", Value::Real(0.194)),
-            ("Winch.RopePos", Value::Real(0.195)),  // 57
-            ("Winch.RopePos", Value::Real(0.196)),  // 57
-            ("Winch.RopePos", Value::Real(0.200)),  // 57
-            ("Winch.RopePos", Value::Real(0.201)),  // 57
-            ("Winch.RopePos", Value::Real(0.203)),  // 57
-            ("Winch.RopePos", Value::Real(0.204)),  // 57
             // ("Load.MainBoomAngle", Value::Int(2)),
             // ("Load.RotaryBoomAngle", Value::Int(3)),
             // ("Int4", Value::Int(4)),
@@ -133,9 +135,9 @@ fn run() {
                     subscribe: /{dbg}/MultiQueue    # Service name, to subscribe for rope positin and crane angles event's
                     crane:
                         bendings:
-                            - D200mm 2.4..2.5 m
-                            - D200mm 2.7..2.9 m
-                            - D200mm 3.1..3.2 m
+                        # Block Diameter   inter    exit
+                        - D300mm           0.500 .. 0.600 m
+                        - D300mm           0.700 .. 0.800 m
                         boom:
                             main-len: 5.3 m                                         # length of the main boom
                             main-angle: point real 'Load.MainBoomAngle'      # degrees, current angle of the main boom to vertical axis
@@ -143,7 +145,7 @@ fn run() {
                             rotary-angle: point real 'Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
                         rope:
                             width: 35 mm        # Diameter of the rome
-                            length: 3001 m      # Total working length of the rope
+                            length: 10 m      # Total working length of the rope
                             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                             pos: point real 'Winch.RopePos'      # meters, current rope position
                             load: point real 'Winch.Load'        # tonn, current rope load

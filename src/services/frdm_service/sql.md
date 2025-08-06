@@ -125,5 +125,5 @@ id  |  deprecation
 -- sliceLingth = ropeLength / slices'
 create table public.frdm_deprecation (
     id                  bigserial primary key not null,
-    deprecation         double precision default 0.0 not null	
+    deprecation         numeric(24, 8) default 0.0 not null	
 );
