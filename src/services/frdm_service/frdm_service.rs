@@ -54,7 +54,6 @@ impl FrdmService {
         let dbg = self.dbg.clone();
         let table = self.conf.table_settings.clone();
         let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
-        log::warn!("{dbg}.update_db_settings | rope_defect: {:#?}", self.conf.rope_defect);
         let defect_slices = (rope_length / self.conf.rope_defect.segment.as_m()).round() as usize;
         let deprecation_slices = (rope_length / self.conf.rope_deprecation.crane.rope.segment.as_m()).round() as usize;
         let _ = self.scheduler.spawn(move || {
@@ -75,7 +74,6 @@ impl FrdmService {
                     },
                     Err(err) => {
                         log::error!("{dbg}.update_db_settings | Fetch error: {:?}", err);
-                        break;
                     }
                 }
                 if exit.load(Ordering::Acquire) {
@@ -123,9 +121,9 @@ impl Service for FrdmService {
                 .collect::<String>()
         );
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
+        self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run()?;
         log::info!("{}.run | ApiClient ready", self.dbg);
-        self.tasks.insert(api_client.name().join(), api_client.clone());
         self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
         let rope_deprecation = Arc::new(RopeDeprecation::new(
             &self.name,
@@ -134,9 +132,9 @@ impl Service for FrdmService {
             services.clone(),
             scheduler.clone(),
         ));
+        self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
         rope_deprecation.run()?;
         log::info!("{}.run | RopeDeprecation ready", self.dbg);
-        self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
         let rope = Arc::new(Rope::new(
             &self.name,
             conf.rope_defect.camera_offset,
@@ -148,7 +146,7 @@ impl Service for FrdmService {
             log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.cameras.len());
             for (camera_id, camera_conf) in &conf.rope_defect.cameras {
                 log::info!("{}.run | Camera '{}'", self.dbg, camera_conf.name);
-                let defect_detection = RopeDefect::new(
+                let defect_detection = Arc::new(RopeDefect::new(
                     &self.name,
                     conf.rope_defect.clone(),
                     **camera_id,
@@ -156,9 +154,9 @@ impl Service for FrdmService {
                     rope.clone(),
                     api_client.clone(),
                     scheduler.clone(),
-                );
+                ));
+                self.tasks.insert(defect_detection.name().join(), defect_detection.clone());
                 defect_detection.run()?; 
-                self.tasks.insert(defect_detection.name().join(), Arc::new(defect_detection));
             }
         } else {
             log::warn!("{}.run | No Camera's configured", self.dbg);
