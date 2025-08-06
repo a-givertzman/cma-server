@@ -143,7 +143,7 @@ fn run() {
                             rotary-angle: point real 'Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
                         rope:
                             width: 35 mm        # Diameter of the rome
-                            length: 3000 m      # Total working length of the rope
+                            length: 3001 m      # Total working length of the rope
                             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                             pos: point real 'Winch.RopePos'      # meters, current rope position
                             load: point real 'Winch.Load'        # tonn, current rope load
