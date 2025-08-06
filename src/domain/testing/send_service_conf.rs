@@ -24,12 +24,12 @@ impl SendServiceConf {
         let dbg = format!("SendServiceConf({})", me);
         log::trace!("{dbg}.new | conf: {:?}", conf);
         let name = Name::new(parent, me);
-        log::debug!("{dbg}.new | name: {:?}", name);
+        log::trace!("{dbg}.new | name: {:?}", name);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{dbg}.new | cycle: {:?}", cycle);
+        log::trace!("{dbg}.new | cycle: {:?}", cycle);
         let send_to: String = conf.get("send-to").expect(&format!("{dbg}.new | 'send-to' - not found or wrong configuration"));
         let send_to = LinkName::from_str(&send_to).unwrap();
-        log::debug!("{dbg}.new | send-to: {}", send_to);
+        log::trace!("{dbg}.new | send-to: {}", send_to);
         Self {
             name,
             cycle,

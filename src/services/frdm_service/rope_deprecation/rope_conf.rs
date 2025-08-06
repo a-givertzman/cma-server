@@ -35,17 +35,17 @@ impl RopeConf {
         let dbg = Dbg::new(&parent, me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, name);
+        log::trace!("{}.new | name: {:?}", dbg, name);
         let width = conf.get_distance("width").expect(&format!("{dbg}.new | 'width' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | width: {:?}", width);
+        log::trace!("{dbg}.new | width: {:?}", width);
         let length = conf.get_distance("length").expect(&format!("{dbg}.new | 'length' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | length: {:?}", length);
+        log::trace!("{dbg}.new | length: {:?}", length);
         let segment = conf.get_distance("segment").expect(&format!("{dbg}.new | 'segment' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | segment: {:?}", segment);
+        log::trace!("{dbg}.new | segment: {:?}", segment);
         let pos = conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name();
-        log::debug!("{dbg}.new | pos: {:?}", pos);
+        log::trace!("{dbg}.new | pos: {:?}", pos);
         let load = conf.get_fn_config(&dbg, "load", &mut vec![]).unwrap().name();
-        log::debug!("{dbg}.new | load: {:?}", load);
+        log::trace!("{dbg}.new | load: {:?}", load);
         Self {
             width,
             length,

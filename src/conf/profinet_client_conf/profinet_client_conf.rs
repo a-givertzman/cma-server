@@ -65,38 +65,38 @@ impl ProfinetClientConf {
         let dbg = format!("ProfinetClientConf({})", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let self_name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, self_name);
+        log::trace!("{}.new | name: {:?}", dbg, self_name);
         let cycle = conf.get_duration("cycle").unwrap_or(Duration::from_millis(100));
-        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
+        log::trace!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").map_or(Duration::from_secs(3), |reconnect| reconnect);
-        log::debug!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
+        log::trace!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
         let subscribe = conf.get("subscribe").unwrap();
-        log::debug!("{}.new | subscribe: {:?}", dbg, subscribe);
+        log::trace!("{}.new | subscribe: {:?}", dbg, subscribe);
         let send_to: String = conf.get("send-to").unwrap();
         let send_to = LinkName::from_str(&send_to).unwrap();
-        log::debug!("{}.new | send-to: {}", dbg, send_to);
+        log::trace!("{}.new | send-to: {}", dbg, send_to);
         if let Ok((_, _)) = conf.get_by_keywd("out", ConfKind::Queue) {
             log::error!("{}.new | Parameter 'out queue' - deprecated, use 'send-to' instead in conf: {:#?}", dbg, conf)
         }
         let protocol = conf.get("protocol").unwrap();
-        log::debug!("{}.new | protocol: {:?}", dbg, protocol);
+        log::trace!("{}.new | protocol: {:?}", dbg, protocol);
         let description = conf.get("description").unwrap();
-        log::debug!("{}.new | description: {:?}", dbg, description);
+        log::trace!("{}.new | description: {:?}", dbg, description);
         let ip = conf.get("ip").unwrap();
-        log::debug!("{}.new | ip: {:?}", dbg, ip);
+        log::trace!("{}.new | ip: {:?}", dbg, ip);
         let rack = conf.get("rack").unwrap();
-        log::debug!("{}.new | rack: {:?}", dbg, rack);
+        log::trace!("{}.new | rack: {:?}", dbg, rack);
         let slot = conf.get("slot").unwrap();
-        log::debug!("{}.new | slot: {:?}", dbg, slot);
+        log::trace!("{}.new | slot: {:?}", dbg, slot);
         let diagnosis = conf.get_diagnosis(&self_name);
-        log::debug!("{}.new | diagnosis: {:#?}", dbg, diagnosis.iter().map(|(k, v)| format!("{}: {}", k, v.name)).collect::<Vec<_>>());
+        log::trace!("{}.new | diagnosis: {:#?}", dbg, diagnosis.iter().map(|(k, v)| format!("{}: {}", k, v.name)).collect::<Vec<_>>());
         let mut dbs = IndexMap::new();
         for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "protocol", "description", "ip", "rack", "slot", "diagnosis"]) {
             let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();
                 let device_conf = conf.get(key).unwrap();
-                log::debug!("{}.new | DB '{}'", dbg, db_name);
+                log::trace!("{}.new | DB '{}'", dbg, db_name);
                 log::trace!("{}.new | DB '{}'   |   conf: {:?}", dbg, db_name, device_conf);
                 let node_conf = ProfinetDbConf::new(&self_name, &db_name, device_conf);
                 dbs.insert(
@@ -104,7 +104,7 @@ impl ProfinetClientConf {
                     node_conf,
                 );
             } else {
-                log::debug!("{}.new | device expected, but found {:?}", dbg, keyword);
+                log::warn!("{}.new | device expected, but found {:?}", dbg, keyword);
             }
         }
         ProfinetClientConf {

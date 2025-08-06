@@ -29,15 +29,15 @@ impl BoomConf {
         let dbg = Dbg::new(&parent, me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, name);
+        log::trace!("{}.new | name: {:?}", dbg, name);
         let main_len = conf.get_distance("main-len").expect(&format!("{dbg}.new | 'main-len' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | main_len: {:?}", main_len);
+        log::trace!("{dbg}.new | main_len: {:?}", main_len);
         let rotary_len = conf.get_distance("rotary-len").expect(&format!("{dbg}.new | 'rotary-len' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | rotary_len: {:?}", rotary_len);
+        log::trace!("{dbg}.new | rotary_len: {:?}", rotary_len);
         let main_angle = conf.get_fn_config(&dbg, "main-angle", &mut vec![]).unwrap().name();
-        log::debug!("{dbg}.new | main_angle: {:?}", main_angle);
+        log::trace!("{dbg}.new | main_angle: {:?}", main_angle);
         let rotary_angle = conf.get_fn_config(&dbg, "rotary-angle", &mut vec![]).unwrap().name();
-        log::debug!("{dbg}.new | rotary_angle: {:?}", rotary_angle);
+        log::trace!("{dbg}.new | rotary_angle: {:?}", rotary_angle);
         Self {
             main_len,
             rotary_len,

@@ -26,11 +26,11 @@ impl RecvServiceConf {
         let dbg = format!("RecvServiceConf({})", me);
         log::trace!("{dbg}.new | conf: {:?}", conf);
         let name = Name::new(parent, me);
-        log::debug!("{dbg}.new | name: {:?}", name);
+        log::trace!("{dbg}.new | name: {:?}", name);
         let recv_limit: Option<u64> = conf.get("recv-limit");
-        log::debug!("{}.new | recv-limit: {:?}", dbg, recv_limit);
+        log::trace!("{}.new | recv-limit: {:?}", dbg, recv_limit);
         let (recv, recv_length) = conf.get_in_queue().unwrap();
-        log::debug!("{}.new | recv: {},\tmax-length: {:?}", dbg, recv, recv_length);
+        log::trace!("{}.new | recv: {},\tmax-length: {:?}", dbg, recv, recv_length);
         Self {
             name,
             recv_limit: recv_limit.map(|v| v as usize),

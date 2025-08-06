@@ -110,10 +110,10 @@ impl ServiceTestPlanner {
                                     match (conf.name(), conf.title()) {
                                         (Ok(node_name), Ok(node_title)) => {
                                             log::info!("{dbg}.run | Configuring service: {} '{}'...", node_name, node_title);
-                                            log::trace!("{dbg}.run | Config: {:#?}", conf);
                                             match node_name.as_str() {
                                                 "SendService" => {
                                                     let conf = SendServiceConf::new(self.name.parent(), conf);
+                                                    log::debug!("{dbg}.run | Conf: {:#?}", conf);
                                                     let events = match send_events.pop() {
                                                         Some(mut events) => {
                                                             events.reverse();
@@ -142,6 +142,7 @@ impl ServiceTestPlanner {
                                                 }
                                                 "RecvService" => {
                                                     let conf = RecvServiceConf::new(self.name.parent(), conf);
+                                                    log::debug!("{dbg}.run | Conf: {:#?}", conf);
                                                     let service = Arc::new(RecvService::new(
                                                         self.name.parent(),
                                                         conf,
@@ -164,7 +165,6 @@ impl ServiceTestPlanner {
                                                     self.services.insert(service);
                                                 }
                                             }
-                                            log::info!("{dbg}.run | Configuring service: {} '{}' - ok\n", node_name, node_title);
                                         }
                                         (Ok(name), Err(err)) => log::warn!("{dbg}.run | Service '{name}' config `Title` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
                                         (Err(err), Ok(_)) => log::warn!("{dbg}.run | Service config `Name` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
@@ -178,11 +178,12 @@ impl ServiceTestPlanner {
                     }
                 }
                 assert!(recv_services.len() == self.inspect_each_received.len(), "{dbg}.run | RecvService's [{}] and each_received's [{}] - are not equals", recv_services.len(), self.inspect_each_received.len());
+                log::info!("{dbg}.run | All services configured\n");
+                log::info!("{dbg}.run | Starting services...");
                 log::info!("{dbg}.run | Services order:");
                 for k in self.services_order.read().clone() {
                     log::info!("{dbg}.run |    {k}");
                 }
-                log::info!("{dbg}.run | Starting services...");
                 self.services.run()?;
                 std::thread::sleep(Duration::from_millis(50));
                 let services_len = self.services.all().len();

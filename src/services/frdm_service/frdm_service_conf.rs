@@ -108,20 +108,20 @@ impl FrdmServiceConf {
         let dbg = format!("FrdmServiceConf '{}'", me);
         log::trace!("{dbg}.new | conf: {:?}", conf);
         let name = Name::new(parent, me);
-        log::debug!("{dbg}.new | name: {:?}", name);
+        log::trace!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
-        log::debug!("{}.new | wait-started: {:?}", dbg, wait_started);
+        log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
         let api: ConfTree = conf.get("api-client").expect(&format!("{dbg}.new | 'api-client' - not found or wrong configuration"));
         let api = ApiClientConf::new(&name, api);
-        log::debug!("{dbg}.new | api: {:#?}", api);
+        log::trace!("{dbg}.new | api: {:#?}", api);
         let table_settings = conf.get("table-settings").expect(&format!("{dbg}.new | 'table-settings' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | table-settings: {:?}", table_settings);
+        log::trace!("{dbg}.new | table-settings: {:?}", table_settings);
         let rope_defect: ConfTree = conf.get("rope-defect").expect(&format!("{dbg}.new | 'rope-defect' - not found or wrong configuration"));
         let rope_defect = RopeDefectConf::new(&name, rope_defect, api.clone());
-        log::debug!("{dbg}.new | rope-defect: {:#?}", rope_defect);
+        log::trace!("{dbg}.new | rope-defect: {:#?}", rope_defect);
         let rope_deprecation: ConfTree = conf.get("rope-deprecation").expect(&format!("{dbg}.new | 'rope-deprecation' - not found or wrong configuration"));
         let rope_deprecation = RopeDeprecationConf::new(&name, rope_deprecation, api.clone());
-        log::debug!("{dbg}.new | rope-deprecation: {:#?}", rope_deprecation);
+        log::trace!("{dbg}.new | rope-deprecation: {:#?}", rope_deprecation);
         Self {
             name,
             wait_started,
