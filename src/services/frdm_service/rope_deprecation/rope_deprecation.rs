@@ -114,7 +114,6 @@ impl Service for RopeDeprecation where {
             log::trace!("{dbg}.run | Subscription: {:?}", subscription);
             subscription
         });
-        let scheduler = self.scheduler.clone();
         let api_client = self.api_client.clone();   // Arc::new(ApiClient::new(&name, conf.api.clone(), self.scheduler.clone()));
         api_client.run()?;
         let mut handles = vec![];
@@ -130,35 +129,16 @@ impl Service for RopeDeprecation where {
             let conf_table = conf.table.clone();
             let mut rope_slices = RopeSlices::new(&name, conf.crane.clone(), |ix, deprecation| {
                 let dbg = &dbg.clone();
-                log::warn!("{dbg}.run | Deprecation om slice {}: {:?}", ix, deprecation);
+                log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", ix, deprecation);
                 let sql = format!(r"
                     insert into {conf_table} (id, deprecation)
                         values ({ix}, {deprecation})
                     on conflict (id) do update 
                         set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {ix};
                 ");
-                // let api_client = api_client.clone();
-                // let dbg_ = dbg.clone();
-                // if let Err(err) = scheduler.spawn(move || {
-                //     let dbg = dbg_;
-                //     log::warn!("{dbg}.run | Fetching sql: {:?}", sql);
-                //     let reply = api_client.fetch(sql).wait();
-                //     log::warn!("{dbg}.run | Sql reply: {:?}", reply);
-                //     Ok(())
-                // }) {
-                //     log::error!("{dbg}.run | Error spawning thread: {:?}", err);
-                // }
-                log::warn!("{dbg}.run | Fetching sql: {:?}", sql);
+                log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
                 let reply = api_client.fetch(sql).wait();
-                log::warn!("{dbg}.run | Sql reply: {:?}", reply);
-                // .then(
-                //     |reply| {
-                //         log::warn!("{dbg}.run | Send sql reply: {:?}", reply);
-                //     },
-                //     |err| {
-                //         log::warn!("{dbg}.run | Send sql error: {:?}", err);
-                //     },
-                // );
+                log::trace!("{dbg}.run | Sql reply: {:?}", reply);
             });
             service_release.add(Ok(()));
             loop {
@@ -198,7 +178,6 @@ impl Service for RopeDeprecation where {
                     },
                 }
                 if exit.load(Ordering::Acquire) {
-                    log::debug!("{dbg}.run | Exiting...");
                     break;
                 }
             }

@@ -2,17 +2,18 @@
 
 ## frdm_settings
 
-key                    |  value
----------------------- | -------
-rope_length            |  3000  (m)
-defect_slices          |  30000
-deprecation_slices     |  60000
+key                    |  value  |  unit
+---------------------- | ------- | ------
+rope_length            |  3000.0 | m
+defect_slices          |  30000  |  
+deprecation_slices     |  60000  |  
 
 ```sql
 -- FRDM | Setting parameters
 create table public.frdm_settings (
     id                  varchar primary key not null,
     value               text not null
+    unit                text null
 );
 ```
 

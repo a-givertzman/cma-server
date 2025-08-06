@@ -21,7 +21,7 @@ use sal_sync::{
     services::{entity::{Name, Object}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::services::frdm_service::{RopeDefect, FrdmServiceConf, Rope, RopeDeprecation};
+use crate::{infra::ApiClient, services::frdm_service::{FrdmServiceConf, Rope, RopeDefect, RopeDeprecation}};
 ///
 /// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
@@ -49,6 +49,42 @@ impl FrdmService {
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
+    }
+    pub fn update_db_settings(&self, exit: Arc<AtomicBool>) -> Result<(), Error> {
+        let dbg = self.dbg.clone();
+        let table = self.conf.table_settings.clone();
+        let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
+        let defect_slices = (rope_length / self.conf.rope_defect.first().unwrap().segment.as_m()).round() as usize;
+        let deprecation_slices = (rope_length / self.conf.rope_deprecation.crane.rope.segment.as_m()).round() as usize;
+        let api_client = Arc::new(ApiClient::new(&self.conf.name, self.conf.api.clone(), self.scheduler.clone()));
+        let _ = self.scheduler.spawn(move || {
+            let sql = format!(r"
+                insert into {table} (id, value) values
+                    ('rope_length', {rope_length})
+                    ('defect_slices', {defect_slices})
+                    ('deprecation_slices', {deprecation_slices})
+            ");
+            log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
+            loop {
+                match api_client.fetch(&sql).wait() {
+                    Ok(reply) => {
+                        if reply.is_ok() {
+                            break;
+                        }
+                        log::trace!("{dbg}.run | Sql reply: {:?}", reply);
+                    },
+                    Err(err) => {
+                        log::error!("{dbg}.run | Fetch error: {:?}", err);
+                        break;
+                    }
+                }
+                if exit.load(Ordering::Acquire) {
+                    break;
+                }
+            }
+            Ok(())
+        })?;
+        Ok(())
     }
 }
 //
@@ -86,6 +122,7 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
+        self.update_db_settings(self.exit.clone())?;
         let rope_deprecation = Arc::new(RopeDeprecation::new(
             &self.name,
             conf.rope_deprecation,

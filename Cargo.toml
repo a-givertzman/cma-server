@@ -43,7 +43,6 @@ rustfft = "~6.4"
 parking_lot = "~0.12"
 once_cell = "~1.21"
 lazy_static = "~1.5"
-# kanal = "~0.1"
 kanal = { version = "~0.1", git = "https://github.com/fereidani/kanal.git" }
 dashmap = "~6.1"
 coco = "~0.3"

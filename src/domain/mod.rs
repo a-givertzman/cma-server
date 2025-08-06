@@ -1,12 +1,12 @@
+pub mod auth;
+pub mod cli;
+pub mod constants;
 pub mod failure;
-mod types;
+pub mod filter;
 pub mod format;
 pub mod net;
 pub mod retain_buffer;
-pub mod constants;
-pub mod auth;
-pub mod filter;
 pub mod testing;
-pub mod cli;
+mod types;
 
 pub use types::*;

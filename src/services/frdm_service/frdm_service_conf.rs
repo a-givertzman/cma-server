@@ -13,6 +13,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         address: "0.0.0.0:8080",
 ///         auth_token: "123!@#",
 ///         database: "cma",
+///     table_settings: 'public.frdm_settings'
 ///     rope-defect:
 ///         tables:
 ///             defect: 'public.frdm_defect'
@@ -90,6 +91,8 @@ pub struct FrdmServiceConf {
     // pub cycle: Option<Duration>,
     /// API configuration parametes
     pub api: ApiClientConf,
+    /// Names of the database table used for storing common settings for the clients
+    pub table_settings: String,
     /// The configuration parameters for the `RopeDefect`
     pub rope_defect: Vec<RopeDefectConf>,
     /// The Config parameters for `RopeDeprecation`
@@ -110,6 +113,8 @@ impl FrdmServiceConf {
         log::debug!("{}.new | wait-started: {:?}", dbg, wait_started);
         let api: ApiClientConf = conf.parse("api").expect(&format!("{dbg}.new | 'api' - not found or wrong configuration"));
         log::debug!("{dbg}.new | api: {:#?}", api);
+        let table_settings = conf.get("table-settings").expect(&format!("{dbg}.new | 'table-settings' - not found or wrong configuration"));
+        log::debug!("{dbg}.new | table-settings: {:?}", table_settings);
         let rope_deprecation: ConfTree = conf.get("rope-deprecation").expect(&format!("{dbg}.new | 'rope-deprecation' - not found or wrong configuration"));
         let rope_deprecation = RopeDeprecationConf::new(&name, rope_deprecation, api.clone());
         log::trace!("{dbg}.new | rope-deprecation: {:#?}", rope_deprecation);
@@ -137,6 +142,7 @@ impl FrdmServiceConf {
             name,
             wait_started,
             api,
+            table_settings,
             rope_defect,
             rope_deprecation,
         }
