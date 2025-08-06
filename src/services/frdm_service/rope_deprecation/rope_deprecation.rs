@@ -139,7 +139,7 @@ impl Service for RopeDeprecation where {
             });
             service_release.add(Ok(()));
             loop {
-                log::debug!("{dbg}.run | Receiving points...");
+                log::trace!("{dbg}.run | Receiving points...");
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
                         log::debug!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
