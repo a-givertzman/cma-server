@@ -89,10 +89,12 @@ fn run() {
             service FrdmService:
                 wait-started: 10 ms
                 cycle: 100 ms
-                api:
+                api-client:
+                    wait-started: 10 ms
                     address: 0.0.0.0:8081
-                    auth_token: "123!@#"
+                    auth-token: "123!@#"
                     database: cma
+                table-settings: 'public.frdm_settings'
                 rope-defect:
                     wait-started: 10 ms
                     tables:

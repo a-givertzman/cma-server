@@ -2,11 +2,11 @@
 
 ## frdm_settings
 
-key                    |  value  |  unit
----------------------- | ------- | ------
-rope_length            |  3000.0 | m
-defect_slices          |  30000  |  
-deprecation_slices     |  60000  |  
+ key                           |  value  |  unit
+------------------------------ | ------- | ------
+ winch1-rope-length            |  3000.0 |  m
+ winch1-defect-slices          |  30000  |  
+ winch1-deprecation-slices     |  60000  |  
 
 ```sql
 -- FRDM | Setting parameters

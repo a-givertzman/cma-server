@@ -1,8 +1,8 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use frdm_tools::camera::CameraConf;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
+use sal_sync::services::{conf::{ConfCustomKeywd, ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
 use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_conf::TablesConf};
 ///
 /// ## The configuration parameters for the `RopeDefect`
@@ -61,9 +61,7 @@ pub struct RopeDefectConf {
     pub camera_offset: ConfDistance,
     /// Configuration parameters for binarization and defect detection algorithms
     pub defect_detection: frdm_tools::conf::Conf,
-    /// Id of the exact camera to used inthe sql database and folder name 
-    pub camera_id: usize,
-    pub camera: CameraConf,
+    pub cameras: Vec<(CameraId, CameraConf)>,
 }
 //
 // 
@@ -74,27 +72,42 @@ impl RopeDefectConf {
         parent: impl Into<String>,
         conf: ConfTree,
         api: ApiClientConf,
-        camera_id: usize,
-        camera: CameraConf,
     ) -> Self {
         let parent = parent.into();
         let me = "RopeDefectConf";
         let dbg = Dbg::new(&parent, me);
         let name = Name::new(parent, me);
-        log::debug!("{dbg}.new | name: {:?}", name);
+        log::trace!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
-        log::debug!("{}.new | wait-started: {:?}", dbg, wait_started);
+        log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
         let tables = conf.parse("tables").expect(&format!("{dbg}.new | 'tables' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | tables: {:?}", tables);
+        log::trace!("{dbg}.new | tables: {:?}", tables);
         let segment = conf.get_distance("segment").expect(&format!("{dbg}.new | 'segment' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | segment: {:?}", segment);
+        log::trace!("{dbg}.new | segment: {:?}", segment);
         let segment_threshold = conf.get_distance("segment-threshold").expect(&format!("{dbg}.new | 'segment-threshold' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | segment-threshold: {:?}", segment_threshold);
+        log::trace!("{dbg}.new | segment-threshold: {:?}", segment_threshold);
         let camera_offset = conf.get_distance("camera-offset").expect(&format!("{dbg}.new | 'camera-offset' - not found or wrong configuration"));
-        log::debug!("{dbg}.new | camera-offset: {:?}", camera_offset);
+        log::trace!("{dbg}.new | camera-offset: {:?}", camera_offset);
         let defect_detection: ConfTree = conf.get("defect-detection").expect(&format!("{dbg}.new | 'defect-detection' - not found or wrong configuration"));
         let defect_detection = frdm_tools::conf::Conf::new(&name, defect_detection);
         log::trace!("{dbg}.new | defect-detection: {:#?}", defect_detection);
+        let mut camera_id = CameraId(0);
+        let mut cameras = vec![];
+        match conf.sub_nodes() {
+            Some(nodes) => {
+                for node in nodes {
+                    if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
+                        if keywd.name() == "camera" {
+                            let camera = CameraConf::new(&name, &node);
+                            log::trace!("{dbg}.new | camera: {:#?}", camera);
+                            cameras.push((camera_id, camera));
+                            *camera_id +=1;
+                        }
+                    }
+                }
+            }
+            None => log::warn!("{dbg}.new | No camera configurations"),
+        }
         Self {
             name,
             wait_started,
@@ -104,8 +117,34 @@ impl RopeDefectConf {
             segment_threshold,
             camera_offset,
             defect_detection,
-            camera_id,
-            camera,
+            cameras,
         }
+    }
+}
+///
+/// Camera unique identifier to be used in the sql database and folder name
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CameraId(pub usize);
+// Implement the Default trait to provide a default value
+impl Default for CameraId {
+    fn default() -> Self {
+        CameraId(0) // Default value for the wrapped usize
+    }
+}
+
+// Implement Deref to allow immutable dereferencing to usize
+impl std::ops::Deref for CameraId {
+    type Target = usize;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0 // Dereference to the inner usize
+    }
+}
+
+// Implement DerefMut to allow mutable dereferencing to usize
+impl std::ops::DerefMut for CameraId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0 // Mutably dereference to the inner usize
     }
 }

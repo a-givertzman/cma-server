@@ -50,31 +50,31 @@ impl FrdmService {
             dbg,
         }
     }
-    pub fn update_db_settings(&self, exit: Arc<AtomicBool>) -> Result<(), Error> {
+    pub fn update_db_settings(&self, winch: usize, api_client: Arc<ApiClient>, exit: Arc<AtomicBool>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let table = self.conf.table_settings.clone();
         let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
-        let defect_slices = (rope_length / self.conf.rope_defect.first().unwrap().segment.as_m()).round() as usize;
+        log::warn!("{dbg}.update_db_settings | rope_defect: {:#?}", self.conf.rope_defect);
+        let defect_slices = (rope_length / self.conf.rope_defect.segment.as_m()).round() as usize;
         let deprecation_slices = (rope_length / self.conf.rope_deprecation.crane.rope.segment.as_m()).round() as usize;
-        let api_client = Arc::new(ApiClient::new(&self.conf.name, self.conf.api.clone(), self.scheduler.clone()));
         let _ = self.scheduler.spawn(move || {
             let sql = format!(r"
                 insert into {table} (id, value) values
-                    ('rope_length', {rope_length})
-                    ('defect_slices', {defect_slices})
-                    ('deprecation_slices', {deprecation_slices})
+                    ('winch{winch}-rope_length', {rope_length})
+                    ('winch{winch}-defect_slices', {defect_slices})
+                    ('winch{winch}-deprecation_slices', {deprecation_slices})
             ");
-            log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
+            log::trace!("{dbg}.update_db_settings | Fetching sql: {:?}", sql);
             loop {
                 match api_client.fetch(&sql).wait() {
                     Ok(reply) => {
                         if reply.is_ok() {
                             break;
                         }
-                        log::trace!("{dbg}.run | Sql reply: {:?}", reply);
+                        log::warn!("{dbg}.update_db_settings | Sql reply: {:?}", reply);
                     },
                     Err(err) => {
-                        log::error!("{dbg}.run | Fetch error: {:?}", err);
+                        log::error!("{dbg}.update_db_settings | Fetch error: {:?}", err);
                         break;
                     }
                 }
@@ -122,40 +122,46 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
-        self.update_db_settings(self.exit.clone())?;
+        let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
+        api_client.run()?;
+        log::info!("{}.run | ApiClient ready", self.dbg);
+        self.tasks.insert(api_client.name().join(), api_client.clone());
+        self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
         let rope_deprecation = Arc::new(RopeDeprecation::new(
             &self.name,
             conf.rope_deprecation,
+            api_client.clone(),
             services.clone(),
             scheduler.clone(),
         ));
         rope_deprecation.run()?;
         log::info!("{}.run | RopeDeprecation ready", self.dbg);
         self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
-        match conf.rope_defect.first() {
-            Some(conf_rope_defect) => {
-                log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.len());
-                let rope = Arc::new(Rope::new(
+        let rope = Arc::new(Rope::new(
+            &self.name,
+            conf.rope_defect.camera_offset,
+            conf.rope_defect.segment,
+            conf.rope_defect.segment_threshold,
+            rope_deprecation,
+        ));
+        if !conf.rope_defect.cameras.is_empty() {
+            log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.cameras.len());
+            for (camera_id, camera_conf) in &conf.rope_defect.cameras {
+                log::info!("{}.run | Camera '{}'", self.dbg, camera_conf.name);
+                let defect_detection = RopeDefect::new(
                     &self.name,
-                    conf_rope_defect.camera_offset,
-                    conf_rope_defect.segment,
-                    conf_rope_defect.segment_threshold,
-                    rope_deprecation,
-                ));
-                for conf_rope_defect in &conf.rope_defect {
-                    log::info!("{}.run | Camera '{}'", self.dbg, conf_rope_defect.camera.name);
-                    let defect_detection = RopeDefect::new(
-                        &self.name,
-                        conf_rope_defect.to_owned(),
-                        storage_path.clone(),
-                        rope.clone(),
-                        scheduler.clone(),
-                    );
-                    defect_detection.run()?; 
-                    self.tasks.insert(defect_detection.name().join(), Arc::new(defect_detection));
-                }
+                    conf.rope_defect.clone(),
+                    **camera_id,
+                    storage_path.clone(),
+                    rope.clone(),
+                    api_client.clone(),
+                    scheduler.clone(),
+                );
+                defect_detection.run()?; 
+                self.tasks.insert(defect_detection.name().join(), Arc::new(defect_detection));
             }
-            None => log::warn!("{}.run | No Camera's configured", self.dbg),
+        } else {
+            log::warn!("{}.run | No Camera's configured", self.dbg);
         }
         log::info!("{}.run | RopeDefect's ready", self.dbg);
         log::info!("{}.run | Starting - Ok", self.dbg);
@@ -165,9 +171,8 @@ impl Service for FrdmService {
     //
     fn wait(&self) -> Result<(), Error> {
         let mut errors = vec![];
-        for item in self.tasks.iter() {
-            let service = item.value();
-            if let Err(err) = service.wait() {
+        for task in self.tasks.iter() {
+            if let Err(err) = task.value().wait() {
                 errors.push(err);
             }
         }
@@ -185,9 +190,8 @@ impl Service for FrdmService {
     //
     fn is_finished(&self) -> bool {
         let mut is_finished = false;
-        for item in self.tasks.iter() {
-            let service = item.value();
-            is_finished = is_finished & service.is_finished();
+        for task in self.tasks.iter() {
+            is_finished = is_finished & task.value().is_finished();
         }
         is_finished
     }
@@ -195,9 +199,8 @@ impl Service for FrdmService {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-        for item in self.tasks.iter() {
-            let service = item.value();
-            service.exit();
+        for task in self.tasks.iter() {
+            task.value().exit();
         }
     }    
 }

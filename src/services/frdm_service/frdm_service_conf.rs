@@ -1,6 +1,5 @@
-use frdm_tools::camera::CameraConf;
-use sal_sync::services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::Name};
-use std::{fs, str::FromStr, time::Duration};
+use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
+use std::{fs, time::Duration};
 use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefectConf, rope_deprecation::RopeDeprecationConf}};
 
 ///
@@ -9,9 +8,10 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
-///     api:
-///         address: "0.0.0.0:8080",
-///         auth_token: "123!@#",
+///     api-client:
+///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+///         address: "0.0.0.0:8081",
+///         auth-token: "123!@#",
 ///         database: "cma",
 ///     table_settings: 'public.frdm_settings'
 ///     rope-defect:
@@ -44,24 +44,24 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                 geometry-defect-threshold: 1.2      # 1.1...1.3, absolute threshold to detect the geometry deffects
 ///             fine-scan:
 ///                 no-params: not implemented yet
-///     camera Camera1:
-///         fps: Max                    # Max / Min / 30.0
-///         resolution: 
-///             width: 1200
-///             height: 800
-///         index: 0
-///         # address: 192.168.10.12:2020
-///         # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
-///         # pixel-format:  Mono8
-///         # pixel-format:  BayerRG8
-///         # pixel-format:  QOI_Mono8
-///         pixel-format:  QOI_BayerRG8
-///         exposure:
-///             auto: Off                   # Off / Continuous
-///             time: 26000                   # microseconds
-///         auto-packet-size: true          # StreamAutoNegotiatePacketSize
-///         channel-packet-size: Max        # Maximizing packet size increases frame rate
-///         resend-packet: true             # StreamPacketResendEnable
+///         camera Camera1:
+///             fps: Max                    # Max / Min / 30.0
+///             resolution: 
+///                 width: 1200
+///                 height: 800
+///             index: 0
+///             # address: 192.168.10.12:2020
+///             # Mono8/10/12/16, Bayer8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
+///             # pixel-format:  Mono8
+///             # pixel-format:  BayerRG8
+///             # pixel-format:  QOI_Mono8
+///             pixel-format:  QOI_BayerRG8
+///             exposure:
+///                 auto: Off                   # Off / Continuous
+///                 time: 26000                   # microseconds
+///             auto-packet-size: true          # StreamAutoNegotiatePacketSize
+///             channel-packet-size: Max        # Maximizing packet size increases frame rate
+///             resend-packet: true             # StreamPacketResendEnable
 /// 
 ///     rope-deprecation:
 ///         table: 'public.frdm_deprecation'
@@ -94,7 +94,7 @@ pub struct FrdmServiceConf {
     /// Names of the database table used for storing common settings for the clients
     pub table_settings: String,
     /// The configuration parameters for the `RopeDefect`
-    pub rope_defect: Vec<RopeDefectConf>,
+    pub rope_defect: RopeDefectConf,
     /// The Config parameters for `RopeDeprecation`
     pub rope_deprecation: RopeDeprecationConf,
 }
@@ -111,33 +111,17 @@ impl FrdmServiceConf {
         log::debug!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
         log::debug!("{}.new | wait-started: {:?}", dbg, wait_started);
-        let api: ApiClientConf = conf.parse("api").expect(&format!("{dbg}.new | 'api' - not found or wrong configuration"));
+        let api: ConfTree = conf.get("api-client").expect(&format!("{dbg}.new | 'api-client' - not found or wrong configuration"));
+        let api = ApiClientConf::new(&name, api);
         log::debug!("{dbg}.new | api: {:#?}", api);
         let table_settings = conf.get("table-settings").expect(&format!("{dbg}.new | 'table-settings' - not found or wrong configuration"));
         log::debug!("{dbg}.new | table-settings: {:?}", table_settings);
+        let rope_defect: ConfTree = conf.get("rope-defect").expect(&format!("{dbg}.new | 'rope-defect' - not found or wrong configuration"));
+        let rope_defect = RopeDefectConf::new(&name, rope_defect, api.clone());
+        log::debug!("{dbg}.new | rope-defect: {:#?}", rope_defect);
         let rope_deprecation: ConfTree = conf.get("rope-deprecation").expect(&format!("{dbg}.new | 'rope-deprecation' - not found or wrong configuration"));
         let rope_deprecation = RopeDeprecationConf::new(&name, rope_deprecation, api.clone());
-        log::trace!("{dbg}.new | rope-deprecation: {:#?}", rope_deprecation);
-        let mut camera_id = 0;
-        let mut rope_defect = vec![];
-        match conf.sub_nodes() {
-            Some(nodes) => {
-                let conf: ConfTree = conf.get("rope-defect").expect(&format!("{dbg}.new | 'rope-defect' - not found or wrong configuration"));
-                for node in nodes {
-                    if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
-                        if keywd.name() == "camera" {
-                            let camera = CameraConf::new(&name, &node);
-                            log::trace!("{dbg}.new | camera: {:#?}", camera);
-                            let rope_defect_conf = RopeDefectConf::new(&name, conf.clone(), api.clone(), camera_id, camera);
-                            log::trace!("{dbg}.new | rope-defect: {:#?}", rope_defect_conf);
-                            rope_defect.push(rope_defect_conf);
-                            camera_id +=1;
-                        }
-                    }
-                }
-            }
-            None => log::warn!("{dbg}.new | No camera configurations"),
-        }
+        log::debug!("{dbg}.new | rope-deprecation: {:#?}", rope_deprecation);
         Self {
             name,
             wait_started,

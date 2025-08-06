@@ -1,8 +1,8 @@
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object}, future::{Future, Sink}, Service}, sync::{channel::{self, RecvTimeoutError}, Handles, Owner}, thread_pool::Scheduler};
+use sal_sync::{services::{entity::{Name, Object}, future::{Future, Sink}, Service, ServiceWaiting}, sync::{channel::{self, RecvTimeoutError}, Handles, Owner}, thread_pool::Scheduler};
 use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, Sender}, infra::ApiClientConf};
 ///
 /// API Reply
@@ -32,12 +32,11 @@ pub struct ApiClient {
 impl ApiClient {
     ///
     /// Returns [ApiClient] new instance
-    pub fn new(parent: impl Into<String>, conf: ApiClientConf, scheduler: Scheduler,) -> Self {
-        let name = Name::new(parent, "ApiClient");
-        let dbg = Dbg::new(name.parent(), name.me());
+    pub fn new(conf: ApiClientConf, scheduler: Scheduler,) -> Self {
+        let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         let (send, recv) = channel::unbounded();
         Self {
-            name,
+            name: conf.name.clone(),
             conf,
             send,
             recv: Owner::new(recv),
@@ -69,6 +68,8 @@ impl Service for ApiClient {
         let name = self.name.clone();
         let conf = self.conf.clone();
         let recv = self.recv.take().unwrap();
+        let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
+        let service_release = service_waiting.release();
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
@@ -77,10 +78,15 @@ impl Service for ApiClient {
                 &name,
                 &conf.address,
                 &conf.auth_token,
-                ApiQuery::new(ApiQueryKind::Sql(ApiQuerySql::new(&conf.database, "")), true),
+                ApiQuery::new(ApiQueryKind::Sql(ApiQuerySql::new(&conf.database, "select 1;")), true),
                 true,
                 false,
             );
+            while let Err(err) = request.fetch(true) {
+                log::warn!("{dbg}.run | ApiClient error: {:?}", err);
+                std::thread::sleep(Duration::from_millis(1000));
+            }
+            service_release.add(Ok(()));
             loop {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((sql, sink)) => {
@@ -119,7 +125,15 @@ impl Service for ApiClient {
             Ok(handle) => {
                 log::info!("{}.run | Starting - ok", self.dbg);
                 self.handles.push(handle);
-                Ok(())
+                let r = match conf.wait_started {
+                    Some(_) => {
+                        log::info!("{}.run | Waiting while starting...", self.dbg);
+                        service_waiting.wait()
+                    }
+                    None => Ok(()),
+                };
+                log::info!("{}.run | Starting - ok", self.dbg);
+                r
             }
             Err(err) => {
                 let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());

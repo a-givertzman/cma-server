@@ -10,6 +10,7 @@ use std::{fs, net::SocketAddr, str::FromStr, time::Duration};
 ///     in queue api-link:
 ///         max-length: 10000
 ///     send-to: MultiQueue.queue   # Used to return replies from SQL requests
+///     auth-token: 123!@#
 ///     debug: false                # API debug mode, optional, default false
 /// ```
 #[derive(Debug, PartialEq, Clone)]
@@ -45,25 +46,25 @@ impl ApiClientConf {
         let dbg = format!("ApiClientConfig({})", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let self_name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, self_name);
+        log::trace!("{}.new | name: {:?}", dbg, self_name);
         let address: String = conf.get("address").unwrap();
         let address: SocketAddr = address.parse().unwrap();
-        log::debug!("{}.new | address: {:?}", dbg, address);
+        log::trace!("{}.new | address: {:?}", dbg, address);
         let database = conf.get("database").unwrap();
-        log::debug!("{}.new | database: {:?}", dbg, database);
-        let auth_token = conf.get("auth_token").unwrap();
-        log::debug!("{}.new | auth_token: {:?}", dbg, auth_token);
+        log::trace!("{}.new | database: {:?}", dbg, database);
+        let auth_token = conf.get("auth-token").unwrap();
+        log::trace!("{}.new | auth-token: {:?}", dbg, auth_token);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
+        log::trace!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").ok();
-        log::debug!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
+        log::trace!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
         let (rx, rx_max_len) = conf.get_in_queue().unwrap();
-        log::debug!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_len);
+        log::trace!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_len);
         let send_to: Option<String> = conf.get("send-to");
         let send_to = send_to.map(|send_to| LinkName::from_str(&send_to).unwrap());
-        log::debug!("{}.new | send-to: {:?}", dbg, send_to);
+        log::trace!("{}.new | send-to: {:?}", dbg, send_to);
         let debug: bool = conf.get("debug").unwrap_or(false);
-        log::debug!("{}.new | debug: {:?}", dbg, debug);
+        log::trace!("{}.new | debug: {:?}", dbg, debug);
         Self {
             name: self_name,
             address,

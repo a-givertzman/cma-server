@@ -10,6 +10,7 @@ use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, servic
 pub struct RopeDefect {
     name: Name,
     conf: RopeDefectConf,
+    camera_id: usize,
     starage_path: PathBuf,
     rope: Arc<Rope>,
     api_client: Arc<ApiClient>,
@@ -26,16 +27,18 @@ impl RopeDefect {
     pub fn new(
         parent: impl Into<String>,
         conf: RopeDefectConf,
+        camera_id: usize,
         starage_path: impl AsRef<Path>,
         rope: Arc<Rope>,
+        api_client: Arc<ApiClient>,
         scheduler: Scheduler,
     ) -> Self {
         let name = Name::new(parent, "RopeDefect");
         let dbg = Dbg::new(name.parent(), name.me());
-        let api_client = Arc::new(ApiClient::new(&name, conf.api.clone(), scheduler.clone()));
         Self {
             name,
             conf,
+            camera_id,
             starage_path: starage_path.as_ref().join("rope-defects"),
             rope,
             api_client,
@@ -199,18 +202,18 @@ impl Service for RopeDefect {
     //
     // 
     fn run(&self) -> Result<(), Error> {
-        log::info!("{}.run | Starting {}[{}]...", self.dbg, self.conf.camera.name, self.conf.camera_id);
+        let camera_conf = self.conf.cameras[self.camera_id].1.clone();
+        log::info!("{}.run | Starting {}[{}]...", self.dbg, camera_conf.name, self.camera_id);
         let dbg = self.dbg.clone();
         let name = self.name.clone();
         let conf = self.conf.clone();
-        let camera_id = self.conf.camera_id;
+        let camera_id = self.camera_id;
         let exit = self.exit.clone();
         let storage_path = self.starage_path.clone();
         let table_defect = conf.tables.defect.clone();
         let table_defect_image = conf.tables.defect_image.clone();
         let rope = self.rope.clone();
         let api_client = self.api_client.clone();
-        api_client.run()?;
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
         let handles_clone = self.handles.clone();
@@ -235,9 +238,9 @@ impl Service for RopeDefect {
                 ),
             );
             let mut prev_index = None;
-            let mut camera = Camera::new(conf.camera.clone());
+            let mut camera = Camera::new(camera_conf.clone());
             let camera_name = camera.name().join();
-            match &conf.camera.from_path {
+            match &camera_conf.from_path {
                 Some(path) => {
                     log::info!("{dbg}.run | Starting camera from path '{path}'...");
                     let frames = camera.from_images(path)?;
@@ -302,7 +305,7 @@ impl Service for RopeDefect {
                                 camera.exit();
                             }
                             Err(err) => {
-                                log::info!("{dbg}.run | Camera '{}' error: {:?}", conf.camera.name, err);
+                                log::info!("{dbg}.run | Camera '{}' error: {:?}", camera_conf.name, err);
                             }
                         }
                     }
@@ -335,8 +338,7 @@ impl Service for RopeDefect {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handles.wait()?;
-        self.api_client.wait()
+        self.handles.wait()
     }
     //
     //
@@ -347,6 +349,5 @@ impl Service for RopeDefect {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-        self.api_client.exit();
     }
 }

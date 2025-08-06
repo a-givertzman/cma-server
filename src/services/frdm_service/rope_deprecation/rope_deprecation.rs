@@ -34,12 +34,12 @@ impl RopeDeprecation {
     pub fn new(
         parent: impl Into<String>,
         conf: RopeDeprecationConf,
+        api_client: Arc<ApiClient>,
         services: Arc<Services>,
         scheduler: Scheduler,
     ) -> Self {
         let name = Name::new(parent, "RopeDeprecation");
         let dbg = Dbg::new(name.parent(), name.me());
-        let api_client = Arc::new(ApiClient::new(&name, conf.api.clone(), scheduler.clone()));
         Self {
             name,
             conf,
@@ -99,7 +99,6 @@ impl Service for RopeDeprecation where {
         let conf = self.conf.clone();
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
-        // let updates = self.updates.take().unwrap();
         let rope_pos = self.rope_pos.clone();
         let rope_pos_ok = self.rope_pos_ok.clone();
         let services = self.services.clone();
@@ -115,7 +114,6 @@ impl Service for RopeDeprecation where {
             subscription
         });
         let api_client = self.api_client.clone();   // Arc::new(ApiClient::new(&name, conf.api.clone(), self.scheduler.clone()));
-        api_client.run()?;
         let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
@@ -210,8 +208,7 @@ impl Service for RopeDeprecation where {
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handles.wait()?;
-        self.api_client.wait()
+        self.handles.wait()
     }
     //
     //
@@ -222,6 +219,5 @@ impl Service for RopeDeprecation where {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-        self.api_client.exit();
     }    
 }
