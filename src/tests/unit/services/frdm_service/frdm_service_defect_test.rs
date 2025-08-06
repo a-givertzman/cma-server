@@ -197,6 +197,7 @@ fn run() {
                 let result: Vec<(String, Value)> = received.iter().map(|p| (p.name(), p.value())).collect();
                 log::debug!("{dbg} | Receiver{ix} result: {:?}", result.len());
                 let target: Vec<(String, Value)> = events.iter().map(|(name, val)| (name.to_string(), val.to_owned())).collect();
+                let _ = target;
                 // assert!(result == target, "{dbg} | Receiver{} \nresult: {:?}\ntarget: {:?}", ix, result, target);
             }
         }).collect(),
