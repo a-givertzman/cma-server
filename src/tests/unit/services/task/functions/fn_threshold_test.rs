@@ -31,6 +31,7 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
             Value::Real(_) => FnConfPointType::Real,
             Value::Double(_) => FnConfPointType::Double,
             Value::String(_) => FnConfPointType::String,
+            Value::Bytes(_) => panic!("{parent} Initial of type 'Bytes' - is not supported"),
         },
         options: FnConfOptions {default: Some(match initial {
             Value::Bool(v) => v.to_string(),
@@ -38,6 +39,7 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
             Value::Real(v) => v.to_string(),
             Value::Double(v) => v.to_string(),
             Value::String(v) => v.to_string(),
+            Value::Bytes(v) => String::from_utf8_lossy(&v).into_owned(),
         }),
             ..Default::default()}, ..Default::default()
     };

@@ -225,6 +225,7 @@ impl Service for ApiClient {
                                         }
                                     }
                                 }
+                                Point::Bytes(_) => log::warn!("{}.run | Invalid point type 'Bytes' (expected 'String' containing SQL) in: {:?}", dbg, point),
                             }
                         }
                         None => {break;}

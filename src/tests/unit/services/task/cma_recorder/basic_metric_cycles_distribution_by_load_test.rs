@@ -89,7 +89,7 @@ fn operating_metric_cycles_distribution_by_load_test() {
             database: crane_data_server
             in queue in-queue:
                 max-length: 10000
-            auth_token: 123!@#
+            auth-token: 123!@#
             debug: true
         ").unwrap(),
     );

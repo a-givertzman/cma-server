@@ -1,7 +1,8 @@
+use std::sync::Arc;
 #[cfg(test)]
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::ConfTree, entity::{Point, ToPoint}};
+use sal_sync::{services::{conf::ConfTree, entity::{Point, ToPoint}}, sync::Owner};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::domain::testing::ServiceTestPlanner;
@@ -85,7 +86,10 @@ fn run() {
     let each_sent_dbg = dbg.clone();
     let each_received_dbg = dbg.clone();
     let all_received_dbg = dbg.clone();
-    let planner = ServiceTestPlanner::new(
+    let planner: Arc<ServiceTestPlanner>;
+    let planner_clone: Arc<Owner<Arc<ServiceTestPlanner>>> = Arc::new(Owner::empty());
+    let planner_clone1 = planner_clone.clone();
+    planner = Arc::new(ServiceTestPlanner::new(
         &dbg,
         conf,
         move |txid, ix, name: &str, event: &Value| {
@@ -116,8 +120,10 @@ fn run() {
             for (ix, recvd) in received.iter().enumerate() {
                 log::debug!("{dbg} | Received[{ix}]: {:?}", recvd);
             }
+            planner_clone.take().unwrap().exit();
         },
-    );
+    ));
+    planner_clone1.replace(planner.clone());
     planner.run().unwrap();
     planner.wait().unwrap();
     test_duration.exit();

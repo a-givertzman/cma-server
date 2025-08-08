@@ -29,7 +29,7 @@ use crate::{
 pub struct FnRetain {
     id: String,
     // name: Name,
-    tx_id: usize,
+    txid: usize,
     kind: FnKind,
     enable: Option<FnInOutRef>,
     every_cycle: bool,
@@ -58,7 +58,7 @@ impl FnRetain {
         Self {
             id: self_id.clone(),
             // name: parent.clone(),
-            tx_id: PointTxId::from_str(&self_id),
+            txid: PointTxId::from_str(&self_id),
             kind: FnKind::Fn,
             enable,
             every_cycle,
@@ -81,36 +81,41 @@ impl FnRetain {
         }
     }
     ///
+    /// Writing `value` to the `path`
+    fn write(&self, path: &Path, value: &[u8]) -> Result<(), String> {
+        match fs::OpenOptions::new().truncate(true).create(true).write(true).open(&path) {
+            Ok(mut f) => {
+                match f.write_all(value) {
+                    Ok(_) => {
+                        log::trace!("{}.store | Retain stored in: {:?}", self.id, path);
+                        Ok(())
+                    }
+                    Err(err) => {
+                        let message = format!("{}.store | Error writing to file: '{:?}'\n\terror: {:?}", self.id, path, err);
+                        log::error!("{}", message);
+                        Err(message)
+                    }
+                }
+            }
+            Err(err) => {
+                let message = format!("{}.store | Error open file: '{:?}'\n\terror: {:?}", self.id, path, err);
+                log::error!("{}", message);
+                Err(message)
+            }
+        }
+    }
+    ///
     /// Writes Point value to the file
     fn store(&mut self, point: &Point) -> Result<(), String> {
         match self.path() {
             Ok(path) => {
-                let value = match point {
-                    Point::Bool(point) => point.value.0.to_string(),
-                    Point::Int(point) => point.value.to_string(),
-                    Point::Real(point) => point.value.to_string(),
-                    Point::Double(point) => point.value.to_string(),
-                    Point::String(point) => point.value.clone(),
-                };
-                match fs::OpenOptions::new().truncate(true).create(true).write(true).open(&path) {
-                    Ok(mut f) => {
-                        match f.write_all(value.as_bytes()) {
-                            Ok(_) => {
-                                log::trace!("{}.store | Retain stored in: {:?}", self.id, path);
-                                Ok(())
-                            }
-                            Err(err) => {
-                                let message = format!("{}.store | Error writing to file: '{:?}'\n\terror: {:?}", self.id, path, err);
-                                log::error!("{}", message);
-                                Err(message)
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        let message = format!("{}.store | Error open file: '{:?}'\n\terror: {:?}", self.id, path, err);
-                        log::error!("{}", message);
-                        Err(message)
-                    }
+                match &point {
+                    Point::Bool(point) => self.write(&path, point.value.0.to_string().as_bytes()),
+                    Point::Int(point) => self.write(&path, point.value.to_string().as_bytes()),
+                    Point::Real(point) => self.write(&path, point.value.to_string().as_bytes()),
+                    Point::Double(point) => self.write(&path, point.value.to_string().as_bytes()),
+                    Point::String(point) => self.write(&path, point.value.as_bytes()),
+                    Point::Bytes(point) => self.write(&path, point.value.as_slice()),
                 }
             }
             Err(err) => Err(err),
@@ -148,8 +153,8 @@ impl FnRetain {
                             Ok(_) => {
                                 match type_ {
                                     PointConfType::Bool => match input.as_str() {
-                                        "true" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
-                                        "false" => Some(Point::Bool(PointHlr::new(self.tx_id, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
+                                        "true" => Some(Point::Bool(PointHlr::new(self.txid, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
+                                        "false" => Some(Point::Bool(PointHlr::new(self.txid, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                         _ => {
                                             log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self.id, input, path);
                                             None
@@ -157,7 +162,7 @@ impl FnRetain {
                                     }
                                     PointConfType::Int => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(Point::Int(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(Point::Int(PointHlr::new(self.txid, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -166,7 +171,7 @@ impl FnRetain {
                                     }
                                     PointConfType::Real => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(Point::Real(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(Point::Real(PointHlr::new(self.txid, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -175,7 +180,7 @@ impl FnRetain {
                                     }
                                     PointConfType::Double => match input.as_str().parse() {
                                         Ok(value) => {
-                                            Some(Point::Double(PointHlr::new(self.tx_id, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                            Some(Point::Double(PointHlr::new(self.txid, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
                                         }
                                         Err(err) => {
                                             log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
@@ -183,10 +188,13 @@ impl FnRetain {
                                         }
                                     }
                                     PointConfType::String => {
-                                        Some(Point::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                        Some(Point::String(PointHlr::new(self.txid, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                    }
+                                    PointConfType::Bytes => {
+                                        Some(Point::Bytes(PointHlr::new(self.txid, &self.id, input.as_bytes().to_vec(), Status::Ok, Cot::Inf, Utc::now())))
                                     }
                                     PointConfType::Json => {
-                                        Some(Point::String(PointHlr::new(self.tx_id, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                        Some(Point::String(PointHlr::new(self.txid, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
                                     }
                                 }
 

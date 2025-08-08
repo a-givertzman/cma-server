@@ -202,6 +202,10 @@ impl CacheService {
                     point.status = status;
                     Point::String(point)
                 }
+                Point::Bytes(mut point) => {
+                    point.status = status;
+                    Point::Bytes(point)
+                }
             }
         }).collect();
         Self::write(dbg, name, points)
@@ -210,7 +214,7 @@ impl CacheService {
     /// Fills self cache with initial values for all configured points
     pub fn initial(
         dbg: &Dbg,
-        tx_id: usize, 
+        txid: usize, 
         cache: &FxDashMap<String, Point>,
         points: &[PointConf],
         initial_status: Status,
@@ -220,7 +224,7 @@ impl CacheService {
         for point_config in points {
             let point = match point_config.type_ {
                 PointConfType::Bool => Point::Bool(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point_config.name,
                     Bool(false),
                     initial_status,
@@ -228,7 +232,7 @@ impl CacheService {
                     timestamp,
                 )),
                 PointConfType::Int => Point::Int(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point_config.name,
                     0,
                     initial_status,
@@ -236,7 +240,7 @@ impl CacheService {
                     timestamp,
                 )),
                 PointConfType::Real => Point::Real(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point_config.name,
                     0.0,
                     initial_status,
@@ -244,7 +248,7 @@ impl CacheService {
                     timestamp,
                 )),
                 PointConfType::Double => Point::Double(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point_config.name,
                     0.0,
                     initial_status,
@@ -252,15 +256,23 @@ impl CacheService {
                     timestamp,
                 )),
                 PointConfType::String => Point::String(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point_config.name,
                     String::new(),
                     initial_status,
                     Cot::Inf,
                     timestamp,
                 )),
+                PointConfType::Bytes => Point::Bytes(PointHlr::new(
+                    txid,
+                    &point_config.name,
+                    vec![],
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
                 PointConfType::Json => Point::String(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point_config.name,
                     String::new(),
                     initial_status,

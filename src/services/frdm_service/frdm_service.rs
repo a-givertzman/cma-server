@@ -156,7 +156,7 @@ impl Service for FrdmService {
         if !conf.rope_defect.cameras.is_empty() {
             log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.cameras.len());
             for (camera_id, camera_conf) in &conf.rope_defect.cameras {
-                log::info!("{}.run | Camera '{}'", self.dbg, camera_conf.name);
+                log::info!("{}.run | Camera '{}' [{}]", self.dbg, camera_conf.name, **camera_id);
                 let defect_detection = Arc::new(RopeDefect::new(
                     &self.name,
                     conf.rope_defect.clone(),

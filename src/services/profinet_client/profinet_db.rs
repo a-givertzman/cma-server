@@ -211,6 +211,10 @@ impl ProfinetDb {
                         message = format!("{}.write | Write 'String' to the S7 Device - not implemented, point: {:?}", self.dbg, point.name);
                         Err(message)
                     }
+                    Point::Bytes(point) => {
+                        message = format!("{}.write | Write 'Bytes' to the S7 Device - not implemented, point: {:?}", self.dbg, point.name);
+                        Err(message)
+                    }
                 }
             }
             None => {

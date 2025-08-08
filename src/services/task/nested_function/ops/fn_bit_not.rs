@@ -80,6 +80,9 @@ impl FnOut for FnBitNot {
                     Point::String(_) => {
                         panic!("{}.out | Not implemented for String", self.id);
                     }
+                    Point::Bytes(_) => {
+                        panic!("{}.out | Not implemented for Bytes", self.id);
+                    }
                 };
                 // trace!("{}.out | value: {:#?}", self.id, value);
                 FnResult::Ok(value)

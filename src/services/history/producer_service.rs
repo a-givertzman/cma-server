@@ -43,28 +43,31 @@ impl ProducerService {
     }
     ///
     /// Returns map of the ParsePoint built from the provided PointConf's
-    fn build_gen_points(parent: impl Into<String>, tx_id: usize, points: Vec<PointConf>) -> IndexMap<String, Box<impl ParsePoint<Value>>> {
+    fn build_gen_points(parent: impl Into<String>, txid: usize, points: Vec<PointConf>) -> IndexMap<String, Box<impl ParsePoint<Value>>> {
         let parent = parent.into();
         let mut gen_points = IndexMap::new();
         for point_conf in points {
             match point_conf.type_ {
                 PointConfType::Bool => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, txid, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfType::Int => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, txid, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfType::Real => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, txid, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfType::Double => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, txid, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfType::String => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, txid, point_conf.name.clone(), &point_conf)));
+                }
+                PointConfType::Bytes => {
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, txid, point_conf.name.clone(), &point_conf)));
                 }
                 PointConfType::Json => {
-                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, tx_id, point_conf.name.clone(), &point_conf)));
+                    gen_points.insert(point_conf.name.clone(), Box::new(PointGen::new(&parent, txid, point_conf.name.clone(), &point_conf)));
                 }
             }
         }
@@ -112,7 +115,7 @@ impl Service for ProducerService {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let self_name = self.name.clone();
-        let tx_id = PointTxId::from_str(&self_name.join());
+        let txid = PointTxId::from_str(&self_name.join());
         let exit = self.exit.clone();
         let debug = self.conf.debug;
         let interval = self.conf.cycle.unwrap_or(Duration::ZERO);
@@ -121,7 +124,7 @@ impl Service for ProducerService {
         let send = self.services.get_link(&self.conf.send_to).unwrap_or_else(|err| {
             panic!("{}.run | services.get_link error: {:#?}", dbg, err);
         });
-        let mut gen_points = Self::build_gen_points(self_name.join(), tx_id, self.conf.points());
+        let mut gen_points = Self::build_gen_points(self_name.join(), txid, self.conf.points());
         let handle = self.scheduler.spawn(move || {
             'main: loop {
                 log::trace!("{}.run | Step...", dbg);
@@ -188,7 +191,7 @@ impl Service for ProducerService {
 #[derive(Debug, Clone)]
 pub struct PointGen {
     dbg: Dbg,
-    pub tx_id: usize,
+    pub txid: usize,
     _type: PointConfType,
     pub name: String,
     pub value: Value,
@@ -205,14 +208,14 @@ impl PointGen {
     /// Creates new instance of the PointGen
     pub fn new(
         parent: impl Into<String>,
-        tx_id: usize,
+        txid: usize,
         name: String,
         config: &PointConf,
         // filter: Filter<T>,
     ) -> PointGen {
         PointGen {
             dbg: Dbg::new(parent, format!("PointGen({name})")),
-            tx_id,
+            txid,
             _type: config.type_.clone(),
             name,
             value: Value::Bool(false),
@@ -231,7 +234,7 @@ impl PointGen {
             match &self._type {
                 PointConfType::Bool => {
                     Some(Point::Bool(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.name, 
                         Bool(test_data_bool().as_bool()), 
                         self.status, 
@@ -241,7 +244,7 @@ impl PointGen {
                 }
                 PointConfType::Int => {
                     Some(Point::Int(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.name, 
                         test_data_int().as_int(), 
                         self.status, 
@@ -251,7 +254,7 @@ impl PointGen {
                 }
                 PointConfType::Real => {
                     Some(Point::Real(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.name, 
                         test_data_real().as_real(), 
                         self.status, 
@@ -261,7 +264,7 @@ impl PointGen {
                 }
                 PointConfType::Double => {
                     Some(Point::Double(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.name, 
                         test_data_double().as_double(), 
                         self.status, 
@@ -271,7 +274,7 @@ impl PointGen {
                 }
                 PointConfType::String => {
                     Some(Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.name, 
                         test_data_double().as_double().to_string(), 
                         self.status, 
@@ -279,9 +282,19 @@ impl PointGen {
                         self.timestamp,
                     )))
                 }
+                PointConfType::Bytes => {
+                    Some(Point::Bytes(PointHlr::new(
+                        self.txid, 
+                        &self.name, 
+                        test_data_double().as_double().to_be_bytes().to_vec(), 
+                        self.status, 
+                        Cot::Inf,
+                        self.timestamp,
+                    )))
+                }
                 PointConfType::Json => {
                     Some(Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.name, 
                         json!(test_data_double().as_double()).to_string(), 
                         self.status, 

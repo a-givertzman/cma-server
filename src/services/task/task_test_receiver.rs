@@ -128,6 +128,7 @@ impl Service for TaskTestReceiver {
                                     break 'main;
                                 }
                             },
+                            Point::Bytes(_) => {},
                         }
                     }
                     Err(err) => {

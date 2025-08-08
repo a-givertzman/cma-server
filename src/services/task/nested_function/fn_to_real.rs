@@ -75,7 +75,7 @@ impl FnOut for FnToReal {
                 log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::Real(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &concat_string!(self.id, ".out"),
                         out,
                         input.status(),

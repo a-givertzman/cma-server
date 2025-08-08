@@ -5,6 +5,6 @@ service ApiClient:
     database: test_api_query
     in queue api-link:
         max-length: 10000
-    auth_token: 123!@#
+    auth-token: 123!@#
     send-to: MultiQueue.in-queue   # Used to return replies from SQL requests
     # debug: true

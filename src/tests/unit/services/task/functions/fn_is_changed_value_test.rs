@@ -32,13 +32,13 @@ fn init_each(default: &str, name: impl Into<String>, type_: FnConfPointType) -> 
 fn is_changed_bool() {
     DebugSession::init(LogLevel::Info, Backtrace::Short);
     init_once();
-    let self_id = "is_changed_bool";
-    log::info!("{}", self_id);
-    let input1 = init_each("false", format!("/{}/Bool", self_id), FnConfPointType::Bool);
-    let input2 = init_each("0", format!("/{}/Int", self_id), FnConfPointType::Int);
-    let input3 = init_each("0.0", format!("/{}/Real", self_id), FnConfPointType::Real);
-    let input4 = init_each("0.0", format!("/{}/Double", self_id), FnConfPointType::Double);
-    let input5 = init_each("test", format!("/{}/String", self_id), FnConfPointType::String);
+    let dbg = "is_changed_bool";
+    log::info!("{}", dbg);
+    let input1 = init_each("false", format!("/{}/Bool", dbg), FnConfPointType::Bool);
+    let input2 = init_each("0", format!("/{}/Int", dbg), FnConfPointType::Int);
+    let input3 = init_each("0.0", format!("/{}/Real", dbg), FnConfPointType::Real);
+    let input4 = init_each("0.0", format!("/{}/Double", dbg), FnConfPointType::Double);
+    let input5 = init_each("test", format!("/{}/String", dbg), FnConfPointType::String);
     let mut fn_is_changed = FnIsChangedValue::new(
         "test",
         vec![
@@ -50,27 +50,27 @@ fn is_changed_bool() {
         ]
     );
     let test_data = vec![
-        (00, format!("/{}/Bool", self_id),      Value::Bool(false),     1),
-        (01, format!("/{}/Bool", self_id),      Value::Bool(false),     0),
-        (02, format!("/{}/Bool", self_id),      Value::Bool(true),      1),
-        (03, format!("/{}/Bool", self_id),      Value::Bool(true),      0),
-        (04, format!("/{}/Int", self_id),       Value::Int(0),          0),
-        (05, format!("/{}/Int", self_id),       Value::Int(0),          0),
-        (06, format!("/{}/Real", self_id),      Value::Real(0.0),       0),
-        (07, format!("/{}/Int", self_id),       Value::Int(0),          0),
-        (08, format!("/{}/Real", self_id),      Value::Real(0.1),       1),
-        (09, format!("/{}/Double", self_id),    Value::Double(0.1),     1),
-        (10, format!("/{}/Bool", self_id),      Value::Bool(true),      0),
-        (11, format!("/{}/Double", self_id),    Value::Double(0.1),     0),
-        (12, format!("/{}/Real", self_id),      Value::Real(0.1),       0),
-        (13, format!("/{}/Bool", self_id),      Value::Bool(true),      0),
-        (13, format!("/{}/String", self_id),    Value::String("..".into()),      1),
-        (14, format!("/{}/Bool", self_id),      Value::Bool(false),     1),
-        (15, format!("/{}/Bool", self_id),      Value::Bool(false),     0),
-        (16, format!("/{}/Double", self_id),    Value::Double(0.0),     1),
-        (17, format!("/{}/Real", self_id),      Value::Real(0.1),       0),
-        (18, format!("/{}/Double", self_id),    Value::Double(0.0),     0),
-        (19, format!("/{}/Bool", self_id),      Value::Bool(false),     0),
+        (00, format!("/{}/Bool", dbg),      Value::Bool(false),     1),
+        (01, format!("/{}/Bool", dbg),      Value::Bool(false),     0),
+        (02, format!("/{}/Bool", dbg),      Value::Bool(true),      1),
+        (03, format!("/{}/Bool", dbg),      Value::Bool(true),      0),
+        (04, format!("/{}/Int", dbg),       Value::Int(0),          0),
+        (05, format!("/{}/Int", dbg),       Value::Int(0),          0),
+        (06, format!("/{}/Real", dbg),      Value::Real(0.0),       0),
+        (07, format!("/{}/Int", dbg),       Value::Int(0),          0),
+        (08, format!("/{}/Real", dbg),      Value::Real(0.1),       1),
+        (09, format!("/{}/Double", dbg),    Value::Double(0.1),     1),
+        (10, format!("/{}/Bool", dbg),      Value::Bool(true),      0),
+        (11, format!("/{}/Double", dbg),    Value::Double(0.1),     0),
+        (12, format!("/{}/Real", dbg),      Value::Real(0.1),       0),
+        (13, format!("/{}/Bool", dbg),      Value::Bool(true),      0),
+        (13, format!("/{}/String", dbg),    Value::String("..".into()),      1),
+        (14, format!("/{}/Bool", dbg),      Value::Bool(false),     1),
+        (15, format!("/{}/Bool", dbg),      Value::Bool(false),     0),
+        (16, format!("/{}/Double", dbg),    Value::Double(0.0),     1),
+        (17, format!("/{}/Real", dbg),      Value::Real(0.1),       0),
+        (18, format!("/{}/Double", dbg),    Value::Double(0.0),     0),
+        (19, format!("/{}/Bool", dbg),      Value::Bool(false),     0),
     ];
     for (step, name, value, target) in test_data {
         match &value {
@@ -88,6 +88,9 @@ fn is_changed_bool() {
             }
             Value::String(value) => {
                 input5.borrow_mut().add(&value.to_point(0, &name))
+            }
+            Value::Bytes(_) => {
+                panic!("{dbg} value of type 'Bytes' - is not supported")
             }
         };
         // debug!("input: {:?}", &input);

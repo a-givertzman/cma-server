@@ -91,22 +91,17 @@ impl RopeDefectConf {
         let defect_detection: ConfTree = conf.get("defect-detection").expect(&format!("{dbg}.new | 'defect-detection' - not found or wrong configuration"));
         let defect_detection = frdm_tools::conf::Conf::new(&name, defect_detection);
         log::trace!("{dbg}.new | defect-detection: {:#?}", defect_detection);
-        let mut camera_id = CameraId(0);
-        let mut cameras = vec![];
-        match conf.sub_nodes() {
-            Some(nodes) => {
-                for node in nodes {
-                    if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
-                        if keywd.name() == "camera" {
-                            let camera = CameraConf::new(&name, &node);
-                            log::trace!("{dbg}.new | camera: {:#?}", camera);
-                            cameras.push((camera_id, camera));
-                            *camera_id +=1;
-                        }
-                    }
-                }
-            }
-            None => log::warn!("{dbg}.new | No camera configurations"),
+        let cameras: Vec<(CameraId, CameraConf)> = conf.nodes()
+            .filter(|node| ConfCustomKeywd::from_str(&node.key).map_or(false, |keywd| keywd.name() == "camera"))
+            .enumerate()
+            .map(|(id, node)| {
+                let camera = CameraConf::new(&name, &node);
+                log::trace!("{dbg}.new | camera: {:#?}", camera);
+                (CameraId(id), camera)
+            })
+            .collect();
+        if cameras.is_empty() {
+            log::warn!("{dbg}.new | No camera configurations");
         }
         Self {
             name,

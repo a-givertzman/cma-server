@@ -88,6 +88,7 @@ mod profinet_client {
                     Point::Double(PointHlr::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
                 }
                 Value::String(value) => panic!("{} | String does not supported: {:?}", self_id, value),
+                Value::Bytes(value) => panic!("{} | Bytes does not supported: {:?}", self_id, value),
             };
             if let Err(err) = send.send(point.clone()) {
                 log::warn!("{} | Send error: {:#?}", self_id, err);
@@ -96,9 +97,7 @@ mod profinet_client {
                 Ok(received_point) => {
                     if received_point.cot() == Cot::Inf {
                         match received_point {
-                            Point::Bool(value) => {
-                                panic!("{} | Bool does not supported: {:?}", self_id, value)
-                            }
+                            Point::Bool(value) => panic!("{} | Bool does not supported: {:?}", self_id, value),
                             Point::Int(received_point) => {
                                 let result = received_point.value;
                                 let target = point.as_int().value;
@@ -114,9 +113,8 @@ mod profinet_client {
                                 let target = point.as_double().value;
                                 assert!(result.aprox_eq(target, 3), "\nresult: {:?}\ntarget: {:?}", result, target);
                             }
-                            Point::String(value) => {
-                                panic!("{} | Bool does not supported: {:?}", self_id, value)
-                            }
+                            Point::String(value) => panic!("{} | String does not supported: {:?}", self_id, value),
+                            Point::Bytes(value) => panic!("{} | Bytes does not supported: {:?}", self_id, value),
                         }
                     }
                 }

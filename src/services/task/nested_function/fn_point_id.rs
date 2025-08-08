@@ -73,7 +73,7 @@ impl FnOut for FnPointId {
                         log::debug!("{}.out | ID: {:?}", self.id, id);
                         FnResult::Ok(Point::Int(
                             PointHlr::new(
-                                input.tx_id(),
+                                input.txid(),
                                 &concat_string!(self.id, ".out"),
                                 *id as i64,
                                 input.status(),

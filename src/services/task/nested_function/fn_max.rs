@@ -96,6 +96,7 @@ impl FnOut for FnMax {
                             }
                         }
                         Point::String(_) => return FnResult::Err(concat_string!(self.id, ".out | Input of type 'String' is not suppoted in: '", input.name(), "'")),
+                        Point::Bytes(_) => return FnResult::Err(concat_string!(self.id, ".out | Input of type 'Bytes' is not suppoted in: '", input.name(), "'")),
                     }
                 }
                 FnResult::None => {}

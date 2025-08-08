@@ -219,6 +219,7 @@ impl Service for EmulatedTcpClientRecv {
                                                                 Value::Real(value) => value == &point.as_real().value,
                                                                 Value::Double(value) => value == &point.as_double().value,
                                                                 Value::String(value) => value == &point.as_string().value,
+                                                                Value::Bytes(value) => value == &point.as_bytes().value,
                                                             };
                                                             if marker_received_ {
                                                                 log::info!("{}.run | received marker {:?}, exiting...", self_id, point);

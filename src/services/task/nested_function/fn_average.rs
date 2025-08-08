@@ -88,7 +88,7 @@ impl FnOut for FnAverage {
                         PointConfType::Int => {
                             FnResult::Ok(Point::Int(
                                 PointHlr::new(
-                                    input.tx_id(),
+                                    input.txid(),
                                     &self.id,
                                     average.round() as i64,
                                     input.status(),
@@ -100,7 +100,7 @@ impl FnOut for FnAverage {
                         PointConfType::Real => {
                             FnResult::Ok(Point::Real(
                                 PointHlr::new(
-                                    input.tx_id(),
+                                    input.txid(),
                                     &self.id,
                                     average as f32,
                                     input.status(),
@@ -112,7 +112,7 @@ impl FnOut for FnAverage {
                         PointConfType::Double => {
                             FnResult::Ok(Point::Double(
                                 PointHlr::new(
-                                    input.tx_id(),
+                                    input.txid(),
                                     &self.id,
                                     average,
                                     input.status(),

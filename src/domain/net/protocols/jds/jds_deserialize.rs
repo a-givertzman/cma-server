@@ -86,7 +86,7 @@ impl JdsDeserialize {
     }
     ///
     /// Deserialize point from JSON string
-    pub fn deserialize(self_id: &str, tx_id: usize, bytes: Vec<u8>) -> Result<Point, String> {
+    pub fn deserialize(self_id: &str, txid: usize, bytes: Vec<u8>) -> Result<Point, String> {
         match serde_json::from_slice(&bytes) {
             Ok(value) => {
                 let value: serde_json::Value = value;
@@ -103,7 +103,7 @@ impl JdsDeserialize {
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
                                         Ok(Point::Bool(PointHlr::new(
-                                            tx_id,
+                                            txid,
                                             name,
                                             Bool(value > 0),
                                             Status::from(status),
@@ -119,7 +119,7 @@ impl JdsDeserialize {
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
                                         Ok(Point::Int(PointHlr::new(
-                                            tx_id,
+                                            txid,
                                             name,
                                             value,
                                             Status::from(status),
@@ -135,7 +135,7 @@ impl JdsDeserialize {
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
                                         Ok(Point::Real(PointHlr::new(
-                                            tx_id,
+                                            txid,
                                             name,
                                             value as f32,
                                             Status::from(status),
@@ -151,7 +151,7 @@ impl JdsDeserialize {
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
                                         Ok(Point::Double(PointHlr::new(
-                                            tx_id,
+                                            txid,
                                             name,
                                             value,
                                             Status::from(status),
@@ -167,9 +167,25 @@ impl JdsDeserialize {
                                         let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
                                         let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
                                         Ok(Point::String(PointHlr::new(
-                                            tx_id,
+                                            txid,
                                             name,
                                             value.to_owned(),
+                                            Status::from(status),
+                                            direction,
+                                            timestamp,
+                                        )))
+                                    }
+                                    Some("bytes") | Some("Bytes") => {
+                                        let name = obj.get("name").unwrap().as_str().unwrap();
+                                        let value = obj.get("value").unwrap().as_array().unwrap().iter().map(|v| v.as_u64().unwrap() as u8).collect();
+                                        let status = obj.get("status").unwrap().as_i64().unwrap();
+                                        let direction = Self::parse_cot(self_id, name, obj);
+                                        let timestamp = obj.get("timestamp").unwrap().as_str().unwrap();
+                                        let timestamp: DateTime<Utc> = chrono::DateTime::parse_from_rfc3339(timestamp).unwrap().with_timezone(&Utc);
+                                        Ok(Point::Bytes(PointHlr::new(
+                                            txid,
+                                            name,
+                                            value,
                                             Status::from(status),
                                             direction,
                                             timestamp,

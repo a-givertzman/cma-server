@@ -27,7 +27,7 @@ use crate::{
 #[derive(Debug)]
 pub struct FnExport {
     id: String,
-    tx_id: usize,
+    txid: usize,
     kind: FnKind,
     enable: Option<FnInOutRef>,
     conf: Option<PointConf>,
@@ -48,7 +48,7 @@ impl FnExport {
         let self_id = format!("{}/FnExport{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
-            tx_id: PointTxId::from_str(&self_id),
+            txid: PointTxId::from_str(&self_id),
             kind: FnKind::Fn,
             enable,
             conf,
@@ -67,7 +67,7 @@ impl FnExport {
             let point = match type_ {
                 PointConfType::Bool => {
                     Point::Bool(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &name, 
                         Bool(point.as_bool().value.0), 
                         point.status(), 
@@ -77,7 +77,7 @@ impl FnExport {
                 }
                 PointConfType::Int => {
                     Point::Int(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &name, 
                         point.as_int().value, 
                         point.status(), 
@@ -87,7 +87,7 @@ impl FnExport {
                 }
                 PointConfType::Real => {
                     Point::Real(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &name, 
                         point.as_real().value, 
                         point.status(), 
@@ -97,7 +97,7 @@ impl FnExport {
                 }
                 PointConfType::Double => {
                     Point::Double(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &name, 
                         point.as_double().value, 
                         point.status(), 
@@ -107,7 +107,7 @@ impl FnExport {
                 }
                 PointConfType::String => {
                     Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &name, 
                         point.as_string().value, 
                         point.status(), 
@@ -115,9 +115,19 @@ impl FnExport {
                         point.timestamp(),
                     ))
                 }
+                PointConfType::Bytes => {
+                    Point::Bytes(PointHlr::new(
+                        self.txid, 
+                        &name, 
+                        point.as_bytes().value, 
+                        point.status(), 
+                        point.cot(), 
+                        point.timestamp(),
+                    ))
+                }
                 PointConfType::Json => {
                     Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &name, 
                         point.as_string().value, 
                         point.status(), 

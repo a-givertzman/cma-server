@@ -59,7 +59,7 @@ impl FnOut for FnFallingEdge {
             FnResult::Ok(input) => {
                 let input_value = input.to_bool().as_bool().value.0;
                 let value = Point::Bool(PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &input.name(),
                     Bool((! input_value) && self.prev),
                     input.status(),

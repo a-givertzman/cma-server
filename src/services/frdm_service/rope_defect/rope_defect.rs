@@ -160,6 +160,8 @@ impl RopeDefect {
                                         None => log::warn!("{dbg}.run | Wrong image path {}", img_path.display()),
                                     };
                                 });
+                            } else {
+                                log::warn!("{dbg}.run | Slice {slice_ix} - No defect detected");
                             }
                         }
                         Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera_name, err),
@@ -259,7 +261,7 @@ impl Service for RopeDefect {
                             &api_client,
                             prev_index,
                         );
-                        std::thread::sleep(Duration::from_millis(100));
+                        std::thread::sleep(Duration::from_millis(50));
                     }
                 }
                 None => {

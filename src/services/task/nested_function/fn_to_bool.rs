@@ -71,12 +71,19 @@ impl FnOut for FnToBool {
                     Point::Double(value) => {
                         value.value > 0.0
                     }
+                    Point::Bytes(value) => {
+                        if value.value.len() > 0 {
+                            value.value[0] != 0
+                        } else {
+                            false
+                        }
+                    }
                     _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
                 };
                 log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::Bool(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &concat_string!(self.id, ".out"),
                         Bool(out),
                         input.status(),

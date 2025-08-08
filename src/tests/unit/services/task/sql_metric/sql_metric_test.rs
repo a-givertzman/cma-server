@@ -80,6 +80,7 @@ fn int() {
                                 Point::Real(point) => point.value.to_string(),
                                 Point::Double(point) => point.value.to_string(),
                                 Point::String(point) => point.value.clone(),
+                                Point::Bytes(point) => point.to_string().value,
                             };
                             log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
                             assert_eq!(
@@ -159,6 +160,7 @@ fn real() {
                                 Point::Real(point) => point.value.to_string(),
                                 Point::Double(point) => point.value.to_string(),
                                 Point::String(point) => point.value.clone(),
+                                Point::Bytes(point) => point.to_string().value,
                             };
                             log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
                             let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
@@ -247,6 +249,7 @@ fn double() {
                                 Point::Real(point) => point.value.to_string(),
                                 Point::Double(point) => point.value.to_string(),
                                 Point::String(point) => point.value.clone(),
+                                Point::Bytes(point) => point.to_string().value,
                             };
                             log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
                             let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";

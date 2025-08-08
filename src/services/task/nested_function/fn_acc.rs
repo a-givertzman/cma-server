@@ -72,13 +72,13 @@ impl FnOut for FnAcc {
                             }
                             None => match input.type_() {
                                 PointConfType::Bool | PointConfType::Int  => Point::Int(PointHlr::new(
-                                    input.tx_id(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
+                                    input.txid(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
                                 )),
                                 PointConfType::Real => Point::Real(PointHlr::new(
-                                    input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
+                                    input.txid(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
                                 PointConfType::Double => Point::Double(PointHlr::new(
-                                    input.tx_id(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
+                                    input.txid(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
                                 )),
                                 _ => panic!("{}.out | Invalit input type '{:?}'", self.id, input.type_()),
                             }

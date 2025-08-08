@@ -43,22 +43,22 @@ impl ApiClientConf {
     /// ```
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> Self {
         let me = conf.sufix_or(conf.name().unwrap());
-        let dbg = format!("ApiClientConfig({})", me);
+        let dbg = format!("ApiClientConfig '{}'", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let self_name = Name::new(parent, me);
         log::trace!("{}.new | name: {:?}", dbg, self_name);
-        let address: String = conf.get("address").unwrap();
+        let address: String = conf.get("address").expect(&format!("{dbg}.new | 'address' - not found or wrong configuration"));
         let address: SocketAddr = address.parse().unwrap();
         log::trace!("{}.new | address: {:?}", dbg, address);
-        let database = conf.get("database").unwrap();
+        let database = conf.get("database").expect(&format!("{dbg}.new | 'database' - not found or wrong configuration"));
         log::trace!("{}.new | database: {:?}", dbg, database);
-        let auth_token = conf.get("auth-token").unwrap();
+        let auth_token = conf.get("auth-token").expect(&format!("{dbg}.new | 'auth-token' - not found or wrong configuration"));
         log::trace!("{}.new | auth-token: {:?}", dbg, auth_token);
         let cycle = conf.get_duration("cycle").ok();
         log::trace!("{}.new | cycle: {:?}", dbg, cycle);
         let reconnect_cycle = conf.get_duration("reconnect").ok();
-        log::trace!("{}.new | reconnectCycle: {:?}", dbg, reconnect_cycle);
-        let (rx, rx_max_len) = conf.get_in_queue().unwrap();
+        log::trace!("{}.new | reconnect: {:?}", dbg, reconnect_cycle);
+        let (rx, rx_max_len) = conf.get_in_queue().expect(&format!("{dbg}.new | 'in queue' - not found or wrong configuration"));
         log::trace!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_len);
         let send_to: Option<String> = conf.get("send-to");
         let send_to = send_to.map(|send_to| LinkName::from_str(&send_to).unwrap());

@@ -24,8 +24,8 @@ mod fn_retain {
     }
     ///
     /// Loads retained Point value from the disk
-    fn load(self_id: &str, path: &str, type_: PointConfType) -> Option<Point> {
-        let tx_id = 10001;
+    fn load(dbg: &str, path: &str, type_: PointConfType) -> Option<Point> {
+        let txid = 10001;
         match fs::OpenOptions::new().read(true).open(&path) {
             Ok(mut f) => {
                 let mut input = String::new();
@@ -33,57 +33,60 @@ mod fn_retain {
                     Ok(_) => {
                         match type_ {
                             PointConfType::Bool => match input.as_str() {
-                                "true" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
-                                "false" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
+                                "true" => Some(Point::Bool(PointHlr::new(txid, dbg, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
+                                "false" => Some(Point::Bool(PointHlr::new(txid, dbg, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                 _ => {
-                                    log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self_id, input, path);
+                                    log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", dbg, input, path);
                                     None
                                 }
                             }
                             PointConfType::Int => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(Point::Int(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Int(PointHlr::new(txid, dbg, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", dbg, input, path, err);
                                     None
                                 }
                             }
                             PointConfType::Real => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(Point::Real(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Real(PointHlr::new(txid, dbg, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", dbg, input, path, err);
                                     None
                                 }
                             }
                             PointConfType::Double => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(Point::Double(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Double(PointHlr::new(txid, dbg, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", dbg, input, path, err);
                                     None
                                 }
                             }
                             PointConfType::String => {
-                                Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                Some(Point::String(PointHlr::new(txid, dbg, input, Status::Ok, Cot::Inf, Utc::now())))
+                            }
+                            PointConfType::Bytes => {
+                                Some(Point::Bytes(PointHlr::new(txid, dbg, input.as_bytes().to_vec(), Status::Ok, Cot::Inf, Utc::now())))
                             }
                             PointConfType::Json => {
-                                Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
+                                Some(Point::String(PointHlr::new(txid, dbg, input, Status::Ok, Cot::Inf, Utc::now())))
                             }
                         }
 
                     }
                     Err(err) => {
-                        log::warn!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", self_id, path, err);
+                        log::warn!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", dbg, path, err);
                         None
                     }
                 }
             }
             Err(err) => {
-                log::warn!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
+                log::warn!("{}.load | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
                 None
             }
         }

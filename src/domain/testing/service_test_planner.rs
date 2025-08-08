@@ -97,124 +97,123 @@ impl ServiceTestPlanner {
         let error = Error::new(&dbg, "run");
         let mut send_events = self.events.take().expect(&format!("{dbg}.run | `events` cant be empty, Vec<Vec<Value>> expected"));
         log::info!("{dbg}.run | Reading configuring...");
-        match self.conf.sub_nodes() {
-            Some(nodes) => {
-                let services_factory = ServicesFactory::new(&Name::new(self.name.parent(), ""));
-                let mut send_services = vec![];
-                let mut recv_services = vec![];
-                for conf in nodes {
-                    match ConfKeywd::from_str(&conf.key) {
-                        Ok(keywd) => {
-                            match keywd.kind() {
-                                k if k == ConfKind::Service.to_string() => {
-                                    match (conf.name(), conf.title()) {
-                                        (Ok(node_name), Ok(node_title)) => {
-                                            log::info!("{dbg}.run | Configuring service: {} '{}'...", node_name, node_title);
-                                            match node_name.as_str() {
-                                                "SendService" => {
-                                                    let conf = SendServiceConf::new(self.name.parent(), conf);
-                                                    log::debug!("{dbg}.run | Conf: {:#?}", conf);
-                                                    let events = match send_events.pop() {
-                                                        Some(mut events) => {
-                                                            events.reverse();
-                                                            events
-                                                        }
-                                                        None => return Err(
-                                                            error.err(&format!("{dbg}.run | SendService [{}] out of avialeble 'events' ({}), SendService's and 'events' should have same size", send_services.len() + 1, send_events.len())),
-                                                        ),
-                                                    };
-                                                    let event_builder = self.event_builder.clone();
-                                                    let service = Arc::new(SendService::new(
-                                                        self.name.parent(),
-                                                        conf,
-                                                        Some(move |txid, ix, point_name: &str, val: &Value| {
-                                                            let point = (event_builder)(txid, ix, point_name, val);
-                                                            // val.to_point(txid, point_name)
-                                                            point
-                                                        }),
-                                                        events,
-                                                        self.services.clone(),
-                                                        self.tp.scheduler(),
-                                                    ));
-                                                    self.services_order.write().push(service.name().join());
-                                                    send_services.push(service.clone());
-                                                    self.services.insert(service);
-                                                }
-                                                "RecvService" => {
-                                                    let conf = RecvServiceConf::new(self.name.parent(), conf);
-                                                    log::debug!("{dbg}.run | Conf: {:#?}", conf);
-                                                    let service = Arc::new(RecvService::new(
-                                                        self.name.parent(),
-                                                        conf,
-                                                        self.tp.scheduler(),
-                                                    ));
-                                                    self.services_order.write().push(service.name().join());
-                                                    recv_services.push(service.clone());
-                                                    self.services.insert(service);
-                                                }
-                                                _ => {
-                                                    let service = services_factory.service(
-                                                        &node_name,
-                                                        &node_title,
-                                                        conf,
-                                                        self.services.clone(),
-                                                        self.tp.scheduler(),
-                                                    );
-                                                    log::info!("{dbg}.run | Configuring service: {} - ok\n", service.name());
-                                                    self.services_order.write().push(service.name().join());
-                                                    self.services.insert(service);
-                                                }
+        if self.conf.is_mapping() {
+            let services_factory = ServicesFactory::new(&Name::new(self.name.parent(), ""));
+            let mut send_services = vec![];
+            let mut recv_services = vec![];
+            for conf in self.conf.nodes() {
+                match ConfKeywd::from_str(&conf.key) {
+                    Ok(keywd) => {
+                        match keywd.kind() {
+                            k if k == ConfKind::Service.to_string() => {
+                                match (conf.name(), conf.title()) {
+                                    (Ok(node_name), Ok(node_title)) => {
+                                        log::info!("{dbg}.run | Configuring service: {} '{}'...", node_name, node_title);
+                                        match node_name.as_str() {
+                                            "SendService" => {
+                                                let conf = SendServiceConf::new(self.name.parent(), conf);
+                                                log::debug!("{dbg}.run | Conf: {:#?}", conf);
+                                                let events = match send_events.pop() {
+                                                    Some(mut events) => {
+                                                        events.reverse();
+                                                        events
+                                                    }
+                                                    None => return Err(
+                                                        error.err(&format!("{dbg}.run | SendService [{}] out of avialeble 'events' ({}), SendService's and 'events' should have same size", send_services.len() + 1, send_events.len())),
+                                                    ),
+                                                };
+                                                let event_builder = self.event_builder.clone();
+                                                let service = Arc::new(SendService::new(
+                                                    self.name.parent(),
+                                                    conf,
+                                                    Some(move |txid, ix, point_name: &str, val: &Value| {
+                                                        let point = (event_builder)(txid, ix, point_name, val);
+                                                        // val.to_point(txid, point_name)
+                                                        point
+                                                    }),
+                                                    events,
+                                                    self.services.clone(),
+                                                    self.tp.scheduler(),
+                                                ));
+                                                self.services_order.write().push(service.name().join());
+                                                send_services.push(service.clone());
+                                                self.services.insert(service);
+                                            }
+                                            "RecvService" => {
+                                                let conf = RecvServiceConf::new(self.name.parent(), conf);
+                                                log::debug!("{dbg}.run | Conf: {:#?}", conf);
+                                                let service = Arc::new(RecvService::new(
+                                                    self.name.parent(),
+                                                    conf,
+                                                    self.tp.scheduler(),
+                                                ));
+                                                self.services_order.write().push(service.name().join());
+                                                recv_services.push(service.clone());
+                                                self.services.insert(service);
+                                            }
+                                            _ => {
+                                                let service = services_factory.service(
+                                                    &node_name,
+                                                    &node_title,
+                                                    conf,
+                                                    self.services.clone(),
+                                                    self.tp.scheduler(),
+                                                );
+                                                log::info!("{dbg}.run | Configuring service: {} - ok\n", service.name());
+                                                self.services_order.write().push(service.name().join());
+                                                self.services.insert(service);
                                             }
                                         }
-                                        (Ok(name), Err(err)) => log::warn!("{dbg}.run | Service '{name}' config `Title` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
-                                        (Err(err), Ok(_)) => log::warn!("{dbg}.run | Service config `Name` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
-                                        (Err(err), Err(_)) => log::warn!("{dbg}.run | Service config `Name` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
                                     }
+                                    (Ok(name), Err(err)) => log::warn!("{dbg}.run | Service '{name}' config `Title` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
+                                    (Err(err), Ok(_)) => log::warn!("{dbg}.run | Service config `Name` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
+                                    (Err(err), Err(_)) => log::warn!("{dbg}.run | Service config `Name` not found (expected: 'service Name Title') \n\terror: {:?}, \n\tin config: {:#?}", err, conf),
                                 }
-                                _ => {}
                             }
+                            _ => {}
                         }
-                        Err(err) => {},
                     }
+                    Err(err) => {},
                 }
-                assert!(recv_services.len() == self.inspect_each_received.len(), "{dbg}.run | RecvService's [{}] and each_received's [{}] - are not equals", recv_services.len(), self.inspect_each_received.len());
-                log::info!("{dbg}.run | All services configured\n");
-                log::info!("{dbg}.run | Starting services...");
-                log::info!("{dbg}.run | Services order:");
-                for k in self.services_order.read().clone() {
-                    log::info!("{dbg}.run |    {k}");
-                }
-                self.services.run()?;
-                std::thread::sleep(Duration::from_millis(50));
-                let services_len = self.services.all().len();
-                for (ix, key) in self.services_order.read().clone().iter().enumerate() {
-                    match self.services.get(key) {
-                        Some(service) => {
-                            if let Err(err) = service.run() {
-                                return Err(error.pass_with(format!("Eror to start service '{key}' {ix} of {services_len}"), err));
-                            }
-                        }
-                        None => return Err(error.err(format!("Service '{key}' {ix} of {services_len} - is not found"))),
-                    }
-                    // std::thread::sleep(Duration::from_millis(500));
-                }
-                log::info!("{dbg}.run | Starting services - Ok");
-                let mut all_received = vec![];
-                log::info!("{dbg}.run | Waiting receivers...");
-                for (rcv_ix, recv) in recv_services.iter().enumerate() {
-                    if let Err(err) = recv.wait() {
-                        return Err(error.pass_with(format!("Eror to wait service '{}'", recv.name()), err));
-                    }
-                    let received = recv.received().read().clone();
-                    (self.inspect_each_received[rcv_ix])(&received);
-                    all_received.push(received);
-                }
-                log::info!("{dbg}.run | Waiting receivers - Ok");
-                (self.inspect_all_received)(all_received);
-                log::info!("{dbg}.run | All done");
-                Ok(())
             }
-            None => Err(error.err(format!("{dbg}.run | Empty or wrong config: {:#?}", self.conf))),
+            assert!(recv_services.len() == self.inspect_each_received.len(), "{dbg}.run | RecvService's [{}] and each_received's [{}] - are not equals", recv_services.len(), self.inspect_each_received.len());
+            log::info!("{dbg}.run | All services configured\n");
+            log::info!("{dbg}.run | Starting services...");
+            log::info!("{dbg}.run | Services order:");
+            for k in self.services_order.read().clone() {
+                log::info!("{dbg}.run |    {k}");
+            }
+            self.services.run()?;
+            std::thread::sleep(Duration::from_millis(50));
+            let services_len = self.services.all().len();
+            for (ix, key) in self.services_order.read().clone().iter().enumerate() {
+                match self.services.get(key) {
+                    Some(service) => {
+                        if let Err(err) = service.run() {
+                            return Err(error.pass_with(format!("Eror to start service '{key}' {ix} of {services_len}"), err));
+                        }
+                    }
+                    None => return Err(error.err(format!("Service '{key}' {ix} of {services_len} - is not found"))),
+                }
+                // std::thread::sleep(Duration::from_millis(500));
+            }
+            log::info!("{dbg}.run | Starting services - Ok");
+            let mut all_received = vec![];
+            log::info!("{dbg}.run | Waiting receivers...");
+            for (rcv_ix, recv) in recv_services.iter().enumerate() {
+                if let Err(err) = recv.wait() {
+                    return Err(error.pass_with(format!("Eror to wait service '{}'", recv.name()), err));
+                }
+                let received = recv.received().read().clone();
+                (self.inspect_each_received[rcv_ix])(&received);
+                all_received.push(received);
+            }
+            log::info!("{dbg}.run | Waiting receivers - Ok");
+            (self.inspect_all_received)(all_received);
+            log::info!("{dbg}.run | All done");
+            Ok(())
+        } else {
+            Err(error.err(format!("{dbg}.run | Empty or wrong config: {:#?}", self.conf)))
         }
     }
     ///

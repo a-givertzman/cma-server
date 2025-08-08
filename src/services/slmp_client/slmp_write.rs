@@ -71,7 +71,7 @@ impl SlmpWrite {
     pub fn run(&mut self, mut tcp_stream: TcpStream) -> Result<JoinHandle<()>, Error> {
         log::info!("{}.run | starting...", self.dbg);
         let dbg = self.dbg.clone();
-        let tx_id = self.tx_id;
+        let txid = self.tx_id;
         let status = self.status.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
@@ -111,7 +111,7 @@ impl SlmpWrite {
                                     Ok(_) => {
                                         error_limit.reset();
                                         log::debug!("{}.run | SlmpDb '{}' - writing point '{}'\t({:?}) - ok", dbg, db_name, point_name, point_value);
-                                        let reply = Self::reply_point(tx_id, point);
+                                        let reply = Self::reply_point(txid, point);
                                         match dest.send(reply.clone()) {
                                             Ok(_) => log::debug!("{}.run | ProfinetDb '{}' - sent reply: {:#?}", dbg, db_name, reply),
                                             Err(err) => log::error!("{}.run | Error sending to queue: {:?}", dbg, err),
@@ -125,7 +125,7 @@ impl SlmpWrite {
                                             exit.exit_pair();
                                             status.store(Status::Invalid.into(), Ordering::SeqCst);
                                             if let Err(err) = dest.send(Point::String(PointHlr::new(
-                                                tx_id,
+                                                txid,
                                                 &point_name,
                                                 format!("Write error: {}", err),
                                                 Status::Ok,
@@ -164,11 +164,11 @@ impl SlmpWrite {
     }
     ///
     /// Creates confirmation reply point with the same value & Cot::ActCon
-    fn reply_point(tx_id: usize, point: Point) -> Point {
+    fn reply_point(txid: usize, point: Point) -> Point {
         match point {
             Point::Bool(point) => {
                 Point::Bool(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point.name,
                     point.value,
                     Status::Ok,
@@ -178,7 +178,7 @@ impl SlmpWrite {
             },
             Point::Int(point) => {
                 Point::Int(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point.name,
                     point.value,
                     Status::Ok,
@@ -188,7 +188,7 @@ impl SlmpWrite {
             },
             Point::Real(point) => {
                 Point::Real(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point.name,
                     point.value,
                     Status::Ok,
@@ -198,7 +198,7 @@ impl SlmpWrite {
             },
             Point::Double(point) => {
                 Point::Double(PointHlr::new(
-                    tx_id,
+                    txid,
                     &point.name,
                     point.value,
                     Status::Ok,
@@ -208,7 +208,17 @@ impl SlmpWrite {
             },
             Point::String(point) => {
                 Point::String(PointHlr::new(
-                    tx_id,
+                    txid,
+                    &point.name,
+                    point.value,
+                    Status::Ok,
+                    Cot::ActCon,
+                    chrono::offset::Utc::now(),
+                ))
+            },
+            Point::Bytes(point) => {
+                Point::Bytes(PointHlr::new(
+                    txid,
                     &point.name,
                     point.value,
                     Status::Ok,

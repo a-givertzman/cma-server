@@ -131,6 +131,7 @@ impl Service for TaskTestProducer {
                     Value::Real(_) => "Real",
                     Value::Double(_) => "Double",
                     Value::String(_) => "String",
+                    Value::Bytes(_) => "Bytes",
                 };
                 PointConf::from_yaml(
                     &Name::new("", ""),

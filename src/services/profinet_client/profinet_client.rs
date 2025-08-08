@@ -367,6 +367,16 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
+            Point::Bytes(point) => {
+                Point::Bytes(PointHlr::new(
+                    tx_id,
+                    &point.name,
+                    point.value,
+                    Status::Ok,
+                    Cot::ActCon,
+                    chrono::offset::Utc::now(),
+                ))
+            },
         }
     }
 }

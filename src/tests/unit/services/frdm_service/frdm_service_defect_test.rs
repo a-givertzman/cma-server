@@ -126,21 +126,22 @@ fn run() {
                             geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
                         fine-scan:
                             no-params: not implemented yet
-                camera Camera1:
-                    from-path: src/tests/unit/services/frdm_service/frames
-                    fps: Max                    # Max / Min / 30.0
-                    resolution: 
-                        width: 1200
-                        height: 800
-                    index: 0
-                    # address: 192.168.10.12:2020
-                    pixel-format:  QOI_Mono8    # QOI_Mono8, QOI_BayerRG8, Mono8/10/12/16, BayerGG8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
-                    exposure:
-                        auto: Off                   # Off / Continuous
-                        time: 26000                 # microseconds
-                    auto-packet-size: true          # StreamAutoNegotiatePacketSize
-                    channel-packet-size: Max        # Maximizing packet size increases frame rate
-                    resend-packet: true             # StreamPacketResendEnable
+                    camera Camera1:
+                        from-path: src/tests/unit/services/frdm_service/defect-frames
+                        #from-path: src/tests/unit/services/frdm_service/frames
+                        fps: Max                    # Max / Min / 30.0
+                        resolution: 
+                            width: 1200
+                            height: 800
+                        index: 0
+                        # address: 192.168.10.12:2020
+                        pixel-format:  QOI_Mono8    # QOI_Mono8, QOI_BayerRG8, Mono8/10/12/16, BayerGG8/10/12/16, RGB8, BGR8, YCbCr8, YCbCr411, YUV422, YUV411 | Default and fastest BayerRG8
+                        exposure:
+                            auto: Off                   # Off / Continuous
+                            time: 26000                 # microseconds
+                        auto-packet-size: true          # StreamAutoNegotiatePacketSize
+                        channel-packet-size: Max        # Maximizing packet size increases frame rate
+                        resend-packet: true             # StreamPacketResendEnable
                 rope-deprecation:
                     wait-started: 10 ms
                     table: public.frdm_deprecation
@@ -211,7 +212,7 @@ fn run() {
     );
     planner.run().unwrap();
     std::thread::sleep(Duration::from_millis(3_000));
-    // planner.exit();
+    planner.exit();
     planner.wait().unwrap();
     test_duration.exit();
 }

@@ -93,7 +93,7 @@ impl FnOut for FnRecOpCycleMetric {
     fn out(&mut self) -> FnResult<Point, String> {
         let (enable, tx_id, status, cot, timestamp) = match &mut self.enable {
             Some(en) => match en.borrow_mut().out() {
-                FnResult::Ok(en) => (en.to_bool().as_bool().value.0, en.tx_id(), en.status(), en.cot(), en.timestamp()),
+                FnResult::Ok(en) => (en.to_bool().as_bool().value.0, en.txid(), en.status(), en.cot(), en.timestamp()),
                 FnResult::None => return FnResult::None,
                 FnResult::Err(err) => return FnResult::Err(err),
             }
@@ -158,6 +158,10 @@ impl FnOut for FnRecOpCycleMetric {
                             Point::String(mut p) => {
                                 p.name = input_name.to_owned();
                                 Point::String(p)
+                            }
+                            Point::Bytes(mut p) => {
+                                p.name = input_name.to_owned();
+                                Point::Bytes(p)
                             }
                         };
                         self.values.push(value)

@@ -29,7 +29,7 @@ use crate::{
 #[derive(Debug)]
 pub struct FnPoint {
     id: String,
-    tx_id: usize,
+    txid: usize,
     kind: FnKind,
     conf: PointConf,
     enable: Option<FnInOutRef>,
@@ -50,7 +50,7 @@ impl FnPoint {
         let self_id = format!("{}/FnPoint{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
-            tx_id: PointTxId::from_str(&self_id),
+            txid: PointTxId::from_str(&self_id),
             kind: FnKind::Fn,
             conf,
             enable,
@@ -67,7 +67,7 @@ impl FnPoint {
             let point = match self.conf.type_ {
                 PointConfType::Bool => {
                     Point::Bool(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         Bool(point.as_bool().value.0), 
                         point.status(), 
@@ -77,7 +77,7 @@ impl FnPoint {
                 }
                 PointConfType::Int => {
                     Point::Int(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_int().value, 
                         point.status(), 
@@ -87,7 +87,7 @@ impl FnPoint {
                 }
                 PointConfType::Real => {
                     Point::Real(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_real().value, 
                         point.status(), 
@@ -97,7 +97,7 @@ impl FnPoint {
                 }
                 PointConfType::Double => {
                     Point::Double(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_double().value, 
                         point.status(), 
@@ -107,7 +107,7 @@ impl FnPoint {
                 }
                 PointConfType::String => {
                     Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_string().value, 
                         point.status(), 
@@ -115,9 +115,19 @@ impl FnPoint {
                         point.timestamp(),
                     ))
                 }
+                PointConfType::Bytes => {
+                    Point::Bytes(PointHlr::new(
+                        self.txid, 
+                        &self.conf.name, 
+                        point.as_bytes().value, 
+                        point.status(), 
+                        point.cot(), 
+                        point.timestamp(),
+                    ))
+                }
                 PointConfType::Json => {
                     Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_string().value, 
                         point.status(), 

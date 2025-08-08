@@ -364,7 +364,7 @@ impl FnVaFft {
                                     // log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
                                     let point = Point::Double(PointHlr::new(
                                         self.txid,
-                                        freq_name,
+                                        freq_name.as_str(),
                                         value,
                                         input.status(),
                                         input.cot(),
@@ -382,7 +382,7 @@ impl FnVaFft {
                                             }
                                             Point::String(PointHlr::new(
                                                 self.txid,
-                                                freq_name,
+                                                freq_name.as_str(),
                                                 format.out(),
                                                 input.status(),
                                                 input.cot(),
@@ -392,7 +392,7 @@ impl FnVaFft {
                                         None => {
                                             Point::Double(PointHlr::new(
                                                 self.txid,
-                                                freq_name,
+                                                freq_name.as_str(),
                                                 value,
                                                 input.status(),
                                                 input.cot(),

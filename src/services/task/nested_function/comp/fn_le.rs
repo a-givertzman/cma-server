@@ -67,9 +67,9 @@ impl FnOut for FnLe {
                     std::cmp::Ordering::Greater => input1.status(),
                 };
                 let (tx_id, timestamp) = match input1.timestamp().cmp(&input2.timestamp()) {
-                    std::cmp::Ordering::Less => (input2.tx_id(), input2.timestamp()),
-                    std::cmp::Ordering::Equal => (input1.tx_id(), input1.timestamp()),
-                    std::cmp::Ordering::Greater => (input1.tx_id(), input1.timestamp()),
+                    std::cmp::Ordering::Less => (input2.txid(), input2.timestamp()),
+                    std::cmp::Ordering::Equal => (input1.txid(), input1.timestamp()),
+                    std::cmp::Ordering::Greater => (input1.txid(), input1.timestamp()),
                 };
                 FnResult::Ok(Point::Bool(
                     PointHlr::new(

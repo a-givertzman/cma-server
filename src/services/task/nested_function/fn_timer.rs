@@ -204,7 +204,7 @@ impl FnOut for FnTimer {
                 log::trace!("{}.out | out: {:?}", self.id, out);
                 let value = Point::Double(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &format!("{}.out", self.id),
                         out,
                         input.status(),

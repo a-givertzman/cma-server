@@ -45,7 +45,7 @@ impl FnPiecewiseLineApprox {
         match input.type_() {
             PointConfType::Int => Point::Int(
                 PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &concat_string!(self.id, ".out"),
                     value.round() as i64,
                     input.status(),
@@ -55,7 +55,7 @@ impl FnPiecewiseLineApprox {
             ),
             PointConfType::Real => Point::Real(
                 PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &concat_string!(self.id, ".out"),
                     value as f32,
                     input.status(),
@@ -65,7 +65,7 @@ impl FnPiecewiseLineApprox {
             ),
             PointConfType::Double => Point::Double(
                 PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &concat_string!(self.id, ".out"),
                     value,
                     input.status(),
