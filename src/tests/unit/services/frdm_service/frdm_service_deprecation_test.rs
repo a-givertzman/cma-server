@@ -106,7 +106,7 @@ fn run() {
                     segment-threshold: 5 mm               # Acceptable camera position error in relation to exact segment position 
                     camera-offset: 0.0 m                  # camera position from the begin of the rope (hook side)
                     defect-detection:
-                        detecting-contours:
+                        contours:
                             gamma:
                                 no-param: not parameters implemented 
                             brightness-contrast:
@@ -125,6 +125,8 @@ fn run() {
                                 src1-weight: 0.5
                                 src2-weight: 0.5
                                 gamma: 0.0
+                        edge-detection:
+                            threshold: 1                        # 0...255
                         fast-scan:
                             geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
                         fine-scan:

@@ -112,7 +112,9 @@ impl RopeDefect {
                             let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
                             let defects = &geometry_defect_ctx.result;
                             if !defects.is_empty() {
+                                log::warn!("{dbg}.run | Slice {slice_ix} - Defects detected");
                                 defects.iter().for_each(|defect| {
+                                    log::warn!("{dbg}.run | Slice {slice_ix} - Defect {:?} detected", defect);
                                     let defect_id = match defect {
                                         GeometryDefectType::Expansion => "expansion",
                                         GeometryDefectType::Compressing => "compressing",
@@ -161,7 +163,7 @@ impl RopeDefect {
                                     };
                                 });
                             } else {
-                                log::warn!("{dbg}.run | Slice {slice_ix} - No defect detected");
+                                log::info!("{dbg}.run | Slice {slice_ix} - No defects detected");
                             }
                         }
                         Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera_name, err),
@@ -226,6 +228,7 @@ impl Service for RopeDefect {
                 conf.defect_detection.fast_scan.geometry_defect_threshold,
                 *Box::new(Mad::new()),
                 EdgeDetection::new(
+                    conf.defect_detection.edge_detection.threshold,
                     DetectingContoursCv::new(
                         conf.defect_detection.detecting_contours.clone(),
                         AutoBrightnessAndContrast::new(
@@ -245,7 +248,7 @@ impl Service for RopeDefect {
             match &camera_conf.from_path {
                 Some(path) => {
                     log::info!("{dbg}.run | Starting camera from path '{path}'...");
-                    let frames = camera.from_images(path)?;
+                    let frames = camera.from_images(path).unwrap();
                     service_release.add(Ok(()));
                     for frame in frames {
                         prev_index = Self::detection(
@@ -261,7 +264,7 @@ impl Service for RopeDefect {
                             &api_client,
                             prev_index,
                         );
-                        std::thread::sleep(Duration::from_millis(50));
+                        std::thread::sleep(Duration::from_millis(100));
                     }
                 }
                 None => {

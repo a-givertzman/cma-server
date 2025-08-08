@@ -34,26 +34,26 @@ fn run() {
     let events = vec![
         vec![   // SendService0
             ("Winch.RopePos", Value::Real(0.000)),  // 55          // EncoderBR0
-            ("Winch.RopePos", Value::Real(0.001)),  // 55
-            ("Winch.RopePos", Value::Real(0.004)),  // 55
-            ("Winch.RopePos", Value::Real(0.005)),  // 55
-            ("Winch.RopePos", Value::Real(0.006)),
-            ("Winch.RopePos", Value::Real(0.050)),
-            ("Winch.RopePos", Value::Real(0.094)),
-            ("Winch.RopePos", Value::Real(0.095)),  // 56
-            ("Winch.RopePos", Value::Real(0.096)),  // 56
-            ("Winch.RopePos", Value::Real(0.100)),  // 56
-            ("Winch.RopePos", Value::Real(0.101)),  // 56
-            ("Winch.RopePos", Value::Real(0.104)),  // 56
-            ("Winch.RopePos", Value::Real(0.105)),  // 56
-            ("Winch.RopePos", Value::Real(0.106)),
-            ("Winch.RopePos", Value::Real(0.194)),
-            ("Winch.RopePos", Value::Real(0.195)),  // 57
-            ("Winch.RopePos", Value::Real(0.196)),  // 57
-            ("Winch.RopePos", Value::Real(0.200)),  // 57
-            ("Winch.RopePos", Value::Real(0.201)),  // 57
-            ("Winch.RopePos", Value::Real(0.203)),  // 57
-            ("Winch.RopePos", Value::Real(0.204)),  // 57
+            ("Winch.RopePos", Value::Real(0.100)),  // 55
+            ("Winch.RopePos", Value::Real(0.200)),  // 55
+            ("Winch.RopePos", Value::Real(0.300)),  // 55
+            ("Winch.RopePos", Value::Real(0.400)),
+            ("Winch.RopePos", Value::Real(0.500)),
+            ("Winch.RopePos", Value::Real(0.600)),
+            ("Winch.RopePos", Value::Real(0.700)),  // 56
+            ("Winch.RopePos", Value::Real(0.800)),  // 56
+            ("Winch.RopePos", Value::Real(0.900)),  // 56
+            ("Winch.RopePos", Value::Real(1.000)),  // 56
+            ("Winch.RopePos", Value::Real(1.100)),  // 56
+            ("Winch.RopePos", Value::Real(1.200)),  // 56
+            ("Winch.RopePos", Value::Real(1.300)),
+            ("Winch.RopePos", Value::Real(1.400)),
+            ("Winch.RopePos", Value::Real(1.500)),  // 57
+            ("Winch.RopePos", Value::Real(1.600)),  // 57
+            ("Winch.RopePos", Value::Real(1.700)),  // 57
+            ("Winch.RopePos", Value::Real(1.700)),  // 57
+            ("Winch.RopePos", Value::Real(1.900)),  // 57
+            ("Winch.RopePos", Value::Real(2.000)),  // 57
             // ("Winch.Load", Value::Int(1)),
             // ("Load.MainBoomAngle", Value::Int(2)),
             // ("Load.RotaryBoomAngle", Value::Int(3)),
@@ -103,7 +103,7 @@ fn run() {
                     segment-threshold: 5 mm               # Acceptable camera position error in relation to exact segment position 
                     camera-offset: 0.0 m                  # camera position from the begin of the rope (hook side)
                     defect-detection:
-                        detecting-contours:
+                        contours:
                             gamma:
                                 no-param: not parameters implemented 
                             brightness-contrast:
@@ -122,13 +122,14 @@ fn run() {
                                 src1-weight: 0.5
                                 src2-weight: 0.5
                                 gamma: 0.0
+                        edge-detection:
+                            threshold: 1                        # 0...255
                         fast-scan:
                             geometry-defect-threshold: 1.2      # 1.1..1.3, absolute threshold to detect the geometry deffects
                         fine-scan:
                             no-params: not implemented yet
                     camera Camera1:
-                        from-path: src/tests/unit/services/frdm_service/defect-frames
-                        #from-path: src/tests/unit/services/frdm_service/frames
+                        from-path: src/tests/unit/services/frdm_service/frames
                         fps: Max                    # Max / Min / 30.0
                         resolution: 
                             width: 1200
