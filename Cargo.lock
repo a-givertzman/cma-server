@@ -1698,7 +1698,7 @@ dependencies = [
 [[package]]
 name = "frdm-tools"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/frdm-server.git?tag=0.1.0#12364d11149ea59bba4ec26c6abaf0b613e2398d"
+source = "git+https://github.com/a-givertzman/frdm-server.git?tag=0.1.0#fabfad9d6f6a00f0842f55beaf1a476015cd9168"
 dependencies = [
  "api-tools",
  "bincode",
