@@ -80,15 +80,14 @@ class Boom:
     l3: float
     l4: float
     D: Offset
-    G: Offset
     def __init__(self, alpha_rel: float, len: float, l1: float, l2: float, l3: float, l4: float):
         """
         :alpha: Относительный угол наклона стрел (относительно предыдыдущей) в градусах
         :len: Длины стрел, мм
-        :l1: Вертикальное смещение точки D, мм ???
-        :l2: Горизонтальное смещение точки D, мм ???
-        :l3: Вертикальное смещение начала стрелы относительно..., мм ???
-        :l4: Горизонтальное смещение начала стрелы относительно..., мм ???
+        :l1: Вертикальное смещение точки D, мм
+        :l2: Горизонтальное смещение точки D, мм
+        :l3: Вертикальное смещение начала стрелы относительно..., мм
+        :l4: Горизонтальное смещение начала стрелы относительно..., мм
         """
         self.alpha_rel = alpha_rel
         self.alpha = 0.0
@@ -101,23 +100,20 @@ class Boom:
 class Block:
     lF: Offset
     D: float
-    schemes: int
+    scheme: int
     boom: int
-    K_lFx: str
     coord: Offset
-    def __init__(self, lF: Offset, D: float, schemes: int, boom: int, K_lFx: str):
+    def __init__(self, lF: Offset, D: float, scheme: int, boom: int):
         """
-        :lF: Размер расположения блоков на стрелах (относительно...), mm
-        :D: Диаметры блоков, мм ???
+        :lF: Растояние от корня стрелы до оси блока, mm
+        :D: Диаметры блоков, мм
         :schemes: Схема схода каната на блоке
         :boom: К какой стреле относится блок (нумерация с 0)
-        :K_lFx: Привязка блока к D(начало стрелы) или G(конец стрелы)
         """
         self.lF = lF
         self.D = D
-        self.schemes = schemes
+        self.scheme = scheme
         self.boom = boom
-        self.K_lFx = K_lFx
         self.coord = Offset(0.0, 0.0)
 
 # ------------------------------------------------
@@ -144,12 +140,12 @@ if __name__ == "__main__":
     #
     # Блоков
     blocks = [
-        #     lF                          D        scheme    boom    K_lFx
-        Block(lF=Offset(308.0, 1090.0),   D=816.2, scheme=1, boom=0, K_lFx="G"),
-        Block(lF=Offset(1433.0, 1743.0),  D=816.2, scheme=1, boom=1, K_lFx="D"),
-        Block(lF=Offset(-1120.0, 1005.0), D=816.2, scheme=2, boom=1, K_lFx="G"),
-        Block(lF=Offset(268.0, 895.0),    D=816.2, scheme=3, boom=1, K_lFx="G"),
-        Block(lF=Offset(140.0, 0.0),      D=816.2, scheme=3, boom=1, K_lFx="G"),
+        #     lF                          D        scheme    boom    
+        Block(lF=Offset(308.0, 1090.0),   D=816.2, scheme=1, boom=0),
+        Block(lF=Offset(1433.0, 1743.0),  D=816.2, scheme=1, boom=1),
+        Block(lF=Offset(-1120.0, 1005.0), D=816.2, scheme=2, boom=1),
+        Block(lF=Offset(268.0, 895.0),    D=816.2, scheme=3, boom=1),
+        Block(lF=Offset(140.0, 0.0),      D=816.2, scheme=3, boom=1),
     ]
     # D = [816.2, 816.2, 816.2, 816.2, 816.2] # диаметры блоков, мм ???
     # schemes = [1, 1, 2, 3, 3]       # схема схода каната на блоке 
@@ -161,7 +157,6 @@ if __name__ == "__main__":
 
     #lFx = [308, 1435, -1121, 267, 136]  # мм как в расчете у Вани
     #lFy = [1100, 1730, 973, 860, -35]   # мм как в расчете у Вани
-    # K_lFx = ["G", "D", "G", "G", "G"]   # привязка блока к D(начало стрелы) или G(конец стрелы)
     # boom_index = [0, 1, 1, 1, 1]        # к какой стреле относится блок (нумерация с 1)
 
     # ---------------------------
@@ -208,14 +203,7 @@ if __name__ == "__main__":
     # 4. Координаты блоков x, y относительно ГСК, мм
     # ---------------------------
     for i, block in enumerate(blocks):
-        if block.K_lFx == "D":
-            base_point = booms[block.boom].D
-        elif block.K_lFx == "G":
-            base_point = booms[block.boom].G
-        else:
-            raise ValueError("Некорректное значение K_lFx")
-        #
-        # dx dy относительно ГСК
+        base_point = booms[block.boom].D
         dx, dy = XY_rotate(block.lF.x, block.lF.y, booms[block.boom].alpha)
         block.coord.x = base_point.x + dx
         block.coord.y = base_point.y + dy
@@ -230,7 +218,7 @@ if __name__ == "__main__":
         X2, Y2 = blocks[i + 1].coord.x, blocks[i + 1].coord.y
         D1 = block.D
         D2 = blocks[i + 1].D
-        scheme = block.schemes
+        scheme = block.scheme
 
         if scheme == 1: k, j = -1, 1
         elif scheme == 2: k, j = 1, 1

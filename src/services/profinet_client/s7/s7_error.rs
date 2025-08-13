@@ -60,6 +60,7 @@ pub enum S7Error {
     CliInvalidParamNumber     = 0x02500000,
     CliCannotChangeParam      = 0x02600000,
     CliFunctionNotImplemented = 0x02700000,
+    #[allow(unused)]
     Inner(String),
 }
 //
