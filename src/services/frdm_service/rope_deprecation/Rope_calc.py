@@ -80,6 +80,7 @@ class Boom:
     l3: float
     l4: float
     D: Offset
+    G: Offset
     def __init__(self, alpha_rel: float, len: float, l1: float, l2: float, l3: float, l4: float):
         """
         :alpha: Относительный угол наклона стрел (относительно предыдыдущей) в градусах
