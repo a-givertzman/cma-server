@@ -106,7 +106,7 @@ class Block:
     coord: Offset
     def __init__(self, lF: Offset, D: float, scheme: int, boom: int):
         """
-        :lF: Растояние от корня стрелы до оси блока, mm
+        :lF: Растояние от **конца** стрелы до оси блока, мм
         :D: Диаметры блоков, мм
         :schemes: Схема схода каната на блоке
         :boom: К какой стреле относится блок (нумерация с 0)
@@ -141,12 +141,12 @@ if __name__ == "__main__":
     #
     # Блоков
     blocks = [
-        #     lF                          D        scheme    boom    
         Block(lF=Offset(308.0, 1090.0),   D=816.2, scheme=1, boom=0),
-        Block(lF=Offset(1433.0, 1743.0),  D=816.2, scheme=1, boom=1),
+        Block(lF=Offset(-6551.0, 1743.0), D=816.2, scheme=1, boom=1),
         Block(lF=Offset(-1120.0, 1005.0), D=816.2, scheme=2, boom=1),
         Block(lF=Offset(268.0, 895.0),    D=816.2, scheme=3, boom=1),
         Block(lF=Offset(140.0, 0.0),      D=816.2, scheme=3, boom=1),
+
     ]
     # D = [816.2, 816.2, 816.2, 816.2, 816.2] # диаметры блоков, мм ???
     # schemes = [1, 1, 2, 3, 3]       # схема схода каната на блоке 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     # 4. Координаты блоков x, y относительно ГСК, мм
     # ---------------------------
     for i, block in enumerate(blocks):
-        base_point = booms[block.boom].D
+        base_point = booms[block.boom].G
         dx, dy = XY_rotate(block.lF.x, block.lF.y, booms[block.boom].alpha)
         block.coord.x = base_point.x + dx
         block.coord.y = base_point.y + dy
@@ -276,7 +276,7 @@ if __name__ == "__main__":
     # Блоки
     target_coords = [
         (2124.2594421692593, 21692.6443146987),
-        (3762.8535564206627, 23249.02370138408),
+        (3762.8535564206622, 23249.023701384085),
         (9074.848736513828, 24599.250425555612),
         (10402.986651928279, 25017.21415321455),
         (10619.580019650972, 24139.43495942004),        
