@@ -98,6 +98,52 @@ class Boom:
         self.l3 = l3
         self.l4 = l4
 
+class Booms:
+    items: list[Boom]
+    def __init__(self, items: list[Boom]):
+        # ---------------------------
+        # 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
+        # ---------------------------
+        alpha_sum = 0.0
+        for i, boom in enumerate(items):
+            alpha_sum += boom.alpha_rel
+            # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
+            boom.alpha = alpha_sum - i * 180
+        # ---------------------------
+        # 3. D и G для каждой стрелы
+        # ---------------------------
+        for i, boom in enumerate(items):
+            # Начало стрелы
+            if i == 0:
+                x0, y0 = 0, 0
+                alpha_prime = 90
+            else:
+                x0, y0 = items[i - 1].G.x, items[i - 1].G.y
+                alpha_prime = items[i - 1].alpha
+
+            wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
+            XY_start = Offset(x0 + wx, y0 + wy)
+            # log.debug(f"Стрела {i}: XY_start={XY_start}")
+
+            # Точка D
+            Dx, Dy = XY_rotate(- boom.l2, boom.l1, boom.alpha)
+            D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
+            # log.debug(f"\t D_point={D_point}")
+
+            # Точка G
+            Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
+            G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
+            # log.debug(f"\t G_point={G_point}")
+
+            boom.D = D_point
+            boom.G = G_point
+
+        self.items = items
+    def __getitem__(self, i):
+        return self.items[i]
+    def len(self):
+        return len(self.items)
+
 class Block:
     lF: Offset
     D: float
@@ -127,10 +173,10 @@ if __name__ == "__main__":
     
     #
     # Стрелы
-    booms = [
+    booms = Booms([
         Boom(alpha_rel= 74.0, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
         Boom(alpha_rel=128.0, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
-    ]
+    ])
     # alpha = [0, 23.783]            # Углы в градусах как в расчете у Вани
     # alpha = [74, 128]               # Углы наклона стрел (относительно предыдыдущей) в градусах
     # L_boom = [11200, 7984]          # Длины стрел (мм)
@@ -159,46 +205,6 @@ if __name__ == "__main__":
     #lFx = [308, 1435, -1121, 267, 136]  # мм как в расчете у Вани
     #lFy = [1100, 1730, 973, 860, -35]   # мм как в расчете у Вани
     # boom_index = [0, 1, 1, 1, 1]        # к какой стреле относится блок (нумерация с 1)
-
-    # ---------------------------
-    # 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
-    # ---------------------------
-    alpha_sum = 0.0
-    for i, boom in enumerate(booms):
-        alpha_sum += boom.alpha_rel
-        # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
-        boom.alpha = alpha_sum - i * 180
-
-    # ---------------------------
-    # 3. D и G для каждой стрелы
-    # ---------------------------
-    for i, boom in enumerate(booms):
-        # Начало стрелы
-        if i == 0:
-            x0, y0 = 0, 0
-            alpha_prime = 90
-        else:
-            x0, y0 = booms[i - 1].G.x, booms[i - 1].G.y
-            alpha_prime = booms[i - 1].alpha
-
-        wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
-        XY_start = Offset(x0 + wx, y0 + wy)
-        # log.debug(f"Стрела {i}: XY_start={XY_start}")
-
-        # Точка D
-        Dx, Dy = XY_rotate(- boom.l2, boom.l1, boom.alpha)
-        D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
-        # log.debug(f"\t D_point={D_point}")
-
-        # Точка G
-        Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
-        G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
-        # log.debug(f"\t G_point={G_point}")
-
-        boom.D = D_point
-        boom.G = G_point
-
-
 
     # ---------------------------
     # 4. Координаты блоков x, y относительно ГСК, мм
@@ -235,7 +241,7 @@ if __name__ == "__main__":
     # ---------------------------
     # Логи
     # ---------------------------
-    log.debug(f"Число стрел: {len(booms)}")
+    log.debug(f"Число стрел: {booms.len()}")
     # log.debug(f"alpha_boom: {[round(a, 3) for a in alpha_boom]}")
     for idx, boom in enumerate(booms, start=1):
         log.debug(f"Стрела {idx}: D={boom.D}, G={boom.G}")
