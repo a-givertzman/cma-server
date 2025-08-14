@@ -18,10 +18,26 @@ use crate::{infra::ApiClientConf, services::frdm_service::CraneConf};
 ///             - D200mm           5.0  .. 5.15 m
 ///             - D300mm           7.23 .. 7.30 mm
 ///         boom:
-///             main-len: 5.3 m                                         # length of the main boom
-///             main-angle: point real 'App/MultiQueue/Load.MainBoomAngle'        # degrees, current angle of the main boom to horisontal axis
-///             rotary-len: 2.1 m                                       # length of the rotary boom
-///             rotary-angle: point real 'App/MultiQueue/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to horisontal axis
+///             main-len: 5.3 m                                                 # length of the main boom
+///             main-angle: point real 'App/MultiQueue/Load.MainBoomAngle'      # degrees, current angle of the main boom to horisontal axis
+///             rotary-len: 2.1 m                                               # length of the rotary boom
+///             rotary-angle: point real 'App/MultiQueue/Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to horisontal axis
+///         booms:
+///             - Main-Boom:
+///                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
+///                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
+///                 l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
+///                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
+///                 len: 11200.0 mm                                         # length of the boom
+///                 angle: point real 'App/MultiQueue/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+///             - Rotary-Boom:
+///                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
+///                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
+///                 l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
+///                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
+///                 len: 7984.1 mm                                          # length of the rotary boom
+///                 angle: point real 'App/MultiQueue/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+/// 
 ///         rope:
 ///             width: 35 mm        # Diameter of the rome
 ///             length: 3000 m      # Total working length of the rope

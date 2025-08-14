@@ -161,7 +161,6 @@ if __name__ == "__main__":
         Block(lF=Offset(  140.0,    0.0), D=816.2, scheme=1, bind=BlockBindBoom(1)),
         Block(lF=Offset(    0.0,    0.0), D=  0.0, scheme=0, bind=BlockBindHook()),
     ]
-
     block_bind = [
         BlockBindFixed(),   # Блок 1
         BlockBindBoom(1),   # Блок 2
