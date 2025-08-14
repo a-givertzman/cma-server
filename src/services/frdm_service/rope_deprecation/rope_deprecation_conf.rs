@@ -74,11 +74,11 @@ impl RopeDeprecationConf {
         log::trace!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
         log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
-        let table = conf.get("table").expect(&format!("{dbg}.new | 'table' - not found or wrong configuration"));
+        let table = conf.get("table").expect(&format!("{dbg}.new | 'table' - not found or wrong config"));
         log::trace!("{dbg}.new | table: {:?}", table);
-        let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong configuration"));
+        let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
         log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
-        let crane = conf.get("crane").expect(&format!("{dbg}.new | 'crane' - not found or wrong configuration"));
+        let crane = conf.get("crane").expect(&format!("{dbg}.new | 'crane' - not found or wrong config"));
         let crane = CraneConf::new(&name, crane);
         log::trace!("{dbg}.new | crane: {:?}", crane);
         Self {

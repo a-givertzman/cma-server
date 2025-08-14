@@ -106,8 +106,8 @@ impl Service for RopeDeprecation where {
         let points = [
             &conf.crane.rope.pos,
             &conf.crane.rope.load,
-            &conf.crane.boom.main_angle,
-            &conf.crane.boom.rotary_angle,
+            // &conf.crane.booms.main_angle,
+            // &conf.crane.booms.rotary_angle,
         ].map(|point| {
             let subscription = SubscriptionCriteria::new(point, Cot::Inf);
             log::trace!("{dbg}.run | Subscription: {:?}", subscription);
@@ -156,14 +156,14 @@ impl Service for RopeDeprecation where {
                                 log::debug!("{dbg}.run | Received rope load: {:.4?} tonn", load);
                                 rope_slices.eval(None, Some(load));
                             }
-                            name if name == conf.crane.boom.main_angle => {
-                                let main_angle = point.to_double().as_double().value;
-                                log::debug!("{dbg}.run | Received boom.main_angle: {:.4?}", main_angle);
-                            }
-                            name if name == conf.crane.boom.rotary_angle => {
-                                let rotary_angle = point.to_double().as_double().value;
-                                log::debug!("{dbg}.run | Received boom.rotary_angle: {:.4?}", rotary_angle);
-                            }
+                            // name if name == conf.crane.booms.main_angle => {
+                            //     let main_angle = point.to_double().as_double().value;
+                            //     log::debug!("{dbg}.run | Received boom.main_angle: {:.4?}", main_angle);
+                            // }
+                            // name if name == conf.crane.booms.rotary_angle => {
+                            //     let rotary_angle = point.to_double().as_double().value;
+                            //     log::debug!("{dbg}.run | Received boom.rotary_angle: {:.4?}", rotary_angle);
+                            // }
                             _ => log::warn!("{dbg}.run | Unknown point name: {:?}", point.name()),
                         }
                     }
