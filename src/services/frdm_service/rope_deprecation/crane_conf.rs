@@ -61,7 +61,9 @@ impl CraneConf {
         log::trace!("{dbg}.new | bendings: {:#?}", bendings);
         let booms: &Vec<serde_yaml::Value> = conf.get("booms").expect(&format!("{dbg}.new | 'booms' - not found or wrong config"));
         let booms = booms.iter().map(|boom| {
-            let boom = ConfTree::new_root(boom.to_owned());
+            let (key, boom) = boom.as_mapping().unwrap().iter().next().unwrap();
+            let boom = ConfTree::new(key.as_str().unwrap(), boom.to_owned());
+            log::debug!("{dbg}.new | boom: {:#?}", boom);
             (boom.key.clone(), BoomConf::new(&name, boom))
         }).collect();
         log::trace!("{dbg}.new | boom: {:#?}", booms);

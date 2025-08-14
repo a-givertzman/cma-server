@@ -6,23 +6,27 @@ use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name};
 /// ### Example:
 /// ```yaml
 /// boom:
-///     main-len: 5.3 m                                        # length of the main boom
-///     main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
-///     rotary-len: 2.1 m                                      # length of the rotary boom
-///     rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+///     l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
+///     l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
+///     l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
+///     l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
+///     len: 11200.0 mm             # Length of the boom
+///     angle: point real 'App/MultiQueue/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoomConf {
+    /// Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
     pub l1: ConfDistance,
+    /// Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
     pub l2: ConfDistance,
+    /// Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
     pub l3: ConfDistance,
+    /// Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
     pub l4: ConfDistance,
+    /// Length of the boom
     pub len: ConfDistance,
+    /// Current angle of the boom (relative axis), degrees
     pub angle: String,
-    // pub main_len: ConfDistance,
-    // pub main_angle: String,
-    // pub rotary_len: ConfDistance,
-    // pub rotary_angle: String,
 }
 //
 // 
@@ -42,14 +46,6 @@ impl BoomConf {
         let l4 = conf.get_distance("l4").expect(&format!("{dbg}.new | 'l4' - not found or wrong config"));
         let len = conf.get_distance("len").expect(&format!("{dbg}.new | 'len' - not found or wrong config"));
         let angle = conf.get_fn_config(&dbg, "angle", &mut vec![]).expect(&format!("{dbg}.new | 'angle' - not found or wrong config")).name();
-        // let main_len = conf.get_distance("main-len").expect(&format!("{dbg}.new | 'main-len' - not found or wrong config"));
-        // log::trace!("{dbg}.new | main-len: {:?}", main_len);
-        // let rotary_len = conf.get_distance("rotary-len").expect(&format!("{dbg}.new | 'rotary-len' - not found or wrong config"));
-        // log::trace!("{dbg}.new | rotary-len: {:?}", rotary_len);
-        // let main_angle = conf.get_fn_config(&dbg, "main-angle", &mut vec![]).unwrap().name();
-        // log::trace!("{dbg}.new | main-angle: {:?}", main_angle);
-        // let rotary_angle = conf.get_fn_config(&dbg, "rotary-angle", &mut vec![]).unwrap().name();
-        // log::trace!("{dbg}.new | rotary-angle: {:?}", rotary_angle);
         Self {
             l1,
             l2,
@@ -57,10 +53,6 @@ impl BoomConf {
             l4,
             len,
             angle,
-            // main_len: todo!("To be removed"),
-            // rotary_len: todo!("To be removed"),
-            // main_angle: todo!("To be removed"),
-            // rotary_angle: todo!("To be removed"),
         }
     }
 }
