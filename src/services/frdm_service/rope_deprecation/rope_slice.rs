@@ -35,36 +35,38 @@ impl RopeSlice {
     pub fn id(&self) -> usize {
         self.ix
     }
+    // ///
+    // /// Registering new `pos` value (meter),
+    // /// So new deprecation result can be evaluated
+    // pub fn add_pos(&mut self, val: f64) {
+    //     self.pos = Some(val);
+    //     self.changed = Some(());
+    // }
+    // ///
+    // /// Registering new `load` value (tonn),
+    // /// So new deprecation result can be evaluated
+    // pub fn add_load(&mut self, val: f64) {
+    //     self.load = Some(val);
+    //     self.changed = Some(());
+    // }
     ///
-    /// Registering new `pos` value (meter),
-    /// So new deprecation result can be evaluated
-    pub fn add_pos(&mut self, val: f64) {
-        self.pos = Some(val);
-        self.changed = Some(());
-    }
-    ///
-    /// Registering new `load` value (tonn),
-    /// So new deprecation result can be evaluated
-    pub fn add_load(&mut self, val: f64) {
-        self.load = Some(val);
-        self.changed = Some(());
-    }
-    ///
-    /// Evaluates [RopeSlice] deprecation, returns `Some` if was added `pos` or `load`
-    /// - can be evaluated only once per new `pos` (meter) or `load` (tonn), else returns `None`
-    pub fn deprecation(&mut self, bendings: &BendingsConf) -> Option<f64> {
-        match self.changed {
-            Some(_) => {
-                self.changed = None;
-                match (self.pos, self.load) {
-                    (None, None) => None,
-                    (None, Some(_)) => None,
-                    (Some(_), None) => None,
-                    (Some(pos), Some(load)) => self._deprecation(bendings, pos, load),
-                }
-            },
-            None => None,
-        }
+    /// Evaluates [RopeSlice] deprecation
+    /// - `pos` rope position, meter
+    /// - `load` - rope load, tonn
+    pub fn deprecation(&mut self, bendings: &BendingsConf, pos: f64, load: f64) -> Option<f64> {
+        // match self.changed {
+        //     Some(_) => {
+        //         self.changed = None;
+        //         match (pos, load) {
+        //             (None, None) => None,
+        //             (None, Some(_)) => None,
+        //             (Some(_), None) => None,
+        //             (Some(pos), Some(load)) => self._deprecation(bendings, pos, load),
+        //         }
+        //     },
+        //     None => None,
+        // }
+        self._deprecation(bendings, pos, load)
     }
     ///
     /// 
