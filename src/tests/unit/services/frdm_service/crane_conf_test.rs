@@ -51,7 +51,7 @@ fn new() {
                         l3: 0.3 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                         l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                         len: 11200.0 mm                                         # length of the boom
-                        angle: point real 'App/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+                        angle: point real '/App/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
                     - Rotary-Boom:
                         l1: 0.1 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                         l2: 0.2 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -64,7 +64,7 @@ fn new() {
                     length: 3000 m      # Total working length of the rope
                     segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                     pos: point real '/App/Winch.EncoderBR2'      # meters, current rope position
-                    load: point real '/App/Winch.Load'          # tonn, current rope load 
+                    load: point real '/App/Winch.Load'          # tonn, current rope load
             ").unwrap(),
             CraneConf {
                 bendings: BendingsConf {
