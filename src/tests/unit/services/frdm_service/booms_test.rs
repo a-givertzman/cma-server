@@ -1,7 +1,7 @@
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, services::conf::ConfTree};
+use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::services::frdm_service::{Booms, CraneConf, Offset};
@@ -37,30 +37,37 @@ fn new() {
             // Input Events
             ("Load.MainBoomAngle",    69.71),
             ("Load.RotaryBoomAngle", 155.30)
-        ], [
-            // Targets
-            // boom.D                              boom.G
+        ], 
+        // Targets
+        // boom[i].alpha
+        [69.71, 45.01],
+        [
+            // boom[i].D                              boom[i].G
             ((6.32530071759608e-13, 10330.0),    (3883.8458824556724, 20835.034086633517)), 
             ((3883.8458824556724, 20835.034086633517),    (9528.40100476262, 26481.55987434036)),
-        ])
+        ]),
+        (01,  [
+            // Input Events
+            ("Load.MainBoomAngle",    74.00),
+            ("Load.RotaryBoomAngle", 128.00)
+        ], 
+        // Targets
+        // boom[i].alpha
+        [74.0, 22.0],
+        [
+            // boom.D                              boom.G
+            ((6.32530071759608e-13, 10330.0), (3087.138385150391, 21096.13099450917)), 
+            ((3087.138385150391, 21096.13099450917), (10489.774280011621, 24086.990036341813)),
+        ]),
     ];
     //  Число стрел: 2
     //  alpha_boom: [69.71, 45.01]
     //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3883.8458824556724, 20835.034086633517)
     //  Стрела 2: D=(3883.8458824556724, 20835.034086633517), G=(9528.40100476262, 26481.55987434036)
-    //  Блок 1: (-1829.9999999999993, 11040.0)
-    //  Блок 2: (2958.9072250002687, 21505.37167318569)
-    //  Блок 3: (3674.151798369415, 23072.283377861302)
-    //  Блок 4: (8047.737692695379, 26376.6496446291)
-    //  Блок 5: (9108.947602987579, 27278.396020445285)
-    //  Блок 6: (9649.303797749028, 26552.998761846295)
-    //  Блок 7: (10057.303797749028, 25552.998761846295)
-    //  Блоки (1, 2) | Схема 1 | L_block=11509.02 | Alpha_rope=-65.34° | L_rope=11509.02
-    //  Блоки (2, 3) | Схема 1 | L_block=1722.44 | Alpha_rope=-65.46° | L_rope=1722.44
-    //  Блоки (3, 4) | Схема 1 | L_block=5481.52 | Alpha_rope=-37.07° | L_rope=5481.52
-    //  Блоки (4, 5) | Схема 2 | L_block=1392.59 | Alpha_rope=-4.49° | L_rope=1128.48
-    //  Блоки (5, 6) | Схема 3 | L_block=904.54 | Alpha_rope=-11.12° | L_rope=390.29
-    //  Блоки (6, 7) | Схема 1 | L_block=1080.03 | Alpha_rope=90.00° | L_rope=1000.00
+    //  Число стрел: 2
+    //  alpha_boom: [74.0, 22.0]
+    //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3087.138385150391, 21096.13099450917)
+    //  Стрела 2: D=(3087.138385150391, 21096.13099450917), G=(10489.774280011621, 24086.990036341813)
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         bendings:           # Rope bloks with diameter, inter and exit
             # Block Diameter   inter   exit
@@ -133,14 +140,17 @@ fn new() {
     let mut inputs = FxIndexMap::default();
     let mut booms = Booms::new(&dbg, &conf.booms, &mut inputs);
     let t = Instant::now();
-    for (step, events, target) in test_data {
+    for (step, events, target_alpha, target_pos) in test_data {
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
         let result = booms.eval(&inputs).unwrap();
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
-        for (i, ((target_dx, target_dy), (target_gx, target_gy))) in target.into_iter().enumerate() {
+        for (i, target) in target_alpha.into_iter().enumerate() {
+            assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);
+        }
+        for (i, ((target_dx, target_dy), (target_gx, target_gy))) in target_pos.into_iter().enumerate() {
             let (Offset{x: dx, y: dy}, Offset{x: gx, y: gy}) = (result[i].dpt, result[i].gpt);
             assert!(dx == target_dx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dx, target_dx);
             assert!(dy == target_dy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dy, target_dy);

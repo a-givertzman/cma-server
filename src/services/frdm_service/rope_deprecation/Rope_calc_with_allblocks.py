@@ -143,173 +143,174 @@ def rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j):
 # Алгоритм расчета входа и исхода каната с блоков
 # ---------------------------
 if __name__ == "__main__":
-    # 1. Исходные данные
-    #
-    # Стрелы
-    booms = [
-        Boom(alpha_rel=69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
-        Boom(alpha_rel=155.3, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0)
-    ]
-    #
-    # Блоки
-    blocks = [
-        Block(lF=Offset( 1830.0, 710.0),  D=844.0, scheme=1, bind=BlockBindFixed()),
-        Block(lF=Offset(  308.0, 1100.0), D=816,   scheme=1, bind=BlockBindBoom(0)),
-        Block(lF=Offset(-6550.0, 1730.0), D=816,   scheme=1, bind=BlockBindBoom(1)),
-        Block(lF=Offset(-1121.0, 973.0),  D=816,   scheme=2, bind=BlockBindBoom(1)),
-        Block(lF=Offset(  267.0, 860.0),  D=816,   scheme=3, bind=BlockBindBoom(1)),
-        Block(lF=Offset(  136.0, -35.0),  D=816,   scheme=1, bind=BlockBindBoom(1)),
-        Block(lF=Offset(  'NaN', 'NaN'),  D=0.0,   scheme=0, bind=BlockBindHook()),
-    ]
+    for alpha in [[69.71,155.3], [74.0,128.0]]:
+        # 1. Исходные данные
+        #
+        # Стрелы
+        booms = [
+            Boom(alpha_rel=alpha[0], len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+            Boom(alpha_rel=alpha[1], len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0)
+        ]
+        #
+        # Блоки
+        blocks = [
+            Block(lF=Offset( 1830.0, 710.0),  D=844.0, scheme=1, bind=BlockBindFixed()),
+            Block(lF=Offset(  308.0, 1100.0), D=816,   scheme=1, bind=BlockBindBoom(0)),
+            Block(lF=Offset(-6550.0, 1730.0), D=816,   scheme=1, bind=BlockBindBoom(1)),
+            Block(lF=Offset(-1121.0, 973.0),  D=816,   scheme=2, bind=BlockBindBoom(1)),
+            Block(lF=Offset(  267.0, 860.0),  D=816,   scheme=3, bind=BlockBindBoom(1)),
+            Block(lF=Offset(  136.0, -35.0),  D=816,   scheme=1, bind=BlockBindBoom(1)),
+            Block(lF=Offset(  'NaN', 'NaN'),  D=0.0,   scheme=0, bind=BlockBindHook()),
+        ]
 
-    block_bind = [
-        BlockBindFixed(),   # Блок 1
-        BlockBindBoom(1),   # Блок 2
-        BlockBindBoom(2),   # Блок 3
-        BlockBindBoom(2),   # Блок 4
-        BlockBindBoom(2),   # Блок 5
-        BlockBindBoom(2),   # Блок 6
-        BlockBindHook(),    # Блок 7
-    ]
-    
-    # ---------------------------
-    # 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
-    # ---------------------------
-    alpha_sum = 0.0
-    for i, boom in enumerate(booms):
-        alpha_sum += boom.alpha_rel
-        # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
-        boom.alpha = alpha_sum - i * 180
-
-    # ---------------------------
-    # 3. Матрица T (D и G для каждой стрелы)
-    # ---------------------------
-    for i, boom in enumerate(booms):
-        if i == 0:
-            x0, y0 = 0, 0
-            alpha_prime = 90
-        else:
-            x0, y0 = booms[i - 1].G.x, booms[i - 1].G.y
-            alpha_prime = booms[i - 1].alpha
-        wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
-        XY_start = Offset(x0 + wx, y0 + wy)
-        # log.debug(f"Стрела {i}: XY_start={XY_start}")
+        block_bind = [
+            BlockBindFixed(),   # Блок 1
+            BlockBindBoom(1),   # Блок 2
+            BlockBindBoom(2),   # Блок 3
+            BlockBindBoom(2),   # Блок 4
+            BlockBindBoom(2),   # Блок 5
+            BlockBindBoom(2),   # Блок 6
+            BlockBindHook(),    # Блок 7
+        ]
         
-        # Точка D
-        Dx, Dy = XY_rotate(-boom.l2, boom.l1, boom.alpha)
-        D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
-        # log.debug(f"\t D_point={D_point}")
-        
-        # Точка G
-        Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
-        G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
-        # log.debug(f"\t G_point={G_point}")
-        
-        boom.D = D_point
-        boom.G = G_point
-    #logging.debug(f"booms {booms}")
+        # ---------------------------
+        # 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
+        # ---------------------------
+        alpha_sum = 0.0
+        for i, boom in enumerate(booms):
+            alpha_sum += boom.alpha_rel
+            # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
+            boom.alpha = alpha_sum - i * 180
 
-    # ---------------------------
-    # 4. Координаты блоков XY_block
-    # ---------------------------
-    for idx, block in enumerate(blocks):
-        # bind = block_bind[idx]
-        match block.bind:
-            case BlockBindFixed():
-                # Формула из алгоритма:
-                dx1, dy1 = XY_rotate(-block.lF.x, block.lF.y, 0)
-                dx2, dy2 = XY_rotate(booms[0].l4, booms[0].l3, 90) # от первой стрелы
-                block.coord.x = dx1 + dx2
-                block.coord.y = dy1 + dy2
-            case BlockBindBoom(boom_index):
-                # Определяем номер стрелы
-                # boom_num = int(feature.split()[0]) - 1
-                boom = booms[boom_index]
-                logging.debug(f"Блок {idx}")
-                base_point = boom.G  # точка G
-                dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
-                block.coord.x = base_point.x + dx
-                block.coord.y = base_point.y + dy
-            case BlockBindHook():
-                block.coord.x = float('nan')
-                block.coord.y = float('nan')
-            case _:
-                raise ValueError(f"Неизвестный тип блока [{idx}]: {bind}")
+        # ---------------------------
+        # 3. Матрица T (D и G для каждой стрелы)
+        # ---------------------------
+        for i, boom in enumerate(booms):
+            if i == 0:
+                x0, y0 = 0, 0
+                alpha_prime = 90
+            else:
+                x0, y0 = booms[i - 1].G.x, booms[i - 1].G.y
+                alpha_prime = booms[i - 1].alpha
+            wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
+            XY_start = Offset(x0 + wx, y0 + wy)
+            # log.debug(f"Стрела {i}: XY_start={XY_start}")
+            
+            # Точка D
+            Dx, Dy = XY_rotate(-boom.l2, boom.l1, boom.alpha)
+            D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
+            # log.debug(f"\t D_point={D_point}")
+            
+            # Точка G
+            Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
+            G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
+            # log.debug(f"\t G_point={G_point}")
+            
+            boom.D = D_point
+            boom.G = G_point
+        #logging.debug(f"booms {booms}")
 
-    # ---------------------------
-    # 5. Координаты крюковоц подвески 
-    # ---------------------------
-    hook_block_index = 6
-    l_hook = 1000
-    prev_block = blocks[hook_block_index - 1]
-    blocks[hook_block_index].coord.x = prev_block.coord.x + 0.5 * prev_block.D
-    blocks[hook_block_index].coord.y = prev_block.coord.y - l_hook
-    logging.debug(f"")
-    # ---------------------------
-    # 6. Расчёт параметров каната
-    # ---------------------------
-    rope_data = []
-    for i in range(len(blocks) - 1):
-        X1, Y1 = blocks[i].coord.x, blocks[i].coord.y
-        X2, Y2 = blocks[i + 1].coord.x, blocks[i + 1].coord.y
-        D1 = blocks[i].D
-        D2 = blocks[i + 1].D
-        scheme = blocks[i].scheme
+        # ---------------------------
+        # 4. Координаты блоков XY_block
+        # ---------------------------
+        for idx, block in enumerate(blocks):
+            # bind = block_bind[idx]
+            match block.bind:
+                case BlockBindFixed():
+                    # Формула из алгоритма:
+                    dx1, dy1 = XY_rotate(-block.lF.x, block.lF.y, 0)
+                    dx2, dy2 = XY_rotate(booms[0].l4, booms[0].l3, 90) # от первой стрелы
+                    block.coord.x = dx1 + dx2
+                    block.coord.y = dy1 + dy2
+                case BlockBindBoom(boom_index):
+                    # Определяем номер стрелы
+                    # boom_num = int(feature.split()[0]) - 1
+                    boom = booms[boom_index]
+                    logging.debug(f"Блок {idx}")
+                    base_point = boom.G  # точка G
+                    dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
+                    block.coord.x = base_point.x + dx
+                    block.coord.y = base_point.y + dy
+                case BlockBindHook():
+                    block.coord.x = float('nan')
+                    block.coord.y = float('nan')
+                case _:
+                    raise ValueError(f"Неизвестный тип блока [{idx}]: {bind}")
 
-        if scheme == 1: k, j = -1, 1
-        elif scheme == 2: k, j = 1, 1
-        elif scheme == 3: k, j = 1, -1
-        elif scheme == 4: k, j = -1, -1
-        else: raise ValueError(f"Некорректная схема: {scheme}")
+        # ---------------------------
+        # 5. Координаты крюковоц подвески 
+        # ---------------------------
+        hook_block_index = 6
+        l_hook = 1000
+        prev_block = blocks[hook_block_index - 1]
+        blocks[hook_block_index].coord.x = prev_block.coord.x + 0.5 * prev_block.D
+        blocks[hook_block_index].coord.y = prev_block.coord.y - l_hook
+        logging.debug(f"")
+        # ---------------------------
+        # 6. Расчёт параметров каната
+        # ---------------------------
+        rope_data = []
+        for i in range(len(blocks) - 1):
+            X1, Y1 = blocks[i].coord.x, blocks[i].coord.y
+            X2, Y2 = blocks[i + 1].coord.x, blocks[i + 1].coord.y
+            D1 = blocks[i].D
+            D2 = blocks[i + 1].D
+            scheme = blocks[i].scheme
 
-        params = rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j)
-        params["block_pair"] = (i + 1, i + 2)
-        params["scheme"] = scheme
-        rope_data.append(params)
+            if scheme == 1: k, j = -1, 1
+            elif scheme == 2: k, j = 1, 1
+            elif scheme == 3: k, j = 1, -1
+            elif scheme == 4: k, j = -1, -1
+            else: raise ValueError(f"Некорректная схема: {scheme}")
 
-    # ---------------------------
-    # Логи
-    # ---------------------------
-    logging.debug(f"Число стрел: {len(booms)}")
-    logging.debug(f"alpha_boom: {[round(boom.alpha, 3) for boom in booms]}")
-    for idx, boom in enumerate(booms, start=1):
-        logging.debug(f"Стрела {idx}: D={boom.D}, G={boom.G}")
-    for i, block in enumerate(blocks, start=1):
-        logging.debug(f"Блок {i}: {block.coord}")
-    for r in rope_data:
-        logging.debug(f"Блоки {r['block_pair']} | Схема {r['scheme']} | "
-                    f"L_block={r['l_block']:.2f} | Alpha_rope={r['alpha_rope']:.2f}° | "
-                    f"L_rope={r['l_rope']:.2f}")
+            params = rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j)
+            params["block_pair"] = (i + 1, i + 2)
+            params["scheme"] = scheme
+            rope_data.append(params)
+
+        # ---------------------------
+        # Логи
+        # ---------------------------
+        logging.debug(f"Число стрел: {len(booms)}")
+        logging.debug(f"alpha_boom: {[round(boom.alpha, 3) for boom in booms]}")
+        for idx, boom in enumerate(booms, start=1):
+            logging.debug(f"Стрела {idx}: D={boom.D}, G={boom.G}")
+        for i, block in enumerate(blocks, start=1):
+            logging.debug(f"Блок {i}: {block.coord}")
+        for r in rope_data:
+            logging.debug(f"Блоки {r['block_pair']} | Схема {r['scheme']} | "
+                        f"L_block={r['l_block']:.2f} | Alpha_rope={r['alpha_rope']:.2f}° | "
+                        f"L_rope={r['l_rope']:.2f}")
 
 
-    # ---------------------------
-    # Построение графика
-    # ---------------------------
-    plt.figure(figsize=(10, 8))
-    plt.title("Схема расположения стрел и блоков")
-    plt.xlabel("X координата (мм)")
-    plt.ylabel("Y координата (мм)")
-    plt.grid(True)
-    plt.axis('equal')
+        # ---------------------------
+        # Построение графика
+        # ---------------------------
+        plt.figure(figsize=(10, 8))
+        plt.title("Схема расположения стрел и блоков")
+        plt.xlabel("X координата (мм)")
+        plt.ylabel("Y координата (мм)")
+        plt.grid(True)
+        plt.axis('equal')
 
-    colors = ['green', 'blue']
-    for i, boom in enumerate(booms):
-        plt.plot([boom.D.x, boom.G.x], [boom.D.y, boom.G.y], color=colors[i], linewidth=1.5)
-        plt.scatter([boom.D.x, boom.G.x], [boom.D.y, boom.G.y], color=colors[i], s=20, marker='s')
+        colors = ['green', 'blue']
+        for i, boom in enumerate(booms):
+            plt.plot([boom.D.x, boom.G.x], [boom.D.y, boom.G.y], color=colors[i], linewidth=1.5)
+            plt.scatter([boom.D.x, boom.G.x], [boom.D.y, boom.G.y], color=colors[i], s=20, marker='s')
 
-    for i, block in enumerate(blocks):
-        x, y = block.coord.x, block.coord.y
-        if math.isnan(x) or math.isnan(y):
-            continue
-        radius = block.D / 2
-        circle = patches.Circle((x, y), radius, fill=False, color='deepskyblue', linewidth=1)
-        plt.gca().add_patch(circle)
-        plt.text(x + radius, y + radius, f'Блок {i+1}', fontsize=8, color='black')
+        for i, block in enumerate(blocks):
+            x, y = block.coord.x, block.coord.y
+            if math.isnan(x) or math.isnan(y):
+                continue
+            radius = block.D / 2
+            circle = patches.Circle((x, y), radius, fill=False, color='deepskyblue', linewidth=1)
+            plt.gca().add_patch(circle)
+            plt.text(x + radius, y + radius, f'Блок {i+1}', fontsize=8, color='black')
 
-    for r in rope_data:
-        plt.plot([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
-                 color='blue', linestyle='--')
-        plt.scatter([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
-                    color='orange', s=15)
+        for r in rope_data:
+            plt.plot([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
+                    color='blue', linestyle='--')
+            plt.scatter([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
+                        color='orange', s=15)
 
-    plt.show()
+        plt.show()
