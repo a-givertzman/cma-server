@@ -43,32 +43,40 @@ impl Booms {
     }
     ///
     /// Evaluates Boom's values using passed new parameters
-    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Boom> {
-        self.angles(inputs);
-        self.boom_d_g_points(inputs);
-        self.items.clone()
+    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Boom>> {
+        match self.angles(inputs) {
+            Some(_) => self.boom_d_g_points(inputs).map(|_| self.items.clone()),
+            None => None,
+        }
     }
     ///
     /// 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
-    fn angles(&mut self, inputs: &FxIndexMap<String, f64>) {
+    fn angles(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<()> {
         let mut alpha_sum = 0.0;
         for (i, boom) in self.items.iter_mut().enumerate() {
             let alpha_rel = match &boom.alpha_input {
-                Some(input) => inputs.get(input).unwrap_or(&0.0),
+                Some(input) => match inputs.get(input) {
+                    Some(alpha) => alpha,
+                    None => {
+                        log::warn!("{}.angles | Boom[{i}] '{}':  Input '{:?}' - Not found", self.dbg, boom.name, boom.alpha_input);
+                        return None
+                    }
+                }
                 None => &boom.alpha_rel,
             };
             alpha_sum += *alpha_rel;
             boom.alpha = alpha_sum - (i as f64) * 180.0;
             log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
         }
+        Some(())
     }
     ///
     /// 3. D и G для каждой стрелы
-    fn boom_d_g_points(&mut self, inputs: &FxIndexMap<String, f64>) {
+    fn boom_d_g_points(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<()> {
         let prev = self.items.first().map(|boom| boom.clone());
         match prev {
             Some(mut prev) => {
-                for (i, boom) in self.items.iter_mut().skip(1).enumerate() {
+                for (i, boom) in self.items.iter_mut().enumerate() {
                     // Начало стрелы
                     let (x0, y0, alpha_prime) = if i == 0 {
                         (0.0, 0.0, 90.0)
@@ -84,7 +92,13 @@ impl Booms {
                     // log::debug!(f"\t dpt={dpt}")
                     // Точка G
                     let boom_len = match &boom.len_input {
-                        Some(input) => inputs.get(input).unwrap_or(&0.0),
+                        Some(input) => match inputs.get(input) {
+                            Some(len) => len,
+                            None => {
+                                log::warn!("{}.angles | Boom[{i}] '{}':  Input '{:?}' - Not found", self.dbg, boom.name, boom.len_input);
+                                return None
+                            }
+                        },
                         None => &boom.len,
                     };
                     let Offset{x: gx, y: gy} = rotate_xy(boom_len - boom.l2, boom.l1, boom.alpha);
@@ -94,8 +108,12 @@ impl Booms {
                     boom.gpt = gpt;
                     prev = boom.clone();
                 }
+                Some(())
             }
-            _ => log::warn!("{}.boom_d_g_points | No Boom's found", self.dbg),
+            _ => {
+                log::warn!("{}.boom_d_g_points | No Boom's found", self.dbg);
+                None
+            }
         }
     }
 }

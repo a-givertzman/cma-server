@@ -41,9 +41,9 @@ fn new() {
                     - D300mm           7.23 .. 7.30 mm
                 boom:
                     main-len: 5.3 m                                        # length of the main boom
-                    main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+                    main-angle: point real '/App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
                     rotary-len: 2.1 m                                      # length of the rotary boom
-                    rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+                    rotary-angle: point real '/App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
                 booms:
                     - Main-Boom:
                         l1: 0.1 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -58,42 +58,42 @@ fn new() {
                         l3: 0.3 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                         l4: 0.4 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                         len: 7984.0 mm                                          # length of the rotary boom
-                        angle: point real 'App/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+                        angle: point real '/App/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
                 blocks:
-                    - 1:
+                    - '1':
                         lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
                         d: 844.0 mm                 # Диаметры блоков, мм
-                        schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                         bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-                    - 2:
+                    - '2':
                         lf: 308.0 mm, 1090.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
                         d: 816.0 mm                 # Диаметры блоков, мм
-                        schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                         bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-                    - 3:
+                    - '3':
                         lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
                         d: 816.0 mm                 # Диаметры блоков, мм
-                        schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                         bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-                    - 4:
+                    - '4':
                         lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
                         d: 816.0 mm                 # Диаметры блоков, мм
-                        schemes: TopBottom          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                        bind: Boom 2                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-                    - 5:
+                        scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                        bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                    - '5':
                         lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                         d: 816.0 mm                 # Диаметры блоков, мм
-                        schemes: BottomTop          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                        bind: Boom 3                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-                    - 6:
+                        scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                        bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                    - '6':
                         lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                         d: 816.0 mm                 # Диаметры блоков, мм
-                        schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                        bind: Boom 4                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-                    - 7:
+                        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                        bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                    - '7':
                         lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
                         d: 0.0 mm                   # Диаметры блоков, мм
-                        schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                         bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 
                 rope:
@@ -117,7 +117,7 @@ fn new() {
                         l3: ConfDistance::new(0.3, ConfDistanceUnit::Millimeter),
                         l4: ConfDistance::new(10330.0, ConfDistanceUnit::Millimeter),
                         len: InputKind::Const(ConfDistance::new(11200.0, ConfDistanceUnit::Millimeter)),
-                        angle: InputKind::Point("App/Load.MainBoomAngle".to_owned()),
+                        angle: InputKind::Point("/App/Load.MainBoomAngle".to_owned()),
                     }),
                     ("Rotary-Boom".to_owned(), BoomConf {
                         l1: ConfDistance::new(0.1, ConfDistanceUnit::Millimeter),
@@ -125,7 +125,7 @@ fn new() {
                         l3: ConfDistance::new(0.3, ConfDistanceUnit::Millimeter),
                         l4: ConfDistance::new(0.4, ConfDistanceUnit::Millimeter),
                         len: InputKind::Const(ConfDistance::new(7984.0, ConfDistanceUnit::Millimeter)),
-                        angle: InputKind::Point("App/Load.RotaryBoomAngle".to_owned()),
+                        angle: InputKind::Point("/App/Load.RotaryBoomAngle".to_owned()),
                     }),
                 ],
                 blocks: vec![
@@ -139,31 +139,31 @@ fn new() {
                         lf: Offset::new(ConfDistance::new(308.0, ConfDistanceUnit::Millimeter), ConfDistance::new(1090.0, ConfDistanceUnit::Millimeter)),
                         d: ConfDistance::new(816.0, ConfDistanceUnit::Millimeter),
                         scheme: BlockScheme::TopTop,
-                        bind: BlockBind::Fixed,
+                        bind: BlockBind::Boom(0),
                     }),
                     ("3".to_owned(), BlockConf {
                         lf: Offset::new(ConfDistance::new(-6550.0, ConfDistanceUnit::Millimeter), ConfDistance::new(1730.0, ConfDistanceUnit::Millimeter)),
                         d: ConfDistance::new(816.0, ConfDistanceUnit::Millimeter),
                         scheme: BlockScheme::TopTop,
-                        bind: BlockBind::Fixed,
+                        bind: BlockBind::Boom(1),
                     }),
                     ("4".to_owned(), BlockConf {
                         lf: Offset::new(ConfDistance::new(-1121.0, ConfDistanceUnit::Millimeter), ConfDistance::new(973.0, ConfDistanceUnit::Millimeter)),
                         d: ConfDistance::new(816.0, ConfDistanceUnit::Millimeter),
                         scheme: BlockScheme::TopBottom,
-                        bind: BlockBind::Fixed,
+                        bind: BlockBind::Boom(1),
                     }),
                     ("5".to_owned(), BlockConf {
                         lf: Offset::new(ConfDistance::new(267.0, ConfDistanceUnit::Millimeter), ConfDistance::new(860.0, ConfDistanceUnit::Millimeter)),
                         d: ConfDistance::new(816.0, ConfDistanceUnit::Millimeter),
                         scheme: BlockScheme::BottomTop,
-                        bind: BlockBind::Fixed,
+                        bind: BlockBind::Boom(1),
                     }),
                     ("6".to_owned(), BlockConf {
                         lf: Offset::new(ConfDistance::new(136.0, ConfDistanceUnit::Millimeter), ConfDistance::new(-35.0, ConfDistanceUnit::Millimeter)),
                         d: ConfDistance::new(816.0, ConfDistanceUnit::Millimeter),
                         scheme: BlockScheme::TopTop,
-                        bind: BlockBind::Fixed,
+                        bind: BlockBind::Boom(1),
                     }),
                     ("7".to_owned(), BlockConf {
                         lf: Offset::new(ConfDistance::new(0.0, ConfDistanceUnit::Millimeter), ConfDistance::new(0.0, ConfDistanceUnit::Millimeter)),

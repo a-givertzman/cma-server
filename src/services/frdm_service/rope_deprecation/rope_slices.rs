@@ -80,19 +80,19 @@ impl<'a> RopeSlices<'a> {
     pub fn eval(&mut self, event: &Point) {
         self.add(event);
         self.blocks.eval(&self.inputs);
-        match point.name() {
-            name if name == conf.crane.rope.pos => {
-                let pos = point.to_double().as_double().value;
-                log::debug!("{dbg}.run | Received rope pos: {:.4?} m", pos);
-                rope_pos.store((pos * 1000.0).round() as usize, Ordering::SeqCst);
-                rope_pos_ok.store(true, Ordering::SeqCst);
-                rope_slices.eval(Some(pos), None);
-            }
-            name if name == conf.crane.rope.load => {
-                let load = point.to_double().as_double().value;
-                log::debug!("{dbg}.run | Received rope load: {:.4?} tonn", load);
-                rope_slices.eval(None, Some(load));
-            }
+        match event.name() {
+            // name if name == conf.crane.rope.pos => {
+            //     let pos = point.to_double().as_double().value;
+            //     log::debug!("{dbg}.run | Received rope pos: {:.4?} m", pos);
+            //     rope_pos.store((pos * 1000.0).round() as usize, Ordering::SeqCst);
+            //     rope_pos_ok.store(true, Ordering::SeqCst);
+            //     rope_slices.eval(Some(pos), None);
+            // }
+            // name if name == conf.crane.rope.load => {
+            //     let load = point.to_double().as_double().value;
+            //     log::debug!("{dbg}.run | Received rope load: {:.4?} tonn", load);
+            //     rope_slices.eval(None, Some(load));
+            // }
             // name if name == conf.crane.booms.main_angle => {
             //     let main_angle = point.to_double().as_double().value;
             //     log::debug!("{dbg}.run | Received boom.main_angle: {:.4?}", main_angle);
@@ -101,22 +101,22 @@ impl<'a> RopeSlices<'a> {
             //     let rotary_angle = point.to_double().as_double().value;
             //     log::debug!("{dbg}.run | Received boom.rotary_angle: {:.4?}", rotary_angle);
             // }
-            _ => log::warn!("{dbg}.run | Unknown point name: {:?}", point.name()),
+            _ => log::warn!("{}.run | Unknown point name: {:?}", self.dbg, event.name()),
         }
 
-        match (pos, load) {
-            (None, None) => {},
-            (None, Some(load)) => for slice in &mut self.slices { slice.add_load(load) },
-            (Some(pos), None) => for slice in &mut self.slices { slice.add_pos(pos) },
-            (Some(pos), Some(load)) => {
-                for slice in &mut self.slices {
-                    slice.add_pos(pos);
-                    slice.add_load(load);
-                }
-            }
-        }
+        // match (pos, load) {
+        //     (None, None) => {},
+        //     (None, Some(load)) => for slice in &mut self.slices { slice.add_load(load) },
+        //     (Some(pos), None) => for slice in &mut self.slices { slice.add_pos(pos) },
+        //     (Some(pos), Some(load)) => {
+        //         for slice in &mut self.slices {
+        //             slice.add_pos(pos);
+        //             slice.add_load(load);
+        //         }
+        //     }
+        // }
         for slice in &mut self.slices {
-            if let Some(deprecation) = slice.deprecation(&self.conf.bendings, pos, load) {
+            if let Some(deprecation) = slice.deprecation(&self.conf.bendings, todo!(), todo!()) {
                 (self.deprecation)(slice.id(), deprecation);
             }
         }

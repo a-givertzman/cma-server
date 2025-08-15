@@ -29,10 +29,11 @@ impl Blocks {
     }
     ///
     /// Evaluates Boom's values using passed new parameters
-    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Block> {
-        let booms = self.booms.eval(inputs);
-        self.blocks_pos(&booms);
-        self.items.clone()
+    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
+        self.booms.eval(inputs).map(|booms| {
+            self.blocks_pos(&booms);
+            self.items.clone()
+        })
     }
     ///
     /// 4. Координаты блоков X, Y

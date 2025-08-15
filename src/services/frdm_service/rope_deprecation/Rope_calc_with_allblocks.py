@@ -1,35 +1,42 @@
 import matplotlib.pyplot as plt
 import math
-import logging 
+import logging
 import matplotlib.patches as patches
 from dataclasses import dataclass
 
 plt.set_loglevel(level="info")
 # logging.getLogger('PIL.PngImagePlugin').setLevel(level="info")
-logging.basicConfig(level = logging.DEBUG, force = True)
+logging.basicConfig(level=logging.DEBUG, force=True)
+
+# ---------------------------
+# Классы
+# ---------------------------
 
 @dataclass
 class BlockBindFixed:
     """Блок вне стрелы, барабан"""
     pass
+
 @dataclass
 class BlockBindBoom:
     """Блок на стреле"""
     boom: int
     def __init__(self, boom: int):
         self.boom = boom
+
 @dataclass
 class BlockBindHook:
     """Блок на подвеске"""
     pass
+
 BlockBind = BlockBindFixed | BlockBindBoom | BlockBindHook
 
 class Offset:
     x: float
     y: float
     def __init__(self, x: float, y: float):
-            self.x = x
-            self.y = y
+        self.x = x
+        self.y = y
     def __str__(self):
         return f'{self.x, self.y}'
 
@@ -51,8 +58,8 @@ class Boom:
         :len: Длины стрел, мм
         :l1: Вертикальное смещение точки D, мм
         :l2: Горизонтальное смещение точки D, мм
-        :l3: Вертикальное смещение начала стрелы относительно..., мм
-        :l4: Горизонтальное смещение начала стрелы относительно..., мм
+        :l3: Вертикальное смещение начала стрелы относительно G_i-1, мм
+        :l4: Горизонтальное смещение начала стрелы относительно G_i-1, мм
         """
         self.alpha_rel = alpha_rel
         self.alpha = 0.0
@@ -73,7 +80,7 @@ class Block:
         :lF: Растояние от **конца** стрелы до оси блока, мм
         :D: Диаметры блоков, мм
         :schemes: Схема схода каната на блоке
-        :bind: К какой стреле относится блок (нумерация с 0)
+        :boom: К какой стреле относится блок (нумерация с 0)
         """
         self.lF = lF
         self.D = D
@@ -98,10 +105,7 @@ def alpha_horiz(Y1, Y2, X1, X2):
     if length == 0:
         return 0
     a = math.degrees(math.asin((Y1 - Y2) / length))
-    if X1 <= X2:
-        return a
-    else:
-        return 180 - a
+    return a if X1 <= X2 else 180 - a
 
 def l_section(Y1, Y2, X1, X2):
     return math.sqrt((X2 - X1)**2 + (Y2 - Y1)**2)
@@ -113,8 +117,7 @@ def distance_point_to_line(Y1, Y2, X1, X2, x, y):
     if denominator == 0:
         return 0
     return numerator / denominator
-
-
+ 
 def rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j):
     l_block = l_section(Y1, Y2, X1, X2)
     alpha_block = alpha_horiz(Y1, Y2, X1, X2)
@@ -136,31 +139,29 @@ def rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j):
         "l_rope": l_rope
     }
 
-# ------------------------------------------------
+# ---------------------------
 # Алгоритм расчета входа и исхода каната с блоков
-# ------------------------------------------------
+# ---------------------------
 if __name__ == "__main__":
-    # ---------------------------
-    # Исходные данные
-    # ---------------------------
-
+    # 1. Исходные данные
     #
     # Стрелы
     booms = [
-        Boom(alpha_rel= 74.0, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
-        Boom(alpha_rel=128.0, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+        Boom(alpha_rel=69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        Boom(alpha_rel=155.3, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0)
     ]
     #
     # Блоки
     blocks = [
-        Block(lF=Offset( 1830.0,  710.0), D=844.0, scheme=1, bind=BlockBindFixed()),
-        Block(lF=Offset(  308.0, 1090.0), D=816.2, scheme=1, bind=BlockBindBoom(0)),
-        Block(lF=Offset(-6550.0, 1743.0), D=816.2, scheme=1, bind=BlockBindBoom(1)),
-        Block(lF=Offset(-1120.0, 1005.0), D=816.2, scheme=2, bind=BlockBindBoom(1)),
-        Block(lF=Offset(  268.0,  895.0), D=816.2, scheme=3, bind=BlockBindBoom(1)),
-        Block(lF=Offset(  140.0,    0.0), D=816.2, scheme=1, bind=BlockBindBoom(1)),
-        Block(lF=Offset(    0.0,    0.0), D=  0.0, scheme=0, bind=BlockBindHook()),
+        Block(lF=Offset( 1830.0, 710.0),  D=844.0, scheme=1, bind=BlockBindFixed()),
+        Block(lF=Offset(  308.0, 1100.0), D=816,   scheme=1, bind=BlockBindBoom(0)),
+        Block(lF=Offset(-6550.0, 1730.0), D=816,   scheme=1, bind=BlockBindBoom(1)),
+        Block(lF=Offset(-1121.0, 973.0),  D=816,   scheme=2, bind=BlockBindBoom(1)),
+        Block(lF=Offset(  267.0, 860.0),  D=816,   scheme=3, bind=BlockBindBoom(1)),
+        Block(lF=Offset(  136.0, -35.0),  D=816,   scheme=1, bind=BlockBindBoom(1)),
+        Block(lF=Offset(  'NaN', 'NaN'),  D=0.0,   scheme=0, bind=BlockBindHook()),
     ]
+
     block_bind = [
         BlockBindFixed(),   # Блок 1
         BlockBindBoom(1),   # Блок 2
@@ -170,7 +171,7 @@ if __name__ == "__main__":
         BlockBindBoom(2),   # Блок 6
         BlockBindHook(),    # Блок 7
     ]
-
+    
     # ---------------------------
     # 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
     # ---------------------------
@@ -184,34 +185,32 @@ if __name__ == "__main__":
     # 3. Матрица T (D и G для каждой стрелы)
     # ---------------------------
     for i, boom in enumerate(booms):
-        # Начало стрелы
         if i == 0:
             x0, y0 = 0, 0
             alpha_prime = 90
         else:
             x0, y0 = booms[i - 1].G.x, booms[i - 1].G.y
             alpha_prime = booms[i - 1].alpha
-
         wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
         XY_start = Offset(x0 + wx, y0 + wy)
         # log.debug(f"Стрела {i}: XY_start={XY_start}")
-
+        
         # Точка D
-        Dx, Dy = XY_rotate(- boom.l2, boom.l1, boom.alpha)
+        Dx, Dy = XY_rotate(-boom.l2, boom.l1, boom.alpha)
         D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
         # log.debug(f"\t D_point={D_point}")
-
+        
         # Точка G
         Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
         G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
         # log.debug(f"\t G_point={G_point}")
-
+        
         boom.D = D_point
         boom.G = G_point
-    logging.debug(f"booms {booms}")
+    #logging.debug(f"booms {booms}")
 
     # ---------------------------
-    # 4. Координаты блоков X, Y
+    # 4. Координаты блоков XY_block
     # ---------------------------
     for idx, block in enumerate(blocks):
         # bind = block_bind[idx]
@@ -219,16 +218,14 @@ if __name__ == "__main__":
             case BlockBindFixed():
                 # Формула из алгоритма:
                 dx1, dy1 = XY_rotate(-block.lF.x, block.lF.y, 0)
-                dx2, dy2 = XY_rotate(booms[0].l4, booms[0].l3, 90)  # от первой стрелы
-                x = dx1 + dx2
-                y = dy1 + dy2
-                block.coord.x = x
-                block.coord.y = y
+                dx2, dy2 = XY_rotate(booms[0].l4, booms[0].l3, 90) # от первой стрелы
+                block.coord.x = dx1 + dx2
+                block.coord.y = dy1 + dy2
             case BlockBindBoom(boom_index):
                 # Определяем номер стрелы
                 # boom_num = int(feature.split()[0]) - 1
                 boom = booms[boom_index]
-                logging.debug(f"Стрела {idx}")
+                logging.debug(f"Блок {idx}")
                 base_point = boom.G  # точка G
                 dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
                 block.coord.x = base_point.x + dx
@@ -236,19 +233,28 @@ if __name__ == "__main__":
             case BlockBindHook():
                 block.coord.x = float('nan')
                 block.coord.y = float('nan')
-            # case _:
-            #     raise ValueError(f"Неизвестный тип блока [{idx}]: {bind}")
+            case _:
+                raise ValueError(f"Неизвестный тип блока [{idx}]: {bind}")
 
     # ---------------------------
-    # 5. Расчёт параметров каната
+    # 5. Координаты крюковоц подвески 
+    # ---------------------------
+    hook_block_index = 6
+    l_hook = 1000
+    prev_block = blocks[hook_block_index - 1]
+    blocks[hook_block_index].coord.x = prev_block.coord.x + 0.5 * prev_block.D
+    blocks[hook_block_index].coord.y = prev_block.coord.y - l_hook
+    logging.debug(f"")
+    # ---------------------------
+    # 6. Расчёт параметров каната
     # ---------------------------
     rope_data = []
-    for i, block in enumerate(blocks[:-1]):
-        X1, Y1 = block.coord.x, block.coord.y
+    for i in range(len(blocks) - 1):
+        X1, Y1 = blocks[i].coord.x, blocks[i].coord.y
         X2, Y2 = blocks[i + 1].coord.x, blocks[i + 1].coord.y
-        D1 = block.D
+        D1 = blocks[i].D
         D2 = blocks[i + 1].D
-        scheme = block.scheme
+        scheme = blocks[i].scheme
 
         if scheme == 1: k, j = -1, 1
         elif scheme == 2: k, j = 1, 1
@@ -275,6 +281,7 @@ if __name__ == "__main__":
                     f"L_block={r['l_block']:.2f} | Alpha_rope={r['alpha_rope']:.2f}° | "
                     f"L_rope={r['l_rope']:.2f}")
 
+
     # ---------------------------
     # Построение графика
     # ---------------------------
@@ -285,13 +292,11 @@ if __name__ == "__main__":
     plt.grid(True)
     plt.axis('equal')
 
-    # Стрелы
     colors = ['green', 'blue']
     for i, boom in enumerate(booms):
         plt.plot([boom.D.x, boom.G.x], [boom.D.y, boom.G.y], color=colors[i], linewidth=1.5)
         plt.scatter([boom.D.x, boom.G.x], [boom.D.y, boom.G.y], color=colors[i], s=20, marker='s')
 
-    # Блоки
     for i, block in enumerate(blocks):
         x, y = block.coord.x, block.coord.y
         if math.isnan(x) or math.isnan(y):
@@ -301,12 +306,10 @@ if __name__ == "__main__":
         plt.gca().add_patch(circle)
         plt.text(x + radius, y + radius, f'Блок {i+1}', fontsize=8, color='black')
 
-    # Канаты
     for r in rope_data:
         plt.plot([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
-                color='blue', linestyle='--')
+                 color='blue', linestyle='--')
         plt.scatter([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
                     color='orange', s=15)
 
-    plt.legend()
     plt.show()
