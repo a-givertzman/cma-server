@@ -39,7 +39,8 @@ impl Blocks {
     /// 4. Координаты блоков X, Y
     fn blocks_pos(&mut self, booms: &Vec<Boom>) {
         let hook_l = 1000.0;
-        let prev = self.items.first().unwrap().clone();
+        let mut prev = self.items.first().unwrap().pos;
+        let mut prev_d = self.items.first().unwrap().d;
         for (idx, block) in self.items.iter_mut().enumerate() {
             log::debug!("{}.blocks_pos | Блок {idx}", self.dbg);
             match block.bind {
@@ -60,10 +61,12 @@ impl Blocks {
                     block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
                 }
                 BlockBind::Hook => {
-                    block.pos.x = prev.pos.x + 0.5 * prev.d;
-                    block.pos.y = prev.pos.y - hook_l;
+                    block.pos.x = prev.x + 0.5 * prev_d;
+                    block.pos.y = prev.y - hook_l;
                 }
             }
+            prev = block.pos;
+            prev_d = block.d;
         }
     }
 
