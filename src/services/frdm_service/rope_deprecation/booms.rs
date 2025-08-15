@@ -73,15 +73,16 @@ impl Booms {
     ///
     /// 3. D и G для каждой стрелы
     fn boom_d_g_points(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<()> {
-        let prev = self.items.first().map(|boom| boom.clone());
-        match prev {
-            Some(mut prev) => {
+        match self.items.first() {
+            Some(first) => {
+                let mut prev_gpt = first.gpt;
+                let mut prev_alpha = first.alpha;
                 for (i, boom) in self.items.iter_mut().enumerate() {
                     // Начало стрелы
                     let (x0, y0, alpha_prime) = if i == 0 {
                         (0.0, 0.0, 90.0)
                     } else {
-                        (prev.gpt.x, prev.gpt.y, prev.alpha)
+                        (prev_gpt.x, prev_gpt.y, prev_alpha)
                     };
                     let Offset{x: wx, y: wy} = rotate_xy(boom.l4, boom.l3, alpha_prime);
                     let start = Offset::new(x0 + wx, y0 + wy);
@@ -106,11 +107,12 @@ impl Booms {
                     // log::debug!(f"\t gpt={gpt}")
                     boom.dpt = dpt;
                     boom.gpt = gpt;
-                    prev = boom.clone();
+                    prev_gpt = boom.gpt;
+                    prev_alpha = boom.alpha;
                 }
                 Some(())
             }
-            _ => {
+            None => {
                 log::warn!("{}.boom_d_g_points | No Boom's found", self.dbg);
                 None
             }

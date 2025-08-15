@@ -157,7 +157,7 @@ fn new() {
             assert!(gx == target_gx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gx, target_gx);
             assert!(gy == target_gy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gy, target_gy);
         }
+        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
-    log::debug!("{dbg} | Elapsed: {:?}", t.elapsed());
     test_duration.exit();
 }

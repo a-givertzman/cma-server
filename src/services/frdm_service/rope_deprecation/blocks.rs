@@ -30,43 +30,54 @@ impl Blocks {
     ///
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
-        self.booms.eval(inputs).map(|booms| {
-            self.blocks_pos(&booms);
-            self.items.clone()
-        })
+        match self.booms.eval(inputs) {
+            Some(booms) => {
+                self.blocks_pos(&booms).map(|_| self.items.clone())
+            },
+            None => None,
+        }
     }
     ///
     /// 4. Координаты блоков X, Y
-    fn blocks_pos(&mut self, booms: &Vec<Boom>) {
+    fn blocks_pos(&mut self, booms: &Vec<Boom>) -> Option<()> {
         let hook_l = 1000.0;
-        let mut prev = self.items.first().unwrap().pos;
-        let mut prev_d = self.items.first().unwrap().d;
-        for (idx, block) in self.items.iter_mut().enumerate() {
-            log::debug!("{}.blocks_pos | Блок {idx}", self.dbg);
-            match block.bind {
-                BlockBind::Fixed => {
-                    // Формула из алгоритма:
-                    let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
-                    let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
-                    let x = dx1 + dx2;
-                    let y = dy1 + dy2;
-                    block.pos.x = x;
-                    block.pos.y = y;
+        match self.items.first() {
+            Some(first) => {
+                let mut prev = first.pos;
+                let mut prev_d = first.d;
+                for (idx, block) in self.items.iter_mut().enumerate() {
+                    log::debug!("{}.blocks_pos | Блок {idx}", self.dbg);
+                    match block.bind {
+                        BlockBind::Fixed => {
+                            // Формула из алгоритма:
+                            let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
+                            let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
+                            let x = dx1 + dx2;
+                            let y = dy1 + dy2;
+                            block.pos.x = x;
+                            block.pos.y = y;
+                        }
+                        BlockBind::Boom(boom_index) => {
+                            // Определяем номер стрелы
+                            // boom_num = int(feature.split()[0]) - 1
+                            let base_point = booms[boom_index].gpt;  // точка G
+                            let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
+                            block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
+                        }
+                        BlockBind::Hook => {
+                            block.pos.x = prev.x + 0.5 * prev_d;
+                            block.pos.y = prev.y - hook_l;
+                        }
+                    }
+                    prev = block.pos;
+                    prev_d = block.d;
                 }
-                BlockBind::Boom(boom_index) => {
-                    // Определяем номер стрелы
-                    // boom_num = int(feature.split()[0]) - 1
-                    let base_point = booms[boom_index].gpt;  // точка G
-                    let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
-                    block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
-                }
-                BlockBind::Hook => {
-                    block.pos.x = prev.x + 0.5 * prev_d;
-                    block.pos.y = prev.y - hook_l;
-                }
+                Some(())
             }
-            prev = block.pos;
-            prev_d = block.d;
+            None => {
+                log::warn!("{}.boom_d_g_points | No Boom's found", self.dbg);
+                None
+            }
         }
     }
 

@@ -1,10 +1,10 @@
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
+use sal_sync::{collections::FxIndexMap, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Blocks, Booms, CraneConf, Offset};
+use crate::services::frdm_service::{Blocks, Booms, CraneConf};
 
 ///
 ///
@@ -183,12 +183,12 @@ fn new() {
             inputs.insert(key.to_owned(), val);
         }
         let result = blocks.eval(&inputs).unwrap();
-        log::debug!("{dbg} | step {step}  result: {:#?}", result);
+        log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (target_x, target_y)) in target.into_iter().enumerate() {
             assert!(result[i].pos.x == target_x, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].pos.x, target_x);
             assert!(result[i].pos.y == target_y, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].pos.y, target_y);
         }
+        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
-    log::debug!("{dbg} | Elapsed: {:?}", t.elapsed());
     test_duration.exit();
 }

@@ -11,6 +11,12 @@ use crate::services::frdm_service::{BendingsConf, BlockConf, BoomConf, RopeConf}
 ///         # Block Diameter   inter   exit
 ///         - D200mm           5.0  .. 5.15 m
 ///         - D300mm           7.23 .. 7.30 mm
+///     rope:
+///         width: 35 mm        # Diameter of the rome
+///         length: 3000 m      # Total working length of the rope
+///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
+///         load: point real '/App/Winch.Load'          # tonn, current rope load 
 ///     booms:
 ///         - Main-Boom:
 ///             l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -62,12 +68,6 @@ use crate::services::frdm_service::{BendingsConf, BlockConf, BoomConf, RopeConf}
 ///             d: 0.0 mm                   # Диаметры блоков, мм
 ///             schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///             bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-///     rope:
-///         width: 35 mm        # Diameter of the rome
-///         length: 3000 m      # Total working length of the rope
-///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
-///         load: point real '/App/Winch.Load'          # tonn, current rope load 
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct CraneConf {
