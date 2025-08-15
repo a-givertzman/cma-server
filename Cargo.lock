@@ -423,9 +423,9 @@ checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "async-trait"
-version = "0.1.88"
+version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
+checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3877,7 +3877,7 @@ dependencies = [
 [[package]]
 name = "regex"
 version = "1.11.1"
-source = "git+https://github.com/rust-lang/regex#1a069b9232c607b34c4937122361aa075ef573fa"
+source = "git+https://github.com/rust-lang/regex#cf00423af182b5d02695fe0f047626583c86cc35"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -3899,7 +3899,7 @@ dependencies = [
 [[package]]
 name = "regex-automata"
 version = "0.4.9"
-source = "git+https://github.com/rust-lang/regex#1a069b9232c607b34c4937122361aa075ef573fa"
+source = "git+https://github.com/rust-lang/regex#cf00423af182b5d02695fe0f047626583c86cc35"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -3915,7 +3915,7 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 [[package]]
 name = "regex-syntax"
 version = "0.8.5"
-source = "git+https://github.com/rust-lang/regex#1a069b9232c607b34c4937122361aa075ef573fa"
+source = "git+https://github.com/rust-lang/regex#cf00423af182b5d02695fe0f047626583c86cc35"
 
 [[package]]
 name = "renderdoc-sys"
@@ -4047,7 +4047,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.0"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#ae6f7a36a625c5d914a45b4a041c6d6007d84aab"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.0#3fc17fbc6e9bf50506b04ef6a2b8c52916e80761"
 dependencies = [
  "api-tools",
  "chrono",
