@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::entity::Point};
-use crate::services::frdm_service::{BoomConf, Booms, CraneConf, RopeSlice};
+use crate::services::frdm_service::{Block, Blocks, BoomConf, Booms, InputKind, CraneConf, RopeSlice};
 
 ///
 /// The collection of [RopeSlice]
@@ -8,7 +8,7 @@ use crate::services::frdm_service::{BoomConf, Booms, CraneConf, RopeSlice};
 /// - Calculate deprecation for each slice
 pub struct RopeSlices<'a> {
     inputs: FxIndexMap<String, f64>,
-    booms: Booms,
+    blocks: Blocks,
     slices: Vec<RopeSlice>,
     conf: CraneConf,
     deprecation: Box<dyn Fn(usize, f64) + 'a>,
@@ -24,9 +24,14 @@ impl<'a> RopeSlices<'a> {
         let dbg = Dbg::new(parent, "RopeSlices");
         let slices = (conf.rope.length.as_m() / conf.rope.segment.as_m()).ceil() as usize;
         log::debug!("{dbg}.new | Rope: {} m, slices: {slices}, devided by {:.2} mm", conf.rope.length.as_m(), conf.rope.segment.as_mm());
+        let mut inputs = FxIndexMap::default();
         Self {
-            inputs: FxIndexMap::default(),
-            booms: Booms::new(&dbg, &conf.booms),
+            blocks: Blocks::new(
+                &dbg,
+                &conf.blocks,
+                Booms::new(&dbg, &conf.booms, &mut inputs),
+            ),
+            inputs,
             slices: (0..slices).map(|slice| {
                 let offset = (slice as f64) * conf.rope.segment.as_m();
                 log::trace!("{dbg}.new | Slice: {slice}: offset: {:.2}", offset);
@@ -74,6 +79,7 @@ impl<'a> RopeSlices<'a> {
     /// New deprecation result can be evaluated and passed via `deprication` callback
     pub fn eval(&mut self, event: &Point) {
         self.add(event);
+        self.blocks.eval(&self.inputs);
         match point.name() {
             name if name == conf.crane.rope.pos => {
                 let pos = point.to_double().as_double().value;

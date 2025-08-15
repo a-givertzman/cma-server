@@ -21,9 +21,9 @@ pub struct BlockConf {
     pub lf: Offset<ConfDistance>,
     /// Block diameter
     pub d: ConfDistance,
-    /// Схема схода каната с блоком к следующему
+    /// Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
     pub scheme: BlockScheme,
-    /// Привязка блока стреле (нумерация с 0)
+    /// Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
     pub bind: BlockBind,
 }
 //

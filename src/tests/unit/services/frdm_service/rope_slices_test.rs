@@ -117,7 +117,7 @@ fn new() {
         target_count = target_count_i;
         log::debug!("{dbg} | step {step}  pos: {:?},  load: {:?}", pos, load);
         let time = Instant::now();
-        rope_slices.eval(pos, load);
+        rope_slices.eval(todo!("Pass a named event"));
         log::debug!("{dbg} | step {step} elapsed: {:?}", time.elapsed());
         assert!(
             result.borrow().iter().enumerate().all(|(ix, r)| {

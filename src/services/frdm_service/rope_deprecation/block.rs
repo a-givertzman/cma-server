@@ -63,6 +63,7 @@ impl FromStr for BlockBind {
 /// Crane Block
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
+    name: String,
     /// Block position relative to boom G (end of boom)
     pub lf: Offset<f64>,
     /// Block diameter
@@ -81,8 +82,9 @@ impl Block {
     /// - `D` - Диаметры блоков, мм
     /// - `schemes` - Схема схода каната на блоке
     /// - `boom` - К какой стреле относится блок (нумерация с 0)
-    pub fn new(lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind) -> Self {
+    pub fn new(name: impl Into<String>, lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind) -> Self {
         Self {
+            name: name.into(),
             lf,
             d,
             scheme: scheme,

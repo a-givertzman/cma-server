@@ -1,10 +1,14 @@
-use crate::services::frdm_service::Offset;
+use crate::services::frdm_service::{InputKind, Offset};
 
 ///
 /// Crane Boom
 #[derive(Debug, Clone)]
 pub struct Boom {
     pub name: String,
+    /// The name of the input `Point` contains current `alpha_rel` value
+    pub alpha_input: Option<String>,
+    /// The name of the input `Point` contains current `len` value
+    pub len_input: Option<String>,
     // Углы наклона стрел (относительно предыдыдущей) в градусах
     pub alpha_rel: f64,
     // Углы наклона стрел (относительно ГСК) в градусах
@@ -28,12 +32,26 @@ impl Boom {
     /// - `l2` - Горизонтальное смещение точки D, мм
     /// - `l3` - Вертикальное смещение начала стрелы относительно..., мм
     /// - `l4` - Горизонтальное смещение начала стрелы относительно..., мм
-    pub fn new(name: impl Into<String>, l1: f64, l2: f64, l3: f64, l4: f64) -> Self {
+    pub fn new(name: impl Into<String>, alpha_input: InputKind<f64>, len_input: InputKind<f64>, l1: f64, l2: f64, l3: f64, l4: f64) -> Self {
         Self {
             name: name.into(),
-            alpha_rel: 0.0,
+            alpha_input: match &alpha_input {
+                InputKind::Const(_) => None,
+                InputKind::Point(val) => Some(val.clone()),
+            },
+            len_input: match &len_input {
+                InputKind::Const(_) => None,
+                InputKind::Point(val) => Some(val.clone()),
+            },
+            alpha_rel: match &alpha_input {
+                InputKind::Const(val) => *val,
+                InputKind::Point(_) => 0.0,
+            },
             alpha: 0.0,
-            len: 0.0,
+            len: match len_input {
+                InputKind::Const(val) => val,
+                InputKind::Point(_) => 0.0,
+            },
             l1,
             l2,
             l3,
@@ -42,17 +60,4 @@ impl Boom {
             gpt: Offset::new(0.0, 0.0),
         }
     }
-    // pub fn new(conf: &Vec<(String, BoomConf)>) -> FxIndexMap<String, Self> {
-    //     conf.iter().map(|(key, conf)| (key.to_owned(), Self {
-    //         alpha_rel: 0.0,
-    //         alpha: 0.0,
-    //         len: 0.0,
-    //         l1: conf.l1.as_mm(),
-    //         l2: conf.l2.as_mm(),
-    //         l3: conf.l3.as_mm(),
-    //         l4: conf.l4.as_mm(),
-    //         dpt: Offset::new(0.0, 0.0),
-    //         gpt: Offset::new(0.0, 0.0),
-    //     })).collect()
-    // }
 }

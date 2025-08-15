@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
-use crate::services::frdm_service::{BendingsConf, BoomConf, RopeConf};
+use crate::services::frdm_service::{BendingsConf, BlockConf, BoomConf, RopeConf};
 ///
 /// ## The configuration parameters for the rope
 /// 
@@ -11,11 +11,6 @@ use crate::services::frdm_service::{BendingsConf, BoomConf, RopeConf};
 ///         # Block Diameter   inter   exit
 ///         - D200mm           5.0  .. 5.15 m
 ///         - D300mm           7.23 .. 7.30 mm
-///     boom:
-///         main-len: 5.3 m                                        # length of the main boom
-///         main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
-///         rotary-len: 2.1 m                                      # length of the rotary boom
-///         rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
 ///     booms:
 ///         - Main-Boom:
 ///             l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -31,6 +26,42 @@ use crate::services::frdm_service::{BendingsConf, BoomConf, RopeConf};
 ///             l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
 ///             len: 7984.1 mm                                          # length of the rotary boom
 ///             angle: point real 'App/MultiQueue/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+///     blocks:
+///         - 1:
+///             lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
+///             d: 844.0 mm                 # Диаметры блоков, мм
+///             schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///             bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+///         - 2:
+///             lf: 308.0 mm, 1090.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
+///             d: 816.0 mm                 # Диаметры блоков, мм
+///             schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///             bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+///         - 3:
+///             lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
+///             d: 816.0 mm                 # Диаметры блоков, мм
+///             schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///             bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+///         - 4:
+///             lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
+///             d: 816.0 mm                 # Диаметры блоков, мм
+///             schemes: TopBottom          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///             bind: Boom 2                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+///         - 5:
+///             lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
+///             d: 816.0 mm                 # Диаметры блоков, мм
+///             schemes: BottomTop          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///             bind: Boom 3                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+///         - 6:
+///             lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
+///             d: 816.0 mm                 # Диаметры блоков, мм
+///             schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///             bind: Boom 4                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+///         - 7:
+///             lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
+///             d: 0.0 mm                   # Диаметры блоков, мм
+///             schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///             bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
@@ -42,6 +73,7 @@ use crate::services::frdm_service::{BendingsConf, BoomConf, RopeConf};
 pub struct CraneConf {
     pub bendings: BendingsConf,
     pub booms: Vec<(String, BoomConf)>,
+    pub blocks: Vec<(String, BlockConf)>,
     pub rope: RopeConf,
 }
 //
@@ -69,13 +101,26 @@ impl CraneConf {
             let boom = ConfTree::new(key.as_str().unwrap(), boom.to_owned());
             (boom.key.clone(), BoomConf::new(&name, boom))
         }).collect();
-        log::trace!("{dbg}.new | boom: {:#?}", booms);
+        log::trace!("{dbg}.new | booms: {:#?}", booms);
+
+        let blocks: &Vec<serde_yaml::Value> = conf.get("blocks").expect(&format!("{dbg}.new | 'blocks' - not found or wrong config"));
+        let blocks = blocks.iter().map(|block| {
+            let (key, block) = block.as_mapping()
+                .expect(&format!("{dbg}.new | block's config have to be a Map, but found: {:#?}", block))
+                .iter()
+                .next()
+                .expect(&format!("{dbg}.new | 'block' config can't be empty, but found: {:#?}", block));
+            let block = ConfTree::new(key.as_str().unwrap(), block.to_owned());
+            (block.key.clone(), BlockConf::new(&name, block))
+        }).collect();
+        log::trace!("{dbg}.new | blocks: {:#?}", blocks);
         let rope = conf.get("rope").expect(&format!("{dbg}.new | 'rope' - not found or wrong config"));
         let rope = RopeConf::new(&name, rope);
         log::trace!("{dbg}.new | rope: {:#?}", rope);
         Self {
             bendings,
             booms,
+            blocks,
             rope,
         }
     }

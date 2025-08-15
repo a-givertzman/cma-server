@@ -1,5 +1,6 @@
 use sal_core::dbg::Dbg;
-use crate::services::frdm_service::{rotate_xy, Boom, BoomConf, Offset};
+use sal_sync::collections::FxIndexMap;
+use crate::services::frdm_service::{rotate_xy, Boom, BoomConf, InputKind, Offset};
 
 ///
 /// Evaluation for the crane boom's collection
@@ -10,43 +11,60 @@ pub struct Booms {
 impl Booms {
     ///
     /// Returns [Boom] new instance
-    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, inputs: &mut FxIndexMap<String, f64>) -> Self {
         Self {
-            items: conf.iter().map(|(name, conf)| Boom::new(
-                name,
-                // alpha_rel: 0.0,
-                // alpha: 0.0,
-                // len: 0.0,
-                conf.l1.as_mm(),
-                conf.l2.as_mm(),
-                conf.l3.as_mm(),
-                conf.l4.as_mm(),
-                // dpt: Offset::new(0.0, 0.0),
-                // gpt: Offset::new(0.0, 0.0),
-            )).collect(),
+            items: conf.iter().map(|(name, conf)| {
+                let alpha = match &conf.angle {
+                    InputKind::Const(len) => InputKind::Const(len.as_mm()),
+                    InputKind::Point(key) => {
+                        inputs.insert(key.clone(), 0.0);
+                        InputKind::Point(key.clone())
+                    }
+                };
+                let len = match &conf.len {
+                    InputKind::Const(len) => InputKind::Const(len.as_mm()),
+                    InputKind::Point(key) => {
+                        inputs.insert(key.clone(), 0.0);
+                        InputKind::Point(key.clone())
+                    }
+                };
+                Boom::new(
+                    name,
+                    alpha,
+                    len,
+                    conf.l1.as_mm(),
+                    conf.l2.as_mm(),
+                    conf.l3.as_mm(),
+                    conf.l4.as_mm(),
+                )
+            }).collect(),
             dbg: Dbg::new(parent, "Booms"),
         }
     }
     ///
     /// Evaluates Boom's values using passed new parameters
-    pub fn eval(&mut self) -> Vec<Boom> {
-        self.angles();
-        self.boom_d_g_points();
+    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Boom> {
+        self.angles(inputs);
+        self.boom_d_g_points(inputs);
         self.items.clone()
     }
     ///
     /// 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
-    fn angles(&mut self) {
+    fn angles(&mut self, inputs: &FxIndexMap<String, f64>) {
         let mut alpha_sum = 0.0;
         for (i, boom) in self.items.iter_mut().enumerate() {
-            alpha_sum += boom.alpha_rel;
+            let alpha_rel = match &boom.alpha_input {
+                Some(input) => inputs.get(input).unwrap_or(&0.0),
+                None => &boom.alpha_rel,
+            };
+            alpha_sum += *alpha_rel;
             boom.alpha = alpha_sum - (i as f64) * 180.0;
             log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
         }
     }
     ///
     /// 3. D и G для каждой стрелы
-    fn boom_d_g_points(&mut self) {
+    fn boom_d_g_points(&mut self, inputs: &FxIndexMap<String, f64>) {
         let prev = self.items.first().map(|boom| boom.clone());
         match prev {
             Some(mut prev) => {
@@ -65,7 +83,11 @@ impl Booms {
                     let dpt = Offset::new(start.x + dx, start.y + dy);
                     // log::debug!(f"\t dpt={dpt}")
                     // Точка G
-                    let Offset{x: gx, y: gy} = rotate_xy(boom.len - boom.l2, boom.l1, boom.alpha);
+                    let boom_len = match &boom.len_input {
+                        Some(input) => inputs.get(input).unwrap_or(&0.0),
+                        None => &boom.len,
+                    };
+                    let Offset{x: gx, y: gy} = rotate_xy(boom_len - boom.l2, boom.l1, boom.alpha);
                     let gpt = Offset::new(start.x + gx, start.y + gy);
                     // log::debug!(f"\t gpt={gpt}")
                     boom.dpt = dpt;

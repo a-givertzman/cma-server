@@ -1,4 +1,5 @@
 use sal_core::dbg::Dbg;
+use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{rotate_xy, Block, BlockBind, BlockConf, Boom, Booms, Offset};
 
 ///
@@ -16,6 +17,7 @@ impl Blocks {
     pub fn new(parent: impl Into<String>, conf: &Vec<(String, BlockConf)>, booms: Booms) -> Self {
         Self {
             items: conf.iter().map(|(key, conf)| Block::new(
+                key,
                 Offset::new(conf.lf.x.as_mm(), conf.lf.y.as_mm()),
                 conf.d.as_mm(),
                 conf.scheme,
@@ -27,11 +29,12 @@ impl Blocks {
     }
     ///
     /// Evaluates Boom's values using passed new parameters
-    pub fn eval(&mut self) -> Vec<Block> {
-        let booms = self.booms.eval();
+    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Block> {
+        let booms = self.booms.eval(inputs);
         self.blocks_pos(&booms);
         self.items.clone()
     }
+    ///
     /// 4. Координаты блоков X, Y
     fn blocks_pos(&mut self, booms: &Vec<Boom>) {
         for (idx, block) in self.items.iter_mut().enumerate() {
@@ -48,10 +51,9 @@ impl Blocks {
                 BlockBind::Boom(boom_index) => {
                     // Определяем номер стрелы
                     // boom_num = int(feature.split()[0]) - 1
-                    let boom = &booms[boom_index];
-                    log::debug!("Стрела {idx}");
-                    let base_point = boom.gpt;  // точка G
-                    let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, boom.alpha);
+                    log::debug!("Блок {idx}");
+                    let base_point = booms[boom_index].gpt;  // точка G
+                    let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
                     block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
                 }
                 BlockBind::Hook => {

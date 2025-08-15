@@ -1,5 +1,7 @@
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name};
+use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
+
+use crate::services::frdm_service::InputKind;
 ///
 /// ## The configuration parameters for the crane's boom
 /// 
@@ -24,9 +26,9 @@ pub struct BoomConf {
     /// Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
     pub l4: ConfDistance,
     /// Length of the boom
-    pub len: ConfDistance,
+    pub len: InputKind<ConfDistance>,
     /// Current angle of the boom (relative axis), degrees
-    pub angle: String,
+    pub angle: InputKind<ConfDistance>,
 }
 //
 // 
@@ -44,8 +46,18 @@ impl BoomConf {
         let l2 = conf.get_distance("l2").expect(&format!("{dbg}.new | 'l2' - not found or wrong config"));
         let l3 = conf.get_distance("l3").expect(&format!("{dbg}.new | 'l3' - not found or wrong config"));
         let l4 = conf.get_distance("l4").expect(&format!("{dbg}.new | 'l4' - not found or wrong config"));
-        let len = conf.get_distance("len").expect(&format!("{dbg}.new | 'len' - not found or wrong config"));
-        let angle = conf.get_fn_config(&dbg, "angle", &mut vec![]).expect(&format!("{dbg}.new | 'angle' - not found or wrong config")).name();
+        let len = match conf.get_distance("len") {
+            Ok(len) => InputKind::Const(len),
+            Err(_) => InputKind::Point(conf.get_fn_config(&dbg, "len", &mut vec![])
+                .expect(&format!("{dbg}.new | 'len' - can be Const: 11200.0 mm or point real 'App/MultiQueue/Load.MainBoomAngle', but found '{:?}'", ConfTreeGet::<String>::get(&conf, "len")))
+                .name()),
+        };
+        let angle = match conf.get_distance("angle") {
+            Ok(angle) => InputKind::Const(angle),
+            Err(_) => InputKind::Point(conf.get_fn_config(&dbg, "angle", &mut vec![])
+                .expect(&format!("{dbg}.new | 'angle' - can be Const: 11200.0 mm or point real 'App/MultiQueue/Load.MainBoomAngle', but found '{:?}'", ConfTreeGet::<String>::get(&conf, "len")))
+                .name()),
+        };
         Self {
             l1,
             l2,

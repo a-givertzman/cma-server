@@ -211,7 +211,7 @@ if __name__ == "__main__":
     logging.debug(f"booms {booms}")
 
     # ---------------------------
-    # 4. Координаты блоков XY_block
+    # 4. Координаты блоков X, Y
     # ---------------------------
     for idx, block in enumerate(blocks):
         # bind = block_bind[idx]
