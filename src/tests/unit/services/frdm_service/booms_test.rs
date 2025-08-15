@@ -146,7 +146,7 @@ fn new() {
             inputs.insert(key.to_owned(), val);
         }
         let result = booms.eval(&inputs).unwrap();
-        log::debug!("{dbg} | step {step}  result: {:#?}", result);
+        log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, target) in target_alpha.into_iter().enumerate() {
             assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);
         }
