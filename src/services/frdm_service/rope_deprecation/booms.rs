@@ -66,7 +66,7 @@ impl Booms {
             };
             alpha_sum += *alpha_rel;
             boom.alpha = alpha_sum - (i as f64) * 180.0;
-            log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
+            // log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
         }
         Some(())
     }

@@ -46,7 +46,7 @@ impl Blocks {
                 let mut prev = first.pos;
                 let mut prev_d = first.d;
                 for (idx, block) in self.items.iter_mut().enumerate() {
-                    log::debug!("{}.blocks_pos | Блок {idx}", self.dbg);
+                    log::trace!("{}.blocks_pos | Блок {idx}", self.dbg);
                     match block.bind {
                         BlockBind::Fixed => {
                             // Формула из алгоритма:
