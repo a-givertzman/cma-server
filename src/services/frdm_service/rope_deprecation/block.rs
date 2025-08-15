@@ -67,7 +67,7 @@ pub struct Block {
     /// Block position relative to boom G (end of boom)
     pub lf: Offset<f64>,
     /// Block diameter
-    d: f64,
+    pub d: f64,
     /// Схема схода каната с блоком к следующему
     scheme: BlockScheme,
     /// Привязка блока стреле (нумерация с 0)

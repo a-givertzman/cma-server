@@ -38,7 +38,10 @@ impl Blocks {
     ///
     /// 4. Координаты блоков X, Y
     fn blocks_pos(&mut self, booms: &Vec<Boom>) {
+        let hook_l = 1000.0;
+        let prev = self.items.first().unwrap().clone();
         for (idx, block) in self.items.iter_mut().enumerate() {
+            log::debug!("{}.blocks_pos | Блок {idx}", self.dbg);
             match block.bind {
                 BlockBind::Fixed => {
                     // Формула из алгоритма:
@@ -52,14 +55,13 @@ impl Blocks {
                 BlockBind::Boom(boom_index) => {
                     // Определяем номер стрелы
                     // boom_num = int(feature.split()[0]) - 1
-                    log::debug!("Блок {idx}");
                     let base_point = booms[boom_index].gpt;  // точка G
                     let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
                     block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
                 }
                 BlockBind::Hook => {
-                    block.pos.x = f64::NAN;
-                    block.pos.y = f64::NAN;
+                    block.pos.x = prev.pos.x + 0.5 * prev.d;
+                    block.pos.y = prev.pos.y - hook_l;
                 }
             }
         }
