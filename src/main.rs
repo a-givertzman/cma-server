@@ -2,6 +2,7 @@ mod domain;
 mod conf;
 mod infra;
 mod services;
+mod sync;
 mod tcp;
 #[cfg(test)]
 mod tests;

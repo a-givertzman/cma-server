@@ -174,7 +174,7 @@ fn new() {
     let mut blocks = Blocks::new(
         &dbg,
         &conf.blocks,
-        Booms::new(&dbg, &conf.booms, &mut inputs),
+        Booms::new(&dbg, &conf.booms, &mut vec![]),
     );
     let t = Instant::now();
     for (step, events, target) in test_data {

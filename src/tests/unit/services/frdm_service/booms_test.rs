@@ -138,7 +138,7 @@ fn new() {
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let mut inputs = FxIndexMap::default();
-    let mut booms = Booms::new(&dbg, &conf.booms, &mut inputs);
+    let mut booms = Booms::new(&dbg, &conf.booms, &mut vec![]);
     let t = Instant::now();
     for (step, events, target_alpha, target_pos) in test_data {
         for (key, val) in events {

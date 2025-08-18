@@ -1,10 +1,10 @@
-use std::sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc};
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     services::{entity::{Cot, Name, Object}, Service, ServiceWaiting, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{RopeDeprecationConf, RopeSlices}};
+use crate::{infra::ApiClient, services::frdm_service::{RopeDeprecationConf, RopeSlices}, sync::AtomicUsizeOption};
 
 ///
 /// ## Rope deprecation rate
@@ -17,8 +17,7 @@ pub struct RopeDeprecation {
     name: Name,
     conf: RopeDeprecationConf,
     /// rope position, mm
-    rope_pos: Arc<AtomicUsize>,
-    rope_pos_option: Arc<AtomicBool>,
+    rope_pos: Arc<AtomicUsizeOption>,
     api_client: Arc<ApiClient>,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -43,8 +42,7 @@ impl RopeDeprecation {
         Self {
             name,
             conf,
-            rope_pos: Arc::new(AtomicUsize::new(0)),
-            rope_pos_option: Arc::new(AtomicBool::new(false)),
+            rope_pos: Arc::new(AtomicUsizeOption::new(None)),
             api_client,
             services,
             scheduler,
@@ -56,9 +54,9 @@ impl RopeDeprecation {
     ///
     /// Returns current rope pos, mm
     pub fn rope_pos(&self) -> Option<f64> {
-        match self.rope_pos_option.load(Ordering::SeqCst) {
-            true => Some(self.rope_pos.load(Ordering::SeqCst) as f64),
-            false => None,
+        match self.rope_pos.load() {
+            Some(val) => Some(val as f64),
+            None => None,
         }
     }
 }
@@ -100,7 +98,6 @@ impl Service for RopeDeprecation where {
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
         let rope_pos = self.rope_pos.clone();
-        let rope_pos_option = self.rope_pos_option.clone();
         let services = self.services.clone();
         let exit = self.exit.clone();
         let points = [
@@ -146,10 +143,7 @@ impl Service for RopeDeprecation where {
                         rope_slices.eval(&point);
                         if let Some(pos) = rope_slices.get(&conf.crane.rope.pos) {
                             log::debug!("{dbg}.run | Received rope pos: {:.4?} m", pos);
-                            rope_pos.store((pos * 1000.0).round() as usize, Ordering::SeqCst);
-                            if !rope_pos_option.load(Ordering::SeqCst) {
-                                rope_pos_option.store(true, Ordering::SeqCst);
-                            }
+                            rope_pos.store(Some((pos * 1000.0).round() as usize));
                         }
                     }
                     Err(err) => match err {
