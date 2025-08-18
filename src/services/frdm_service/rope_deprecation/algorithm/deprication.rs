@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::entity::Point};
-use crate::services::frdm_service::Blocks;
+use crate::services::frdm_service::{Blocks, RopeConf};
 
 ///
 /// Evaluation for the crane rope deprication
@@ -14,7 +14,7 @@ pub struct Deprication {
 impl Deprication {
     ///
     /// Returns [Boom] new instance
-    pub fn new(parent: impl Into<String>, blocks: Blocks, inputs: FxIndexMap<String, f64>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: &RopeConf, blocks: Blocks, inputs: FxIndexMap<String, f64>) -> Self {
         Self {
             inputs,
             blocks,

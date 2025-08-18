@@ -27,6 +27,7 @@ impl<'a> RopeSlices<'a> {
         Self {
             eval: Deprication::new(
                 &dbg,
+                &conf.rope,
                 Blocks::new(
                     &dbg,
                     &conf.blocks,

@@ -10,7 +10,6 @@ pub struct RopeSlice {
     offset: f64,
     pos: Option<f64>,
     load: Option<f64>,
-    changed: Option<()>,
     dbg: Dbg,
 }
 //
@@ -26,7 +25,6 @@ impl RopeSlice {
             offset,
             pos: None,
             load: None,
-            changed: None,
             dbg: Dbg::own(format!("RopeSlice[{id}]"))
         }
     }
