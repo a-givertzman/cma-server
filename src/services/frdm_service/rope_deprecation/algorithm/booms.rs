@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::collections::FxIndexMap;
-use crate::services::frdm_service::{rotate_xy, Boom, BoomConf, InputKind, Offset};
+use crate::services::frdm_service::{rope_deprecation::rotate_xy, Boom, BoomConf, InputKind, Offset};
 
 ///
 /// Evaluation for the crane boom's collection

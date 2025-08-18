@@ -1,14 +1,13 @@
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::entity::Point};
-use crate::services::frdm_service::{Block, Blocks, BoomConf, Booms, InputKind, CraneConf, RopeSlice};
+use crate::services::frdm_service::{Blocks, Booms, CraneConf, Deprication, RopeSlice};
 
 ///
 /// The collection of [RopeSlice]
 /// - Devide rope by specified in the config number of slices
 /// - Calculate deprecation for each slice
 pub struct RopeSlices<'a> {
-    inputs: FxIndexMap<String, f64>,
-    blocks: Blocks,
+    eval: Deprication,
     slices: Vec<RopeSlice>,
     conf: CraneConf,
     deprecation: Box<dyn Fn(usize, f64) + 'a>,
@@ -26,12 +25,15 @@ impl<'a> RopeSlices<'a> {
         log::debug!("{dbg}.new | Rope: {} m, slices: {slices}, devided by {:.2} mm", conf.rope.length.as_m(), conf.rope.segment.as_mm());
         let mut inputs = FxIndexMap::default();
         Self {
-            blocks: Blocks::new(
+            eval: Deprication::new(
                 &dbg,
-                &conf.blocks,
-                Booms::new(&dbg, &conf.booms, &mut inputs),
+                Blocks::new(
+                    &dbg,
+                    &conf.blocks,
+                    Booms::new(&dbg, &conf.booms, &mut inputs),
+                ),
+                inputs,
             ),
-            inputs,
             slices: (0..slices).map(|slice| {
                 let offset = (slice as f64) * conf.rope.segment.as_m();
                 log::trace!("{dbg}.new | Slice: {slice}: offset: {:.2}", offset);
@@ -42,44 +44,15 @@ impl<'a> RopeSlices<'a> {
             dbg,
         }
     }
-    ///
-    /// ### Use this method to pass a new Event contains a value for the calculation
-    /// - Expected boom len / angle, rope pos / load events, for example:
-    ///     - [Load.MainBoomAngle], current angle of the boom (relative axis), degrees
-    ///     - [Load.RotaryBoomLen], length of the rotary boom, meter
-    ///     - [Winch.EncoderBR2], current rope position, meter
-    ///     - [Winch.Load], current rope load, tonn
-    /// - Event mast have proper name, defined in the configured inputs, else it will be ignored
-    /// - Event mast have value in proper units:
-    ///     - angle: degrees
-    ///     - distances: millimeters
-    ///     - weight: tonn
-    /// - Event can have type (else it will be ignores):
-    ///     - `Int`
-    ///     - `Real`
-    ///     - `Double`
-    fn add(&mut self, event: &Point) {
-        match self.inputs.get_mut(&event.name()) {
-            Some(input) => {
-                match event {
-                    Point::Bool(_) => log::warn!("{}.new | Point '{}' - expected numeric type, but has 'Bool'", self.dbg, event.name()),
-                    Point::Int(point) => *input = point.value as f64,
-                    Point::Real(point) => *input = point.value as f64,
-                    Point::Double(point) => *input = point.value,
-                    Point::String(_) => log::warn!("{}.new | Point '{}' - expected numeric type, but has 'String'", self.dbg, event.name()),
-                    Point::Bytes(_) => log::warn!("{}.new | Point '{}' - expected numeric type, but has 'Bytes'", self.dbg, event.name()),
-                }
-            }
-            None => log::warn!("{}.new | Unexpected Point '{}'", self.dbg, event.name()),
-        }
-    }
     
     ///
     /// Evaluates rope slices deprication depend on boom len / angle, rope pos / load event was received,
     /// New deprecation result can be evaluated and passed via `deprication` callback
     pub fn eval(&mut self, event: &Point) {
-        self.add(event);
-        self.blocks.eval(&self.inputs);
+        match self.eval.eval(event) {
+            Some(blocks) => todo!(),
+            None => todo!(),
+        };
         match event.name() {
             // name if name == conf.crane.rope.pos => {
             //     let pos = point.to_double().as_double().value;
