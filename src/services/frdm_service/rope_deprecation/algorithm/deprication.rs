@@ -6,6 +6,7 @@ use crate::services::frdm_service::{Blocks, RopeConf};
 /// Evaluation for the crane rope deprication
 pub struct Deprication {
     inputs: FxIndexMap<String, f64>,
+    subscriptions: Vec<String>,
     blocks: Blocks,
     dbg: Dbg,
 }
@@ -14,9 +15,12 @@ pub struct Deprication {
 impl Deprication {
     ///
     /// Returns [Boom] new instance
-    pub fn new(parent: impl Into<String>, conf: &RopeConf, blocks: Blocks, inputs: FxIndexMap<String, f64>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: &RopeConf, blocks: Blocks, mut subscriptions: Vec<String>) -> Self {
+        subscriptions.push(conf.load.clone());
+        subscriptions.push(conf.pos.clone());
         Self {
-            inputs,
+            inputs: FxIndexMap::default(),
+            subscriptions,
             blocks,
             dbg: Dbg::new(parent, "Deprication"),
         }
@@ -41,15 +45,28 @@ impl Deprication {
         match self.inputs.get_mut(&event.name()) {
             Some(input) => {
                 match event {
-                    Point::Bool(_) => log::warn!("{}.new | Point '{}' - expected numeric type, but has 'Bool'", self.dbg, event.name()),
+                    Point::Bool(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bool'", self.dbg, event.name()),
                     Point::Int(point) => *input = point.value as f64,
                     Point::Real(point) => *input = point.value as f64,
                     Point::Double(point) => *input = point.value,
-                    Point::String(_) => log::warn!("{}.new | Point '{}' - expected numeric type, but has 'String'", self.dbg, event.name()),
-                    Point::Bytes(_) => log::warn!("{}.new | Point '{}' - expected numeric type, but has 'Bytes'", self.dbg, event.name()),
+                    Point::String(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'String'", self.dbg, event.name()),
+                    Point::Bytes(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bytes'", self.dbg, event.name()),
                 }
             }
-            None => log::warn!("{}.new | Unexpected Point '{}'", self.dbg, event.name()),
+            None => {
+                match self.subscriptions.contains(&event.name()) {
+                    true => _ = self.inputs.insert(event.name(), event.to_double().as_double().value),
+                    false => log::warn!("{}.add | Unexpected Point '{}'", self.dbg, event.name()),
+                }
+            }
+        }
+    }
+    ///
+    /// Returns current calue from inputs by the key if exists
+    pub fn get(&self, key: &str) -> Option<f64> {
+        match self.inputs.get(key) {
+            Some(val) => Some(*val),
+            None => None,
         }
     }
     ///

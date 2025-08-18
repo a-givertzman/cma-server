@@ -18,7 +18,7 @@ pub struct RopeDeprecation {
     conf: RopeDeprecationConf,
     /// rope position, mm
     rope_pos: Arc<AtomicUsize>,
-    rope_pos_ok: Arc<AtomicBool>,
+    rope_pos_option: Arc<AtomicBool>,
     api_client: Arc<ApiClient>,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -44,7 +44,7 @@ impl RopeDeprecation {
             name,
             conf,
             rope_pos: Arc::new(AtomicUsize::new(0)),
-            rope_pos_ok: Arc::new(AtomicBool::new(false)),
+            rope_pos_option: Arc::new(AtomicBool::new(false)),
             api_client,
             services,
             scheduler,
@@ -56,7 +56,7 @@ impl RopeDeprecation {
     ///
     /// Returns current rope pos, mm
     pub fn rope_pos(&self) -> Option<f64> {
-        match self.rope_pos_ok.load(Ordering::SeqCst) {
+        match self.rope_pos_option.load(Ordering::SeqCst) {
             true => Some(self.rope_pos.load(Ordering::SeqCst) as f64),
             false => None,
         }
@@ -100,7 +100,7 @@ impl Service for RopeDeprecation where {
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
         let rope_pos = self.rope_pos.clone();
-        let rope_pos_ok = self.rope_pos_ok.clone();
+        let rope_pos_option = self.rope_pos_option.clone();
         let services = self.services.clone();
         let exit = self.exit.clone();
         let points = [
@@ -144,29 +144,12 @@ impl Service for RopeDeprecation where {
                     Ok(point) => {
                         log::debug!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
                         rope_slices.eval(&point);
-                        match point.name() {
-                            name if name == conf.crane.rope.pos => {
-                                let pos = point.to_double().as_double().value;
-                                log::debug!("{dbg}.run | Received rope pos: {:.4?} m", pos);
-                                rope_pos.store((pos * 1000.0).round() as usize, Ordering::SeqCst);
-                                rope_pos_ok.store(true, Ordering::SeqCst);
-                        //         rope_slices.eval(Some(pos), None);
+                        if let Some(pos) = rope_slices.get(&conf.crane.rope.pos) {
+                            log::debug!("{dbg}.run | Received rope pos: {:.4?} m", pos);
+                            rope_pos.store((pos * 1000.0).round() as usize, Ordering::SeqCst);
+                            if !rope_pos_option.load(Ordering::SeqCst) {
+                                rope_pos_option.store(true, Ordering::SeqCst);
                             }
-                        //     name if name == conf.crane.rope.load => {
-                        //         let load = point.to_double().as_double().value;
-                        //         log::debug!("{dbg}.run | Received rope load: {:.4?} tonn", load);
-                        //         rope_slices.eval(None, Some(load));
-                        //     }
-                        //     name if name == conf.crane.booms.main_angle => {
-                        //         let main_angle = point.to_double().as_double().value;
-                        //         log::debug!("{dbg}.run | Received boom.main_angle: {:.4?}", main_angle);
-                        //     }
-                        //     name if name == conf.crane.booms.rotary_angle => {
-                        //         let rotary_angle = point.to_double().as_double().value;
-                        //         log::debug!("{dbg}.run | Received boom.rotary_angle: {:.4?}", rotary_angle);
-                        //     }
-                        //     _ => log::warn!("{dbg}.run | Unknown point name: {:?}", point.name()),
-                            _ => {}
                         }
                     }
                     Err(err) => match err {

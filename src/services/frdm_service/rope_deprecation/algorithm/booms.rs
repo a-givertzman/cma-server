@@ -11,20 +11,21 @@ pub struct Booms {
 impl Booms {
     ///
     /// Returns [Boom] new instance
-    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, inputs: &mut FxIndexMap<String, f64>) -> Self {
+    /// - `subscribe` - List of `Event` names, wich required for calculation, and will acessed from the `inpurs`
+    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, subscriptions: &mut Vec<String>) -> Self {
         Self {
             items: conf.iter().map(|(name, conf)| {
                 let alpha = match &conf.angle {
                     InputKind::Const(len) => InputKind::Const(len.as_mm()),
                     InputKind::Point(key) => {
-                        inputs.insert(key.clone(), 0.0);
+                        subscriptions.push(key.clone());
                         InputKind::Point(key.clone())
                     }
                 };
                 let len = match &conf.len {
                     InputKind::Const(len) => InputKind::Const(len.as_mm()),
                     InputKind::Point(key) => {
-                        inputs.insert(key.clone(), 0.0);
+                        subscriptions.push(key.clone());
                         InputKind::Point(key.clone())
                     }
                 };
