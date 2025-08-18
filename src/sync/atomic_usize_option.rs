@@ -87,9 +87,10 @@ fn new() {
         let next_tx = next_tx.clone();
         let handle = std::thread::spawn(move || {
             loop {
-                if val.load() == target {
+                let value = val.load();
+                if value == target {
                     log::debug!("{dbg} | Exit {i}, Elapsed: {:?}", t.elapsed());
-                    next_tx.send(()).unwrap();
+                    next_tx.send(value).unwrap();
                     break
                 } else {
                     std::thread::sleep(Duration::from_millis(1));
@@ -99,10 +100,9 @@ fn new() {
         handles.push(handle);
     }
     for (step, val) in test_data {
-        // std::thread::sleep(Duration::from_millis(10));
         val_ref.store(val);
-        next_rx.recv().unwrap();
-        // assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);
+        let result = next_rx.recv().unwrap();
+        assert!(result == val, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result, val);
     }
     let _: Vec<()> = handles.into_iter().map(|h| h.join().unwrap()).collect();
     log::debug!("{dbg} | Elapsed: {:?}", t.elapsed());
