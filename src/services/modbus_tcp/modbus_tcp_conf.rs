@@ -7,7 +7,7 @@ use sal_sync::{
 use std::{fs, str::FromStr, time::Duration};
 
 ///
-/// Config for ModbusTcp format:
+/// ## Config for `ModbusTcp` format:
 /// ```yaml
 /// service ModbusTcp FrdmService1:
 ///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
@@ -24,11 +24,7 @@ use std::{fs, str::FromStr, time::Duration};
 ///         point Connection:               # Ok(0) / Invalid(10)
 ///             type: 'Int'
 ///             # history: r
-///     db db899:                       # multiple DB blocks are allowed, must have unique namewithing parent device
-///         description: 'db899 | Exhibit - drive data'
-///         number: 899
-///         offset: 0
-///         size: 34
+///     function:                       # Modbus function code, groups multiple registers
 ///         point Drive.Speed: 
 ///             type: 'Real'
 ///             offset: 0

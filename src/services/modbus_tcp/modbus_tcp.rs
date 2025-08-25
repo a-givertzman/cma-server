@@ -8,9 +8,10 @@
 //!     parameter: value    # meaning
 //! ```
 use std::{sync::{Arc,atomic::{AtomicBool, Ordering}}};
+use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object, Point}, Service, Services}, sync::{Handles, Owner}, thread_pool::Scheduler};
-use crate::{domain::Sender, services::ModbusTcpConf};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service, Services}, thread_pool::Scheduler};
+use crate::{domain::Sender, services::{ModbusTcpConf, ModbusTcpRead}};
 
 ///
 /// Do something ...
@@ -19,7 +20,7 @@ pub struct ModbusTcp {
     conf: ModbusTcpConf,
     services: Arc<Services>,
     scheduler: Scheduler,
-    handles: Handles<()>,
+    tasks: Arc<DashMap<String, Arc<dyn Service>>>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
@@ -27,7 +28,7 @@ pub struct ModbusTcp {
 //
 impl ModbusTcp {
     //
-    /// Crteates new instance of the ModbusTcp 
+    /// Crteates new instance of the [ModbusTcp] 
     pub fn new(conf: ModbusTcpConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
@@ -35,9 +36,9 @@ impl ModbusTcp {
             conf,
             services,
             scheduler,
-            handles: Handles::new(&dbg),
-            dbg,
+            tasks: Arc::new(DashMap::new()),
             exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
 }
@@ -63,7 +64,7 @@ impl std::fmt::Debug for ModbusTcp {
 impl Service for ModbusTcp {
     //
     // 
-    fn get_link(&self, name: &str) -> Sender<Point> {
+    fn get_link(&self, _: &str) -> Sender<Point> {
         panic!("{}.get_link | Does not support get_link", self.dbg)
         // match self.rxSend.get(name) {
         //     Some(send) => send.clone(),
@@ -75,33 +76,46 @@ impl Service for ModbusTcp {
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
-        let exit = self.exit.clone();
         log::info!("{}.run | Preparing thread...", dbg);
-        let handle = self.scheduler.spawn(move || {
-            loop {
-                if exit.load(Ordering::SeqCst) {
-                    break;
-                }
-            }
-            Ok(())
-        }).map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))?;
-        self.handles.push(handle);
+        let read = Arc::new(ModbusTcpRead::new(self.conf.clone(), self.services.clone(), self.scheduler.clone()));
+        self.tasks.insert(read.name().join(), read.clone());
+        read.run().map_err(|err| Error::new(&self.dbg, "run").pass_with("Start 'Read' failed", err))?;
+        let write = Arc::new(ModbusTcpRead::new(self.conf.clone(), self.services.clone(), self.scheduler.clone()));
+        self.tasks.insert(write.name().join(), write.clone());
+        write.run().map_err(|err| Error::new(&self.dbg, "run").pass_with("Start 'Write' failed", err))?;
         log::info!("{}.run | Starting - ok", self.dbg);
         Ok(())
     }
     //
     //
     fn is_finished(&self) -> bool {
-        self.handles.is_finished()
+        self.tasks.iter().fold(false, |is_finished, task| is_finished & task.value().is_finished())
     }
     //
     //
     fn wait(&self) -> Result<(), Error> {
-        self.handles.wait()
+        let mut errors = vec![];
+        for task in self.tasks.iter() {
+            if let Err(err) = task.value().wait() {
+                errors.push(err);
+            }
+        }
+        errors
+            .is_empty()
+            .then(|| {
+                log::info!("{}.run | Exit", self.dbg);
+                ()
+            })
+            .ok_or(
+                Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err)))
+            )
     }
     //
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
+        for task in self.tasks.iter() {
+            task.value().exit();
+        }
     }    
 }
