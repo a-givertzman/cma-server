@@ -15,6 +15,7 @@ mod cache;
 pub mod diagnosis;
 pub mod frdm_service;
 pub mod history;
+mod modbus_tcp;
 pub mod profinet_client;
 pub mod server;
 pub mod slmp_client;
@@ -25,4 +26,5 @@ mod services_factory;
 
 pub use api_cient::*;
 pub use cache::*;
+pub use modbus_tcp::*;
 pub use services_factory::*;

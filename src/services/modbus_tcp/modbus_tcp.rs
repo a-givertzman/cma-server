@@ -3,16 +3,20 @@
 //! 
 //! Basic configuration parameters:
 //! ```yaml
-//! service ServiceName Id:
+//! service ModbusTcp Id:
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
 use std::{sync::{Arc,atomic::{AtomicBool, Ordering}}};
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::{services::{entity::{Name, Object, Point}, Service, Services}, sync::{Handles, Owner}, thread_pool::Scheduler};
+use crate::{domain::Sender, services::ModbusTcpConf};
+
 ///
 /// Do something ...
-pub struct ServiceName {
+pub struct ModbusTcp {
     name: Name,
-    conf: ServiceNameConf,
+    conf: ModbusTcpConf,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Handles<()>,
@@ -21,42 +25,42 @@ pub struct ServiceName {
 }
 //
 //
-impl ServiceName {
+impl ModbusTcp {
     //
-    /// Crteates new instance of the ServiceName 
-    pub fn new(conf: ServiceNameConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    /// Crteates new instance of the ModbusTcp 
+    pub fn new(conf: ModbusTcpConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
-            name: conf.clone(),
-            conf: conf,
+            name: conf.name.clone(),
+            conf,
             services,
             scheduler,
             handles: Handles::new(&dbg),
-            exit: Arc::new(AtomicBool::new(false)),
             dbg,
+            exit: Arc::new(AtomicBool::new(false)),
         }
     }
 }
 //
 //
-impl Object for ServiceName {
+impl Object for ModbusTcp {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
 // 
-impl std::fmt::Debug for ServiceName {
+impl std::fmt::Debug for ModbusTcp {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("ServiceName")
+            .debug_struct("ModbusTcp")
             .field("name", &self.name)
             .finish()
     }
 }
 //
 // 
-impl Service for ServiceName {
+impl Service for ModbusTcp {
     //
     // 
     fn get_link(&self, name: &str) -> Sender<Point> {
