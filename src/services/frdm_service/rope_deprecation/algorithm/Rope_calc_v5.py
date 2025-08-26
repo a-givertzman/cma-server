@@ -496,9 +496,11 @@ if __name__ == "__main__":
 
 
     #############################################################
+
+    # 7. Углы обхвата и длины дуг каждого блока
     block_results = calc_block_angles_and_arcs(blocks, loose_rope_sections)
 
-    # Строим опорные точки
+    # 10. Определение опорных точек по длине каната
     support_points = build_support_points(rope_results, loose_rope_sections, block_results)
 
     # Считаем перегибы
