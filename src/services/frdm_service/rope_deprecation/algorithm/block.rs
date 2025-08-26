@@ -7,10 +7,14 @@ use crate::services::frdm_service::Offset;
 /// Схема схода каната с блоком к следующему
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockScheme {
-    TopTop,
-    TopBottom,
-    BottomTop,
-    BottomBottom,
+    /// Schema "1", Rope exits from top of the block, enters to the next on the top
+    TopTop = 1,
+    /// Schema "2", Rope exits from top of the block, enters to the next on the bottom
+    TopBottom = 2,
+    /// Schema "3", Rope exits from bottom of the block, enters to the next on the top
+    BottomTop = 3,
+    /// Schema "4", Rope exits from bottom of the block, enters to the next on the bottom
+    BottomBottom = 4,
 }
 impl FromStr for BlockScheme {
     type Err = Error;
@@ -69,7 +73,7 @@ pub struct Block {
     /// Block diameter
     pub d: f64,
     /// Схема схода каната с блоком к следующему
-    scheme: BlockScheme,
+    pub scheme: BlockScheme,
     /// Привязка блока стреле (нумерация с 0)
     pub bind: BlockBind,
     /// Координаты блока в ГСК

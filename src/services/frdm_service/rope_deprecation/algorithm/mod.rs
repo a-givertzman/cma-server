@@ -3,6 +3,8 @@ mod blocks;
 mod boom;
 mod booms;
 mod input_kind;
+mod loose_rope_section;
+mod loose_rope_sections;
 mod deprication;
 mod offset;
 
@@ -11,6 +13,8 @@ pub(crate) use blocks::*;
 pub(crate) use boom::*;
 pub(crate) use booms::*;
 pub(crate) use input_kind::*;
+pub(crate) use loose_rope_section::*;
+pub(crate) use loose_rope_sections::*;
 pub(crate) use deprication::*;
 pub(crate) use offset::*;
 

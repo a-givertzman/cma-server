@@ -10,7 +10,7 @@ pub struct Booms {
 }
 impl Booms {
     ///
-    /// Returns [Boom] new instance
+    /// Returns [Booms] new instance
     /// - `subscribe` - List of `Event` names, wich required for calculation, and will acessed from the `inpurs`
     pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, subscriptions: &mut Vec<String>) -> Self {
         Self {
