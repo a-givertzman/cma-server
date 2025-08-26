@@ -67,7 +67,7 @@ impl FromStr for BlockBind {
 /// Crane Block
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
-    name: String,
+    pub name: String,
     /// Block position relative to boom G (end of boom)
     pub lf: Offset<f64>,
     /// Block diameter
@@ -77,8 +77,14 @@ pub struct Block {
     /// Привязка блока стреле (нумерация с 0)
     pub bind: BlockBind,
     /// Координаты блока в ГСК
-    pub pos: Offset<f64>
+    pub pos: Offset<f64>,
+    /// Угол линии каната между текущим блоком и следующим к горизонту, градусы
+    pub alpha_rope_fwd: f64,
+    /// Угол линии каната между текущим блоком и предыдущим к горизонту, градусы
+    pub alpha_rope_bck: f64,
 }
+//
+//
 impl Block {
     ///
     /// Returns [Block] new instance
@@ -86,7 +92,7 @@ impl Block {
     /// - `D` - Диаметры блоков, мм
     /// - `schemes` - Схема схода каната на блоке
     /// - `boom` - К какой стреле относится блок (нумерация с 0)
-    pub fn new(name: impl Into<String>, lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind) -> Self {
+    pub fn new(name: impl Into<String>, lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind, alpha_rope_fvd: f64, alpha_rope_bck: f64) -> Self {
         Self {
             name: name.into(),
             lf,
@@ -94,6 +100,8 @@ impl Block {
             scheme: scheme,
             bind: bind,
             pos: Offset::new(0.0, 0.0),
+            alpha_rope_fwd: alpha_rope_fvd,
+            alpha_rope_bck,
         }
     }
 }

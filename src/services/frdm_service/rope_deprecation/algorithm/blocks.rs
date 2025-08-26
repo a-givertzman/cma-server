@@ -22,6 +22,8 @@ impl Blocks {
                 conf.d.as_mm(),
                 conf.scheme,
                 conf.bind,
+                f64::NAN,
+                f64::NAN,
             )).collect(),
             booms,
             dbg: Dbg::new(parent, "Blocks"),

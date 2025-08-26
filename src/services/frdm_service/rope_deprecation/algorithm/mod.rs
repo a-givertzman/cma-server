@@ -1,3 +1,4 @@
+mod block_arcs;
 mod block;
 mod blocks;
 mod boom;
@@ -8,6 +9,7 @@ mod loose_rope_sections;
 mod deprication;
 mod offset;
 
+pub(crate) use block_arcs::*;
 pub(crate) use block::*;
 pub(crate) use blocks::*;
 pub(crate) use boom::*;

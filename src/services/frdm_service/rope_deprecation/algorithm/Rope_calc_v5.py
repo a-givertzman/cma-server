@@ -122,9 +122,9 @@ class RopeLooseSection:
     l_block: float
     "Расстояние между блоками"
     alpha_block: float
-    "угол между линией между блоками и горизонтом"
+    "угол между линией между блоками и горизонтом, градусы"
     alpha_rope: float
-    "угол между линией каната между блоками и горизонтом"
+    "угол между линией каната между блоками и горизонтом, градусы"
     block1_x: float
     "точка входа на блок по X"
     block1_y: float
@@ -178,7 +178,7 @@ class RopeLooseSection:
 # -----------------------------
 # 7. Углы обхвата и длины дуг каждого блока
 # -----------------------------
-def calc_block_angles_and_arcs(blocks: list[Block], rope_data: list[RopeLooseSection]):
+def calc_block_angles_and_arcs(blocks: list[Block], loose_rope_sections: list[RopeLooseSection]):
     
     wrap_angles = []
     arc_lengths = []
@@ -186,7 +186,7 @@ def calc_block_angles_and_arcs(blocks: list[Block], rope_data: list[RopeLooseSec
 
     prev_alpha = None  # предыдущий угол для формирования alpha_rope_list
 
-    for block, r in zip(blocks[:-1], rope_data):
+    for block, r in zip(blocks[:-1], loose_rope_sections):
         alpha_rope = r.alpha_rope or 0
         logging.debug(f"alpha_rope: {alpha_rope}")
 
