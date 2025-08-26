@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::entity::Point;
-use crate::services::frdm_service::{Blocks, Booms, CraneConf, Deprication, RopeSlice};
+use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, Deprication, LooseRopeSections, RopeSlice};
 
 ///
 /// The collection of [RopeSlice]
@@ -28,10 +28,16 @@ impl<'a> RopeSlices<'a> {
             eval: Deprication::new(
                 &dbg,
                 &conf.rope,
-                Blocks::new(
+                BlockArcs::new(
                     &dbg,
-                    &conf.blocks,
-                    Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                    LooseRopeSections::new(
+                        &dbg,
+                        Blocks::new(
+                            &dbg,
+                            &conf.blocks,
+                            Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                        ),
+                    ),
                 ),
                 subscriptions,
             ),

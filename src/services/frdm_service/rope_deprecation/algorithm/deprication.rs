@@ -1,13 +1,13 @@
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::entity::Point};
-use crate::services::frdm_service::{Blocks, RopeConf};
+use crate::services::frdm_service::{BlockArcs, Blocks, RopeConf};
 
 ///
 /// Evaluation for the crane rope deprication
 pub struct Deprication {
     inputs: FxIndexMap<String, f64>,
     subscriptions: Vec<String>,
-    blocks: Blocks,
+    block_arcs: BlockArcs,
     dbg: Dbg,
 }
 //
@@ -15,13 +15,13 @@ pub struct Deprication {
 impl Deprication {
     ///
     /// Returns [Boom] new instance
-    pub fn new(parent: impl Into<String>, conf: &RopeConf, blocks: Blocks, mut subscriptions: Vec<String>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: &RopeConf, block_arcs: BlockArcs, mut subscriptions: Vec<String>) -> Self {
         subscriptions.push(conf.load.clone());
         subscriptions.push(conf.pos.clone());
         Self {
             inputs: FxIndexMap::default(),
             subscriptions,
-            blocks,
+            block_arcs,
             dbg: Dbg::new(parent, "Deprication"),
         }
     }
@@ -73,7 +73,7 @@ impl Deprication {
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self, event: &Point) -> Option<()> {
         self.add(event);
-        match self.blocks.eval(&self.inputs) {
+        match self.block_arcs.eval(&self.inputs) {
             Some(blocks) => {
                 todo!("
                     - Add implementeation of `Bendings` calculation

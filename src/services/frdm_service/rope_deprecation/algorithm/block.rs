@@ -79,9 +79,11 @@ pub struct Block {
     /// Координаты блока в ГСК
     pub pos: Offset<f64>,
     /// Угол линии каната между текущим блоком и следующим к горизонту, градусы
-    pub alpha_rope_fwd: f64,
+    pub rope_alpha_fwd: f64,
     /// Угол линии каната между текущим блоком и предыдущим к горизонту, градусы
-    pub alpha_rope_bck: f64,
+    pub rope_alpha_bck: f64,
+    pub wrap_alpha: f64,
+    pub arc_length: f64,
 }
 //
 //
@@ -92,7 +94,7 @@ impl Block {
     /// - `D` - Диаметры блоков, мм
     /// - `schemes` - Схема схода каната на блоке
     /// - `boom` - К какой стреле относится блок (нумерация с 0)
-    pub fn new(name: impl Into<String>, lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind, alpha_rope_fvd: f64, alpha_rope_bck: f64) -> Self {
+    pub fn new(name: impl Into<String>, lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind, rope_alpha_fwd: f64, rope_alpha_bck: f64, wrap_alpha: f64, arc_length: f64) -> Self {
         Self {
             name: name.into(),
             lf,
@@ -100,8 +102,10 @@ impl Block {
             scheme: scheme,
             bind: bind,
             pos: Offset::new(0.0, 0.0),
-            alpha_rope_fwd: alpha_rope_fvd,
-            alpha_rope_bck,
+            rope_alpha_fwd,
+            rope_alpha_bck,
+            wrap_alpha,
+            arc_length,
         }
     }
 }

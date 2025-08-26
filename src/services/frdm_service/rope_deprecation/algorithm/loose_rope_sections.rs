@@ -23,7 +23,7 @@ impl LooseRopeSections {
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
         match self.blocks.eval(inputs) {
             Some(blocks) => {
-                let mut alpha_rope_bck = f64::NAN;
+                let mut alpha_rope_bck = 0.0;
                 Some(blocks.windows(2).map(|pair| {
                     let (block1, block2) = (&pair[0], &pair[1]);
                     let (k, j) = match block1.scheme {
@@ -59,6 +59,8 @@ impl LooseRopeSections {
                         block1.bind,
                         alpha_rope_fwd,
                         alpha_rope_bck,
+                        0.0,
+                        0.0,
                     );
                     alpha_rope_bck = alpha_rope_fwd;
                     block
