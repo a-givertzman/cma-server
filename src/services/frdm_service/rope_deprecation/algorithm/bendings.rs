@@ -1,7 +1,7 @@
 use std::ops::Range;
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::conf::ConfDistance};
-use crate::services::frdm_service::{BendingsConf, BlockArcs};
+use crate::services::frdm_service::{BendingsConf, Block, BlockArcs};
 
 ///
 /// 10. Определение опорных точек по длине каната
@@ -42,7 +42,7 @@ impl Bendings {
     ///     F10 = F9  + l_rope_5
     ///     F11 = F10 + arc_5
     ///     F12 = F11 + l_rope_6
-    fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Range<f64>> {
+    fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Block> {
         match self.block_arcs.eval(inputs) {
             Some(blocks) => {
                 let mut bendings = vec![];
@@ -54,10 +54,21 @@ impl Bendings {
                         let mut bind = enter .. exit;    // Первый сход считаем с барабана
                         bendings.push(bind.clone());
                         for block in blocks {
-                            enter = bind.end + block.arc_length;
+                            enter = bind.end + block.rope_alpha_bck;
                             exit = enter + block.arc_length;
                             bind = enter .. exit;
-                            bendings.push(bind.clone());
+                            bendings.push(Block::new(
+                                block.name.clone(),
+                                block.lf,
+                                block.d,
+                                block.scheme,
+                                block.bind,
+                                block.rope_alpha_fwd,
+                                block.rope_alpha_bck,
+                                block.wrap_alpha,
+                                block.arc_length,
+                                bind.clone(),
+                            ));
                         }
                         bendings
                     }

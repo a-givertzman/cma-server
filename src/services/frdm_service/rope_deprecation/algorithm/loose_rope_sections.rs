@@ -61,6 +61,7 @@ impl LooseRopeSections {
                         alpha_rope_bck,
                         0.0,
                         0.0,
+                        0.0..0.0,
                     );
                     alpha_rope_bck = alpha_rope_fwd;
                     block

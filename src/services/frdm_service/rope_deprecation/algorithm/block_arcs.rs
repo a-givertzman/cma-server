@@ -31,7 +31,18 @@ impl BlockArcs {
                     let wrap_alpha = f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck);
                     let arc_length = (PI * block.d * 0.5 * wrap_alpha) / 180.0;
                     l_sys_arc += arc_length;
-                    Block::new(block.name.clone(), block.lf, block.d, block.scheme, block.bind, block.rope_alpha_fwd, block.rope_alpha_bck, wrap_alpha, arc_length)
+                    Block::new(
+                        block.name.clone(),
+                        block.lf,
+                        block.d,
+                        block.scheme,
+                        block.bind,
+                        block.rope_alpha_fwd,
+                        block.rope_alpha_bck,
+                        wrap_alpha,
+                        arc_length,
+                        0.0..0.0,
+                    )
                 }).collect())
             }
             None => None,

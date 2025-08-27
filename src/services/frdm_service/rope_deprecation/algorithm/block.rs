@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Range, str::FromStr};
 use regex::Regex;
 use sal_core::error::Error;
 use crate::services::frdm_service::Offset;
@@ -84,6 +84,8 @@ pub struct Block {
     pub rope_alpha_bck: f64,
     pub wrap_alpha: f64,
     pub arc_length: f64,
+    // Текущие точки входа и схода каната с блока, считая от его начала каната 
+    pub bending: Range<f64>,
 }
 //
 //
@@ -94,7 +96,18 @@ impl Block {
     /// - `D` - Диаметры блоков, мм
     /// - `schemes` - Схема схода каната на блоке
     /// - `boom` - К какой стреле относится блок (нумерация с 0)
-    pub fn new(name: impl Into<String>, lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind, rope_alpha_fwd: f64, rope_alpha_bck: f64, wrap_alpha: f64, arc_length: f64) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        lf: Offset<f64>,
+        d: f64,
+        scheme:BlockScheme,
+        bind: BlockBind,
+        rope_alpha_fwd: f64,
+        rope_alpha_bck: f64,
+        wrap_alpha: f64,
+        arc_length: f64,
+        bending: Range<f64>,
+    ) -> Self {
         Self {
             name: name.into(),
             lf,
@@ -106,6 +119,7 @@ impl Block {
             rope_alpha_bck,
             wrap_alpha,
             arc_length,
+            bending,
         }
     }
 }
