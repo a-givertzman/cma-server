@@ -49,9 +49,9 @@ impl Bendings {
                 match inputs.get(&self.pos_input) {
                     Some(rope_pos) => {
                         let winch_rope_len = self.winch_rope_len0.as_mm() - rope_pos;
-                        let mut enter = 0.0;                // точка входа каната на блок
-                        let mut exit = winch_rope_len;      // точка схода каната с блока
-                        let mut bind = enter .. exit;
+                        let mut enter = 0.0;                    // Точка входа каната на блок
+                        let mut exit = winch_rope_len;          // Точка схода каната с блока
+                        let mut bind = enter .. exit;    // Первый сход считаем с барабана
                         bendings.push(bind.clone());
                         for block in blocks {
                             enter = bind.end + block.arc_length;
