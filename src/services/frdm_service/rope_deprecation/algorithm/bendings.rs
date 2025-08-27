@@ -1,11 +1,13 @@
 use std::ops::Range;
 use sal_core::dbg::Dbg;
-use sal_sync::collections::FxIndexMap;
+use sal_sync::{collections::FxIndexMap, services::conf::ConfDistance};
 use crate::services::frdm_service::{BendingsConf, BlockArcs};
 
 ///
 /// 10. Определение опорных точек по длине каната
 pub struct Bendings {
+    pos_input: String,
+    winch_rope_len0: ConfDistance,
     block_arcs: BlockArcs,
     dbg: Dbg,
 }
@@ -14,11 +16,14 @@ pub struct Bendings {
 impl Bendings {
     ///
     /// Returns [Bendings] new instance
+    /// - `pos_input` - Name of input og the `Rope` position, mm
     /// rope_results,
     /// rope_loose_sections: list[RopeLooseSection],
     /// block_results
-    pub fn new(parent: impl Into<String>, block_arcs: BlockArcs) -> Self {
+    pub fn new(parent: impl Into<String>, pos_input: String, winch_rope_len0: ConfDistance, block_arcs: BlockArcs) -> Self {
         Self {
+            pos_input,
+            winch_rope_len0,
             block_arcs,
             dbg: Dbg::new(parent, "BlockArcs"),
         }
@@ -38,21 +43,47 @@ impl Bendings {
     ///     F11 = F10 + arc_5
     ///     F12 = F11 + l_rope_6
     fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Range<f64>> {
-        let L_winch = rope_results["L_winch"];                // мм
-        let l_sections = [r.l_rope for r in rope_loose_sections];       // мм, 6 прямых отрезков
-        let arcs       = block_results["arc_lengths"];        // мм, 6 значений
-        let F = [L_winch];   // F1 (мм)
+        match self.block_arcs.eval(inputs) {
+            Some(blocks) => {
+                let mut bendings = vec![];
+                match inputs.get(&self.pos_input) {
+                    Some(rope_pos) => {
+                        let winch_rope_len = self.winch_rope_len0.as_mm() - rope_pos;
+                        let mut enter = 0.0;                // точка входа каната на блок
+                        let mut exit = winch_rope_len;      // точка схода каната с блока
+                        let mut bind = enter .. exit;
+                        bendings.push(bind.clone());
+                        for block in blocks {
+                            enter = bind.end + block.arc_length;
+                            exit = enter + block.arc_length;
+                            bind = enter .. exit;
+                            bendings.push(bind.clone());
+                        }
+                        bendings
+                    }
+                    None => {
+                        log::warn!("{}.eval | Input '{:?}' - Not found", self.dbg, self.pos_input);
+                        return vec![]
+                    }
+                }
+            }
+            None => vec![],
+        }
+        // let L_winch = rope_results["L_winch"];                // мм
+        // let l_sections = [r.l_rope for r in rope_loose_sections];       // мм, 6 прямых отрезков
+        // let arcs       = block_results["arc_lengths"];        // мм, 6 значений
+        // let F = [L_winch];   // F1 (мм)
     
-         // первые 5 пролётов: "прямая -> дуга"
-        for i in range(5):
-            F.append(F[-1] + l_sections[i])   // после прямой
-            F.append(F[-1] + arcs[i+1]) 
+        //  // первые 5 пролётов: "прямая -> дуга"
+        // for i in range(5):
+        //     F.append(F[-1] + l_sections[i])   // после прямой
+        //     F.append(F[-1] + arcs[i+1]) 
     
-         // шестой пролёт: только "прямая"
-        F.append(F[-1] + l_sections[5])
+        //  // шестой пролёт: только "прямая"
+        // F.append(F[-1] + l_sections[5])
     
-         //logging.debug(f"Опорные точки (м):{F}")
-        return F
+        //  //logging.debug(f"Опорные точки (м):{F}")
+        // return F
     }
     
 }

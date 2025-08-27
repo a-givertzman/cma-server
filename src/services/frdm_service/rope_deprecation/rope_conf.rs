@@ -9,8 +9,8 @@ use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name};
 ///     width: 35 mm        # Diameter of the rome
 ///     length: 3000 m      # Total working length of the rope
 ///     segment: 100 mm     # Rope segmetn length. Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///     pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
-///     load: point real '/App/Winch.Load'          # tonn, current rope load 
+///     pos: point real 'Winch.EncoderBR2'      # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
+///     load: point real 'Winch.Load'          # tonn, current rope load 
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct RopeConf {
@@ -21,7 +21,9 @@ pub struct RopeConf {
     /// Rope segmetn length.
     /// Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
     pub segment: ConfDistance,
+    /// Current rope position (длина каната размотанного с барабана считая от парковочного), meters
     pub pos: String,
+    /// Current rope load, tonn
     pub load: String,
 }
 //
