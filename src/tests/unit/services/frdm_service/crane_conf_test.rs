@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::{ConfDistance, ConfDistanceUnit, ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{BendingsConf, BlockBind, BlockConf, BlockScheme, BoomConf, InputKind, CraneConf, Offset, RopeConf};
+use crate::services::frdm_service::{BlockBind, BlockConf, BlockScheme, BoomConf, InputKind, CraneConf, Offset, RopeConf};
 
 ///
 ///
@@ -41,9 +41,9 @@ fn new() {
                     - D300mm           7.23 .. 7.30 mm
                 boom:
                     main-len: 5.3 m                                        # length of the main boom
-                    main-angle: point real '/App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+                    main-angle: point real 'Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
                     rotary-len: 2.1 m                                      # length of the rotary boom
-                    rotary-angle: point real '/App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+                    rotary-angle: point real 'Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
                 booms:
                     - Main-Boom:
                         l1: 0.1 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -51,14 +51,14 @@ fn new() {
                         l3: 0.3 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                         l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                         len: 11200.0 mm                                         # length of the boom
-                        angle: point real '/App/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+                        angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
                     - Rotary-Boom:
                         l1: 0.1 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                         l2: 0.2 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
                         l3: 0.3 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                         l4: 0.4 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                         len: 7984.0 mm                                          # length of the rotary boom
-                        angle: point real '/App/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+                        angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
                 blocks:
                     - '1':
                         lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -99,17 +99,12 @@ fn new() {
                 rope:
                     width: 35 mm        # Diameter of the rome
                     length: 3000 m      # Total working length of the rope
+                    winch-length: 3000 m      # Total working length of the rope
                     segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-                    pos: point real '/App/Winch.EncoderBR2'      # meters, current rope position
-                    load: point real '/App/Winch.Load'          # tonn, current rope load
+                    pos: point real 'Winch.EncoderBR2'      # meters, current rope position
+                    load: point real 'Winch.Load'          # tonn, current rope load
             ").unwrap(),
             CraneConf {
-                bendings: BendingsConf {
-                    bendings: vec![
-                        (ConfDistance::new(200.0, ConfDistanceUnit::Millimeter), 5.0..5.15),
-                        (ConfDistance::new(300.0, ConfDistanceUnit::Millimeter), 7.23*0.001..7.3*0.001),
-                    ],
-                },
                 booms: vec![
                     ("Main-Boom".to_owned(), BoomConf {
                         l1: ConfDistance::new(0.1, ConfDistanceUnit::Millimeter),
@@ -117,7 +112,7 @@ fn new() {
                         l3: ConfDistance::new(0.3, ConfDistanceUnit::Millimeter),
                         l4: ConfDistance::new(10330.0, ConfDistanceUnit::Millimeter),
                         len: InputKind::Const(ConfDistance::new(11200.0, ConfDistanceUnit::Millimeter)),
-                        angle: InputKind::Point("/App/Load.MainBoomAngle".to_owned()),
+                        angle: InputKind::Point("Load.MainBoomAngle".to_owned()),
                     }),
                     ("Rotary-Boom".to_owned(), BoomConf {
                         l1: ConfDistance::new(0.1, ConfDistanceUnit::Millimeter),
@@ -125,7 +120,7 @@ fn new() {
                         l3: ConfDistance::new(0.3, ConfDistanceUnit::Millimeter),
                         l4: ConfDistance::new(0.4, ConfDistanceUnit::Millimeter),
                         len: InputKind::Const(ConfDistance::new(7984.0, ConfDistanceUnit::Millimeter)),
-                        angle: InputKind::Point("/App/Load.RotaryBoomAngle".to_owned()),
+                        angle: InputKind::Point("Load.RotaryBoomAngle".to_owned()),
                     }),
                 ],
                 blocks: vec![
@@ -175,9 +170,10 @@ fn new() {
                 rope: RopeConf {
                     width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                     length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
+                    winch_len: ConfDistance::new(2985.0, ConfDistanceUnit::Meter),
                     segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
-                    pos: "/App/Winch.EncoderBR2".to_owned(),
-                    load: "/App/Winch.Load".to_owned(),
+                    pos: "Winch.EncoderBR2".to_owned(),
+                    load: "Winch.Load".to_owned(),
                 },
             },
         ),

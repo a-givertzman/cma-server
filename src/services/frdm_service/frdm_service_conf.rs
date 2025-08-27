@@ -70,16 +70,13 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         table: 'public.frdm_deprecation'
 ///         subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///         crane:
-///             bendings:           # Rope bloks with diameter, inter and exit
-///                 # Block Diameter   inter   exit
-///                 - D200mm           5.0  .. 5.15 m
-///                 - D300mm           7.23 .. 7.30 mm
 ///             rope:
-///                 width: 35 mm        # Diameter of the rome
-///                 length: 3000 m      # Total working length of the rope
-///                 segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///                 pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
-///                 load: point real 'App/MultiQueue/Winch.Load'           # tonn, current rope load
+///                 width: 35 mm            # Diameter of the rome
+///                 length: 3000 m          # Total working length of the rope
+///                 winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
+///                 segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///                 pos: point real 'Winch.EncoderBR2'      # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
+///                 load: point real 'Winch.Load'           # tonn, current rope load
 ///             booms:
 ///                 - Main-Boom:
 ///                     l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -87,14 +84,14 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     len: 11200.0 mm                                         # length of the boom
-///                     angle: point real 'App/MultiQueue/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+///                     angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
 ///                 - Rotary-Boom:
 ///                     l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
 ///                     l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
 ///                     l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     len: 7984.1 mm                                          # length of the rotary boom
-///                     angle: point real 'App/MultiQueue/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+///                     angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
 ///             blocks:
 ///                 - 1:
 ///                     lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм

@@ -29,12 +29,12 @@ impl BlockArcs {
                 Some(blocks.iter().map(|block| {
                     log::debug!("{}.eval | alpha_rope: {}", self.dbg, block.rope_alpha_fwd);
                     let wrap_alpha = f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck);
-                    let arc_length = (PI * block.d * 0.5 * wrap_alpha) / 180.0;
+                    let arc_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
                     l_sys_arc += arc_length;
                     Block::new(
                         block.name.clone(),
                         block.lf,
-                        block.d,
+                        block.diameter,
                         block.scheme,
                         block.bind,
                         block.rope_alpha_fwd,

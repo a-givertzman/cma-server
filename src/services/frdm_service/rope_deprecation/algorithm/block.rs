@@ -71,10 +71,10 @@ pub struct Block {
     /// Block position relative to boom G (end of boom)
     pub lf: Offset<f64>,
     /// Block diameter
-    pub d: f64,
+    pub diameter: f64,
     /// Схема схода каната с блоком к следующему
     pub scheme: BlockScheme,
-    /// Привязка блока стреле (нумерация с 0)
+    /// Привязка блока к стреле (нумерация с 0)
     pub bind: BlockBind,
     /// Координаты блока в ГСК
     pub pos: Offset<f64>,
@@ -84,7 +84,7 @@ pub struct Block {
     pub rope_alpha_bck: f64,
     pub wrap_alpha: f64,
     pub arc_length: f64,
-    // Текущие точки входа и схода каната с блока, считая от его начала каната 
+    /// Текущие точки входа и схода каната с блока, считая от его начала каната 
     pub bending: Range<f64>,
 }
 //
@@ -111,7 +111,7 @@ impl Block {
         Self {
             name: name.into(),
             lf,
-            d,
+            diameter: d,
             scheme: scheme,
             bind: bind,
             pos: Offset::new(0.0, 0.0),

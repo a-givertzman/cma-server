@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::entity::Point;
-use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, Deprication, LooseRopeSections, RopeSlice};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprication, LooseRopeSections, RopeSlice};
 
 ///
 /// The collection of [RopeSlice]
@@ -27,19 +27,27 @@ impl<'a> RopeSlices<'a> {
         Self {
             eval: Deprication::new(
                 &dbg,
-                &conf.rope,
-                BlockArcs::new(
+                &conf,
+                Bendings::new(
                     &dbg,
-                    LooseRopeSections::new(
+                    conf.rope.pos,
+                    conf.rope.winch_len,
+                    BlockArcs::new(
                         &dbg,
-                        Blocks::new(
+                        LooseRopeSections::new(
                             &dbg,
-                            &conf.blocks,
-                            Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                            Blocks::new(
+                                &dbg,
+                                &conf.blocks,
+                                Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                            ),
                         ),
                     ),
                 ),
                 subscriptions,
+                |index, deprication| {
+
+                },
             ),
             slices: (0..slices).map(|slice| {
                 let offset = (slice as f64) * conf.rope.segment.as_m();

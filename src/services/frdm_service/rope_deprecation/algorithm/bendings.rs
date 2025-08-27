@@ -1,7 +1,6 @@
-use std::ops::Range;
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::conf::ConfDistance};
-use crate::services::frdm_service::{BendingsConf, Block, BlockArcs};
+use crate::services::frdm_service::{Block, BlockArcs};
 
 ///
 /// 10. Определение опорных точек по длине каната
@@ -42,25 +41,21 @@ impl Bendings {
     ///     F10 = F9  + l_rope_5
     ///     F11 = F10 + arc_5
     ///     F12 = F11 + l_rope_6
-    fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Vec<Block> {
+    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
         match self.block_arcs.eval(inputs) {
             Some(blocks) => {
-                let mut bendings = vec![];
+                let mut result = vec![];
                 match inputs.get(&self.pos_input) {
                     Some(rope_pos) => {
-                        let winch_rope_len = self.winch_rope_len0.as_mm() - rope_pos;
-                        let mut enter = 0.0;                    // Точка входа каната на блок
-                        let mut exit = winch_rope_len;          // Точка схода каната с блока
-                        let mut bind = enter .. exit;    // Первый сход считаем с барабана
-                        bendings.push(bind.clone());
+                        todo!("Доработать логику");
+                        let mut enter = 0.0;                   // Точка входа каната на блок
+                        let mut exit = self.winch_rope_len0.as_mm() - *rope_pos;              // Точка схода каната с барабанаб а в общем с блока
+                        let mut bind = enter .. exit;   // Первый сход считаем с барабана
                         for block in blocks {
-                            enter = bind.end + block.rope_alpha_bck;
-                            exit = enter + block.arc_length;
-                            bind = enter .. exit;
-                            bendings.push(Block::new(
+                            result.push(Block::new(
                                 block.name.clone(),
                                 block.lf,
-                                block.d,
+                                block.diameter,
                                 block.scheme,
                                 block.bind,
                                 block.rope_alpha_fwd,
@@ -69,16 +64,19 @@ impl Bendings {
                                 block.arc_length,
                                 bind.clone(),
                             ));
+                            enter = bind.end + block.rope_alpha_fwd;
+                            exit = enter + block.arc_length;
+                            bind = enter .. exit;
                         }
-                        bendings
+                        Some(result)
                     }
                     None => {
                         log::warn!("{}.eval | Input '{:?}' - Not found", self.dbg, self.pos_input);
-                        return vec![]
+                        return None;
                     }
                 }
             }
-            None => vec![],
+            None => None,
         }
         // let L_winch = rope_results["L_winch"];                // мм
         // let l_sections = [r.l_rope for r in rope_loose_sections];       // мм, 6 прямых отрезков

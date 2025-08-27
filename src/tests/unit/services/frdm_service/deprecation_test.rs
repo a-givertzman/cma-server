@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{CraneConf, RopeSlices};
+use crate::services::frdm_service::{CraneConf, Deprication};
 
 ///
 ///
@@ -88,30 +88,38 @@ fn new() {
             - D300mm           0.700 .. 0.800 m
         boom:
             main-len: 5.3 m                                        # length of the main boom
-            main-angle: point real 'App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
+            main-angle: point real 'Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
             rotary-len: 2.1 m                                      # length of the rotary boom
-            rotary-angle: point real 'App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
+            rotary-angle: point real 'Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
         rope:
             width: 35 mm            # Diameter of the rome
             length: 10 m            # Total working length of the rope
             segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-            pos: point real '/App/Winch.EncoderBR2'      # in meters
-            load: point real '/App/Winch.Load'             # in tonn
+            pos: point real 'Winch.EncoderBR2'      # in meters
+            load: point real 'Winch.Load'             # in tonn
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let result = Rc::new(RefCell::new(vec![0.00, 0.00, 0.00]));
     let result_count = Rc::new(RefCell::new(0));
-    let mut rope_slices = RopeSlices::new(&dbg, conf, |ix, deprecation| {
-        let dbg = &dbg.clone();
-        log::debug!("{dbg} | Deprication slice[{ix}]: {:?}", deprecation);
-        result.replace_with(|r| {
-            r[ix] += deprecation;
-            r.to_owned()
-        });
-        result_count.replace_with(|r| {
-            *r + 1
-        });
-    });
+    let subscriptions = vec![];
+    let bendings = ;
+    let mut rope_slices = Deprication::new(
+        &dbg,
+        conf,
+        bendings,
+        subscriptions,
+        |ix, deprecation| {
+            let dbg = &dbg.clone();
+            log::debug!("{dbg} | Deprication slice[{ix}]: {:?}", deprecation);
+            result.replace_with(|r| {
+                r[ix] += deprecation;
+                r.to_owned()
+            });
+            result_count.replace_with(|r| {
+                *r + 1
+            });
+        }
+    );
     for (step, pos, load, target_i, target_count_i) in test_data {
         target = target_i;
         target_count = target_count_i;

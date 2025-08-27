@@ -3,7 +3,9 @@ use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBind, BlockConf, Boom, Booms, Offset};
 
 ///
-/// Evaluation for the crane boom's collection
+/// Evaluation for the crane `Block`'s collection
+/// - First one is always a `Winch drum`
+/// - Next - are regular block from `Winch` towards `Hook`
 pub struct Blocks {
     items: Vec<Block>,
     booms: Booms,
@@ -49,7 +51,7 @@ impl Blocks {
         match self.items.first() {
             Some(first) => {
                 let mut prev = first.pos;
-                let mut prev_d = first.d;
+                let mut prev_d = first.diameter;
                 for (idx, block) in self.items.iter_mut().enumerate() {
                     log::trace!("{}.blocks_pos | Блок {idx}", self.dbg);
                     match block.bind {
@@ -75,7 +77,7 @@ impl Blocks {
                         }
                     }
                     prev = block.pos;
-                    prev_d = block.d;
+                    prev_d = block.diameter;
                 }
                 Some(())
             }

@@ -1,5 +1,5 @@
 use sal_core::dbg::Dbg;
-use crate::services::frdm_service::BendingsConf;
+use crate::services::frdm_service::Block;
 
 /// 
 /// A atomic part of a rope, used for rope deprecation rate calculation.
@@ -18,10 +18,11 @@ impl RopeSlice {
     ///
     /// Returns [RopeSlice] new instance
     /// - `id` - index of the current slice, keep in mind the rope devided by number of equal slices
-    pub fn new(id: usize, bendings: &BendingsConf, offset: f64) -> Self {
+    /// - `blocks` - Count of blocks including winch drum and block at the hook
+    pub fn new(id: usize, blocks: usize, offset: f64) -> Self {
         Self {
             ix: id,
-            state: (0..bendings.bendings.len()).map(|ix| (ix, RopeSliceSate::Out)).collect(),
+            state: (0..blocks).map(|ix| (ix, RopeSliceSate::Unknown)).collect(),
             offset,
             pos: None,
             load: None,
@@ -33,25 +34,11 @@ impl RopeSlice {
     pub fn id(&self) -> usize {
         self.ix
     }
-    // ///
-    // /// Registering new `pos` value (meter),
-    // /// So new deprecation result can be evaluated
-    // pub fn add_pos(&mut self, val: f64) {
-    //     self.pos = Some(val);
-    //     self.changed = Some(());
-    // }
-    // ///
-    // /// Registering new `load` value (tonn),
-    // /// So new deprecation result can be evaluated
-    // pub fn add_load(&mut self, val: f64) {
-    //     self.load = Some(val);
-    //     self.changed = Some(());
-    // }
     ///
     /// Evaluates [RopeSlice] deprecation
-    /// - `pos` rope position, meter
+    /// - `pos` rope position, mm
     /// - `load` - rope load, tonn
-    pub fn deprecation(&mut self, bendings: &BendingsConf, pos: f64, load: f64) -> Option<f64> {
+    pub fn deprecation(&mut self, blocks: &Vec<Block>, pos: f64, load: f64) -> Option<f64> {
         // match self.changed {
         //     Some(_) => {
         //         self.changed = None;
@@ -64,32 +51,39 @@ impl RopeSlice {
         //     },
         //     None => None,
         // }
-        self._deprecation(bendings, pos, load)
+        self._deprecation(blocks, pos, load)
     }
     ///
     /// 
-    fn _deprecation(&mut self, bendings: &BendingsConf, pos: f64, load: f64) -> Option<f64> {
+    fn _deprecation(&mut self, blocks: &Vec<Block>, pos: f64, load: f64) -> Option<f64> {
         let dbg = self.dbg.clone();
         let mut result = None;
         let pos = pos + self.offset;
         for (ix, state) in &mut self.state {
             log::trace!("{dbg} | state: {:?}", state);
-            let (diameter, bending_range) = &bendings.bendings[*ix];
+            let block = &blocks[*ix];
             match state {
                 RopeSliceSate::Block => {
-                    if !bending_range.contains(&pos) {
-                        let deprecation = load / diameter.as_m();
+                    if !block.bending.contains(&pos) {
+                        let deprecation = load / (block.diameter * 0.001);
                         *result.get_or_insert(0.0) += deprecation;
-                        log::debug!("{dbg} | Slice[{}] -> Out({ix}),  pos: {pos},  D: {} m,  result: {:?}", self.ix, diameter.as_m(), result);
+                        log::debug!("{dbg} | Slice[{}] -> Out({ix}),  pos: {pos},  D: {} m,  result: {:?}", self.ix, block.diameter * 0.001, result);
                         *state = RopeSliceSate::Out;
                     }
                 }
                 RopeSliceSate::Out => {
-                    if bending_range.contains(&pos) {
-                        let deprecation = load / diameter.as_m();
+                    if block.bending.contains(&pos) {
+                        let deprecation = load / (block.diameter * 0.001);
                         *result.get_or_insert(0.0) += deprecation;
-                        log::debug!("{dbg} | Slice[{}] -> Block({ix}),  pos: {pos},  D: {} m,  result: {:?}", self.ix, diameter.as_m(), result);
+                        log::debug!("{dbg} | Slice[{}] -> Block({ix}),  pos: {pos},  D: {} m,  result: {:?}", self.ix, block.diameter * 0.001, result);
                         *state = RopeSliceSate::Block;
+                    }
+                }
+                RopeSliceSate::Unknown => {
+                    if block.bending.contains(&pos) {
+                        *state = RopeSliceSate::Block;
+                    } else {
+                        *state = RopeSliceSate::Out;
                     }
                 }
             }
@@ -105,4 +99,5 @@ impl RopeSlice {
 enum RopeSliceSate {
     Block,
     Out,
+    Unknown,
 }

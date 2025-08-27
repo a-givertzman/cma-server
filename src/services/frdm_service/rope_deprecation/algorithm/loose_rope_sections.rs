@@ -34,11 +34,11 @@ impl LooseRopeSections {
                     };
                     let l_block = block1.pos.distance(block2.pos);
                     let alpha_block = Self::alpha_horiz(block1.pos, block2.pos);
-                    let alpha_rope_fwd = alpha_block + j * (0.5 * (block1.d + k * block2.d) / l_block).asin().to_degrees();
-                    let block1_x = block1.pos.x + j * 0.5 * block1.d * alpha_rope_fwd.to_radians().sin();
-                    let block1_y = block1.pos.y + j * 0.5 * block1.d * alpha_rope_fwd.to_radians().cos();
-                    let block2_x = block2.pos.x - j * k * 0.5 * block2.d * alpha_rope_fwd.to_radians().sin();
-                    let block2_y = block2.pos.y - j * k * 0.5 * block2.d * alpha_rope_fwd.to_radians().cos();
+                    let alpha_rope_fwd = alpha_block + j * (0.5 * (block1.diameter + k * block2.diameter) / l_block).asin().to_degrees();
+                    let block1_x = block1.pos.x + j * 0.5 * block1.diameter * alpha_rope_fwd.to_radians().sin();
+                    let block1_y = block1.pos.y + j * 0.5 * block1.diameter * alpha_rope_fwd.to_radians().cos();
+                    let block2_x = block2.pos.x - j * k * 0.5 * block2.diameter * alpha_rope_fwd.to_radians().sin();
+                    let block2_y = block2.pos.y - j * k * 0.5 * block2.diameter * alpha_rope_fwd.to_radians().cos();
                     let l_rope = Offset::new(block1_x, block1_y).distance(Offset::new(block2_x, block2_y));
                     // LooseRopeSection {
                     //     l_block,
@@ -54,7 +54,7 @@ impl LooseRopeSections {
                     let block = Block::new(
                         block1.name.clone(),
                         block1.lf,
-                        block1.d,
+                        block1.diameter,
                         block1.scheme,
                         block1.bind,
                         alpha_rope_fwd,
