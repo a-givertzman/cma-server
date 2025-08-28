@@ -42,7 +42,8 @@ impl LooseRopeSections {
                     let block1_y = block1.pos.y + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().cos();
                     let block2_x = block2.pos.x - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().sin();
                     let block2_y = block2.pos.y - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().cos();
-                    let rope_len_fwd = Offset::new(block1_x, block1_y).distance(Offset::new(block2_x, block2_y));
+                    log::debug!("{}.eval | Block: {}: {:.3}, {:.3} | Block: {}: {:.3}, {:.3}", self.dbg, block1.name, block1_x, block1_y, block2.name, block2_x, block2_y);
+                    let rope_len_fwd = Offset::new(block2_x, block2_y).distance(Offset::new(block1_x, block1_y));
                     log::debug!("{}.eval | Block: {}: rope_alpha_bck: {:.3}", self.dbg, block1.name, rope_alpha_bck);
                     log::debug!("{}.eval | Block: {}: rope_alpha_fwd: {:.3}", self.dbg, block1.name, rope_alpha_fwd);
                     log::debug!("{}.eval | Block: {}: rope_len_bck: {:.3}", self.dbg, block1.name, rope_len_bck);
@@ -76,7 +77,7 @@ impl LooseRopeSections {
         if length == 0.0 {
             return 0.0
         }
-        let a =  ((dot1.y - dot2.y).asin() / length).to_degrees();
+        let a =  (((dot1.y - dot2.y) / length).asin()).to_degrees();
         if dot1.x <= dot2.x {
             a
         } else {

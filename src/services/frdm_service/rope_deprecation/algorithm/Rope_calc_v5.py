@@ -146,11 +146,14 @@ class RopeLooseSection:
         else: raise ValueError(f"Некорректная схема: {scheme}")
         l_block = l_section(Y1, Y2, X1, X2)
         alpha_block = alpha_horiz(Y1, Y2, X1, X2)
+        logging.debug(f"alpha_block: {alpha_block}")
         alpha_rope = alpha_block + j * math.degrees(math.asin(0.5 * (D1 + k * D2) / l_block))
+        logging.debug(f"alpha_rope: {alpha_rope}")
         block1_x = X1 + j * 0.5 * D1 * math.sin(math.radians(alpha_rope))
         block1_y = Y1 + j * 0.5 * D1 * math.cos(math.radians(alpha_rope))
         block2_x = X2 - j * k * 0.5 * D2 * math.sin(math.radians(alpha_rope))
         block2_y = Y2 - j * k * 0.5 * D2 * math.cos(math.radians(alpha_rope))
+        logging.debug(f"block1: {block1_x}, {block1_y} | block2: {block2_x}, {block2_y}")
         l_rope = l_section(block2_y, block1_y, block2_x, block1_x)
         self.scheme = scheme
         self.l_block = l_block
@@ -277,8 +280,10 @@ if __name__ == "__main__":
 
     # Стрелы
     booms = [
-        Boom(alpha_rel= 69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
-        Boom(alpha_rel= 155.3, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+        Boom(alpha_rel=  74.00, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        Boom(alpha_rel= 128.00, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+        # Boom(alpha_rel=  69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        # Boom(alpha_rel= 155.30, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
     ]
 
     # Блоки
