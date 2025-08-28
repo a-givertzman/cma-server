@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Blocks, Booms, CraneConf, LooseRopeSections};
+use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, LooseRopeSections};
 
 ///
 ///
@@ -21,14 +21,14 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [LooseRopeSection]
+/// Testing [BlockArcs]
 #[test]
 fn new() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = Dbg::own("LooseRopeSection-test");
+    let dbg = Dbg::own("BlockArcs-test");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
@@ -40,13 +40,13 @@ fn new() {
         ], 
         // Targets
         [
-            // rope_len_bck,     rope_len_fwd
-            (    0.00,           11509.01),
-            (11509.01,            1722.44),
-            ( 1722.44,            5481.52),
-            ( 5481.52,            1128.33),
-            ( 1128.33,             389.89),
-            (  389.89,            1000.00),
+            // wrap_alpha, deg     wrap_length, mm
+            (  0.000,                0.000),
+            (  0.127,                0.903),
+            ( 28.393,              202.232),
+            ( 32.597,              232.176),
+            ( 6.674,                47.540),
+            (101.150,              720.452),
         ]),
         (02,  [
             // Input Events
@@ -55,29 +55,29 @@ fn new() {
         ], 
         // Targets
         [
-            // rope_len_bck,     rope_len_fwd
-            (    0.00,           11362.11),
-            (11362.11,            2261.27),
-            ( 2261.27,            5481.52),
-            ( 5481.52,            1128.33),
-            ( 1128.33,             389.89),
-            (  389.89,            1000.00),
+            // wrap_alpha, deg     wrap_length, mm
+            ( 0.000,                 0.000),
+            (26.619,               189.599),
+            (28.930,               206.057),
+            (32.597,               232.176),
+            ( 6.674,                47.540),
+            (78.140,               556.560),
         ]),
     ];
 
-    // Блоки 0 | Схема 1 | L_block=11509.02 | Alpha_rope=-65.34° | L_rope=11509.01
-    // Блоки 1 | Схема 1 | L_block=1722.44 | Alpha_rope=-65.46° | L_rope=1722.44
-    // Блоки 2 | Схема 1 | L_block=5481.52 | Alpha_rope=-37.07° | L_rope=5481.52
-    // Блоки 3 | Схема 2 | L_block=1392.59 | Alpha_rope=-4.48° | L_rope=1128.33
-    // Блоки 4 | Схема 3 | L_block=904.54 | Alpha_rope=-11.15° | L_rope=389.89
-    // Блоки 5 | Схема 1 | L_block=1080.07 | Alpha_rope=90.00° | L_rope=1000.00
+    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
+    // Блок 2: угол обхвата = 0.127 deg, длина дуги = 0.903 mm
+    // Блок 3: угол обхвата = 28.393 deg, длина дуги = 202.232 mm
+    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
+    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
+    // Блок 6: угол обхвата = 101.150 deg, длина дуги = 720.452 mm
 
-    // Блоки 0 | Схема 1 | L_block=11362.12 | Alpha_rope=-69.61° | L_rope=11362.11
-    // Блоки 1 | Схема 1 | L_block=2261.27 | Alpha_rope=-42.99° | L_rope=2261.27
-    // Блоки 2 | Схема 1 | L_block=5481.52 | Alpha_rope=-14.06° | L_rope=5481.52
-    // Блоки 3 | Схема 2 | L_block=1392.59 | Alpha_rope=18.53° | L_rope=1128.33
-    // Блоки 4 | Схема 3 | L_block=904.54 | Alpha_rope=11.86° | L_rope=389.89
-    // Блоки 5 | Схема 1 | L_block=1080.07 | Alpha_rope=90.00° | L_rope=1000.00
+    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
+    // Блок 2: угол обхвата = 26.619 deg, длина дуги = 189.599 mm
+    // Блок 3: угол обхвата = 28.930 deg, длина дуги = 206.057 mm
+    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
+    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
+    // Блок 6: угол обхвата = 78.140 deg, длина дуги = 556.560 mm
 
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
@@ -142,12 +142,15 @@ fn new() {
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let mut inputs = FxIndexMap::default();
-    let mut rope_sections = LooseRopeSections::new(
+    let mut block_arcs = BlockArcs::new(
         &dbg,
-        Blocks::new(
+        LooseRopeSections::new(
             &dbg,
-            &conf.blocks,
-            Booms::new(&dbg, &conf.booms, &mut vec![]),
+            Blocks::new(
+                &dbg,
+                &conf.blocks,
+                Booms::new(&dbg, &conf.booms, &mut vec![]),
+            ),
         ),
     );
     let t = Instant::now();
@@ -156,11 +159,11 @@ fn new() {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
-        let result = rope_sections.eval(&inputs).unwrap();
-        log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        for (i, (rope_len_bck, rope_len_fwd)) in target.into_iter().enumerate() {
-            assert!(result[i].rope_len_bck.aprox_eq(rope_len_bck, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].rope_len_bck, rope_len_bck);
-            assert!(result[i].rope_len_fwd.aprox_eq(rope_len_fwd, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+        let result = block_arcs.eval(&inputs).unwrap();
+        log::debug!("{dbg} | step {step}  result: {:#?}", result);
+        for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
+            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
+            assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }

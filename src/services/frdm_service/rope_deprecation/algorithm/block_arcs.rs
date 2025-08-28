@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 use sal_core::dbg::Dbg;
 use sal_sync::collections::FxIndexMap;
-use crate::services::frdm_service::{Block, LooseRopeSections};
+use crate::services::frdm_service::{Block, BlockBind, LooseRopeSections};
 
 ///
 /// 7. Углы обхвата и длины дуг каждого блока
@@ -27,9 +27,14 @@ impl BlockArcs {
             Some(blocks) => {
                 let mut l_sys_arc = 0.0;
                 Some(blocks.iter().map(|block| {
-                    log::debug!("{}.eval | Block {} alpha_rope: {}", self.dbg, block.name, block.rope_alpha_fwd);
-                    let wrap_alpha = f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck);
+                    let wrap_alpha = match block.bind {
+                        BlockBind::Fixed => 0.0,
+                        BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
+                        BlockBind::Hook => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
+                    };
+                    log::debug!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
                     let wrap_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
+                    log::debug!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
                     l_sys_arc += wrap_length;
                     Block::new(
                         block.name.clone(),

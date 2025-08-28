@@ -1,3 +1,4 @@
+mod block_arcs_test;
 mod blocks_test;
 mod booms_test;
 mod crane_conf_test;
