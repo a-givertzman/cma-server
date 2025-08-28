@@ -32,9 +32,9 @@ impl BlockArcs {
                         BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                         BlockBind::Hook => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                     };
-                    log::debug!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
+                    log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
                     let wrap_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
-                    log::debug!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
+                    log::trace!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
                     l_sys_arc += wrap_length;
                     Block::new(
                         block.name.clone(),

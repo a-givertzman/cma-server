@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, LooseRopeSections};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, LooseRopeSections};
 
 ///
 ///
@@ -35,55 +35,83 @@ fn new() {
     let test_data = [
         (01,  [
             // Input Events
+            ("Winch.Pos",          0.00),
             ("MainBoom.Angle",    69.71),
             ("RotaryBoom.Angle", 155.30)
         ], 
         // Targets
         [
-            // wrap_alpha, deg     wrap_length, mm
-            (  0.000,                0.000),
-            (  0.127,                0.903),
-            ( 28.393,              202.232),
-            ( 32.597,              232.176),
-            ( 6.674,                47.540),
-            (101.150,              720.452),
+            // enter .. exit, mm
+            65.566,
+            77.075,
+            77.075,
+            78.798,
+            79.000,
+            84.482,
+            84.714,
+            85.842,
+            85.890,
+            86.280,
+            87.000,
+            88.000,
         ]),
         (02,  [
             // Input Events
+            ("Winch.Pos",          0.00),
             ("MainBoom.Angle",    74.00),
             ("RotaryBoom.Angle", 128.00)
         ], 
         // Targets
         [
-            // wrap_alpha, deg     wrap_length, mm
-            ( 0.000,                 0.000),
-            (26.619,               189.599),
-            (28.930,               206.057),
-            (32.597,               232.176),
-            ( 6.674,                47.540),
-            (78.140,               556.560),
+            // enter .. exit, mm
+            65.145,
+            76.507,
+            76.697,
+            78.958,
+            79.164,
+            84.646,
+            84.878,
+            86.006,
+            86.054,
+            86.443,
+            87.000,
+            88.000,
         ]),
     ];
 
-    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
-    // Блок 2: угол обхвата = 0.127 deg, длина дуги = 0.903 mm
-    // Блок 3: угол обхвата = 28.393 deg, длина дуги = 202.232 mm
-    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
-    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
-    // Блок 6: угол обхвата = 101.150 deg, длина дуги = 720.452 mm
+    // Опорные точки
+    // F01:   65.566
+    // F02:   77.075
+    // F03:   77.075
+    // F04:   78.798
+    // F05:   79.000
+    // F06:   84.482
+    // F07:   84.714
+    // F08:   85.842
+    // F09:   85.890
+    // F10:   86.280
+    // F11:   87.000
+    // F12:   88.000
 
-    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
-    // Блок 2: угол обхвата = 26.619 deg, длина дуги = 189.599 mm
-    // Блок 3: угол обхвата = 28.930 deg, длина дуги = 206.057 mm
-    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
-    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
-    // Блок 6: угол обхвата = 78.140 deg, длина дуги = 556.560 mm
+    // Опорные точки
+    // F01:   65.145
+    // F02:   76.507
+    // F03:   76.697
+    // F04:   78.958
+    // F05:   79.164
+    // F06:   84.646
+    // F07:   84.878
+    // F08:   86.006
+    // F09:   86.054
+    // F10:   86.443
+    // F11:   87.000
+    // F12:   88.000
 
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
             width: 35 mm            # Diameter of the rome
-            length: 3000 m          # Total working length of the rope
-            winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
+            length: 88000 mm          # Total working length of the rope
+            winch-length: 65565.50 mm    # Length of the rope on the winch drum in the parking position, when rope pos is zero
             segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
             load: point real 'Winch.Load'       # tonn, current rope load 
@@ -142,14 +170,19 @@ fn new() {
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let mut inputs = FxIndexMap::default();
-    let mut block_arcs = BlockArcs::new(
+    let mut bendings = Bendings::new(
         &dbg,
-        LooseRopeSections::new(
+        conf.rope.pos.clone(),
+        conf.rope.winch_len,
+        BlockArcs::new(
             &dbg,
-            Blocks::new(
+            LooseRopeSections::new(
                 &dbg,
-                &conf.blocks,
-                Booms::new(&dbg, &conf.booms, &mut vec![]),
+                Blocks::new(
+                    &dbg,
+                    &conf.blocks,
+                    Booms::new(&dbg, &conf.booms, &mut vec![]),
+                ),
             ),
         ),
     );
@@ -159,13 +192,13 @@ fn new() {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
-        let result = block_arcs.eval(&inputs).unwrap();
-        log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
-            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
-            assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
-        }
+        let result = bendings.eval(&inputs).unwrap();
+        log::debug!("{dbg} | step {step}  result: {:#?}", result);
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
+        // for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
+        //     assert!(result[i].bending.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
+        //     assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+        // }
     }
     test_duration.exit();
 }

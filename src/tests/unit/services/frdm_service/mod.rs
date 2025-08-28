@@ -1,3 +1,4 @@
+mod bendings_test;
 mod block_arcs_test;
 mod blocks_test;
 mod booms_test;
