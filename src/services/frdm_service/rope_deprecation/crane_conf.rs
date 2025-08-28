@@ -107,7 +107,14 @@ impl CraneConf {
                 .iter()
                 .next()
                 .expect(&format!("{dbg}.new | 'block' config can't be empty, but found: {:#?}", block));
-            let block = ConfTree::new(key.as_str().unwrap(), block.to_owned());
+            let key = if key.is_number() {
+                format!("{}", key.as_u64().expect(&format!("{dbg}.new | Block's key expected positive number or string")))
+            } else if key.is_string() {
+                format!("{}", key.as_str().expect(&format!("{dbg}.new | Block's key expected positive number or string")))
+            } else {
+                panic!("{dbg}.new | Block's key expected positive number or string");
+            };
+            let block = ConfTree::new(key, block.to_owned());
             (block.key.clone(), BlockConf::new(&name, block))
         }).collect();
         log::trace!("{dbg}.new | blocks: {:#?}", blocks);
