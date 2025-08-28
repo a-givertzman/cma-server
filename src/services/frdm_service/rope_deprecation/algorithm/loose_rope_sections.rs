@@ -7,6 +7,7 @@ use crate::services::frdm_service::{Block, Blocks, Offset};
 /// 6. Расчёт участков каната между блоками
 pub struct LooseRopeSections {
     blocks: Blocks,
+    #[allow(unused)]
     dbg: Dbg,
 }
 impl LooseRopeSections {
@@ -34,20 +35,20 @@ impl LooseRopeSections {
                         super::BlockScheme::BottomBottom => (-1.0, -1.0),
                     };
                     let l_block = block1.pos.distance(block2.pos);
-                    log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
+                    // log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
                     let alpha_block = Self::alpha_horiz(l_block, block1.pos, block2.pos);
-                    log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
+                    // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                     let rope_alpha_fwd = alpha_block + j * (0.5 * (block1.diameter + k * block2.diameter) / l_block).asin().to_degrees();
                     let block1_x = block1.pos.x + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().sin();
                     let block1_y = block1.pos.y + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().cos();
                     let block2_x = block2.pos.x - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().sin();
                     let block2_y = block2.pos.y - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().cos();
-                    log::debug!("{}.eval | Block: {}: {:.3}, {:.3} | Block: {}: {:.3}, {:.3}", self.dbg, block1.name, block1_x, block1_y, block2.name, block2_x, block2_y);
+                    // log::debug!("{}.eval | Block: {}: {:.3}, {:.3} | Block: {}: {:.3}, {:.3}", self.dbg, block1.name, block1_x, block1_y, block2.name, block2_x, block2_y);
                     let rope_len_fwd = Offset::new(block2_x, block2_y).distance(Offset::new(block1_x, block1_y));
-                    log::debug!("{}.eval | Block: {}: rope_alpha_bck: {:.3}", self.dbg, block1.name, rope_alpha_bck);
-                    log::debug!("{}.eval | Block: {}: rope_alpha_fwd: {:.3}", self.dbg, block1.name, rope_alpha_fwd);
-                    log::debug!("{}.eval | Block: {}: rope_len_bck: {:.3}", self.dbg, block1.name, rope_len_bck);
-                    log::debug!("{}.eval | Block: {}: rope_len_fwd: {:.3}", self.dbg, block1.name, rope_len_fwd);
+                    // log::debug!("{}.eval | Block: {}: rope_alpha_bck: {:.3}", self.dbg, block1.name, rope_alpha_bck);
+                    // log::debug!("{}.eval | Block: {}: rope_alpha_fwd: {:.3}", self.dbg, block1.name, rope_alpha_fwd);
+                    // log::debug!("{}.eval | Block: {}: rope_len_bck: {:.3}", self.dbg, block1.name, rope_len_bck);
+                    // log::debug!("{}.eval | Block: {}: rope_len_fwd: {:.3}", self.dbg, block1.name, rope_len_fwd);
                     let block = Block::new(
                         block1.name.clone(),
                         block1.lf,
