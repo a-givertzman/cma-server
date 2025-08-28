@@ -16,7 +16,7 @@ impl Booms {
         Self {
             items: conf.iter().map(|(name, conf)| {
                 let alpha = match &conf.angle {
-                    InputKind::Const(len) => InputKind::Const(len.as_mm()),
+                    InputKind::Const(angle) => InputKind::Const(*angle),
                     InputKind::Point(key) => {
                         subscriptions.push(key.clone());
                         InputKind::Point(key.clone())

@@ -52,9 +52,12 @@ fn new() {
     //                                    0   1   2  3   4   5   6  7
     // 
     let test_data = [
-        //                                       rope slices deprecetion
-        //    pos, m                 slice[0]  slice[1]  slice[2]  count of dep's
+        //    input values                        rope slices deprecetion
+        //    pos, m                              slice[0]  slice[1]  slice[2]  count of dep's
         //    load, tonn
+        //    angle, degree
+        (01,  "MainBoom.Angle",       69.71,      vec![ 0.00,     0.00,     0.00],     0),
+        (01,  "Load.MainBoomAngle",  155.30,      vec![ 0.00,     0.00,     0.00],     0),
         (01,  "Winch.Pos",  0.00,      vec![ 0.00,     0.00,     0.00],     0),
         (02,  "Winch.Load", 1.00,      vec![ 3.33,     0.00,     3.33],     2),
         // (03,  "          ", 0.51,      vec![ 3.33,     0.00,     3.33],     2),
@@ -101,48 +104,48 @@ fn new() {
                 l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 11200.0 mm                                         # length of the boom
-                angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+                angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
             - Rotary-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
                 l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.1 mm                                          # length of the rotary boom
-                angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+                angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 844.0 mm                 # Диаметры блоков, мм
+                d: 845.670 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 2:
-                lf: 308.0 mm, 1090.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                lf: 308.0 mm, 1100.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 3:
                 lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 4:
                 lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: Boom 2                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 5:
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: Boom 3                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: Boom 4                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 7:
                 lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 0.0 mm                   # Диаметры блоков, мм
+                d: 0.0 mm                   # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе    ").unwrap());
     let conf = CraneConf::new(&dbg, conf);

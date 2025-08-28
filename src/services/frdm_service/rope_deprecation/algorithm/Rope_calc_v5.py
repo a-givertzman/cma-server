@@ -292,17 +292,6 @@ if __name__ == "__main__":
         Block(lF=Offset(  136.0,  -35.0), D=816.195, scheme=1, bind=BlockBindBoom(1)),
         Block(lF=Offset(    0.0,    0.0), D=    0.0, scheme=0, bind=BlockBindHook()),
     ]
-
-    block_bind = [
-        BlockBindFixed(),   # Блок 1
-        BlockBindBoom(1),   # Блок 2
-        BlockBindBoom(2),   # Блок 3
-        BlockBindBoom(2),   # Блок 4
-        BlockBindBoom(2),   # Блок 5
-        BlockBindBoom(2),   # Блок 6
-        BlockBindHook(),    # Блок 7
-    ]
-
     
     # Дополнительные параметры крюковой подвески
     hook_params = {
