@@ -110,8 +110,8 @@ fn new() {
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
             width: 35 mm            # Diameter of the rome
-            length: 88000 mm          # Total working length of the rope
-            winch-length: 65565.50 mm    # Length of the rope on the winch drum in the parking position, when rope pos is zero
+            length: 88 m          # Total working length of the rope
+            winch-length: 65.5655 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
             segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
             load: point real 'Winch.Load'       # tonn, current rope load 
