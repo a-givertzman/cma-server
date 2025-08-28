@@ -21,7 +21,7 @@ impl BlockArcs {
         }
     }
     ///
-    /// Evaluates Boom's values using passed new parameters
+    /// Evaluates Block arck's
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
         match self.loose_rope_sections.eval(inputs) {
             Some(blocks) => {
@@ -29,8 +29,8 @@ impl BlockArcs {
                 Some(blocks.iter().map(|block| {
                     log::debug!("{}.eval | alpha_rope: {}", self.dbg, block.rope_alpha_fwd);
                     let wrap_alpha = f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck);
-                    let arc_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
-                    l_sys_arc += arc_length;
+                    let wrap_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
+                    l_sys_arc += wrap_length;
                     Block::new(
                         block.name.clone(),
                         block.lf,
@@ -40,7 +40,9 @@ impl BlockArcs {
                         block.rope_alpha_fwd,
                         block.rope_alpha_bck,
                         wrap_alpha,
-                        arc_length,
+                        wrap_length,
+                        0.0,
+                        0.0,
                         0.0..0.0,
                     )
                 }).collect())

@@ -47,11 +47,13 @@ impl Bendings {
                 let mut result = vec![];
                 match inputs.get(&self.pos_input) {
                     Some(rope_pos) => {
-                        todo!("Доработать логику");
-                        let mut enter = 0.0;                   // Точка входа каната на блок
-                        let mut exit = self.winch_rope_len0.as_mm() - *rope_pos;              // Точка схода каната с барабанаб а в общем с блока
-                        let mut bind = enter .. exit;   // Первый сход считаем с барабана
+                        let mut enter = 0.0;                                       // Точка входа каната на блок
+                        let mut exit = self.winch_rope_len0.as_mm() - *rope_pos;   // Точка схода каната с барабана, а в общем с блока
+                        let mut bend = enter .. exit;                       // Первый сход считаем с барабана
                         for block in blocks {
+                            enter = bend.end + block.rope_len_bck;
+                            exit = enter + block.wrap_length;
+                            bend = enter .. exit;
                             result.push(Block::new(
                                 block.name.clone(),
                                 block.lf,
@@ -61,12 +63,11 @@ impl Bendings {
                                 block.rope_alpha_fwd,
                                 block.rope_alpha_bck,
                                 block.wrap_alpha,
-                                block.arc_length,
-                                bind.clone(),
+                                block.wrap_length,
+                                block.rope_len_fwd,
+                                block.rope_len_bck,
+                                bend.clone(),
                             ));
-                            enter = bind.end + block.rope_alpha_fwd;
-                            exit = enter + block.arc_length;
-                            bind = enter .. exit;
                         }
                         Some(result)
                     }

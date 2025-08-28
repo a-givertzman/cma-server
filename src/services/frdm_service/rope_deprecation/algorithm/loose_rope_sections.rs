@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::collections::FxIndexMap;
-use crate::services::frdm_service::{Block, Blocks, LooseRopeSection, Offset};
+use crate::services::frdm_service::{Block, Blocks, Offset};
 
 ///
 /// Rope Loose Sections
@@ -23,7 +23,8 @@ impl LooseRopeSections {
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
         match self.blocks.eval(inputs) {
             Some(blocks) => {
-                let mut alpha_rope_bck = 0.0;
+                let mut rope_alpha_bck = 0.0;
+                let mut rope_len_bck = 0.0;
                 Some(blocks.windows(2).map(|pair| {
                     let (block1, block2) = (&pair[0], &pair[1]);
                     let (k, j) = match block1.scheme {
@@ -34,36 +35,30 @@ impl LooseRopeSections {
                     };
                     let l_block = block1.pos.distance(block2.pos);
                     let alpha_block = Self::alpha_horiz(block1.pos, block2.pos);
-                    let alpha_rope_fwd = alpha_block + j * (0.5 * (block1.diameter + k * block2.diameter) / l_block).asin().to_degrees();
-                    let block1_x = block1.pos.x + j * 0.5 * block1.diameter * alpha_rope_fwd.to_radians().sin();
-                    let block1_y = block1.pos.y + j * 0.5 * block1.diameter * alpha_rope_fwd.to_radians().cos();
-                    let block2_x = block2.pos.x - j * k * 0.5 * block2.diameter * alpha_rope_fwd.to_radians().sin();
-                    let block2_y = block2.pos.y - j * k * 0.5 * block2.diameter * alpha_rope_fwd.to_radians().cos();
-                    let l_rope = Offset::new(block1_x, block1_y).distance(Offset::new(block2_x, block2_y));
-                    // LooseRopeSection {
-                    //     l_block,
-                    //     alpha_block,
-                    //     alpha_rope,
-                    //     block1_x,
-                    //     block1_y,
-                    //     block2_x,
-                    //     block2_y,
-                    //     l_rope,
-                    //     alpha_rope_list: vec![],
-                    // }
+                    let rope_alpha_fwd = alpha_block + j * (0.5 * (block1.diameter + k * block2.diameter) / l_block).asin().to_degrees();
+                    let block1_x = block1.pos.x + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().sin();
+                    let block1_y = block1.pos.y + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().cos();
+                    let block2_x = block2.pos.x - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().sin();
+                    let block2_y = block2.pos.y - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().cos();
+                    let rope_len_fwd = Offset::new(block1_x, block1_y).distance(Offset::new(block2_x, block2_y));
+                    log::trace!("{}.eval | Block: {}: alpha_rope_fwd: {:.3}", self.dbg, block1.name, rope_alpha_fwd);
+                    log::trace!("{}.eval | Block: {}: alpha_rope_bck: {:.3}", self.dbg, block1.name, rope_alpha_bck);
                     let block = Block::new(
                         block1.name.clone(),
                         block1.lf,
                         block1.diameter,
                         block1.scheme,
                         block1.bind,
-                        alpha_rope_fwd,
-                        alpha_rope_bck,
+                        rope_alpha_fwd,
+                        rope_alpha_bck,
                         0.0,
                         0.0,
+                        rope_len_fwd,
+                        rope_len_bck,
                         0.0..0.0,
                     );
-                    alpha_rope_bck = alpha_rope_fwd;
+                    rope_alpha_bck = rope_alpha_fwd;
+                    rope_len_bck = rope_len_fwd;
                     block
                 }).collect())
             }

@@ -8,8 +8,6 @@ pub struct RopeSlice {
     ix: usize,
     state: Vec<(usize, RopeSliceSate)>,
     offset: f64,
-    pos: Option<f64>,
-    load: Option<f64>,
     dbg: Dbg,
 }
 //
@@ -24,8 +22,6 @@ impl RopeSlice {
             ix: id,
             state: (0..blocks).map(|ix| (ix, RopeSliceSate::Unknown)).collect(),
             offset,
-            pos: None,
-            load: None,
             dbg: Dbg::own(format!("RopeSlice[{id}]"))
         }
     }
@@ -39,23 +35,6 @@ impl RopeSlice {
     /// - `pos` rope position, mm
     /// - `load` - rope load, tonn
     pub fn deprecation(&mut self, blocks: &Vec<Block>, pos: f64, load: f64) -> Option<f64> {
-        // match self.changed {
-        //     Some(_) => {
-        //         self.changed = None;
-        //         match (pos, load) {
-        //             (None, None) => None,
-        //             (None, Some(_)) => None,
-        //             (Some(_), None) => None,
-        //             (Some(pos), Some(load)) => self._deprecation(bendings, pos, load),
-        //         }
-        //     },
-        //     None => None,
-        // }
-        self._deprecation(blocks, pos, load)
-    }
-    ///
-    /// 
-    fn _deprecation(&mut self, blocks: &Vec<Block>, pos: f64, load: f64) -> Option<f64> {
         let dbg = self.dbg.clone();
         let mut result = None;
         let pos = pos + self.offset;
@@ -88,8 +67,7 @@ impl RopeSlice {
                 }
             }
         }
-        result
-    }
+        result    }
 }
 ///
 /// State of the [RopeSlice]

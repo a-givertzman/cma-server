@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{CraneConf, Deprication};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprication, LooseRopeSections};
 
 ///
 ///
@@ -101,31 +101,45 @@ fn new() {
     let conf = CraneConf::new(&dbg, conf);
     let result = Rc::new(RefCell::new(vec![0.00, 0.00, 0.00]));
     let result_count = Rc::new(RefCell::new(0));
-    let subscriptions = vec![];
-    let bendings = ;
-    let mut rope_slices = Deprication::new(
+    let mut subscriptions = vec![];
+    let mut deprecation = Deprication::new(
         &dbg,
-        conf,
-        bendings,
+        &conf,
+        Bendings::new(
+            &dbg,
+            conf.rope.pos.clone(),
+            conf.rope.winch_len,
+            BlockArcs::new(
+                &dbg,
+                LooseRopeSections::new(
+                    &dbg,
+                    Blocks::new(
+                        &dbg,
+                        &conf.blocks,
+                        Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                    ),
+                ),
+            ),
+        ),
         subscriptions,
-        |ix, deprecation| {
+        |slice_ix, deprecation| {
             let dbg = &dbg.clone();
-            log::debug!("{dbg} | Deprication slice[{ix}]: {:?}", deprecation);
+            log::debug!("{dbg} | Deprication slice[{slice_ix}]: {:?}", deprecation);
             result.replace_with(|r| {
-                r[ix] += deprecation;
+                r[slice_ix] += deprecation;
                 r.to_owned()
             });
             result_count.replace_with(|r| {
                 *r + 1
             });
-        }
+        },
     );
     for (step, pos, load, target_i, target_count_i) in test_data {
         target = target_i;
         target_count = target_count_i;
         log::debug!("{dbg} | step {step}  pos: {:?},  load: {:?}", pos, load);
         let time = Instant::now();
-        rope_slices.eval(todo!("Pass a named event"));
+        deprecation.eval(todo!("Pass a named event"));
         log::debug!("{dbg} | step {step} elapsed: {:?}", time.elapsed());
         assert!(
             result.borrow().iter().enumerate().all(|(ix, r)| {

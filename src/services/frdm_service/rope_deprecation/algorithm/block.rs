@@ -82,8 +82,14 @@ pub struct Block {
     pub rope_alpha_fwd: f64,
     /// Угол линии каната между текущим блоком и предыдущим к горизонту, градусы
     pub rope_alpha_bck: f64,
+    /// угол обхвата каната огибающего блок
     pub wrap_alpha: f64,
-    pub arc_length: f64,
+    /// Длина каната огибающего блок, для барабана длина каната на барабане до точки схода
+    pub wrap_length: f64,
+    /// Длина каната от точки схода с текущего блока до точки входа на следующий, мм
+    pub rope_len_fwd: f64,
+    /// Длина каната от точки входа на текущий блок до точки схода с предыдущего, мм
+    pub rope_len_bck: f64,
     /// Текущие точки входа и схода каната с блока, считая от его начала каната 
     pub bending: Range<f64>,
 }
@@ -96,29 +102,40 @@ impl Block {
     /// - `D` - Диаметры блоков, мм
     /// - `schemes` - Схема схода каната на блоке
     /// - `boom` - К какой стреле относится блок (нумерация с 0)
+    /// - `rope_alpha_fwd` - Угол линии каната между текущим блоком и следующим к горизонту, градусы
+    /// - `rope_alpha_bck` - Угол линии каната между текущим блоком и предыдущим к горизонту, градусы
+    /// - `wrap_alpha` - Угол обхвата каната огибающего блок, градусы
+    /// - `wrap_length` - Длина дуги каната огибающего блок, мм
+    /// - `rope_len_fwd` - Длина каната от точки схода с текущего блока до точки входа на следующий, мм
+    /// - `rope_len_bck` - Длина каната от точки входа на текущий блок до точки схода с предыдущего, мм
+    /// - `bending` - 
     pub fn new(
         name: impl Into<String>,
         lf: Offset<f64>,
-        d: f64,
+        diameter: f64,
         scheme:BlockScheme,
         bind: BlockBind,
         rope_alpha_fwd: f64,
         rope_alpha_bck: f64,
         wrap_alpha: f64,
-        arc_length: f64,
+        wrap_length: f64,
+        rope_len_fwd: f64,
+        rope_len_bck: f64,
         bending: Range<f64>,
     ) -> Self {
         Self {
             name: name.into(),
             lf,
-            diameter: d,
+            diameter,
             scheme: scheme,
             bind: bind,
             pos: Offset::new(0.0, 0.0),
             rope_alpha_fwd,
             rope_alpha_bck,
             wrap_alpha,
-            arc_length,
+            wrap_length,
+            rope_len_fwd,
+            rope_len_bck,
             bending,
         }
     }
