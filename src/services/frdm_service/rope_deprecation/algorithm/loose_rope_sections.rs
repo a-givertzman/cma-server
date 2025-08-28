@@ -34,15 +34,19 @@ impl LooseRopeSections {
                         super::BlockScheme::BottomBottom => (-1.0, -1.0),
                     };
                     let l_block = block1.pos.distance(block2.pos);
-                    let alpha_block = Self::alpha_horiz(block1.pos, block2.pos);
+                    log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
+                    let alpha_block = Self::alpha_horiz(l_block, block1.pos, block2.pos);
+                    log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                     let rope_alpha_fwd = alpha_block + j * (0.5 * (block1.diameter + k * block2.diameter) / l_block).asin().to_degrees();
                     let block1_x = block1.pos.x + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().sin();
                     let block1_y = block1.pos.y + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().cos();
                     let block2_x = block2.pos.x - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().sin();
                     let block2_y = block2.pos.y - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().cos();
                     let rope_len_fwd = Offset::new(block1_x, block1_y).distance(Offset::new(block2_x, block2_y));
-                    log::trace!("{}.eval | Block: {}: alpha_rope_fwd: {:.3}", self.dbg, block1.name, rope_alpha_fwd);
-                    log::trace!("{}.eval | Block: {}: alpha_rope_bck: {:.3}", self.dbg, block1.name, rope_alpha_bck);
+                    log::debug!("{}.eval | Block: {}: rope_alpha_bck: {:.3}", self.dbg, block1.name, rope_alpha_bck);
+                    log::debug!("{}.eval | Block: {}: rope_alpha_fwd: {:.3}", self.dbg, block1.name, rope_alpha_fwd);
+                    log::debug!("{}.eval | Block: {}: rope_len_bck: {:.3}", self.dbg, block1.name, rope_len_bck);
+                    log::debug!("{}.eval | Block: {}: rope_len_fwd: {:.3}", self.dbg, block1.name, rope_len_fwd);
                     let block = Block::new(
                         block1.name.clone(),
                         block1.lf,
@@ -66,14 +70,13 @@ impl LooseRopeSections {
         }
     }
     ///
-    /// Угол наклона прямой к горизонту (в градусах)
-    fn alpha_horiz(dot1: Offset<f64>, dot2: Offset<f64>) -> f64 {
-        // Длина отрезка
-        let length = dot1.distance(dot2);
+    /// Угол наклона отрезка к горизонту (в градусах)
+    /// - `length` - длина отрезка
+    fn alpha_horiz(length: f64, dot1: Offset<f64>, dot2: Offset<f64>) -> f64 {
         if length == 0.0 {
             return 0.0
         }
-        let a =  ((dot1.y - dot2.x).asin() / length).to_degrees();
+        let a =  ((dot1.y - dot2.y).asin() / length).to_degrees();
         if dot1.x <= dot2.x {
             a
         } else {

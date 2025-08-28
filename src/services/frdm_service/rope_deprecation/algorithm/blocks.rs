@@ -78,7 +78,7 @@ impl Blocks {
                             block.pos.y = prev.y - hook_l;
                         }
                     }
-                    log::debug!("{}.blocks_pos | Блок {idx} {}: pos: {:.4}, {:.4}", block.name, block.pos.x, block.pos.y, self.dbg);
+                    log::debug!("{}.blocks_pos | Блок {} [{idx}]: pos: {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
                     prev = block.pos;
                     prev_d = block.diameter;
                 }
