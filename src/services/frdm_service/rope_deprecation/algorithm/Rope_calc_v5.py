@@ -188,7 +188,6 @@ def calc_block_angles_and_arcs(blocks: list[Block], loose_rope_sections: list[Ro
 
     for block, r in zip(blocks[:-1], loose_rope_sections):
         alpha_rope = r.alpha_rope or 0
-        logging.debug(f"alpha_rope: {alpha_rope}")
 
         # Формируем alpha_rope_list
         if prev_alpha is None:

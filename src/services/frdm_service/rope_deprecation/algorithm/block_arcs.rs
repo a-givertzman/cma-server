@@ -27,7 +27,7 @@ impl BlockArcs {
             Some(blocks) => {
                 let mut l_sys_arc = 0.0;
                 Some(blocks.iter().map(|block| {
-                    log::debug!("{}.eval | alpha_rope: {}", self.dbg, block.rope_alpha_fwd);
+                    log::debug!("{}.eval | Block {} alpha_rope: {}", self.dbg, block.name, block.rope_alpha_fwd);
                     let wrap_alpha = f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck);
                     let wrap_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
                     l_sys_arc += wrap_length;

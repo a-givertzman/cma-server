@@ -4,6 +4,7 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBin
 
 ///
 /// Evaluation for the crane `Block`'s collection
+/// 4. Координаты блоков X, Y
 /// - First one is always a `Winch drum`
 /// - Next - are regular block from `Winch` towards `Hook`
 pub struct Blocks {
@@ -55,7 +56,6 @@ impl Blocks {
                 let mut prev = first.pos;
                 let mut prev_d = first.diameter;
                 for (idx, block) in self.items.iter_mut().enumerate() {
-                    log::trace!("{}.blocks_pos | Блок {idx}", self.dbg);
                     match block.bind {
                         BlockBind::Fixed => {
                             // Формула из алгоритма:
@@ -78,6 +78,7 @@ impl Blocks {
                             block.pos.y = prev.y - hook_l;
                         }
                     }
+                    log::debug!("{}.blocks_pos | Блок {idx} {}: pos: {:.4}, {:.4}", block.name, block.pos.x, block.pos.y, self.dbg);
                     prev = block.pos;
                     prev_d = block.diameter;
                 }

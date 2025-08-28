@@ -65,10 +65,15 @@ impl<'a> Deprication<'a> {
                     Point::String(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'String'", self.dbg, event.name()),
                     Point::Bytes(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bytes'", self.dbg, event.name()),
                 }
+                log::warn!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), event.value());
             }
             None => {
                 match self.subscriptions.contains(&event.name()) {
-                    true => _ = self.inputs.insert(event.name(), event.to_double().as_double().value),
+                    true => {
+                        let val = event.to_double().as_double().value;
+                        self.inputs.insert(event.name(), val);
+                        log::warn!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), val);
+                    }
                     false => log::warn!("{}.add | Unexpected Point '{}'", self.dbg, event.name()),
                 }
             }
@@ -96,11 +101,11 @@ impl<'a> Deprication<'a> {
                         return None;
                     }
                     (None, Some(_)) => {
-                        log::warn!("{}.eval | Input '{}' - Not found", self.dbg, self.conf.rope.load);
+                        log::warn!("{}.eval | Input '{}' - Not found", self.dbg, self.conf.rope.pos);
                         return None;
                     }
                     (Some(_), None) => {
-                        log::warn!("{}.eval | Input '{}' - Not found", self.dbg, self.conf.rope.pos);
+                        log::warn!("{}.eval | Input '{}' - Not found", self.dbg, self.conf.rope.load);
                         return None;
                     }
                     (Some(pos), Some(load)) => {

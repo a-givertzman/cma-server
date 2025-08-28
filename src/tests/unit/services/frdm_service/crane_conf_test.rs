@@ -97,10 +97,10 @@ fn new() {
                         bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 
                 rope:
-                    width: 35 mm        # Diameter of the rome
-                    length: 3000 m      # Total working length of the rope
-                    winch-length: 3000 m      # Total working length of the rope
-                    segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+                    width: 35 mm          # Diameter of the rome
+                    length: 3000 m        # Total working length of the rope
+                    winch-length: 2985 m  # Rope length on the winch drum
+                    segment: 100 mm       # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                     pos: point real 'Winch.EncoderBR2'      # meters, current rope position
                     load: point real 'Winch.Load'          # tonn, current rope load
             ").unwrap(),
