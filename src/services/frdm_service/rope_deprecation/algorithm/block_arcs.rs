@@ -7,6 +7,7 @@ use crate::services::frdm_service::{Block, BlockBind, LooseRopeSections};
 /// 7. Углы обхвата и длины дуг каждого блока
 pub struct BlockArcs {
     loose_rope_sections: LooseRopeSections,
+    #[allow(unused)]
     dbg: Dbg,
 }
 //
@@ -32,9 +33,9 @@ impl BlockArcs {
                         BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                         BlockBind::Hook => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                     };
-                    log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
+                    // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
                     let wrap_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
-                    log::trace!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
+                    // log::trace!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
                     l_sys_arc += wrap_length;
                     Block::new(
                         block.name.clone(),
@@ -51,7 +52,7 @@ impl BlockArcs {
                         0.0..0.0,
                     )
                 }).collect();
-                log::debug!("{} | Blocks: {:?}", self.dbg, blocks.len());
+                // log::debug!("{} | Blocks: {:?}", self.dbg, blocks.len());
                 Some(blocks)
             }
             None => None,

@@ -57,9 +57,10 @@ fn new() {
         //    load, tonn
         //    angle, degree
         (01,  "MainBoom.Angle",           69.71,      vec![ 0.00,     0.00,     0.00],     0),
-        (01,  "RotaryBoom.Angle",        155.30,      vec![ 0.00,     0.00,     0.00],     0),
-        (01,  "Winch.Pos",                 0.00,      vec![ 0.00,     0.00,     0.00],     0),
-        (02,  "Winch.Load",                1.00,      vec![ 3.33,     0.00,     3.33],     2),
+        (02,  "RotaryBoom.Angle",        155.30,      vec![ 0.00,     0.00,     0.00],     0),
+        (03,  "Winch.Pos",                 0.00,      vec![ 0.00,     0.00,     0.00],     0),
+        (04,  "Winch.Load",                1.00,      vec![ 3.33,     0.00,     3.33],     2),
+        (05,  "Winch.Pos",                 0.01,      vec![ 0.00,     0.00,     0.00],     0),
         // (03,  "          ", 0.51,      vec![ 3.33,     0.00,     3.33],     2),
         // (04,  "          ", 0.52,      vec![ 3.33,     0.00,     3.33],     2),
         // (05,  "          ", 0.53,      vec![ 3.33,     0.00,     3.33],     2),
@@ -149,7 +150,7 @@ fn new() {
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе    ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
-    log::debug!("{dbg} | conf: {:#?}", conf);
+    log::trace!("{dbg} | conf: {:#?}", conf);
     let result = Rc::new(RefCell::new(vec![0.00, 0.00, 0.00]));
     let result_count = Rc::new(RefCell::new(0));
     let mut subscriptions = vec![];

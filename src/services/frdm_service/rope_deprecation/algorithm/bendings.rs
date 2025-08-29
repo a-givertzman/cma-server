@@ -75,7 +75,7 @@ impl Bendings {
                             ));
                         }
                         result.reverse();
-                        log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
+                        // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                         Some(result)
                     }
                     None => {

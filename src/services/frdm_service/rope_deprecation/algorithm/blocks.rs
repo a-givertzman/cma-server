@@ -43,7 +43,7 @@ impl Blocks {
         match self.booms.eval(inputs) {
             Some(booms) => {
                 self.blocks_pos(&booms).map(|_| {
-                    log::debug!("{} | Blocks: {:?}", self.dbg, self.items.len());
+                    // log::debug!("{} | Blocks: {:?}", self.dbg, self.items.len());
                     self.items.clone()
                 })
             },
@@ -58,7 +58,7 @@ impl Blocks {
             Some(first) => {
                 let mut prev = first.pos;
                 let mut prev_d = first.diameter;
-                for (idx, block) in self.items.iter_mut().enumerate() {
+                for (_, block) in self.items.iter_mut().enumerate() {
                     match block.bind {
                         BlockBind::Fixed => {
                             // Формула из алгоритма:
@@ -79,7 +79,7 @@ impl Blocks {
                             block.pos.y = prev.y - hook_l;
                         }
                     }
-                    log::debug!("{}.blocks_pos | Блок {} [{idx}]: pos: {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
+                    // log::debug!("{}.blocks_pos | Блок {} [{idx}]: pos: {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
                     prev = block.pos;
                     prev_d = block.diameter;
                 }

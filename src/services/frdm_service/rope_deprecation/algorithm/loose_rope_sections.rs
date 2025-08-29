@@ -81,7 +81,7 @@ impl LooseRopeSections {
                     blocks.last().unwrap().rope_len_fwd,
                     0.0..0.0,
                 ));
-                log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
+                // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                 Some(result)
             }
             None => None,
