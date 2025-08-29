@@ -160,7 +160,7 @@ fn new() {
             inputs.insert(key.to_owned(), val);
         }
         let result = block_arcs.eval(&inputs).unwrap();
-        log::trace!("{dbg} | step {step}  result: {:#?}", result);
+        log::debug!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
             assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
             assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);

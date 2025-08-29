@@ -46,8 +46,8 @@ impl BlockArcs {
                         block.rope_alpha_bck,
                         wrap_alpha,
                         wrap_length,
-                        0.0,
-                        0.0,
+                        block.rope_len_fwd,
+                        block.rope_len_bck,
                         0.0..0.0,
                     )
                 }).collect())

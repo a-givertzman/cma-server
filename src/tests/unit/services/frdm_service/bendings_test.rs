@@ -42,18 +42,13 @@ fn new() {
         // Targets
         [
             // enter .. exit, mm
-            65.566,
-            77.075,
-            77.075,
-            78.798,
-            79.000,
-            84.482,
-            84.714,
-            85.842,
-            85.890,
-            86.280,
-            87.000,
-            88.000,
+            65566.0 .. 65566.0,
+            77075.0 .. 77075.0,
+            78798.0 .. 79000.0,
+            84482.0 .. 84714.0,
+            85842.0 .. 85890.0,
+            86280.0 .. 87000.0,
+            // 88000.0 .. 88000.0,
         ]),
         (02,  [
             // Input Events
@@ -64,18 +59,13 @@ fn new() {
         // Targets
         [
             // enter .. exit, mm
-            65.145,
-            76.507,
-            76.697,
-            78.958,
-            79.164,
-            84.646,
-            84.878,
-            86.006,
-            86.054,
-            86.443,
-            87.000,
-            88.000,
+            65145.0 .. 65145.0,
+            76507.0 .. 76697.0,
+            78958.0 .. 79164.0,
+            84646.0 .. 84878.0,
+            86006.0 .. 86054.0,
+            86443.0 .. 87000.0,
+            // 88000.0 .. 88000.0,
         ]),
     ];
 
@@ -195,10 +185,10 @@ fn new() {
         let result = bendings.eval(&inputs).unwrap();
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
-        // for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
-        //     assert!(result[i].bending.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
-        //     assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
-        // }
+        for (i, bending) in target.into_iter().enumerate() {
+            assert!(result[i].bending == bending, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].bending, bending);
+            // assert!(result[i].wrap_length == wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+        }
     }
     test_duration.exit();
 }
