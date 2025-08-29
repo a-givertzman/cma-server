@@ -29,7 +29,7 @@ impl<'a> Deprecation<'a> {
             subscriptions,
             conf: conf.clone(),
             slices: (0..slices).map(|slice| {
-                let offset = (slice as f64) * conf.rope.segment.as_m();
+                let offset = (slice as f64) * conf.rope.segment.as_mm();
                 log::trace!("{dbg}.new | Slice: {slice}: offset: {:.2}", offset);
                 RopeSlice::new(slice, conf.blocks.len(), offset)
             }).collect(),
@@ -65,7 +65,7 @@ impl<'a> Deprecation<'a> {
                     Point::String(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'String'", self.dbg, event.name()),
                     Point::Bytes(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bytes'", self.dbg, event.name()),
                 }
-                log::warn!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), event.value());
+                log::debug!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), event.value());
             }
             None => {
                 match self.subscriptions.contains(&event.name()) {
@@ -93,6 +93,10 @@ impl<'a> Deprecation<'a> {
         self.add(event);
         match self.bendings.eval(&self.inputs) {
             Some(blocks) => {
+                // log::debug!("{} | Bendings:", self.dbg);
+                // for block in &blocks {
+                //     log::debug!("{} | \t Block[{}]: {:.4}..{:.4}", self.dbg, block.name, block.bending.start, block.bending.end);
+                // }
                 let pos = self.inputs.get(&self.conf.rope.pos);
                 let load = self.inputs.get(&self.conf.rope.load);
                 match (pos, load) {
