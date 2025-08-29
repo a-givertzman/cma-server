@@ -26,7 +26,7 @@ impl BlockArcs {
         match self.loose_rope_sections.eval(inputs) {
             Some(blocks) => {
                 let mut l_sys_arc = 0.0;
-                Some(blocks.iter().map(|block| {
+                let blocks: Vec<Block> = blocks.iter().map(|block| {
                     let wrap_alpha = match block.bind {
                         BlockBind::Fixed => 0.0,
                         BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
@@ -50,7 +50,9 @@ impl BlockArcs {
                         block.rope_len_bck,
                         0.0..0.0,
                     )
-                }).collect())
+                }).collect();
+                log::debug!("{} | Blocks: {:?}", self.dbg, blocks.len());
+                Some(blocks)
             }
             None => None,
         }

@@ -38,8 +38,9 @@ impl RopeSlice {
         let dbg = self.dbg.clone();
         let mut result = None;
         let pos = pos + self.offset;
+        // log::debug!("{dbg} | Blocks: {:?}", blocks.len());
         for (ix, state) in &mut self.state {
-            log::trace!("{dbg} | state: {:?}", state);
+            // log::debug!("{dbg} | ix: {ix},  state: {:?}", state);
             let block = &blocks[*ix];
             match state {
                 RopeSliceSate::Block => {

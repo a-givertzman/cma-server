@@ -26,7 +26,7 @@ impl LooseRopeSections {
             Some(blocks) => {
                 let mut rope_alpha_bck = 0.0;
                 let mut rope_len_bck = 0.0;
-                Some(blocks.windows(2).map(|pair| {
+                let mut result: Vec<Block> = blocks.windows(2).map(|pair| {
                     let (block1, block2) = (&pair[0], &pair[1]);
                     let (k, j) = match block1.scheme {
                         super::BlockScheme::TopTop => (-1.0, 1.0),
@@ -66,7 +66,23 @@ impl LooseRopeSections {
                     rope_alpha_bck = rope_alpha_fwd;
                     rope_len_bck = rope_len_fwd;
                     block
-                }).collect())
+                }).collect();
+                result.push(Block::new(
+                    blocks.last().unwrap().name.clone(),
+                    blocks.last().unwrap().lf,
+                    blocks.last().unwrap().diameter,
+                    blocks.last().unwrap().scheme,
+                    blocks.last().unwrap().bind,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    blocks.last().unwrap().rope_len_fwd,
+                    0.0..0.0,
+                ));
+                log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
+                Some(result)
             }
             None => None,
         }

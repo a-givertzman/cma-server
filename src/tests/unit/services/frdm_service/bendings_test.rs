@@ -42,13 +42,13 @@ fn new() {
         // Targets
         [
             // enter .. exit, mm
-            65566.0 .. 65566.0,
-            77075.0 .. 77075.0,
-            78798.0 .. 79000.0,
-            84482.0 .. 84714.0,
-            85842.0 .. 85890.0,
-            86280.0 .. 87000.0,
-            // 88000.0 .. 88000.0,
+                0.0000 .. 65565.5016,
+            77074.5163 .. 77075.4196,
+            78797.8560 .. 79000.0876,
+            84481.6102 .. 84713.7866,
+            85842.1211 .. 85889.6608,
+            86279.5476 .. 87000.0000,
+    // F12: 88000.0000
         ]),
         (02,  [
             // Input Events
@@ -59,43 +59,43 @@ fn new() {
         // Targets
         [
             // enter .. exit, mm
-            65145.0 .. 65145.0,
-            76507.0 .. 76697.0,
-            78958.0 .. 79164.0,
-            84646.0 .. 84878.0,
-            86006.0 .. 86054.0,
-            86443.0 .. 87000.0,
-            // 88000.0 .. 88000.0,
+                0.0000 .. 65144.9469,
+            76507.0587 .. 76696.6577,
+            78957.9230 .. 79163.9797,
+            84645.5023 .. 84877.6787,
+            86006.0132 .. 86053.5528,
+            86443.4396 .. 87000.0000,
+    // F12: 88000.0000
         ]),
     ];
 
     // Опорные точки
-    // F01:   65.566
-    // F02:   77.075
-    // F03:   77.075
-    // F04:   78.798
-    // F05:   79.000
-    // F06:   84.482
-    // F07:   84.714
-    // F08:   85.842
-    // F09:   85.890
-    // F10:   86.280
-    // F11:   87.000
-    // F12:   88.000
+    // F01: 65565.5016
+    // F02: 77074.5163
+    // F03: 77075.4196
+    // F04: 78797.8560
+    // F05: 79000.0876
+    // F06: 84481.6102
+    // F07: 84713.7866
+    // F08: 85842.1211
+    // F09: 85889.6608
+    // F10: 86279.5476
+    // F11: 87000.0000
+    // F12: 88000.0000
 
     // Опорные точки
-    // F01:   65.145
-    // F02:   76.507
-    // F03:   76.697
-    // F04:   78.958
-    // F05:   79.164
-    // F06:   84.646
-    // F07:   84.878
-    // F08:   86.006
-    // F09:   86.054
-    // F10:   86.443
-    // F11:   87.000
-    // F12:   88.000
+    // F01: 65144.9469
+    // F02: 76507.0587
+    // F03: 76696.6577
+    // F04: 78957.9230
+    // F05: 79163.9797
+    // F06: 84645.5023
+    // F07: 84877.6787
+    // F08: 86006.0132
+    // F09: 86053.5528
+    // F10: 86443.4396
+    // F11: 87000.0000
+    // F12: 88000.0000
 
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
@@ -163,7 +163,7 @@ fn new() {
     let mut bendings = Bendings::new(
         &dbg,
         conf.rope.pos.clone(),
-        conf.rope.winch_len,
+        &conf.rope,
         BlockArcs::new(
             &dbg,
             LooseRopeSections::new(
@@ -186,8 +186,8 @@ fn new() {
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         for (i, bending) in target.into_iter().enumerate() {
-            assert!(result[i].bending == bending, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].bending, bending);
-            // assert!(result[i].wrap_length == wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+            assert!(result[i].bending.start.aprox_eq(bending.start, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
+            assert!(result[i].bending.end.aprox_eq(bending.end, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
         }
     }
     test_duration.exit();

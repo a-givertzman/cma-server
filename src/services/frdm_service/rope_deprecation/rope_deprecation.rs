@@ -4,7 +4,7 @@ use sal_sync::{
     services::{entity::{Cot, Name, Object}, Service, ServiceWaiting, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprication, LooseRopeSections, RopeDeprecationConf}, sync::AtomicUsizeOption};
+use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, LooseRopeSections, RopeDeprecationConf}, sync::AtomicUsizeOption};
 
 ///
 /// ## Rope deprecation rate
@@ -123,13 +123,13 @@ impl Service for RopeDeprecation where {
             // ]);
             let conf_table = conf.table.clone();
             let mut subscriptions = vec![];
-            let mut deprecation = Deprication::new(
+            let mut deprecation = Deprecation::new(
                 dbg,
                 &conf.crane,
                 Bendings::new(
                     dbg,
                     conf.crane.rope.pos.clone(),
-                    conf.crane.rope.winch_len,
+                    &conf.crane.rope,
                     BlockArcs::new(
                         dbg,
                         LooseRopeSections::new(

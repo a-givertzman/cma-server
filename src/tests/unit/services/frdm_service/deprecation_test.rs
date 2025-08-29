@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::ConfTree, entity::ToPoint};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprication, LooseRopeSections};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprecation, LooseRopeSections};
 
 ///
 ///
@@ -153,13 +153,13 @@ fn new() {
     let result = Rc::new(RefCell::new(vec![0.00, 0.00, 0.00]));
     let result_count = Rc::new(RefCell::new(0));
     let mut subscriptions = vec![];
-    let mut deprecation = Deprication::new(
+    let mut deprecation = Deprecation::new(
         &dbg,
         &conf,
         Bendings::new(
             &dbg,
             conf.rope.pos.clone(),
-            conf.rope.winch_len,
+            &conf.rope,
             BlockArcs::new(
                 &dbg,
                 LooseRopeSections::new(

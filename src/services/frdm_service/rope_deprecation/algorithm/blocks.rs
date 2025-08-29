@@ -42,7 +42,10 @@ impl Blocks {
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
         match self.booms.eval(inputs) {
             Some(booms) => {
-                self.blocks_pos(&booms).map(|_| self.items.clone())
+                self.blocks_pos(&booms).map(|_| {
+                    log::debug!("{} | Blocks: {:?}", self.dbg, self.items.len());
+                    self.items.clone()
+                })
             },
             None => None,
         }
@@ -67,8 +70,6 @@ impl Blocks {
                             block.pos.y = y;
                         }
                         BlockBind::Boom(boom_index) => {
-                            // Определяем номер стрелы
-                            // boom_num = int(feature.split()[0]) - 1
                             let base_point = booms[boom_index].gpt;  // точка G
                             let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
                             block.pos = Offset::new(base_point.x + dx, base_point.y + dy);

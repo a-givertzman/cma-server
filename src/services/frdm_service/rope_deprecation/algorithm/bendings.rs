@@ -1,12 +1,13 @@
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, services::conf::ConfDistance};
-use crate::services::frdm_service::{Block, BlockArcs};
+use sal_sync::collections::FxIndexMap;
+use crate::services::frdm_service::{Block, BlockArcs, BlockBind, RopeConf};
 
 ///
 /// 10. Определение опорных точек по длине каната
 pub struct Bendings {
     pos_input: String,
-    winch_rope_len0: ConfDistance,
+    conf: RopeConf,
+    // winch_rope_len0: ConfDistance,
     block_arcs: BlockArcs,
     dbg: Dbg,
 }
@@ -19,10 +20,10 @@ impl Bendings {
     /// rope_results,
     /// rope_loose_sections: list[RopeLooseSection],
     /// block_results
-    pub fn new(parent: impl Into<String>, pos_input: String, winch_rope_len0: ConfDistance, block_arcs: BlockArcs) -> Self {
+    pub fn new(parent: impl Into<String>, pos_input: String, conf: &RopeConf, block_arcs: BlockArcs) -> Self {
         Self {
             pos_input,
-            winch_rope_len0,
+            conf: conf.clone(),
             block_arcs,
             dbg: Dbg::new(parent, "BlockArcs"),
         }
@@ -47,13 +48,17 @@ impl Bendings {
                 let mut result = vec![];
                 match inputs.get(&self.pos_input) {
                     Some(rope_pos) => {
-                        let mut enter = 0.0;                                       // Точка входа каната на блок
-                        let mut exit = self.winch_rope_len0.as_mm() - *rope_pos;   // Точка схода каната с барабана, а в общем с блока
-                        let mut bend = enter .. exit;                       // Первый сход считаем с барабана
-                        for block in blocks {
-                            enter = bend.end + block.rope_len_bck;
-                            exit = enter + block.wrap_length;
-                            bend = enter .. exit;
+                        let mut start = self.conf.length.as_mm() - *rope_pos;                                       // Точка входа каната на блок
+                        let mut end = 0.0;   // Точка схода каната с барабана, а в общем с блока
+                        let mut bend = start .. end;                       // Первый сход считаем с барабана
+                        for block in blocks.iter().rev() {
+                            end = bend.start - block.rope_len_fwd;
+                            start = match block.bind {
+                                BlockBind::Fixed => 0.0,
+                                BlockBind::Boom(_) => end - block.wrap_length,
+                                BlockBind::Hook => end - block.wrap_length,
+                            };
+                            bend = start .. end;
                             result.push(Block::new(
                                 block.name.clone(),
                                 block.lf,
@@ -69,6 +74,8 @@ impl Bendings {
                                 bend.clone(),
                             ));
                         }
+                        result.reverse();
+                        log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                         Some(result)
                     }
                     None => {
@@ -79,21 +86,5 @@ impl Bendings {
             }
             None => None,
         }
-        // let L_winch = rope_results["L_winch"];                // мм
-        // let l_sections = [r.l_rope for r in rope_loose_sections];       // мм, 6 прямых отрезков
-        // let arcs       = block_results["arc_lengths"];        // мм, 6 значений
-        // let F = [L_winch];   // F1 (мм)
-    
-        //  // первые 5 пролётов: "прямая -> дуга"
-        // for i in range(5):
-        //     F.append(F[-1] + l_sections[i])   // после прямой
-        //     F.append(F[-1] + arcs[i+1]) 
-    
-        //  // шестой пролёт: только "прямая"
-        // F.append(F[-1] + l_sections[5])
-    
-        //  //logging.debug(f"Опорные точки (м):{F}")
-        // return F
     }
-    
 }

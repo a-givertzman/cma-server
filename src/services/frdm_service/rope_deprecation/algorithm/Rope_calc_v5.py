@@ -280,10 +280,10 @@ if __name__ == "__main__":
 
     # Стрелы
     booms = [
-        # Boom(alpha_rel=  74.00, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
-        # Boom(alpha_rel= 128.00, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
-        Boom(alpha_rel=  69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
-        Boom(alpha_rel= 155.30, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+        # Boom(alpha_rel=  69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        # Boom(alpha_rel= 155.30, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+        Boom(alpha_rel=  74.00, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        Boom(alpha_rel= 128.00, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
     ]
 
     # Блоки
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     logging.debug('-'*40)
     logging.debug("Опорные точки")
     for i, v in enumerate(support_points, start=1):
-        logging.debug(f"F{i:02d}: {v:8.3f}")
+        logging.debug(f"F{i:02d}: {v * 1000:.4f}")
     logging.debug('-'*40)
     logging.debug(f"Число перегибов --> Чаще всего: {most}, Минимальное: {mini}, Максимальное: {maxi}")
 

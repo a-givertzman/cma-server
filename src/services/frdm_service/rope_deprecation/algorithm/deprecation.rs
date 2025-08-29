@@ -4,7 +4,7 @@ use crate::services::frdm_service::{Bendings, CraneConf, RopeSlice};
 
 ///
 /// Evaluation for the crane rope deprication
-pub struct Deprication<'a> {
+pub struct Deprecation<'a> {
     inputs: FxIndexMap<String, f64>,
     subscriptions: Vec<String>,
     conf: CraneConf,
@@ -15,7 +15,7 @@ pub struct Deprication<'a> {
 }
 //
 //
-impl<'a> Deprication<'a> {
+impl<'a> Deprecation<'a> {
     ///
     /// Returns [Boom] new instance
     /// - `results` - Callback provides deprication results as index of slice and it new deprication value
