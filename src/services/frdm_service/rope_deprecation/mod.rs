@@ -5,7 +5,6 @@ mod crane_conf;
 mod rope_conf;
 mod rope_deprecation_conf;
 mod rope_deprecation;
-mod rope_slice;
 
 pub(crate) use algorithm::*;
 pub(crate) use block_conf::*;
@@ -14,4 +13,3 @@ pub(crate) use crane_conf::*;
 pub(crate) use rope_conf::*;
 pub(crate) use rope_deprecation_conf::*;
 pub(crate) use rope_deprecation::*;
-pub(crate) use rope_slice::*;

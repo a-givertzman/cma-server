@@ -21,14 +21,14 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [BlockArcs]
+/// Testing [Bendings]
 #[test]
 fn new() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = Dbg::own("BlockArcs-test");
+    let dbg = Dbg::own("Bendings-test");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
@@ -183,7 +183,7 @@ fn new() {
             inputs.insert(key.to_owned(), val);
         }
         let result = bendings.eval(&inputs).unwrap();
-        log::debug!("{dbg} | step {step}  result: {:#?}", result);
+        log::trace!("{dbg} | step {step}  result: {:#?}", result);
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         for (i, bending) in target.into_iter().enumerate() {
             assert!(result[i].bending.start.aprox_eq(bending.start, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);

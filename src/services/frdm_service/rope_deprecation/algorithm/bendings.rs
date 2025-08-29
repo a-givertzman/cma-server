@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use sal_core::dbg::Dbg;
 use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{Block, BlockArcs, BlockBind, RopeConf};
@@ -43,12 +45,13 @@ impl Bendings {
     ///     F11 = F10 + arc_5
     ///     F12 = F11 + l_rope_6
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
+        let t = Instant::now();
         match self.block_arcs.eval(inputs) {
             Some(blocks) => {
                 let mut result = vec![];
                 match inputs.get(&self.pos_input) {
                     Some(rope_pos) => {
-                        let mut start = self.conf.length.as_mm() - *rope_pos;                                       // Точка входа каната на блок
+                        let mut start = self.conf.length.as_mm() - *rope_pos * 1000.0;                                       // Точка входа каната на блок
                         let mut end = 0.0;   // Точка схода каната с барабана, а в общем с блока
                         let mut bend = start .. end;                       // Первый сход считаем с барабана
                         for block in blocks.iter().rev() {
@@ -75,6 +78,7 @@ impl Bendings {
                             ));
                         }
                         result.reverse();
+                        log::debug!("{}.eval | Elapsed: {:?}", self.dbg, t.elapsed());
                         // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                         Some(result)
                     }

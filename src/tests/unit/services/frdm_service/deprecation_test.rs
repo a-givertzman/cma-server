@@ -22,7 +22,7 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [RopeSlices]
+/// Testing [Deprication]
 #[test]
 fn new() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
@@ -60,29 +60,41 @@ fn new() {
         (02,  "RotaryBoom.Angle",        155.300,     vec![ 0.00,     0.00,     0.00],     0),
         (03,  "Winch.Pos",                 0.000,     vec![ 0.00,     0.00,     0.00],     0),
         (04,  "Winch.Load",                1.000,     vec![ 3.33,     0.00,     3.33],     2),
-        (05,  "Winch.Pos",                 0.001,     vec![ 0.00,     0.00,     0.00],     0),
-        (06,  "Winch.Pos",                 0.005,     vec![ 0.00,     0.00,     0.00],     0),
+        (05,  "Winch.Pos",                 0.002,     vec![ 0.00,     0.00,     0.00],     0),
+        (06,  "Winch.Pos",                 0.003,     vec![ 0.00,     0.00,     0.00],     0),
+        (06,  "Winch.Pos",                 0.006,     vec![ 0.00,     0.00,     0.00],     0),
+        (06,  "Winch.Pos",                 0.008,     vec![ 0.00,     0.00,     0.00],     0),
         (07,  "Winch.Pos",                 0.010,     vec![ 0.00,     0.00,     0.00],     0),
-        (08,  "Winch.Pos",                 0.015,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.012,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.014,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.016,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.018,     vec![ 0.00,     0.00,     0.00],     0),
         (09,  "Winch.Pos",                 0.020,     vec![ 0.00,     0.00,     0.00],     0),
-        (10,  "Winch.Pos",                 0.025,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.022,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.024,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.026,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.028,     vec![ 0.00,     0.00,     0.00],     0),
         (11,  "Winch.Pos",                 0.030,     vec![ 0.00,     0.00,     0.00],     0),
-        (12,  "Winch.Pos",                 0.035,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.032,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.034,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.036,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.038,     vec![ 0.00,     0.00,     0.00],     0),
         (13,  "Winch.Pos",                 0.040,     vec![ 0.00,     0.00,     0.00],     0),
-        (14,  "Winch.Pos",                 0.045,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.042,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.044,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.046,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.048,     vec![ 0.00,     0.00,     0.00],     0),
         (15,  "Winch.Pos",                 0.050,     vec![ 0.00,     0.00,     0.00],     0),
-        (16,  "Winch.Pos",                 0.055,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.052,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.054,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.056,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.058,     vec![ 0.00,     0.00,     0.00],     0),
         (17,  "Winch.Pos",                 0.060,     vec![ 0.00,     0.00,     0.00],     0),
-        (18,  "Winch.Pos",                 0.065,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.062,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.064,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.066,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.068,     vec![ 0.00,     0.00,     0.00],     0),
         (19,  "Winch.Pos",                 0.070,     vec![ 0.00,     0.00,     0.00],     0),
-        (20,  "Winch.Pos",                 0.075,     vec![ 0.00,     0.00,     0.00],     0),
-        (21,  "Winch.Pos",                 0.080,     vec![ 0.00,     0.00,     0.00],     0),
-        (22,  "Winch.Pos",                 0.085,     vec![ 0.00,     0.00,     0.00],     0),
-        (23,  "Winch.Pos",                 0.090,     vec![ 0.00,     0.00,     0.00],     0),
-        (24,  "Winch.Pos",                 0.095,     vec![ 0.00,     0.00,     0.00],     0),
-        (25,  "Winch.Pos",                 0.100,     vec![ 0.00,     0.00,     0.00],     0),
-        (26,  "Winch.Pos",                 0.105,     vec![ 0.00,     0.00,     0.00],     0),
-        (27,  "Winch.Pos",                 0.200,     vec![ 0.00,     0.00,     0.00],     0),
     ];
     let mut target: Vec<f64> = vec![];
     let mut target_count = 0;
@@ -93,9 +105,9 @@ fn new() {
             - D300mm           7.23 .. 7.30 mm
         rope:
             width: 35 mm            # Diameter of the rome
-            length: 30 m          # Total working length of the rope
-            winch-length: 29.85 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
-            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+            length: 3000 m          # Total working length of the rope
+            winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
+            segment: 10 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
             load: point real 'Winch.Load'       # tonn, current rope load 
         booms:
@@ -176,9 +188,9 @@ fn new() {
         subscriptions,
         |slice_ix, deprecation| {
             let dbg = &dbg.clone();
-            log::warn!("{dbg} | Deprication slice[{slice_ix}]: {:?}", deprecation);
+            log::debug!("{dbg} | Deprication slice[{slice_ix}]: {:?}", deprecation);
             result.replace_with(|r| {
-                r[slice_ix] += deprecation;
+                r[*slice_ix] += deprecation;
                 r.to_owned()
             });
             result_count.replace_with(|r| {

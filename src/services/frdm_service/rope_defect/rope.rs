@@ -46,7 +46,6 @@ impl Rope {
     }
     ///
     /// Returns segment index from 0, 
-    /// - `pos` - camera position from the begining of the rope (hook side) in meters
     /// - Returns Some(index) if camera position located at the begining of segment with acceptable error in relation to exact segment position
     pub fn segment_index(&self) -> Option<usize> {
         // Index of the current slice located under the camera (from hook)
