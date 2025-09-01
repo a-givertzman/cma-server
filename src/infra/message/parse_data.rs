@@ -3,21 +3,23 @@ use crate::infra::message::FromBytes;
 use super::message::{Bytes, MessageParse};
 ///
 /// Extracting `Data` field from the input bytes
-pub struct ParseData<FieldIn, FieldOut, Out> {
+pub struct SizedField<FieldIn, FieldOut, Out> {
     dbg: Dbg,
     size: usize,
     field: Box<dyn MessageParse<FieldIn, FieldOut, Out>>,
     field_data: Option<(FieldIn, FieldOut)>,
+    from_bytes: Box<dyn Fn(Bytes) -> Result<Out, Error>>,
     remainder: Bytes,
 }
 //
 //
-impl<Out: FromBytes, FieldIn, FieldOut> ParseData<FieldIn, FieldOut, Out> {
+impl<Out: FromBytes, FieldIn, FieldOut> SizedField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [ParseData] new instance
-    pub fn new(parent: impl Into<String>, size: usize, field: impl MessageParse<FieldIn, FieldOut, Out> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(Bytes) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Out> + 'static) -> Self {
         Self {
             size,
+            from_bytes: Box::new(from_bytes),
             field: Box::new(field),
             field_data: None,
             remainder: vec![],
@@ -50,7 +52,7 @@ impl<Out: FromBytes, FieldIn, FieldOut> ParseData<FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<Out: FromBytes, FieldIn, FieldOut> MessageParse<FieldIn, FieldOut, Out> for ParseData<FieldIn, FieldOut, Out> {
+impl<Out: FromBytes, FieldIn, FieldOut> MessageParse<FieldIn, FieldOut, Out> for SizedField<FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`
