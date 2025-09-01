@@ -35,11 +35,6 @@ impl Rope {
         }
     }
     ///
-    /// Returns cerrent rope position (mm)
-    pub fn pos(&self) -> Option<f64> {
-        self.pos.rope_pos()
-    }
-    ///
     /// Returns cerrent rope position (mm) under the camera
     pub fn pos_at_camera(&self) -> Option<f64> {
         self.pos.rope_pos().map(|pos| pos + self.camera_offset)

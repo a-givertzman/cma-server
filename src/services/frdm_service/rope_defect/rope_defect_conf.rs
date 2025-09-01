@@ -1,5 +1,4 @@
 use std::{str::FromStr, time::Duration};
-
 use frdm_tools::camera::CameraConf;
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfCustomKeywd, ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
@@ -16,7 +15,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_co
 ///         defect-image: 'public.frdm_defect_image'
 ///     segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
 ///     segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
-///     camera-offset: 5.5 m                        # camera position from the begin of the rope (hook side)
+///     camera-offset: 5.5 m        # camera position from the begin of the rope (hook side)
 ///     defect-detection:
 ///         gamma:
 ///             no-param: not parameters implemented 
