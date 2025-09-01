@@ -1,7 +1,7 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}};
 use std::{collections::HashMap, fmt::Debug, ops::RangeBounds, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
-use crate::core_::RwLock;
+use crate::domain::RwLock;
 ///
 /// 
 pub struct TaskTestReceiver {
@@ -128,6 +128,7 @@ impl Service for TaskTestReceiver {
                                     break 'main;
                                 }
                             },
+                            Point::Bytes(_) => {},
                         }
                     }
                     Err(err) => {

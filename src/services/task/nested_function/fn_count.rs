@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_sync::services::entity::{Point, PointHlr};
-use crate::core_::FnInOutRef;
+use crate::domain::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Counts number of raised fronts of boolean input
@@ -89,7 +89,7 @@ impl FnOut for FnCount {
                 log::trace!("{}.out | value: {:?}", self.id, count);
                 FnResult::Ok(Point::Int(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &format!("{}.out", self.id),
                         count,
                         input.status(),

@@ -1,7 +1,7 @@
 use sal_sync::services::{entity::{Point, PointHlr}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -59,7 +59,7 @@ impl FnOut for FnRisingEdge {
             FnResult::Ok(input) => {
                 let input_value = input.to_bool().as_bool().value.0;
                 let value = Point::Bool(PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &input.name(),
                     Bool(input_value && (! self.prev)),
                     input.status(),

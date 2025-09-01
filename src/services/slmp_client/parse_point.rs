@@ -1,11 +1,11 @@
 use chrono::{DateTime, Utc};
-use sal_sync::services::entity::{Point, PointConfigAddress, PointConfigType, Status};
+use sal_sync::services::entity::{Point, PointConfAddress, PointConfType, Status};
 ///
 /// Returns updated points parsed from the data slice from the S7 device,
 pub trait ParsePoint: Send {
     ///
     /// Returns the type of the configured point
-    fn type_(&self) -> PointConfigType;
+    fn type_(&self) -> PointConfType;
     ///
     /// Returns new point parsed from the data slice [bytes] with the given [timestamp] and Status::Ok
     fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point>;
@@ -17,7 +17,7 @@ pub trait ParsePoint: Send {
     fn is_changed(&self) -> bool;
     ///
     /// Returns raw protocol specific address
-    fn address(&self) -> PointConfigAddress;
+    fn address(&self) -> PointConfAddress;
     ///
     /// Returns size of the type in the bytes
     fn size(&self) -> usize;

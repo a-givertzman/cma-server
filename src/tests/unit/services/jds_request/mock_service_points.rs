@@ -3,14 +3,14 @@
 //! Which returns exactly the vector from which it was created
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}};
 use sal_core::error::Error;
-use sal_sync::services::{entity::{Name, Object, PointConfig}, Service};
+use sal_sync::services::{entity::{Name, Object, PointConf}, Service};
 ///
 /// MockServicePoints implements points() method only.
 /// Which returns exactly the vector from which it was created
 pub struct MockServicePoints {
     id: String,
     name: Name,
-    points: Vec<PointConfig>,
+    points: Vec<PointConf>,
     is_finished: Arc<AtomicBool>,
 }
 //
@@ -18,7 +18,7 @@ pub struct MockServicePoints {
 impl MockServicePoints {
     ///
     /// 
-    pub fn new(parent: impl Into<String>, points: Vec<PointConfig>) -> Self {
+    pub fn new(parent: impl Into<String>, points: Vec<PointConf>) -> Self {
         let name = Name::new(parent, format!("MockServicePoints{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         Self {
             id: name.join(),
@@ -81,7 +81,7 @@ impl Service for MockServicePoints {
     }
     //
     //
-    fn points(&self) -> Vec<PointConfig> {
+    fn points(&self) -> Vec<PointConf> {
         log::debug!("{}.points | Returning: {:#?}", self.id, self.points);
         self.points.clone()
     }

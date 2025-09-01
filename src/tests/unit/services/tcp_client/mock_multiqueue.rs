@@ -4,7 +4,7 @@ use sal_sync::{services::{
     Service,
 }, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}};
-use crate::core_::RwLock;
+use crate::domain::RwLock;
 ///
 /// 
 pub struct MockMultiQueue {

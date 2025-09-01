@@ -7,7 +7,7 @@ mod tests {
     use std::{collections::HashMap, hash::BuildHasherDefault, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::core_::{Mutex, RwLock};
+    use crate::domain::{Mutex, RwLock};
 
     ///
     static INIT: Once = Once::new();

@@ -10,8 +10,7 @@ mod fn_point {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig,
-        services::task::{task::Task, task_test_receiver::TaskTestReceiver},
+        services::task::{Task, TaskConf, TaskTestReceiver},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer,
     };
     ///
@@ -55,7 +54,7 @@ mod fn_point {
         log::trace!("dir: {:?}", env::current_dir());
         let tp = ThreadPool::new(dbg, Some(8));
         let services = init_each(dbg, tp.scheduler());
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
                 service Task RecorderTask:

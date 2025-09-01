@@ -8,8 +8,8 @@ use std::{
     time::Duration,
 };
 use crate::{
-    conf::tcp_client_config::TcpClientConfig,
-    core_::net::protocols::jds::{
+    conf::tcp_client_conf::TcpClientConf,
+    domain::net::protocols::jds::{
         jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize,
         jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize,
     },
@@ -28,7 +28,7 @@ pub struct TcpClient {
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
     in_recv: Owner<Receiver<Point>>,
-    conf: TcpClientConfig,
+    conf: TcpClientConf,
     services: Arc<Services>,
     scheduler: Scheduler,
     handles: Handles<()>,
@@ -40,7 +40,7 @@ impl TcpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TcpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: TcpClientConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let (send, recv) = channel::unbounded();
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
@@ -220,7 +220,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn points(&self) -> Vec<sal_sync::services::entity::PointConfig> {
+    fn points(&self) -> Vec<sal_sync::services::entity::PointConf> {
         std::vec![]
     }
     //

@@ -1,5 +1,5 @@
 use sal_sync::services::conf::ConfTree;
-use crate::core_::auth::{secret::auth_secret::AuthSecret, ssh::auth_ssh_path::AuthSshPath};
+use crate::domain::auth::{secret::auth_secret::AuthSecret, ssh::auth_ssh_path::AuthSshPath};
 ///
 /// Jds-protocol specific kind of auturization on the TcpServer
 #[derive(Debug, Clone, PartialEq)]

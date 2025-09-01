@@ -2,7 +2,7 @@ use sal_sync::services::{entity::{Name, Point, ToPoint}, LinkName, Services, tas
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::Arc};
 use indexmap::IndexMap;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::{
         nested_function::{
             comp::{fn_eq::FnEq, fn_ge::FnGe, fn_gt::FnGt, fn_le::FnLe, fn_lt::FnLt, fn_ne::FnNe},
@@ -292,15 +292,12 @@ impl NestedFn {
                             Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
-                        let point_conf = match conf.input_conf("conf") {
-                            Ok(conf) => {
-                                match conf {
-                                    FnConfKind::PointConf(conf) => Some(conf.conf.clone()),
-                                    _ => panic!("{}.function | Invalid Point config in: {:?}", self_id, conf.name()),
-                                }
+                        let point_conf = conf.input_conf("conf").map(|conf| {
+                            if let FnConfKind::PointConf(conf) = conf {
+                                return conf.conf.clone()
                             }
-                            Err(_) => None,
-                        };
+                            panic!("{}.function | Invalid Point config in: {:?}", self_id, conf.name())
+                        }).ok();
                         let send_queue = match conf.param("send-to") {
                             Some(queue_name) => {
                                 let queue_name = match queue_name {

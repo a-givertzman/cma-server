@@ -2,14 +2,14 @@ use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ord
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ExitNotify, services::{
-        conf::DiagKeywd, entity::{Name, Object, Point, PointConfig, PointTxId, Status},
+        conf::DiagKeywd, entity::{Name, Object, Point, PointConf, PointTxId, Status},
         Service,
         Services,
     }, sync::{channel::Sender, Handles}, thread_pool::Scheduler
 };
 use crate::{
-    conf::slmp_client_config::slmp_client_config::SlmpClientConfig,
-    core_::{constants::constants::RECV_TIMEOUT, Mutex},
+    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
+    domain::{constants::constants::RECV_TIMEOUT, Mutex},
     services::{
         diagnosis::diag_point::DiagPoint,
         slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
@@ -25,7 +25,7 @@ pub struct SlmpClient {
     tx_id: usize,
     dbg: Dbg,
     name: Name,
-    conf: SlmpClientConfig,
+    conf: SlmpClientConf,
     services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     scheduler: Scheduler,
@@ -38,7 +38,7 @@ impl SlmpClient {
     ///
     /// Creates new instance of [ApiClient]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: SlmpClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: SlmpClientConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))
@@ -235,7 +235,7 @@ impl Service for SlmpClient {
     }
     //
     //
-    fn points(&self) -> Vec<PointConfig> {
+    fn points(&self) -> Vec<PointConf> {
         self.conf.points()
     }
     //

@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use sal_sync::services::entity::Point;
-use crate::core_::FnInOutRef;
+use crate::domain::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Returns an max value (in Double) of the input
@@ -96,6 +96,7 @@ impl FnOut for FnMax {
                             }
                         }
                         Point::String(_) => return FnResult::Err(concat_string!(self.id, ".out | Input of type 'String' is not suppoted in: '", input.name(), "'")),
+                        Point::Bytes(_) => return FnResult::Err(concat_string!(self.id, ".out | Input of type 'Bytes' is not suppoted in: '", input.name(), "'")),
                     }
                 }
                 FnResult::None => {}

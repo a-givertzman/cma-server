@@ -5,7 +5,7 @@ use sal_sync::services::{
 use std::sync::atomic::{AtomicUsize, Ordering};
 use chrono::Utc;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     },
@@ -117,6 +117,9 @@ impl FnOut for FnBitAnd {
                                 }
                                 Point::String(_) => {
                                     panic!("{}.out | Not implemented for String", self.id);
+                                }
+                                Point::Bytes(_) => {
+                                    panic!("{}.out | Not implemented for Bytes", self.id);
                                 }
                             };
                         }

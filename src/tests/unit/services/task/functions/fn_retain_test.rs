@@ -3,14 +3,13 @@
 mod fn_retain {
     use chrono::Utc;
     use sal_sync::{math::AproxEq, services::{
-        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointConfigType, PointHlr, Status}, types::Bool, MultiQueue, MultiQueueConf, Service, Services
+        conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointConfType, PointHlr, Status}, types::Bool, MultiQueue, MultiQueueConf, Service, Services
     }, thread_pool::ThreadPool};
     use std::{env, fs, io::Read, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::task_config::TaskConfig,
-        services::task::{task::Task, task_test_receiver::TaskTestReceiver},
+        services::task::{Task, TaskConf, TaskTestReceiver},
         tests::unit::services::task::task_test_producer::TaskTestProducer
     };
     ///
@@ -25,66 +24,69 @@ mod fn_retain {
     }
     ///
     /// Loads retained Point value from the disk
-    fn load(self_id: &str, path: &str, type_: PointConfigType) -> Option<Point> {
-        let tx_id = 10001;
+    fn load(dbg: &str, path: &str, type_: PointConfType) -> Option<Point> {
+        let txid = 10001;
         match fs::OpenOptions::new().read(true).open(&path) {
             Ok(mut f) => {
                 let mut input = String::new();
                 match f.read_to_string(&mut input) {
                     Ok(_) => {
                         match type_ {
-                            PointConfigType::Bool => match input.as_str() {
-                                "true" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
-                                "false" => Some(Point::Bool(PointHlr::new(tx_id, &self_id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
+                            PointConfType::Bool => match input.as_str() {
+                                "true" => Some(Point::Bool(PointHlr::new(txid, dbg, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
+                                "false" => Some(Point::Bool(PointHlr::new(txid, dbg, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
                                 _ => {
-                                    log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self_id, input, path);
+                                    log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", dbg, input, path);
                                     None
                                 }
                             }
-                            PointConfigType::Int => match input.as_str().parse() {
+                            PointConfType::Int => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(Point::Int(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Int(PointHlr::new(txid, dbg, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", dbg, input, path, err);
                                     None
                                 }
                             }
-                            PointConfigType::Real => match input.as_str().parse() {
+                            PointConfType::Real => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(Point::Real(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Real(PointHlr::new(txid, dbg, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", dbg, input, path, err);
                                     None
                                 }
                             }
-                            PointConfigType::Double => match input.as_str().parse() {
+                            PointConfType::Double => match input.as_str().parse() {
                                 Ok(value) => {
-                                    Some(Point::Double(PointHlr::new(tx_id, &self_id, value, Status::Ok, Cot::Inf, Utc::now())))
+                                    Some(Point::Double(PointHlr::new(txid, dbg, value, Status::Ok, Cot::Inf, Utc::now())))
                                 }
                                 Err(err) => {
-                                    log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self_id, input, path, err);
+                                    log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", dbg, input, path, err);
                                     None
                                 }
                             }
-                            PointConfigType::String => {
-                                Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
+                            PointConfType::String => {
+                                Some(Point::String(PointHlr::new(txid, dbg, input, Status::Ok, Cot::Inf, Utc::now())))
                             }
-                            PointConfigType::Json => {
-                                Some(Point::String(PointHlr::new(tx_id, &self_id, input, Status::Ok, Cot::Inf, Utc::now())))
+                            PointConfType::Bytes => {
+                                Some(Point::Bytes(PointHlr::new(txid, dbg, input.as_bytes().to_vec(), Status::Ok, Cot::Inf, Utc::now())))
+                            }
+                            PointConfType::Json => {
+                                Some(Point::String(PointHlr::new(txid, dbg, input, Status::Ok, Cot::Inf, Utc::now())))
                             }
                         }
 
                     }
                     Err(err) => {
-                        log::warn!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", self_id, path, err);
+                        log::warn!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", dbg, path, err);
                         None
                     }
                 }
             }
             Err(err) => {
-                log::warn!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self_id, path, err);
+                log::warn!("{}.load | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
                 None
             }
         }
@@ -108,7 +110,7 @@ mod fn_retain {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", dbg), PointConfigType::Bool)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/BoolFlag.json", dbg), PointConfType::Bool)
             .map_or(false, |init| init.as_bool().value.0);
         let tp = ThreadPool::new(dbg, Some(8));
         let services = Arc::new(Services::new(dbg, ServicesConf::new(
@@ -125,7 +127,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
                 service Task RetainTask:
@@ -267,7 +269,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
                 service Task RetainTask:
@@ -322,7 +324,7 @@ mod fn_retain {
             (format!("/{}/Load", dbg), Value::Real(0.0)),
         ];
         let total_count = test_data.len();
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/Count.json", dbg), PointConfigType::Int)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/Count.json", dbg), PointConfType::Int)
             .map_or(0, |init| init.as_int().value);
         let mut target_data = vec![
             Value::Int(initial + 0),
@@ -429,7 +431,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(&format!(r"
                 service Task RetainTask:
@@ -486,7 +488,7 @@ mod fn_retain {
             (format!("/{}/Load", dbg), Value::Real(1.1)),
         ];
         let total_count = test_data.len();
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetain.json", dbg), PointConfigType::Real)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetain.json", dbg), PointConfType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let mut target_data = vec![
             Value::Real(initial + 0.1),
@@ -577,7 +579,7 @@ mod fn_retain {
         //
         // can be changed
         log::trace!("dir: {:?}", env::current_dir());
-        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", dbg), PointConfigType::Real)
+        let initial = load(dbg, &format!("./assets/testing/retain/{}/RetainTask/RealRetainEveryCycle.json", dbg), PointConfType::Real)
             .map_or(0.0, |init| init.as_real().value);
         let tp = ThreadPool::new(dbg, Some(8));
         let services = Arc::new(Services::new(dbg, ServicesConf::new(
@@ -594,7 +596,7 @@ mod fn_retain {
                         database: crane_data_server
             "#).unwrap()),
         ), Some(tp.scheduler())));
-        let config = TaskConfig::from_yaml(
+        let config = TaskConf::from_yaml(
             &self_name,
             &serde_yaml::from_str(r"
                 service Task RetainTask:

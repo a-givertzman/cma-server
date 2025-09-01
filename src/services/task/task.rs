@@ -1,13 +1,13 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
-    entity::{Name, Object, Point, PointConfig, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
+    entity::{Name, Object, Point, PointConf, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
 }, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{
     collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration,
 };
 use concat_string::concat_string;
 use crate::{
-    conf::task_config::TaskConfig, core_::constants::constants::RECV_TIMEOUT, services::task::task_nodes::TaskNodes,
+    domain::constants::constants::RECV_TIMEOUT, services::task::{task_conf::TaskConf, task_nodes::TaskNodes},
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations
@@ -20,7 +20,7 @@ pub struct Task {
     in_send: HashMap<String, Sender<Point>>,
     rx_recv: Owner<Receiver<Point>>,
     services: Arc<Services>,
-    conf: TaskConfig,
+    conf: TaskConf,
     scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
@@ -31,7 +31,7 @@ impl Task {
     ///
     /// Creates new instance of [Task]
     /// - [parent] - the ID if the parent entity
-    pub fn new(conf: TaskConfig, services: Arc<Services>, scheduler: Scheduler) -> Task {
+    pub fn new(conf: TaskConf, services: Arc<Services>, scheduler: Scheduler) -> Task {
         let (send, recv) = channel::unbounded();
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Task {
@@ -48,7 +48,7 @@ impl Task {
     }
     ///
     ///
-    fn subscriptions_(&self, conf: &TaskConfig, services: &Arc<Services>) -> Option<(String, Vec<SubscriptionCriteria>)> {
+    fn subscriptions_(&self, conf: &TaskConf, services: &Arc<Services>) -> Option<(String, Vec<SubscriptionCriteria>)> {
         if conf.subscribe.is_empty() {
             None
         } else {
@@ -215,7 +215,7 @@ impl Service for Task {
     }
     //
     //
-    fn points(&self) -> Vec<PointConfig> {
+    fn points(&self) -> Vec<PointConf> {
         self.conf.points()
     }
     //

@@ -7,7 +7,7 @@ use std::{
     sync::{atomic::{AtomicBool, Ordering}, Arc},
     thread::{self}, time::Duration,
 };
-use crate::{core_::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::OpResult};
+use crate::{domain::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::OpResult};
 use super::steam_read::TcpStreamRead;
 
 ///

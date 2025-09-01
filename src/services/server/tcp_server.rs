@@ -4,10 +4,10 @@ use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration
 };
 use crate::{
-    conf::tcp_server_config::TcpServerConfig,
-    core_::{constants::constants::RECV_TIMEOUT},
+    domain::{constants::constants::RECV_TIMEOUT},
     services::server::{
-        connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection
+        connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection,
+        TcpServerConf,
     },
 };
 ///
@@ -35,7 +35,7 @@ impl<'a> ConnectionInfo<'a> {
 pub struct TcpServer {
     dbg: Dbg,
     name: Name,
-    conf: TcpServerConfig,
+    conf: TcpServerConf,
     connections: Arc<TcpServerConnections>,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -51,7 +51,7 @@ impl TcpServer {
     /// - filter - all trafic from server to client will be filtered by some criterias, until Subscribe request confirmed:
     ///    - cot - [Cot] - bit mask wich will be passed
     ///    - name - exact name wich passed
-    pub fn new(conf: TcpServerConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: TcpServerConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
@@ -66,7 +66,7 @@ impl TcpServer {
     }
     ///
     ///                 self_id: &str, self_name: &Name, connection_id: &str
-    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<Services>, conf: TcpServerConfig, exit: Arc<AtomicBool>, connections: Arc<TcpServerConnections>, scheduler: Scheduler) {
+    fn setup_connection(con_info: ConnectionInfo, stream: TcpStream, services: Arc<Services>, conf: TcpServerConf, exit: Arc<AtomicBool>, connections: Arc<TcpServerConnections>, scheduler: Scheduler) {
         log::info!("{}.setup_connection | Trying to repair Connection '{}'...", con_info.dbg, con_info.connection_id);
         let repair_result = connections.repair(con_info.connection_id, stream.try_clone().unwrap());
         match repair_result {

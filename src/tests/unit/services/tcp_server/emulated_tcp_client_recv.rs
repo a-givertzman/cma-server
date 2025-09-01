@@ -9,7 +9,7 @@ use sal_sync::{
 use std::{fmt::Debug, io::Write, net::{SocketAddr, TcpStream}, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread::{self}, time::Duration};
 use testing::entities::test_value::Value;
 use crate::{
-    core_::{net::{
+    domain::{net::{
         connection_status::ConnectionStatus,
         protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize},
     }, RwLock},
@@ -219,6 +219,7 @@ impl Service for EmulatedTcpClientRecv {
                                                                 Value::Real(value) => value == &point.as_real().value,
                                                                 Value::Double(value) => value == &point.as_double().value,
                                                                 Value::String(value) => value == &point.as_string().value,
+                                                                Value::Bytes(value) => value == &point.as_bytes().value,
                                                             };
                                                             if marker_received_ {
                                                                 log::info!("{}.run | received marker {:?}, exiting...", self_id, point);

@@ -2,7 +2,7 @@ use sal_sync::services::entity::{Point, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -61,11 +61,12 @@ impl FnOut for FnToString {
                     Point::Real(value) => &value.value.to_string(),
                     Point::Double(value) => &value.value.to_string(),
                     Point::String(value) => &value.value,
+                    Point::Bytes(value) => &value.to_string().value,
                 };
                 log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::String(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &concat_string!(self.id, ".out"),
                         out.to_owned(),
                         input.status(),

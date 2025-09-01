@@ -2,7 +2,7 @@ use sal_sync::services::{entity::{Name, Point, PointHlr, PointTxId, ToPoint}, Se
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use indexmap::IndexMap;
 use crate::{
-    core_::{
+    domain::{
         format::FormatPoint,
         FnInOutRef,
     },

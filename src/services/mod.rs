@@ -10,9 +10,10 @@
 //! ```
 ///
 pub mod app;
-pub mod api_cient;
-pub mod cache;
+mod api_cient;
+mod cache;
 pub mod diagnosis;
+pub mod frdm_service;
 pub mod history;
 pub mod profinet_client;
 pub mod server;
@@ -20,3 +21,8 @@ pub mod slmp_client;
 pub mod task;
 pub mod tcp_client;
 pub mod udp_client;
+mod services_factory;
+
+pub use api_cient::*;
+pub use cache::*;
+pub use services_factory::*;

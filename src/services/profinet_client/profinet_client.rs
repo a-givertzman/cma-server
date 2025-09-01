@@ -9,15 +9,15 @@ use sal_core::{dbg::Dbg, error::{Error, ErrorLimit}};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ChangeNotify,
     services::{
-        conf::DiagKeywd, entity::{Cot, Name, Object, Point, PointConfig, PointHlr, PointTxId, Status},
+        conf::DiagKeywd, entity::{Cot, Name, Object, Point, PointConf, PointHlr, PointTxId, Status},
         Service, ServiceCycle,
         Services, SubscriptionCriteria,
     },
     sync::{channel::{RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler,
 };
 use crate::{
-    conf::profinet_client_config::profinet_client_config::ProfinetClientConfig,
-    core_::{
+    conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf,
+    domain::{
         constants::constants::RECV_TIMEOUT, Mutex,
     },
     services::{
@@ -32,7 +32,7 @@ pub struct ProfinetClient {
     tx_id: usize,
     dbg: Dbg,
     name: Name,
-    conf: ProfinetClientConfig,
+    conf: ProfinetClientConf,
     services: Arc<Services>,
     diagnosis: Arc<Mutex<FxIndexMap<DiagKeywd, DiagPoint>>>,
     scheduler: Scheduler,
@@ -44,7 +44,7 @@ pub struct ProfinetClient {
 impl ProfinetClient {
     ///
     /// Creates new instance of the ProfinetClient
-    pub fn new(conf: ProfinetClientConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: ProfinetClientConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let tx_id = PointTxId::from_str(&conf.name.join());
         let diagnosis = Arc::new(Mutex::new(conf.diagnosis.iter().map(|(keywd, conf)| {
             (keywd.to_owned(), DiagPoint::new(tx_id, conf.clone()))
@@ -204,7 +204,7 @@ impl ProfinetClient {
                 ]
             );
             let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
-            let mut points: Vec<PointConfig> = vec![];
+            let mut points: Vec<PointConf> = vec![];
             for (db_name, db_conf) in conf.dbs {
                 log::info!("{}.write | configuring ProfinetDb: {:?}...", dbg, db_name);
                 let db = ProfinetDb::new(&dbg, tx_id, &db_conf);
@@ -367,6 +367,16 @@ impl ProfinetClient {
                     chrono::offset::Utc::now(),
                 ))
             },
+            Point::Bytes(point) => {
+                Point::Bytes(PointHlr::new(
+                    tx_id,
+                    &point.name,
+                    point.value,
+                    Status::Ok,
+                    Cot::ActCon,
+                    chrono::offset::Utc::now(),
+                ))
+            },
         }
     }
 }
@@ -430,7 +440,7 @@ impl Service for ProfinetClient {
     }
     //
     //
-    fn points(&self) -> Vec<PointConfig> {
+    fn points(&self) -> Vec<PointConf> {
         self.conf.points()
     }
     //

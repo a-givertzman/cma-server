@@ -1,7 +1,7 @@
-use sal_sync::services::entity::{Point, PointConfigType, PointHlr};
+use sal_sync::services::entity::{Point, PointConfType, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
-use crate::core_::FnInOutRef;
+use crate::domain::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 ///
 /// Returns an average value (in Double) of the input
@@ -85,10 +85,10 @@ impl FnOut for FnAverage {
                     log::trace!("{}.out | count: {:?}", self.id, self.count);
                     log::trace!("{}.out | average: {:?}", self.id, average);
                     match input.type_() {
-                        PointConfigType::Int => {
+                        PointConfType::Int => {
                             FnResult::Ok(Point::Int(
                                 PointHlr::new(
-                                    input.tx_id(),
+                                    input.txid(),
                                     &self.id,
                                     average.round() as i64,
                                     input.status(),
@@ -97,10 +97,10 @@ impl FnOut for FnAverage {
                                 )
                             ))
                         }
-                        PointConfigType::Real => {
+                        PointConfType::Real => {
                             FnResult::Ok(Point::Real(
                                 PointHlr::new(
-                                    input.tx_id(),
+                                    input.txid(),
                                     &self.id,
                                     average as f32,
                                     input.status(),
@@ -109,10 +109,10 @@ impl FnOut for FnAverage {
                                 )
                             ))
                         }
-                        PointConfigType::Double => {
+                        PointConfType::Double => {
                             FnResult::Ok(Point::Double(
                                 PointHlr::new(
-                                    input.tx_id(),
+                                    input.txid(),
                                     &self.id,
                                     average,
                                     input.status(),

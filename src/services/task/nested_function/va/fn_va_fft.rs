@@ -1,5 +1,5 @@
 use chrono::Utc;
-use concat_in_place::strcat;
+use concat_string::concat_string;
 use derivative::Derivative;
 use egui::ahash::HashMapExt;
 use indexmap::IndexMap;
@@ -7,13 +7,13 @@ use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_sync::{collections::FxHashMap, services::{
     entity::{
         Cot, Name,
-        Point, PointConfig, PointConfigFilter, PointConfigType, PointHlr, PointTxId,
+        Point, PointConf, PointConfFilter, PointConfType, PointHlr, PointTxId,
         Status, ToPoint,
     }, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, types::Bool, LinkName, Services
 }, sync::channel::Sender};
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
-    core_::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::FormatPoint, FnInOutRef},
+    domain::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::FormatPoint, FnInOutRef},
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_const::FnConst, fn_input::FnInput, fn_kind::FnKind, fn_result::FnResult, io::fn_retain::FnRetain
     }
@@ -79,7 +79,7 @@ pub struct FnVaFft {
     kind: FnKind,
     enable: Option<FnInOutRef>,
     /// Point config for exported Point's
-    point_conf: PointConfig,
+    point_conf: PointConf,
     fft_size: usize,
     input: FnInOutRef,
     #[derivative(Debug="ignore")]
@@ -143,12 +143,12 @@ impl FnVaFft {
                     match &point_conf.name.split('/').last() {
                         Some(name) => {
                             if name.is_empty() {
-                                strcat!(freq)
+                                freq.to_owned()
                             } else {
-                                strcat!(name "-" freq)
+                                concat_string!(name, "-", freq)
                             }
                         }
-                        None => strcat!(freq)
+                        None => freq.to_owned()
                     }
                 }
                 None => panic!("{}.out | Freq index {} out of the fft_size {}", dbg, i, fft_size),
@@ -224,7 +224,7 @@ impl FnVaFft {
     }
     ///
     /// Returns Threshold (key filter)
-    fn build_filter(conf: Option<PointConfigFilter>, initial: Option<f64>) -> Box<dyn Filter<Item = f64>> {
+    fn build_filter(conf: Option<PointConfFilter>, initial: Option<f64>) -> Box<dyn Filter<Item = f64>> {
         match conf {
             Some(conf) => {
                 Box::new(
@@ -236,16 +236,16 @@ impl FnVaFft {
     }
     ///
     /// Returns Conf for Point's to be exported (by send-to) full name will be: /App/Task/Fft.freq
-    fn parse_point_conf(parent: impl Into<String>, self_id: &str, conf: &FnConfig) -> PointConfig {
+    fn parse_point_conf(parent: impl Into<String>, self_id: &str, conf: &FnConfig) -> PointConf {
         match conf.clone().input_conf("conf") {
             Ok(conf) => match conf {
                 FnConfKind::PointConf(conf) => match conf.conf.type_ {
-                    PointConfigType::Int | PointConfigType::Real | PointConfigType::Double => conf.conf.clone(),
+                    PointConfType::Int | PointConfType::Real | PointConfType::Double => conf.conf.clone(),
                     _ => panic!("{}.new | Invalid Point type: '{:?}' in {:#?}", self_id, conf.conf.type_, conf.conf),
                 }
                 _ => panic!("{}.new | Invalid Point config in: {:?}", self_id, conf.name()),
             }
-            Err(_) => PointConfig::from_yaml(&Name::new(parent, ""), &serde_yaml::from_str(r#"
+            Err(_) => PointConf::from_yaml(&Name::new(parent, ""), &serde_yaml::from_str(r#"
                 conf point FFT:
                     type: 'Real'
             "#).unwrap()),
@@ -253,12 +253,12 @@ impl FnVaFft {
     }
     ///
     /// Returns Threshold config
-    fn parse_threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfigFilter> {
+    fn parse_threshold_conf(self_id: &str, conf: &FnConfig) -> Option<PointConfFilter> {
         match conf.param("filter") {
             Some(threshold) => match threshold {
                 FnConfKind::Param(threshold) => match serde_yaml::from_value(threshold.conf.clone()) {
                     Ok(threshold) => {
-                        let threshold: PointConfigFilter = threshold;
+                        let threshold: PointConfFilter = threshold;
                         Some(threshold)
                     }
                     Err(err) => {
@@ -364,7 +364,7 @@ impl FnVaFft {
                                     // log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
                                     let point = Point::Double(PointHlr::new(
                                         self.txid,
-                                        freq_name,
+                                        freq_name.as_str(),
                                         value,
                                         input.status(),
                                         input.cot(),
@@ -382,7 +382,7 @@ impl FnVaFft {
                                             }
                                             Point::String(PointHlr::new(
                                                 self.txid,
-                                                freq_name,
+                                                freq_name.as_str(),
                                                 format.out(),
                                                 input.status(),
                                                 input.cot(),
@@ -392,7 +392,7 @@ impl FnVaFft {
                                         None => {
                                             Point::Double(PointHlr::new(
                                                 self.txid,
-                                                freq_name,
+                                                freq_name.as_str(),
                                                 value,
                                                 input.status(),
                                                 input.cot(),

@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use sal_sync::services::entity::{Point, PointConfigType, PointHlr};
+use sal_sync::services::entity::{Point, PointConfType, PointHlr};
 use crate::{
-    core_::FnInOutRef, services::task::nested_function::{
+    domain::FnInOutRef, services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
     }
@@ -142,9 +142,9 @@ impl FnOut for FnThreshold {
                     }
                     let value = match &self.value {
                         Some(value) => match input_type {
-                            PointConfigType::Int => value.to_int(),
-                            PointConfigType::Real => value.to_real(),
-                            PointConfigType::Double => value.to_double(),
+                            PointConfType::Int => value.to_int(),
+                            PointConfType::Real => value.to_real(),
+                            PointConfType::Double => value.to_double(),
                             _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
                         }
                         None => panic!("{}.out | Internal error - self.value is not initialised", self.id),

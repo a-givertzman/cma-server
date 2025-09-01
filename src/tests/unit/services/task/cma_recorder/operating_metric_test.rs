@@ -7,10 +7,9 @@ mod cma_recorder {
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::{api_client_config::ApiClientConfig, task_config::TaskConfig},
         services::{
-            api_cient::api_client::ApiClient,
-            task::{task::Task, task_test_receiver::TaskTestReceiver},
+            ApiClient, ApiClientConf,
+            task::{Task, TaskConf, TaskTestReceiver},
         },
         tests::unit::services::task::task_test_producer::TaskTestProducer,
     };
@@ -68,7 +67,7 @@ mod cma_recorder {
                         for (key, config) in config.as_mapping().unwrap() {
                             let mut conf = serde_yaml::Mapping::new();
                             conf.insert(key.clone(), config.clone());
-                            let config = TaskConfig::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
+                            let config = TaskConf::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
                             let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
                             services.insert(task.clone());
                             tasks.push(task);
@@ -89,7 +88,7 @@ mod cma_recorder {
         );
         let multi_queue = Arc::new(MultiQueue::new(conf, services.clone(), Some(tp.scheduler())));
         services.insert(multi_queue.clone());
-        let conf = ApiClientConfig::from_yaml(
+        let conf = ApiClientConf::from_yaml(
             dbg,
             &serde_yaml::from_str(r"service ApiClient:
                 cycle: 100 ms
@@ -98,11 +97,11 @@ mod cma_recorder {
                 database: crane_data_server
                 in queue in-queue:
                     max-length: 10000
-                auth_token: 123!@#
+                auth-token: 123!@#
                 debug: true
             ").unwrap(),
         );
-        let api_client = Arc::new(ApiClient::new(conf, tp.scheduler()));
+        let api_client = Arc::new(ApiClient::new(conf, services.clone(), tp.scheduler()));
         services.insert(api_client.clone());
         let test_data = vec![
         //  step    nape                                input                    Pp Cycle   target_thrh             target_smooth

@@ -1,9 +1,9 @@
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{Point, PointConfigType, PointHlr}, types::TypeOf};
+use sal_sync::services::{entity::{Point, PointConfType, PointHlr}, types::TypeOf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind,
@@ -43,9 +43,9 @@ impl FnPiecewiseLineApprox {
     /// Build an out Point deppending on the input type
     fn build_point(&self, input: &Point, value: f64) -> Point {
         match input.type_() {
-            PointConfigType::Int => Point::Int(
+            PointConfType::Int => Point::Int(
                 PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &concat_string!(self.id, ".out"),
                     value.round() as i64,
                     input.status(),
@@ -53,9 +53,9 @@ impl FnPiecewiseLineApprox {
                     input.timestamp(),
                 )
             ),
-            PointConfigType::Real => Point::Real(
+            PointConfType::Real => Point::Real(
                 PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &concat_string!(self.id, ".out"),
                     value as f32,
                     input.status(),
@@ -63,9 +63,9 @@ impl FnPiecewiseLineApprox {
                     input.timestamp(),
                 )
             ),
-            PointConfigType::Double => Point::Double(
+            PointConfType::Double => Point::Double(
                 PointHlr::new(
-                    input.tx_id(),
+                    input.txid(),
                     &concat_string!(self.id, ".out"),
                     value,
                     input.status(),

@@ -2,7 +2,7 @@ use sal_sync::services::{entity::{Point, PointHlr}, types::DebugTypeOf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -75,7 +75,7 @@ impl FnOut for FnToDouble {
                 log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::Double(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &concat_string!(self.id, ".out"),
                         out,
                         input.status(),

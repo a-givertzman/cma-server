@@ -2,7 +2,7 @@ use std::{fmt::Debug, io::BufReader, net::TcpStream, sync::Arc};
 use sal_core::dbg::Dbg;
 use sal_sync::{services::{entity::{Name, Object, Point}, Services}, sync::channel::Sender, thread_pool::Scheduler};
 use crate::{
-    core_::{net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, RwLock}, 
+    domain::{net::{connection_status::ConnectionStatus, protocols::jds::jds_deserialize::JdsDeserialize}, RwLock}, 
     services::server::jds_cnnection::Shared,
     tcp::{steam_read::TcpStreamRead, tcp_stream_write::OpResult},
 };

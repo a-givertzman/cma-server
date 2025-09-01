@@ -85,9 +85,9 @@ impl AppConfig {
                     let node_name = keyword.name();
                     let node_conf = conf.get(key).unwrap();
                     if log::max_level() == log::LevelFilter::Debug {
-                        let sufix = match keyword.sufix().is_empty() {
+                        let sufix = match keyword.title().is_empty() {
                             true => "".to_owned(),
-                            false => format!(": '{}'", keyword.sufix()),
+                            false => format!(": '{}'", keyword.title()),
                         };
                         log::debug!("{}.new | service '{}'{}", self_id, node_name, sufix);
                     } else if log::max_level() == log::LevelFilter::Trace {

@@ -21,14 +21,14 @@ use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{
-        entity::{Cot, Name, Object, Point, PointConfig, PointConfigType, PointHlr, PointTxId, Status}, future::Future, types::Bool, Service, Services, SubscriptionCriteria
+        entity::{Cot, Name, Object, Point, PointConf, PointConfType, PointHlr, PointTxId, Status}, future::Future, types::Bool, Service, Services, SubscriptionCriteria
     }, sync::{channel::RecvTimeoutError, Handles}, thread_pool::Scheduler,
 };
 use serde::Serialize;
 use serde_json::json;
 use crate::{
-    conf::cache_service_config::CacheServiceConfig,
-    core_::{constants::constants::RECV_TIMEOUT, FxDashMap},
+    services::CacheServiceConf,
+    domain::{constants::constants::RECV_TIMEOUT, FxDashMap},
     services::cache::delay_store::DelyStore
 };
 ///
@@ -38,7 +38,7 @@ use crate::{
 pub struct CacheService {
     dbg: Dbg,
     name: Name,
-    conf: CacheServiceConfig,
+    conf: CacheServiceConf,
     services: Arc<Services>,
     cache: FxDashMap<String, Point>,
     scheduler: Scheduler,
@@ -50,7 +50,7 @@ pub struct CacheService {
 impl CacheService {
     ///
     /// Creates new instance of the CacheService
-    pub fn new(conf: CacheServiceConfig, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    pub fn new(conf: CacheServiceConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
@@ -65,7 +65,7 @@ impl CacheService {
     }
     ///
     /// Returns vector of the SubscriptionCriteria by config and list of configured Point's
-    fn subscriptions(&self, conf: &CacheServiceConfig, points: &[PointConfig]) -> (String, Vec<SubscriptionCriteria>) {
+    fn subscriptions(&self, conf: &CacheServiceConf, points: &[PointConf]) -> (String, Vec<SubscriptionCriteria>) {
         if conf.subscribe.is_empty() {
             panic!("{}.subscribe | Error. Subscription can`t be empty: {:#?}", self.dbg, conf.subscribe);
         } else {
@@ -202,6 +202,10 @@ impl CacheService {
                     point.status = status;
                     Point::String(point)
                 }
+                Point::Bytes(mut point) => {
+                    point.status = status;
+                    Point::Bytes(point)
+                }
             }
         }).collect();
         Self::write(dbg, name, points)
@@ -210,57 +214,65 @@ impl CacheService {
     /// Fills self cache with initial values for all configured points
     pub fn initial(
         dbg: &Dbg,
-        tx_id: usize, 
+        txid: usize, 
         cache: &FxDashMap<String, Point>,
-        points: &[PointConfig],
+        points: &[PointConf],
         initial_status: Status,
     ) {
         let timestamp = Utc::now();
         log::trace!("{}.initial | Initial cashe generated at {:?}", dbg, timestamp);
         for point_config in points {
             let point = match point_config.type_ {
-                PointConfigType::Bool => Point::Bool(PointHlr::new(
-                    tx_id,
+                PointConfType::Bool => Point::Bool(PointHlr::new(
+                    txid,
                     &point_config.name,
                     Bool(false),
                     initial_status,
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfigType::Int => Point::Int(PointHlr::new(
-                    tx_id,
+                PointConfType::Int => Point::Int(PointHlr::new(
+                    txid,
                     &point_config.name,
                     0,
                     initial_status,
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfigType::Real => Point::Real(PointHlr::new(
-                    tx_id,
+                PointConfType::Real => Point::Real(PointHlr::new(
+                    txid,
                     &point_config.name,
                     0.0,
                     initial_status,
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfigType::Double => Point::Double(PointHlr::new(
-                    tx_id,
+                PointConfType::Double => Point::Double(PointHlr::new(
+                    txid,
                     &point_config.name,
                     0.0,
                     initial_status,
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfigType::String => Point::String(PointHlr::new(
-                    tx_id,
+                PointConfType::String => Point::String(PointHlr::new(
+                    txid,
                     &point_config.name,
                     String::new(),
                     initial_status,
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfigType::Json => Point::String(PointHlr::new(
-                    tx_id,
+                PointConfType::Bytes => Point::Bytes(PointHlr::new(
+                    txid,
+                    &point_config.name,
+                    vec![],
+                    initial_status,
+                    Cot::Inf,
+                    timestamp,
+                )),
+                PointConfType::Json => Point::String(PointHlr::new(
+                    txid,
                     &point_config.name,
                     String::new(),
                     initial_status,

@@ -2,7 +2,7 @@ use sal_sync::services::{entity::{Point, PointHlr}, types::{Bool, DebugTypeOf}};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut},
         fn_kind::FnKind, fn_result::FnResult,
@@ -71,12 +71,19 @@ impl FnOut for FnToBool {
                     Point::Double(value) => {
                         value.value > 0.0
                     }
+                    Point::Bytes(value) => {
+                        if value.value.len() > 0 {
+                            value.value[0] != 0
+                        } else {
+                            false
+                        }
+                    }
                     _ => panic!("{}.out | {:?} type is not supported: {:?}", self.id, input.print_type_of(), input),
                 };
                 log::trace!("{}.out | out: {:?}", self.id, &out);
                 FnResult::Ok(Point::Bool(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &concat_string!(self.id, ".out"),
                         Bool(out),
                         input.status(),

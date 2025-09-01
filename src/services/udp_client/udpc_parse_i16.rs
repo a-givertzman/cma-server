@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{
-    Cot, Point, PointConfig, PointConfigAddress, PointConfigHistory, PointConfigType, PointHlr, Status,
+    Cot, Point, PointConf, PointConfAddress, PointConfHistory, PointConfType, PointHlr, Status,
 };
 use crate::services::udp_client::parse_point::ParsePoint;
 ///
@@ -10,13 +10,13 @@ use crate::services::udp_client::parse_point::ParsePoint;
 #[derive(Debug)]
 pub struct UdpcParseI16 {
     id: String,
-    pub type_: PointConfigType,
+    pub type_: PointConfType,
     pub tx_id: usize,
     pub name: String,
     pub values: VecDeque<Option<i16>>,
     pub status: Status,
     // pub size: usize,
-    pub history: PointConfigHistory,
+    pub history: PointConfHistory,
     pub alarm: Option<u8>,
     pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
@@ -35,7 +35,7 @@ impl UdpcParseI16 {
         tx_id: usize,
         name: String,
         // size: usize,
-        config: &PointConfig,
+        config: &PointConf,
     ) -> UdpcParseI16 {
         UdpcParseI16 {
             id: format!("UdpcParseI16({})", name),
@@ -131,7 +131,7 @@ impl UdpcParseI16 {
 impl ParsePoint for UdpcParseI16 {
     //
     //
-    fn type_(&self) -> PointConfigType {
+    fn type_(&self) -> PointConfType {
         self.type_.clone()
     }
     //
@@ -151,8 +151,8 @@ impl ParsePoint for UdpcParseI16 {
     }
     //
     //
-    fn address(&self) -> PointConfigAddress {
-        PointConfigAddress { offset: None, bit: None }
+    fn address(&self) -> PointConfAddress {
+        PointConfAddress { offset: None, bit: None }
     }
     //
     //

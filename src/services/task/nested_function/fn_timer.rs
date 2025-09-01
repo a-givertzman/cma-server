@@ -1,9 +1,9 @@
 use sal_sync::{
     kernel::state::{Switch, SwitchCondition, SwitchState},
-    services::entity::{Cot, {Point, PointConfigType, PointHlr}}
+    services::entity::{Cot, {Point, PointConfType, PointHlr}}
 };
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
-use crate::core_::FnInOutRef;
+use crate::domain::FnInOutRef;
 use super::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult};
 //
 //
@@ -204,7 +204,7 @@ impl FnOut for FnTimer {
                 log::trace!("{}.out | out: {:?}", self.id, out);
                 let value = Point::Double(
                     PointHlr::new(
-                        input.tx_id(),
+                        input.txid(),
                         &format!("{}.out", self.id),
                         out,
                         input.status(),
@@ -217,9 +217,9 @@ impl FnOut for FnTimer {
                         match initial.borrow_mut().out() {
                             FnResult::Ok(initial) => {
                                 match initial.type_() {
-                                    PointConfigType::Int => FnResult::Ok(value.to_int()),
-                                    PointConfigType::Real => FnResult::Ok(value.to_real()),
-                                    PointConfigType::Double => FnResult::Ok(value),
+                                    PointConfType::Int => FnResult::Ok(value.to_int()),
+                                    PointConfType::Real => FnResult::Ok(value.to_real()),
+                                    PointConfType::Double => FnResult::Ok(value),
                                     _ => panic!("{}.out | Usupported type in initial input '{:?}'", self.id, initial.type_()),
                                 }
                             }

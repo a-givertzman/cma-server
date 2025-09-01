@@ -1,7 +1,7 @@
-use sal_sync::{services::{entity::{Point, PointConfig, PointConfigType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
+use sal_sync::{services::{entity::{Point, PointConf, PointConfType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{
-    core_::FnInOutRef, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
+    domain::FnInOutRef, services::task::nested_function::{fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult},
 };
 ///
 /// Function | Used for export Point from Task service to another service
@@ -29,9 +29,9 @@ use crate::{
 #[derive(Debug)]
 pub struct FnPoint {
     id: String,
-    tx_id: usize,
+    txid: usize,
     kind: FnKind,
-    conf: PointConfig,
+    conf: PointConf,
     enable: Option<FnInOutRef>,
     changes_only: Option<FnInOutRef>,
     input: Option<FnInOutRef>,
@@ -46,11 +46,11 @@ impl FnPoint {
     /// - id - just for proper debugging
     /// - input - incoming points
     /// - if [changes-only] is specified and true - changes only will be sent, default false (sending all points)
-    pub fn new(parent: impl Into<String>, conf: PointConfig, enable: Option<FnInOutRef>, changes_only: Option<FnInOutRef>, input: Option<FnInOutRef>, send_to: Option<Sender<Point>>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: PointConf, enable: Option<FnInOutRef>, changes_only: Option<FnInOutRef>, input: Option<FnInOutRef>, send_to: Option<Sender<Point>>) -> Self {
         let self_id = format!("{}/FnPoint{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
-            tx_id: PointTxId::from_str(&self_id),
+            txid: PointTxId::from_str(&self_id),
             kind: FnKind::Fn,
             conf,
             enable,
@@ -65,9 +65,9 @@ impl FnPoint {
     fn send(&self, point: &Point) {
         if let Some(tx_send) = &self.send_to {
             let point = match self.conf.type_ {
-                PointConfigType::Bool => {
+                PointConfType::Bool => {
                     Point::Bool(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         Bool(point.as_bool().value.0), 
                         point.status(), 
@@ -75,9 +75,9 @@ impl FnPoint {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Int => {
+                PointConfType::Int => {
                     Point::Int(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_int().value, 
                         point.status(), 
@@ -85,9 +85,9 @@ impl FnPoint {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Real => {
+                PointConfType::Real => {
                     Point::Real(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_real().value, 
                         point.status(), 
@@ -95,9 +95,9 @@ impl FnPoint {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Double => {
+                PointConfType::Double => {
                     Point::Double(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_double().value, 
                         point.status(), 
@@ -105,9 +105,9 @@ impl FnPoint {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::String => {
+                PointConfType::String => {
                     Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_string().value, 
                         point.status(), 
@@ -115,9 +115,19 @@ impl FnPoint {
                         point.timestamp(),
                     ))
                 }
-                PointConfigType::Json => {
+                PointConfType::Bytes => {
+                    Point::Bytes(PointHlr::new(
+                        self.txid, 
+                        &self.conf.name, 
+                        point.as_bytes().value, 
+                        point.status(), 
+                        point.cot(), 
+                        point.timestamp(),
+                    ))
+                }
+                PointConfType::Json => {
                     Point::String(PointHlr::new(
-                        self.tx_id, 
+                        self.txid, 
                         &self.conf.name, 
                         point.as_string().value, 
                         point.status(), 

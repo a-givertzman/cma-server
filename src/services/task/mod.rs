@@ -76,16 +76,20 @@
 //! input <type> <'/path/PointName'>
 //! ```
 //! 
-pub mod task;
+mod nested_function;
+mod task_conf;
+mod task;
+mod task_nodes;
+mod task_node_vars;
+mod task_eval_node;
+mod task_test_receiver;
+mod task_test_producer;
 
-pub mod task_nodes;
-
-pub mod task_node_vars;
-
-pub mod task_eval_node;
-
-pub mod task_test_receiver;
-
-pub mod task_test_producer;
-
-pub mod nested_function;
+pub use nested_function::*;
+pub use task_conf::*;
+pub use task::*;
+pub use task_nodes::*;
+pub use task_node_vars::*;
+pub use task_eval_node::*;
+pub use task_test_receiver::*;
+pub use task_test_producer::*;

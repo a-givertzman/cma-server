@@ -1,9 +1,9 @@
 use sal_sync::services::entity::{
-    Cot, Point, PointConfig, PointConfigAddress, PointHlr, Status
+    Cot, Point, PointConf, PointConfAddress, PointHlr, Status
 };
 use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
-use crate::{core_::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
+use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
 ///
 ///
 #[derive(Debug)]
@@ -13,7 +13,7 @@ pub struct S7ParseReal {
     pub value: Box<dyn Filter<Item = f32>>,
     pub status: Box<dyn Filter<Item = Status>>,
     pub offset: Option<u32>,
-    // pub history: PointConfigHistory,
+    // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
@@ -27,7 +27,7 @@ impl S7ParseReal {
     pub fn new(
         tx_id: usize,
         name: String,
-        config: &PointConfig,
+        config: &PointConf,
         filter: Box<dyn Filter<Item = f32>>,
     ) -> S7ParseReal {
         S7ParseReal {
@@ -35,7 +35,7 @@ impl S7ParseReal {
             value: filter,
             status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
             name,
-            offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
+            offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
@@ -128,7 +128,7 @@ impl ParsePoint for S7ParseReal {
     }
     //
     //
-    fn address(&self) -> PointConfigAddress {
-        PointConfigAddress { offset: self.offset, bit: None }
+    fn address(&self) -> PointConfAddress {
+        PointConfAddress { offset: self.offset, bit: None }
     }
 }

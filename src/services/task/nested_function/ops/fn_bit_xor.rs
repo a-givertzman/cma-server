@@ -5,7 +5,7 @@ use sal_sync::services::{
 use std::sync::atomic::{AtomicUsize, Ordering};
 use chrono::Utc;
 use crate::{
-    core_::FnInOutRef,
+    domain::FnInOutRef,
     services::task::nested_function::{
         fn_::{FnIn, FnInOut, FnOut}, fn_kind::FnKind, fn_result::FnResult,
     },
@@ -68,7 +68,7 @@ impl FnOut for FnBitXor {
     }
     //
     fn out(&mut self) -> FnResult<Point, String> {
-        let tx_id = PointTxId::from_str(&self.id);
+        let txid = PointTxId::from_str(&self.id);
         let mut inputs = self.inputs.iter();
         let mut value: Point;
         match inputs.next() {
@@ -88,7 +88,7 @@ impl FnOut for FnBitXor {
                                     let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
                                     Point::Bool(
                                         PointHlr::new(
-                                            tx_id,
+                                            txid,
                                             &format!("{}.out", self.id),
                                             Bool(val.value.0 ^ input_val.value.0),
                                             Status::Ok,
@@ -101,7 +101,7 @@ impl FnOut for FnBitXor {
                                     let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
                                     Point::Int(
                                         PointHlr::new(
-                                            tx_id,
+                                            txid,
                                             &format!("{}.out", self.id),
                                             val.value ^ input_val.value,
                                             Status::Ok,
@@ -118,6 +118,9 @@ impl FnOut for FnBitXor {
                                 }
                                 Point::String(_) => {
                                     panic!("{}.out | Not implemented for String", self.id);
+                                }
+                                Point::Bytes(_) => {
+                                    panic!("{}.out | Not implemented for Bytes", self.id);
                                 }
                             };
                         }

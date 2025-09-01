@@ -5,8 +5,8 @@ mod tcp_client {
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
     use crate::{
-        conf::tcp_client_config::TcpClientConfig,
-        core_::{net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, RwLock},
+        conf::tcp_client_conf::TcpClientConf,
+        domain::{net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, RwLock},
         services::tcp_client::tcp_client::TcpClient,
         tcp::tcp_stream_write::OpResult, tests::unit::services::tcp_client::mock_multiqueue::MockMultiQueue,
     };
@@ -45,7 +45,7 @@ mod tcp_client {
                     max-length: 10000
                 send-to: /{}/MockMultiQueue.queue
         "#, port, dbg)).unwrap();
-        let conf = TcpClientConfig::from_yaml(dbg, &conf);
+        let conf = TcpClientConf::from_yaml(dbg, &conf);
         let addr = format!("127.0.0.1:{}", port);
         // conf.address = addr.parse().unwrap();
         let iterations = 100;

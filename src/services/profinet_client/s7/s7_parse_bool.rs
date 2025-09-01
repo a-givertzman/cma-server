@@ -1,5 +1,5 @@
 use sal_sync::services::{
-    entity::{Cot, Point, PointConfig, PointConfigAddress, PointHlr, Status},
+    entity::{Cot, Point, PointConf, PointConfAddress, PointHlr, Status},
     types::Bool,
 };
 use std::array::TryFromSliceError;
@@ -16,7 +16,7 @@ pub struct S7ParseBool {
     pub status: Status,
     pub offset: Option<u32>,
     pub bit: Option<u8>,
-    // pub history: PointConfigHistory,
+    // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,
     pub timestamp: DateTime<Utc>,
@@ -28,7 +28,7 @@ impl S7ParseBool {
     pub fn new(
         tx_id: usize,
         name: String,
-        config: &PointConfig,
+        config: &PointConf,
         // filter: Filter<T>,
     ) -> S7ParseBool {
         S7ParseBool {
@@ -37,8 +37,8 @@ impl S7ParseBool {
             value: false,
             status: Status::Invalid,
             is_changed: false,
-            offset: config.clone().address.unwrap_or(PointConfigAddress::empty()).offset,
-            bit: config.clone().address.unwrap_or(PointConfigAddress::empty()).bit,
+            offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
+            bit: config.clone().address.unwrap_or(PointConfAddress::empty()).bit,
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
@@ -138,7 +138,7 @@ impl ParsePoint for S7ParseBool {
     }
     //
     //
-    fn address(&self) -> PointConfigAddress {
-        PointConfigAddress { offset: self.offset, bit: self.bit }
+    fn address(&self) -> PointConfAddress {
+        PointConfAddress { offset: self.offset, bit: self.bit }
     }
 }

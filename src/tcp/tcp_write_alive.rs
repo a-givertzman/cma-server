@@ -3,7 +3,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::ServiceCycle, sync::Handles, thread_pool::Scheduler};
 use crate::{
-    core_::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::{OpResult, TcpStreamWrite},
+    domain::net::connection_status::ConnectionStatus, tcp::tcp_stream_write::{OpResult, TcpStreamWrite},
 };
 ///
 /// Transfering points from Channel Sender<PointType> to the JdsStream (socket)

@@ -18,12 +18,13 @@ env_logger = "~0.11"
 chrono = "~0.4"
 #
 # Internal
-testing = { git = "https://github.com/a-givertzman/rust-testing.git", tag = "0.1.2" }
-debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
-api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.0.6" }
-sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.1.0" }
+sal-core = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-sal-core.git" }
+testing = { tag = "0.1.2", git = "https://github.com/a-givertzman/rust-testing.git" }
+debugging = { tag = "0.0.1", git = "https://github.com/a-givertzman/rust-debuging.git" }
+api-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/rust-api-tools.git" }
 # sal-sync = { path = "../sal-sync" }
-sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.3.0" }
+sal-sync = { tag = "0.3.0", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
+frdm-tools = { tag = "0.1.0", git = "https://github.com/a-givertzman/frdm-server.git" }
 #
 # Serde
 serde = { version = "~1.0", features = ["derive"] }
@@ -42,7 +43,7 @@ rustfft = "~6.4"
 parking_lot = "~0.12"
 once_cell = "~1.21"
 lazy_static = "~1.5"
-kanal = "~0.1"
+kanal = { version = "~0.1", git = "https://github.com/fereidani/kanal.git" }
 dashmap = "~6.1"
 coco = "~0.3"
 
@@ -63,7 +64,6 @@ libloading = "~0.8"
 #
 # fast string concatinations
 concat-string = "~1.0"
-concat-in-place = "~1.1"
 
 signal-hook = "~0.3"
 
@@ -76,10 +76,10 @@ clap = { version = "~4.5", features = ["derive"] }
 
 #
 # UI
-egui = "~0.31"
-egui_plot = "~0.32"
-egui_extras = "~0.31"
-eframe = "~0.31"
+egui = "~0.32"
+egui_plot = "~0.33"
+egui_extras = "~0.32"
+eframe = "~0.32"
 hsl = "~0.1"
 winit = { version = "~0.30", optional = true }
 #winit = { version = "~0.30" }
@@ -88,7 +88,8 @@ uid = "~0.1"
 
 derivative = "~2.2"
 
-plotters = "~0.3"
+# plotters = "~0.3"
+plotters = { version = "~0.3", features = ["ab_glyph", "fontconfig-dlopen"] }
 
 [build-dependencies]
 cc = "~1.2"

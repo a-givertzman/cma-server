@@ -952,3 +952,24 @@ service ProfinetClient Ied01:
 ```
 
 </details>
+
+#### [FrdmService](src/services/frdm_service)
+
+##### Description
+
+Crane rope diagnosis
+
+- [Rope defect](src/services/frdm_service/rope_defect) detection using frames from the Camera
+   - Whole rope divided by the segments equal size 85..95% of the image width (along thr rope)
+   - Imagees receivings from the camera with the required FPS
+   - If by changing the position of the rope, relative position of the camera fitts rope segment the frame wil be passed to the analisys
+      - Rope contours will be detected
+      - Contour line wil be analised in terms of the diviation, sufficent for the guess th deffect
+- [Rope deprecation](src/services/frdm_service/rope_deprecation) calculated by the bends on the enter and exit the winch drum and blocks ([algoritm discrobed and implemented in the python](design/frdm-service))
+   - Whole rope divided by the segments equal size
+   - Calculated the position of each block located on the booms and the relative position of the winch drum
+   - If some of the rope segments enter/exit the winch drum or block, the segment has been bended and it's deprecation increased and stored to the DB
+
+##### [Configuration](src/services/frdm_service/frdm_service_conf.rs)
+
+
