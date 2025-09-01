@@ -1,18 +1,10 @@
 //!
-//! # Implements communication with Vibro-analytics microcontroller (Sub MC) over udp simple protocol.
+//! # Crane rope diagnosis
 //! 
-//! - Cyclically reads data from the device 
-//! and yields changed to the specified destination service.
+//! - Rope defect detection using frames from the Camera
+//! - Rope deprecation calculated by the bends on the enter and exit winch drum and blocks
 //! 
-//! - Writes Point to the device specific address.
-//! 
-//! Configuration example for single Sub MC:
-//! 
-//! ```yaml
-//! service UdpClient UdpClientSencor01:
-//!     cycle: 10ms
-//!     ...
-//! ```
+//! ## [Configuration](src/services/frdm_service/frdm_service_conf.rs)
 //! 
 mod rope_defect;
 mod rope_deprecation;
