@@ -953,12 +953,12 @@ service ProfinetClient Ied01:
 
 </details>
 
-#### FrdmService
+#### [FrdmService](src/services/frdm_service)
 
 Crane rope diagnosis
 
 - Rope defect detection using frames from the Camera
-- Rope deprecation calculated by the bends on the enter and exit winch drum and blocks
+- Rope deprecation calculated by the bends on the enter and exit the winch drum and blocks ([algoritm discrobed and implemented in the python](design/frdm-service))
 
 [Configuration](src/services/frdm_service/frdm_service_conf.rs)
 
