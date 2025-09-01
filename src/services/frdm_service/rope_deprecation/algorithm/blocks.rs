@@ -53,6 +53,7 @@ impl Blocks {
     ///
     /// 4. Координаты блоков X, Y
     fn blocks_pos(&mut self, booms: &Vec<Boom>) -> Option<()> {
+        // TODO: replace with config or calculated value
         let hook_l = 1000.0;
         match self.items.first() {
             Some(first) => {

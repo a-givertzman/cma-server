@@ -31,7 +31,7 @@ fn new() {
     log::debug!("");
     let dbg = Dbg::own("Deprication-test");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     //
     // rope pos                   blk[0] blk[1]
@@ -188,7 +188,7 @@ fn new() {
         subscriptions,
         |slice_ix, deprecation| {
             let dbg = &dbg.clone();
-            log::debug!("{dbg} | Deprication slice[{slice_ix}]: {:?}", deprecation);
+            // log::debug!("{dbg} | Deprication slice[{slice_ix}]: {:?}", deprecation);
             result.replace_with(|r| {
                 r[*slice_ix] += deprecation;
                 r.to_owned()

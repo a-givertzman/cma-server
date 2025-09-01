@@ -1,5 +1,4 @@
-use std::{collections::HashSet, ops::Range};
-
+use std::ops::Range;
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::entity::Point};
 use crate::services::frdm_service::{Bendings, CraneConf};
@@ -10,9 +9,9 @@ pub struct Deprecation<'a> {
     inputs: FxIndexMap<String, f64>,
     subscriptions: Vec<String>,
     conf: CraneConf,
-    // slices: Vec<RopeSlice>,
-    //                 Block     Slices
-    slices: FxIndexMap<usize, HashSet<usize>>,
+    segment: f64,
+    ///                Block     Slices
+    slices: FxIndexMap<usize, Vec<usize>>,
     bendings: Bendings,
     results: Box<dyn Fn(&usize, f64) + 'a>,
     dbg: Dbg,
@@ -27,17 +26,12 @@ impl<'a> Deprecation<'a> {
         let dbg = Dbg::new(parent, "Deprication");
         subscriptions.push(conf.rope.load.clone());
         subscriptions.push(conf.rope.pos.clone());
-        // let slices = (conf.rope.length.as_m() / conf.rope.segment.as_m()).ceil() as usize;
         Self {
             inputs: FxIndexMap::default(),
             subscriptions,
             conf: conf.clone(),
-            slices: FxIndexMap::default(),
-            // slices: (0..slices).map(|slice| {
-            //     let offset = (slice as f64) * conf.rope.segment.as_mm();
-            //     log::trace!("{dbg}.new | Slice: {slice}: offset: {:.2} mm", offset);
-            //     RopeSlice::new(slice, conf.blocks.len(), offset)
-            // }).collect(),
+            segment: conf.rope.segment.as_mm(),
+            slices: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
             bendings,
             results: Box::new(results),
             dbg,
@@ -120,26 +114,25 @@ impl<'a> Deprecation<'a> {
                     (Some(_), Some(load)) => {
                         for (block_ix, block) in blocks.iter().enumerate() {
                             let deprecation = load / (block.diameter * 0.001);
-                            let current = self.slices(&block.bending);
-                            // the Slices that are in self.slices but not in current
-                            let exit = self.slices[block_ix].difference(&current);
-                            for slice in exit {
-                                // log::debug!("{dbg} | Slice[{}] -> Out({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
-                                (self.results)(slice, deprecation);
+                            let mut current = self.slices(&block.bending);
+                            // Exit: the Slices that are in self.slices but not in current
+                            for slice in &self.slices[block_ix] {
+                                // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
+                                if let Err(_) = current.binary_search(slice) {
+                                    (self.results)(&slice, deprecation);
+                                }
                             }
-                            // the Slices that are in current but not in self.slices
-                            let enter = current.difference(&self.slices[block_ix]);
-                            for slice in enter {
-                                (self.results)(slice, deprecation);
+                            // Enter: the Slices that are in current but not in self.slices
+                            for slice in &current {
+                                if let Err(_) = self.slices[block_ix].binary_search(slice) {
+                                // log::debug!("{dbg} | Slice[{}] -> Enter ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
+                                    (self.results)(&slice, deprecation);
+                                }
                             }
-                            self.slices[block_ix] = self.slices[block_ix].intersection(&current).map(|s| *s).collect();
+                            current.sort();
+                            self.slices[block_ix] = current;
+                            // log::debug!("{} | Slices: {:?}", self.dbg, self.slices);
                         }
-                        // todo!("Try to replace it with much more faster algorithm");
-                        // for slice in &mut self.slices {
-                        //     if let Some(deprecation) = slice.deprecation(&blocks, *load) {
-                        //         (self.results)(slice.id(), deprecation);
-                        //     }
-                        // }
                         Some(())
                     }
                 }
@@ -149,15 +142,117 @@ impl<'a> Deprecation<'a> {
     }
     ///
     /// Returns slices (indexes) intersects with the bend range
-    fn slices(&self, bend: &Range<f64>) -> HashSet<usize> {
-        let rope_len = self.conf.rope.length.as_mm();
-        let segment = self.conf.rope.segment.as_mm();
-        // Номер Слайса который приходится на начало Бенда
-        let first_slice = ((rope_len - bend.start) / segment).ceil() as usize;
+    fn slices(&self, bend: &Range<f64>) -> Vec<usize> {
+        // Количество Слайсов которые приходятся на начало Бенда
+        // log::debug!("{}.slices | rope_len: {}", self.dbg, self.rope_len);
+        // log::debug!("{}.slices | segment: {}", self.dbg, self.segment);
+        // log::debug!("{}.slices | bend: {:?}", self.dbg, bend);
+        let first_slice = (bend.start / self.segment).trunc() as usize;
+        // log::debug!("{}.slices | first_slice: {first_slice}", self.dbg);
         // Точка начала первого Слайса в Бенде
-        let start_point = (first_slice as f64) * segment;
+        let start_point = (first_slice as f64) * self.segment;
+        // log::debug!("{}.slices | start_point: {start_point}", self.dbg);
         let delta = bend.end - start_point;
-        let slices = (delta / segment).ceil() as usize;
-        (first_slice..first_slice + slices).collect()
+        // log::debug!("{}.slices | delta: {delta}", self.dbg);
+        let slices = (delta / self.segment).ceil() as usize;
+        // log::debug!("{}.slices | slices: {slices}", self.dbg);
+        Vec::from_iter(first_slice..first_slice + slices)
     }
+}
+#[cfg(test)]
+///
+/// Testing such functionality / behavior
+#[test]
+fn slices() {
+    use std::{time::{Duration, Instant}};
+    use sal_sync::services::conf::ConfTree;
+    use testing::stuff::max_test_duration::TestDuration;
+    use crate::services::frdm_service::{BlockArcs, Blocks, Booms, LooseRopeSections};
+    env_logger::Builder::new().filter_level(log::LevelFilter::Debug).init();
+    log::debug!("");
+    let dbg = Dbg::own("Deprecation.slices");
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    test_duration.run().unwrap();
+    let test_data: &[(i32, Range<f64>, Vec<usize>)] = &[
+        (01,  0.0.. 5.0, vec![0]),
+        (02,  0.0..10.0, vec![0]),
+        
+        (10, 08.0..10.0, vec![0]),
+        (11, 09.0..11.0, vec![0, 1]),
+        (12, 10.0..12.0, vec![1]),
+        (13, 11.0..13.0, vec![1]),
+
+        (30, 11.0..35.0, vec![1, 2, 3]),
+        (31, 12.0..35.0, vec![1, 2, 3]),
+        (32, 15.0..35.0, vec![1, 2, 3]),
+        (33, 17.0..35.0, vec![1, 2, 3]),
+        (34, 19.0..35.0, vec![1, 2, 3]),
+
+        (41, 15.0..31.0, vec![1, 2, 3]),
+        (42, 15.0..32.0, vec![1, 2, 3]),
+        (43, 15.0..35.0, vec![1, 2, 3]),
+        (44, 15.0..37.0, vec![1, 2, 3]),
+        (45, 15.0..39.0, vec![1, 2, 3]),
+
+        (51, 15.0..39.0, vec![1, 2, 3]),
+        (52, 15.0..40.0, vec![1, 2, 3]),
+        (53, 15.0..41.0, vec![1, 2, 3, 4]),
+
+    ];
+    let conf = ConfTree::new_root(serde_yaml::from_str(r"
+        rope:
+            width: 35 mm
+            length: 1 m
+            winch-length: 1 m
+            segment: 10 mm
+            pos: point real 'Winch.Pos'
+            load: point real 'Winch.Load'
+        booms:
+            - Main-Boom:
+                l1: 0.0 mm
+                l2: 0.0 mm
+                l3: 0.0 mm
+                l4: 10330.0 mm
+                len: 11200.0 mm
+                angle: point real 'MainBoom.Angle'
+        blocks:
+            - 1:
+                lf: 1830.0 mm,  710.0 mm
+                d: 845.670 mm
+                scheme: TopTop
+                bind: Fixed
+    ").unwrap());
+    let conf = CraneConf::new(&dbg, conf);
+    let mut subscriptions = vec![];
+    let deprecation = Deprecation::new(
+        &dbg,
+        &conf,
+        Bendings::new(
+            &dbg,
+            conf.rope.pos.clone(),
+            &conf.rope,
+            BlockArcs::new(
+                &dbg,
+                LooseRopeSections::new(
+                    &dbg,
+                    Blocks::new(
+                        &dbg,
+                        &conf.blocks,
+                        Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                    ),
+                ),
+            ),
+        ),
+        subscriptions,
+        |_, _| {},
+    );
+    let mut t;
+    for (step, bendings, target) in test_data {
+        t = Instant::now();
+        let result = deprecation.slices(&bendings);
+        log::debug!("{dbg} | {step}  result: {:?}, target: {:?},  elapsed: {:?}", result, target, t.elapsed());
+        assert!(result == target.to_owned(), "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+    }
+    test_duration.exit();
 }
