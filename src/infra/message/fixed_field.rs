@@ -31,8 +31,7 @@ impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
     fn convert(&mut self, remainder: Vec<u8>) -> Result<(Out, Bytes), Error> {
         if remainder.len() >= self.size {
             let bytes = &remainder[..self.size];
-            // let dbg_bytes = if data_bytes.len() > 16 {format!("{:?}...", &data_bytes[..16])} else {format!("{:?}", data_bytes)};
-            // log::trace!("{}.parse | data_bytes: {:?}", self.dbg, dbg_bytes);
+            log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, self.size, bytes);
             self.reset();
             match (self.from_bytes)(bytes) {
                 Ok(data) => if remainder.len() >= self.size {
@@ -56,7 +55,7 @@ impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<'a, FieldIn: Debug, FieldOut: Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for FixedField<'a, FieldIn, FieldOut, Out> {
+impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for FixedField<'a, FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`
@@ -66,7 +65,7 @@ impl<'a, FieldIn: Debug, FieldOut: Debug, Out: Debug> MessageParse<'a, (FieldIn,
         let dbg = self.dbg.clone();
         let remainder = [std::mem::take(&mut self.remainder), bytes].concat();
         log::debug!("{dbg}.parse | remainder: {:?}", remainder);
-        match self.field_data.take() {
+        match self.field_data {
             Some((din, dout)) => match self.convert(remainder) {
                 Ok((data, remainder)) => {
                     log::debug!("{}.parse | Field exist | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);

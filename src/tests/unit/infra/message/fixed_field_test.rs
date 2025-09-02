@@ -33,16 +33,22 @@ fn parse() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
-        (01, vec![0x00,0x02,0x02,0x02], Err(())),
-        (02, vec![0x01,0x01], Ok((11, 222))),
-        (03, vec![0x00,0x04,0x04,0x04], Err(())),
-        (04, vec![0x03,0x03], Ok((33, 444))),
+        (01, vec![0x00], Err(())),
+        (02, vec![0x00], Err(())),
+        (03, vec![0x40], Err(())),  // dec 64
+        (04, vec![0x00], Err(())),
+        (05, vec![0x00], Err(())),
+        (06, vec![0x00], Err(())),
+        (07, vec![0xDE], Err(())),  // dec 222
+        (08, vec![0x00,0x0B], Ok((64, 222, 11))),
+        (09, vec![0x57], Err(())),  // dec 87
+        (10, vec![0x00,0x00,0x01,0xBC], Err(())),   // 444
+        (11, vec![0x00,0x21], Ok((87, 444, 33))),
     ];
     let dbg1 = dbg.clone();
     let dbg2 = dbg.clone();
     let mut fixed_field = FixedField::new(
-        &dbg,
-        2,
+        &dbg, 2,
         move |bytes| {
             log::debug!("{dbg1} | Bytes to u16: {:?}", bytes);
             match bytes.try_into() {
@@ -55,8 +61,7 @@ fn parse() {
             }
         },
         FixedField::new(
-            &dbg,
-            4,
+            &dbg, 4,
             move |bytes| {
                 log::debug!("{dbg2} | Bytes to u16: {:?}", bytes);
                 match bytes.try_into() {
@@ -68,19 +73,30 @@ fn parse() {
                     Err(_) => todo!(),
                 }
             },
-            Terminator::new(),
+            FixedField::new(
+                &dbg, 1,
+                move |bytes| {
+                    match bytes.try_into() {
+                        Ok(bytes) => Ok(u8::from_be_bytes(bytes)),
+                        Err(_) => todo!(),
+                    }
+                },
+                Terminator::new(),
+            ),
         ),
     );
     for (step, bytes, target) in test_data {
-        // Result<((((), ()), u32), u16, Vec<u8>), Error>
         log::debug!("{dbg} | Bytes: {:?}", bytes);
+        let t = Instant::now();
         match (fixed_field.parse(bytes), target) {
-            (Ok(((_, result_u32), result_u16, _)), Ok((target_u16, target_u32))) => {
+            (Ok((((_, result_u8), result_u32), result_u16, _)), Ok((target_u8, target_u32, target_u16))) => {
+                log::debug!("{dbg} | Elapsed: {:?}", t.elapsed());
+                assert!(result_u8 == target_u8, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result_u8, target_u8);
                 assert!(result_u32 == target_u32, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result_u32, target_u32);
                 assert!(result_u16 == target_u16, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result_u16, target_u16);
             }
-            (Ok(_), Err(_)) => todo!(),
-            (Err(_), Ok(_)) => todo!(),
+            (Ok(result), Err(target)) => panic!("{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
+            (Err(result), Ok(target)) => panic!("{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
             (Err(_), Err(_)) => {},
         };
     }
