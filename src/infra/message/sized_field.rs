@@ -2,10 +2,10 @@ use std::fmt::Debug;
 use sal_core::{dbg::Dbg, error::Error};
 use super::message::{Bytes, MessageParse};
 ///
-/// Extracting `Data` field from the input bytes fixed length
-pub struct FixedField<'a, FieldIn, FieldOut, Out> {
+/// Extracting `Data` field from the input bytes of calculated length
+pub struct SizedField<'a, FieldIn, FieldOut, Out> {
     dbg: Dbg,
-    size: usize,
+    size: Box<dyn Fn(&FieldIn, &FieldOut) -> usize>,
     field: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
     field_data: Option<(FieldIn, FieldOut)>,
     from_bytes: Box<dyn Fn(&[u8]) -> Result<Out, Error>>,
@@ -13,30 +13,30 @@ pub struct FixedField<'a, FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
+impl<'a, FieldIn, FieldOut, Out> SizedField<'a, FieldIn, FieldOut, Out> {
     ///
-    /// Returns [FixedField] new instance
-    /// - `size` - Field length in the bytes
-    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    /// Returns [SizedField] new instance
+    /// - `size` - Field length in the bytes calculated from previous fields
+    pub fn new(parent: impl Into<String>, size: impl Fn(&FieldIn, &FieldOut) -> usize + 'static, from_bytes: impl Fn(&[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
         Self {
-            size,
+            size: Box::new(size),
             from_bytes: Box::new(from_bytes),
             field: Box::new(field),
             field_data: None,
             remainder: vec![],
-            dbg: Dbg::new(parent, format!("FixedField(size {size})")),
+            dbg: Dbg::new(parent, format!("SizedField")),
         }
     }
     ///
     /// Returns T of specified bytes length
-    fn convert(&mut self, remainder: Vec<u8>) -> Result<(Out, Bytes), Error> {
-        if remainder.len() >= self.size {
-            let bytes = &remainder[..self.size];
-            log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, self.size, bytes);
+    fn convert(&mut self, remainder: Vec<u8>, size: usize) -> Result<(Out, Bytes), Error> {
+        if remainder.len() >= size {
+            let bytes = &remainder[..size];
+            log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, size, bytes);
             self.reset();
             match (self.from_bytes)(bytes) {
-                Ok(data) => if remainder.len() >= self.size {
-                    Ok((data, remainder[self.size..].to_vec()))
+                Ok(data) => if remainder.len() >= size {
+                    Ok((data, remainder[size..].to_vec()))
                 } else {
                     Ok((data, vec![]))
                 }
@@ -56,7 +56,7 @@ impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for FixedField<'a, FieldIn, FieldOut, Out> {
+impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for SizedField<'a, FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`
@@ -67,25 +67,23 @@ impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse
         let remainder = [std::mem::take(&mut self.remainder), bytes].concat();
         log::debug!("{dbg}.parse | remainder: {:?}", remainder);
         match self.field_data {
-            Some((din, dout)) => match self.convert(remainder) {
+            Some((din, dout)) => match self.convert(remainder, (self.size)(&din, &dout)) {
                 Ok((data, remainder)) => {
                     log::debug!("{}.parse | Field exist | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
                     Ok(((din, dout), data, remainder))
                 }
-                Err(err) => Err(error.pass(err)),
+                Err(err) => Err(error.pass_with("Field value from bytes error", err)),
             }
             None => {
                 match self.field.parse(remainder) {
-                    Ok((din, dout, remainder)) => {
-                        match self.convert(remainder) {
-                            Ok((data, remainder)) => {
-                                log::debug!("{}.parse | Field parsed | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
-                                Ok(((din, dout), data, remainder))
-                            }
-                            Err(err) => {
-                                self.field_data = Some((din, dout));
-                                Err(error.pass(err))
-                            }
+                    Ok((din, dout, remainder)) => match self.convert(remainder, (self.size)(&din, &dout)) {
+                        Ok((data, remainder)) => {
+                            log::debug!("{}.parse | Field parsed | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
+                            Ok(((din, dout), data, remainder))
+                        }
+                        Err(err) => {
+                            self.field_data = Some((din, dout));
+                            Err(error.pass_with("Field value from bytes error", err))
                         }
                     }
                     Err(err) => Err(error.pass(err)),

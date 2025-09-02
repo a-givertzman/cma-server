@@ -16,6 +16,7 @@ pub struct FindField<'a, FieldIn, FieldOut, Out> {
 impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
     ///
     /// Returns [FindField] new instance
+    /// - `size` - Field length in the bytes
     pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&[u8]) -> Result<Option<Out>, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
         let dbg = Dbg::new(parent, format!("FindField(size {size})"));
         if size == 0 {
