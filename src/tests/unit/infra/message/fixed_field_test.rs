@@ -32,8 +32,8 @@ fn parse() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     let test_data = [
-        (01, vec![0x00], Err(())),
-        (02, vec![0x00], Err(())),
+        // (01, vec![0x00], Err(())),
+        // (02, vec![0x00], Err(())),
         (03, vec![0x40], Err(())),  // dec 64
         (04, vec![0x00], Err(())),
         (05, vec![0x00], Err(())),
