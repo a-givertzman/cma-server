@@ -3,7 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use super::message::{Bytes, MessageParse};
 ///
 /// Extracting `Data` field from the input bytes fixed length
-pub struct FixedField<'a, FieldIn, FieldOut, Out> {
+pub struct FindField<'a, FieldIn, FieldOut, Out> {
     dbg: Dbg,
     size: usize,
     field: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
@@ -13,36 +13,51 @@ pub struct FixedField<'a, FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
+impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
     ///
-    /// Returns [FixedField] new instance
+    /// Returns [FindField] new instance
     pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
+        let dbg = Dbg::new(parent, format!("FindField(size {size})"));
+        if size == 0 {
+            panic!("{dbg}.new | Size should be >= 1");
+        }
         Self {
             size,
             from_bytes: Box::new(from_bytes),
             field: Box::new(field),
             field_data: None,
-            remainder: vec![],
-            dbg: Dbg::new(parent, format!("FixedField(size {size})")),
+            remainder: Vec::with_capacity(size - 1),
+            dbg,
         }
     }
     ///
     /// Returns T of specified bytes length
     fn convert(&mut self, remainder: Vec<u8>) -> Result<(Out, Bytes), Error> {
+        let mut e = Error::new(&self.dbg, "");
         if remainder.len() >= self.size {
-            let bytes = &remainder[..self.size];
-            log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, self.size, bytes);
-            self.reset();
-            match (self.from_bytes)(bytes) {
-                Ok(data) => if remainder.len() >= self.size {
-                    Ok((data, remainder[self.size..].to_vec()))
-                } else {
-                    Ok((data, vec![]))
+            match remainder
+                .windows(self.size)
+                .find_map(|bytes| {
+                    match (self.from_bytes)(bytes) {
+                        Ok(data) => if remainder.len() >= self.size {
+                            Some((data, remainder[self.size..].to_vec()))
+                        } else {
+                            Some((data, vec![]))
+                        }
+                        Err(err) => {
+                            e = err;
+                            None
+                        },
+                    }
+                }) {
+                    Some(val) => Ok(val),
+                    None => {
+                        self.remainder = remainder[(remainder.len() - self.size + 1)..].to_vec();
+                        Err(Error::new(&self.dbg, "parse").pass_with("FromBytes error", e))
+                    }
                 }
-                Err(err) => Err(Error::new(&self.dbg, "parse").pass_with("FromBytes error", err)),
-            }
         } else {
-            self.remainder.extend(remainder);
+            self.remainder = remainder[(remainder.len() - self.size + 1)..].to_vec();
             Err(Error::new(&self.dbg, "parse").err("Take error"))
         }
     }
@@ -50,12 +65,12 @@ impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
     /// Resets state to the initial
     fn reset(&mut self) {
         self.field_data = None;
-        self.remainder = vec![];
+        self.remainder = Vec::with_capacity(self.size - 1);
     }
 }
 //
 //
-impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for FixedField<'a, FieldIn, FieldOut, Out> {
+impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for FindField<'a, FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`

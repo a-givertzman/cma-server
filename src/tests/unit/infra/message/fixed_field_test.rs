@@ -4,8 +4,7 @@ use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::{dbg::Dbg, error::Error};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-
-use crate::infra::message::{Bytes, FixedField, FromBytes, MessageParse};
+use crate::infra::message::{Bytes, FixedField, MessageParse};
 ///
 ///
 static INIT: Once = Once::new();
