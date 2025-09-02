@@ -4,7 +4,7 @@ use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::{dbg::Dbg, error::Error};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::infra::message::{Bytes, FindField, FixedField, MessageParse};
+use crate::infra::message::{Bytes, FindField, MessageParse};
 ///
 ///
 static INIT: Once = Once::new();
@@ -21,7 +21,7 @@ fn init_once() {
 fn init_each() -> () {}
 ///
 /// Testing [FixedField].parse
-// #[test]
+#[test]
 fn parse_u8() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
@@ -77,7 +77,7 @@ fn parse_u8() {
 }
 ///
 /// Testing [FixedField].parse
-// #[test]
+#[test]
 fn parse_u16() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
@@ -149,21 +149,21 @@ fn parse_u32() {
     let test_data = [
         (01, vec![0x00], Err(())),
         (02, vec![0x01], Err(())),  // dec 12
-        (02, vec![0x02], Err(())),  // dec 64
-        (02, vec![0x03], Err(())),  // dec 12
-        (03, vec![0x04], Ok((16909060, vec![]))), // dec 64
-        (04, vec![0x01], Err(())),
-        (04, vec![0x00], Err(())),
-        (02, vec![0x01], Err(())),  // dec 12
-        (02, vec![0x02], Err(())),  // dec 64
-        (05, vec![0x03,0x04,0x01,0x02], Ok((16909060, vec![0x01,0x02]))),
-        (06, vec![0x04], Err(())),   // dec 12
-        (07, vec![0xDE], Err(())),  // dec 222
-        (08, vec![0x00], Err(())),
-        (02, vec![0x01], Err(())),  // dec 64
-        (02, vec![0x02], Err(())),  // dec 12
-        (09, vec![0x03], Err(())),  // dec 12
-        (10, vec![0x04], Ok((16909060, vec![]))), // dec 64
+        (03, vec![0x02], Err(())),  // dec 64
+        (04, vec![0x03], Err(())),  // dec 12
+        (05, vec![0x04], Ok((16909060, vec![]))), // dec 64
+        (06, vec![0x01], Err(())),
+        (07, vec![0x00], Err(())),
+        (08, vec![0x01], Err(())),  // dec 12
+        (09, vec![0x02], Err(())),  // dec 64
+        (10, vec![0x03,0x04,0x01,0x02], Ok((16909060, vec![0x01,0x02]))),
+        (11, vec![0x04], Err(())),   // dec 12
+        (12, vec![0xDE], Err(())),  // dec 222
+        (13, vec![0x00], Err(())),
+        (14, vec![0x01], Err(())),  // dec 64
+        (15, vec![0x02], Err(())),  // dec 12
+        (16, vec![0x03], Err(())),  // dec 12
+        (17, vec![0x04], Ok((16909060, vec![]))), // dec 64
     ];
     let dbg1 = dbg.clone();
     let mut fixed_field = FindField::new(
@@ -174,7 +174,7 @@ fn parse_u32() {
                 Ok(bytes) => {
                     let val = u32::from_be_bytes(bytes);
                     log::debug!("{dbg1} | Value u8: {:?}", val);
-                    match val == 1264 {
+                    match val == 16909060 {
                         true => Ok(Some(val)),
                         false => Ok(None),
                     }

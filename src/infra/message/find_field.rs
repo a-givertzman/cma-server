@@ -37,11 +37,12 @@ impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
         if remainder.len() >= self.size {
             match remainder
                 .windows(self.size)
-                .find_map(|bytes| {
+                .enumerate()
+                .find_map(|(i, bytes)| {
                     match (self.from_bytes)(bytes) {
                         Ok(data) => match data {
-                                Some(data) => if remainder.len() >= self.size + 1 {
-                                Some((data, remainder[(self.size + 1)..].to_vec()))
+                            Some(data) => if remainder.len() >= self.size + i {
+                                Some((data, remainder[(self.size + i)..].to_vec()))
                             } else {
                                 Some((data, vec![]))
                             },
@@ -53,14 +54,23 @@ impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
                         },
                     }
                 }) {
-                    Some(val) => Ok(val),
+                    Some(val) => {
+                        self.reset();
+                        Ok(val)
+                    }
                     None => {
-                        self.remainder = remainder[(remainder.len() - self.size + 1)..].to_vec();
+                        match remainder.get((remainder.len() - self.size)..) {
+                            Some(r) => {
+                                self.remainder = r.to_vec();
+                            }
+                            None => self.remainder = remainder[1..].to_vec(),
+                        }
+                        // self.remainder = remainder[(remainder.len() - self.size + 1)..].to_vec();
                         Err(Error::new(&self.dbg, "parse").pass_with("FromBytes error", e))
                     }
                 }
         } else {
-            self.remainder = remainder[(remainder.len() - self.size + 1)..].to_vec();
+            self.remainder = remainder;
             Err(Error::new(&self.dbg, "parse").err("Take error"))
         }
     }
@@ -68,7 +78,6 @@ impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
     /// Resets state to the initial
     fn reset(&mut self) {
         self.field_data = None;
-        self.remainder = Vec::with_capacity(self.size - 1);
     }
 }
 //
