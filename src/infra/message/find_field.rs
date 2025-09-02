@@ -8,7 +8,7 @@ pub struct FindField<'a, FieldIn, FieldOut, Out> {
     size: usize,
     field: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
     field_data: Option<(FieldIn, FieldOut)>,
-    from_bytes: Box<dyn Fn(&[u8]) -> Result<Out, Error>>,
+    from_bytes: Box<dyn Fn(&[u8]) -> Result<Option<Out>, Error>>,
     remainder: Bytes,
 }
 //
@@ -16,7 +16,7 @@ pub struct FindField<'a, FieldIn, FieldOut, Out> {
 impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
     ///
     /// Returns [FindField] new instance
-    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&[u8]) -> Result<Option<Out>, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
         let dbg = Dbg::new(parent, format!("FindField(size {size})"));
         if size == 0 {
             panic!("{dbg}.new | Size should be >= 1");
@@ -39,10 +39,13 @@ impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
                 .windows(self.size)
                 .find_map(|bytes| {
                     match (self.from_bytes)(bytes) {
-                        Ok(data) => if remainder.len() >= self.size {
-                            Some((data, remainder[self.size..].to_vec()))
-                        } else {
-                            Some((data, vec![]))
+                        Ok(data) => match data {
+                                Some(data) => if remainder.len() >= self.size + 1 {
+                                Some((data, remainder[(self.size + 1)..].to_vec()))
+                            } else {
+                                Some((data, vec![]))
+                            },
+                            None => None,
                         }
                         Err(err) => {
                             e = err;
