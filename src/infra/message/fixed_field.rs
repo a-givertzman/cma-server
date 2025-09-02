@@ -1,22 +1,21 @@
 use sal_core::{dbg::Dbg, error::Error};
-use crate::infra::message::FromBytes;
 use super::message::{Bytes, MessageParse};
 ///
-/// Extracting `Data` field from the input bytes
-pub struct SizedField<FieldIn, FieldOut, Out> {
+/// Extracting `Data` field from the input bytes fixed length
+pub struct FixedField<FieldIn, FieldOut, Out> {
     dbg: Dbg,
     size: usize,
-    field: Box<dyn MessageParse<FieldIn, FieldOut, Out>>,
+    field: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,
     field_data: Option<(FieldIn, FieldOut)>,
     from_bytes: Box<dyn Fn(Bytes) -> Result<Out, Error>>,
     remainder: Bytes,
 }
 //
 //
-impl<Out: FromBytes, FieldIn, FieldOut> SizedField<FieldIn, FieldOut, Out> {
+impl<FieldIn, FieldOut, Out> FixedField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [ParseData] new instance
-    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(Bytes) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Out> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(Bytes) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
         Self {
             size,
             from_bytes: Box::new(from_bytes),
@@ -34,7 +33,7 @@ impl<Out: FromBytes, FieldIn, FieldOut> SizedField<FieldIn, FieldOut, Out> {
             // let dbg_bytes = if data_bytes.len() > 16 {format!("{:?}...", &data_bytes[..16])} else {format!("{:?}", data_bytes)};
             // log::trace!("{}.parse | data_bytes: {:?}", self.dbg, dbg_bytes);
             self.reset();
-            match Out::from_bytes(&bytes.collect::<Vec<u8>>()) {
+            match (self.from_bytes)(bytes.collect::<Vec<u8>>()) {
                 Ok(data) => Ok((data, remainder)),
                 Err(err) => Err(Error::new(&self.dbg, "parse").pass_with("FromBytes error", err)),
             }
@@ -52,21 +51,21 @@ impl<Out: FromBytes, FieldIn, FieldOut> SizedField<FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<Out: FromBytes, FieldIn, FieldOut> MessageParse<FieldIn, FieldOut, Out> for SizedField<FieldIn, FieldOut, Out> {
+impl<FieldIn, FieldOut, Out> MessageParse<(FieldIn, FieldOut), Out, Bytes> for FixedField<FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`
     /// - call this method multiple times, until the end of message
-    fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut, Out, Bytes), Error> {
+    fn parse(&mut self, bytes: Bytes) -> Result<((FieldIn, FieldOut), Out, Bytes), Error> {
         let error = Error::new(&self.dbg, "parse");
-        let mut remainder = [std::mem::take(&mut self.remainder), bytes].concat();
+        let remainder = [std::mem::take(&mut self.remainder), bytes].concat();
         match self.field_data.take() {
-            Some((din, dout)) => self.take(remainder).map(|(data, remainder)| (din, dout, data, remainder)),
+            Some((din, dout)) => self.take(remainder).map(|(data, remainder)| ((din, dout), data, remainder)),
             None => {
                 match self.field.parse(remainder) {
-                    Ok((din, dout, data, mut remainder)) => {
+                    Ok((din, dout, remainder)) => {
                         match self.take(remainder) {
-                            Ok((data, remainder)) => Ok((din, dout, data, remainder)),
+                            Ok((data, remainder)) => Ok(((din, dout), data, remainder)),
                             Err(err) => {
                                 self.field_data = Some((din, dout));
                                 Err(error.pass(err))

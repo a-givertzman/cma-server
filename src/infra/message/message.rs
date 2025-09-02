@@ -42,7 +42,7 @@ pub type Bytes = Vec<u8>;
 pub trait MessageParse<FieldIn, FieldOut, Out> {
     ///
     /// Extracting some pattern from input `bytes`
-    fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut, Out, Bytes), Error>;
+    fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut, Bytes), Error>;
 }
 /// 
 /// 
@@ -55,16 +55,16 @@ pub enum MessageField {
 }
 ///
 /// Socket Message
-pub struct Message<FieldIn, FieldOut, Out> {
+pub struct Message<FieldIn, FieldOut> {
     dbg: Dbg,
     build: Vec<MessageField>, 
-    parse: Box<dyn MessageParse<FieldIn, FieldOut, Out>>,
+    parse: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,
     remines: Bytes,
 }
 
 //
 //
-impl<FieldIn, FieldOut, Out> std::fmt::Debug for Message<FieldIn, FieldOut, Out> {
+impl<FieldIn, FieldOut> std::fmt::Debug for Message<FieldIn, FieldOut> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Message")
             .field("dbgid", &self.dbg)
@@ -74,13 +74,13 @@ impl<FieldIn, FieldOut, Out> std::fmt::Debug for Message<FieldIn, FieldOut, Out>
 }
 //
 //
-impl<FieldIn, FieldOut, Out> Message<FieldIn, FieldOut, Out> {
+impl<FieldIn, FieldOut> Message<FieldIn, FieldOut> {
     ///
     /// Returns `Message` new instance 
     pub fn new(
         parent: impl Into<String>,
         build: Vec<MessageField>,
-        parse: impl MessageParse<FieldIn, FieldOut, Out> + 'static
+        parse: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static
     ) -> Self {
         Self {
             dbg: Dbg::new(parent.into(), "Message"),
@@ -110,11 +110,11 @@ impl<FieldIn, FieldOut, Out> Message<FieldIn, FieldOut, Out> {
     /// Extracting [Message] fields from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`
     /// - call this method multiple times, until the end of message
-    fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut, Out), Error> {
+    fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut), Error> {
         match self.parse.parse(bytes) {
-            Ok((d_in, d_out, data, remines)) => {
+            Ok((din, dout, remines)) => {
                 self.remines = remines;
-                Ok((d_in, d_out, data))
+                Ok((din, dout))
             }
             Err(err) => Err(Error::new(&self.dbg, "parse").pass(err)),
         }
