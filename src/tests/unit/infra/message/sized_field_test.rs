@@ -55,14 +55,14 @@ fn parse() {
         &dbg,
         |((), ()), size| *size as usize,
         move |bytes| {
-            log::debug!("{dbg1} | Bytes to u16: {:?}", bytes);
+            log::debug!("{dbg1} | Bytes to String: {:?}", bytes);
             match bytes.try_into() {
                 Ok(bytes) => {
                     let val = String::from_utf8_lossy(bytes).into_owned();
-                    log::debug!("{dbg1} | Value u16: {:?}", val);
+                    log::debug!("{dbg1} | Value String: {:?}", val);
                     Ok(val)
                 }
-                Err(_) => todo!(),
+                Err(_) => panic!("{dbg1} | Error parsing String from bytes {:?}", bytes),
             }
         },
         FixedField::new(
@@ -72,10 +72,10 @@ fn parse() {
                 match bytes.try_into() {
                     Ok(bytes) => {
                         let val = u16::from_be_bytes(bytes);
-                        log::debug!("{dbg2} | Value u32: {:?}", val);
+                        log::debug!("{dbg2} | Value u16: {:?}", val);
                         Ok(val)
                     }
-                    Err(_) => todo!(),
+                    Err(_) => panic!("{dbg2} | Error parsing u16 from bytes {:?}", bytes),
                 }
             },
             Terminator::new(),

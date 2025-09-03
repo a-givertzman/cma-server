@@ -56,10 +56,10 @@ pub enum MessageField {
 ///
 /// Socket Message
 pub struct Message<'a, FieldIn, FieldOut> {
-    dbg: Dbg,
     build: Vec<MessageField>, 
     parse: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
-    remines: Bytes,
+    remainder: Bytes,
+    dbg: Dbg,
 }
 
 //
@@ -67,7 +67,7 @@ pub struct Message<'a, FieldIn, FieldOut> {
 impl<'a, FieldIn, FieldOut> std::fmt::Debug for Message<'a, FieldIn, FieldOut> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Message")
-            .field("dbgid", &self.dbg)
+            .field("dbg", &self.dbg)
             .field("build", &self.build)
             .finish()
     }
@@ -86,7 +86,7 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
             dbg: Dbg::new(parent.into(), "Message"),
             build,
             parse: Box::new(parse),
-            remines: vec![],
+            remainder: vec![],
         }
     }
     ///
@@ -110,10 +110,11 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
     /// Extracting [Message] fields from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`
     /// - call this method multiple times, until the end of message
-    fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut), Error> {
+    pub fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut), Error> {
+        let bytes = [std::mem::take(&mut self.remainder), bytes].concat();
         match self.parse.parse(bytes) {
-            Ok((din, dout, remines)) => {
-                self.remines = remines;
+            Ok((din, dout, remainder)) => {
+                self.remainder = remainder;
                 Ok((din, dout))
             }
             Err(err) => Err(Error::new(&self.dbg, "parse").pass(err)),

@@ -56,20 +56,20 @@ fn parse() {
                     log::debug!("{dbg1} | Value u16: {:?}", val);
                     Ok(val)
                 }
-                Err(_) => todo!(),
+                Err(_) => panic!("{dbg1} | Error parsing u16 from bytes {:?}", bytes),
             }
         },
         FixedField::new(
             &dbg, 4,
             move |bytes| {
-                log::debug!("{dbg2} | Bytes to u16: {:?}", bytes);
+                log::debug!("{dbg2} | Bytes to u32: {:?}", bytes);
                 match bytes.try_into() {
                     Ok(bytes) => {
                         let val = u32::from_be_bytes(bytes);
                         log::debug!("{dbg2} | Value u32: {:?}", val);
                         Ok(val)
                     }
-                    Err(_) => todo!(),
+                    Err(_) => panic!("{dbg2} | Error parsing u32 from bytes {:?}", bytes),
                 }
             },
             FixedField::new(

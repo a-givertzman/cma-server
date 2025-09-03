@@ -179,7 +179,7 @@ fn parse_u32() {
                         false => Ok(None),
                     }
                 }
-                Err(_) => todo!(),
+                Err(_) => panic!("{dbg1} | Error parsing u32 from bytes {:?}", bytes),
             }
         },
         Terminator::new(),
