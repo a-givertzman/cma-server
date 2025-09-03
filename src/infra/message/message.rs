@@ -32,12 +32,17 @@
 //!     - 49, Duration
 //!     - .., ...
 //! 
-use std::collections::VecDeque;
-
+use std::{fmt::Debug, usize};
 use sal_core::{dbg::Dbg, error::Error};
 ///
 /// 
 pub type Bytes = Vec<u8>;
+///
+/// 
+pub trait ToBytes {
+    fn to_be_bytes(&self) -> impl Iterator<Item = u8>;
+    fn to_le_bytes(&self) -> impl Iterator<Item = u8>;
+}
 ///
 /// Parse Message structure from bytes Interface 
 pub trait MessageParse<'a, FieldIn, FieldOut, Out> {
@@ -46,64 +51,106 @@ pub trait MessageParse<'a, FieldIn, FieldOut, Out> {
     fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut, Bytes), Error>;
 }
 /// 
+/// Filed configuration for the [Message].build
+/// 
+/// Use such fields to specify a sequence of fields in the message built from values
+/// 
+/// ```ignire
+/// vec![
+///     ConstBe(64u16),    // First field (length 2 bytes) always contains value 64 as Big-ending bytes
+///     ValueBe(0),        // Second field (length defines by input value type) coming feom input array in the index 0 contains value to be converted into Big-ending bytes
+///     ConstBe(12u16),    // Therd field (length 2 bytes) always contains value 12 as Big-ending bytes
+///     ValueBe(1),        // Forth field (length defines by input value type) coming feom input array in the index 0 contains value to be converted into Big-ending bytes
+/// ]
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConfField {
+    /// Const u8 to be converted to byte
+    Const(Vec<u8>),
+    /// Variable u8 to be converted to byte
+    ValueBe(FieldParam),
+    /// Variable u8 to be converted to byte
+    ValueLe(FieldParam),
+    /// Value passed by already converted to the bytes
+    Byte(usize),
+    /// Value passed by already converted to the bytes
+    Bytes(usize),
+}
+#[derive(Debug, Clone, PartialEq)]
+struct FieldParam {
+    pub index: usize,
+    pub length: usize,
+    pub signed: bool,
+}
+impl FieldParam {
+    pub fn to_be_bytes<'a>(&'a self, val: usize) -> Vec<u8> {
+        match self.length {
+            1 => match self.signed {
+                true => (val as i8).to_be_bytes().to_vec(),
+                false => (val as u8).to_be_bytes().to_vec(),
+            }
+            2 => match self.signed {
+                true => (val as i16).to_be_bytes().to_vec(),
+                false => (val as u16).to_be_bytes().to_vec(),
+            }
+            4 => match self.signed {
+                true => (val as i32).to_be_bytes().to_vec(),
+                false => (val as u32).to_be_bytes().to_vec(),
+            }
+            8 => match self.signed {
+                true => (val as i64).to_be_bytes().to_vec(),
+                false => (val as u64).to_be_bytes().to_vec(),
+            }
+            _ => panic!(),
+        }
+    }
+    pub fn to_le_bytes(&self, val: usize) -> Vec<u8> {
+        match self.length {
+            1 => match self.signed {
+                true => (val as i8).to_le_bytes().to_vec(),
+                false => (val as u8).to_le_bytes().to_vec(),
+            }
+            2 => match self.signed {
+                true => (val as i16).to_le_bytes().to_vec(),
+                false => (val as u16).to_le_bytes().to_vec(),
+            }
+            4 => match self.signed {
+                true => (val as i32).to_le_bytes().to_vec(),
+                false => (val as u32).to_le_bytes().to_vec(),
+            }
+            8 => match self.signed {
+                true => (val as i64).to_le_bytes().to_vec(),
+                false => (val as u64).to_le_bytes().to_vec(),
+            }
+            _ => panic!(),
+        }
+    }
+}
+// impl FieldParam<4> {
+//     pub fn to_be_bytes(&self, val: impl ToBytes) -> [u8; 4] {
+//         val.to_be_bytes()
+//     }
+//     pub fn to_le_bytes(&self, val: impl ToBytes) -> [u8; 4] {
+//         val.to_le_bytes()
+//     }
+// }
+/// 
 /// 
 #[derive(Debug, Clone, PartialEq)]
-pub enum BuildField {
-    /// u8 to be converted to byte
-    U8(u8),
-    /// u16 value to be converted to Big-ending bytes
-    BeU16(u16),
-    /// u16 value to be converted to Little-ending bytes
-    LeU16(u16),
-    /// u32 value to be converted to Big-ending bytes
-    BeU32(u32),
-    /// u32 value to be converted to Little-ending bytes
-    LeU32(u32),
-    /// u64 value to be converted to Big-ending bytes
-    BeU64(u64),
-    /// u64 value to be converted to Little-ending bytes
-    LeU64(u64),
-    /// u128 value to be converted to Big-ending bytes
-    BeU128(u128),
-    /// u128 value to be converted to Little-ending bytes
-    LeU128(u128),
-
-    /// i8 to be converted to Big-ending bytes
-    BeI8(i8),
-    /// i8 to be converted to Little-ending bytes
-    LeI8(i8),
-    /// i16 value to be converted to Big-ending bytes
-    BeI16(i16),
-    /// i16 value to be converted to Little-ending bytes
-    LeI16(i16),
-    /// i32 value to be converted to Big-ending bytes
-    BeI32(i32),
-    /// i32 value to be converted to Little-ending bytes
-    LeI32(i32),
-    /// i64 value to be converted to Big-ending bytes
-    BeI64(i64),
-    /// i64 value to be converted to Little-ending bytes
-    LeI64(i64),
-    /// i128 value to be converted to Big-ending bytes
-    BeI128(i128),
-    /// i128 value to be converted to Little-ending bytes
-    LeI128(i128),
-
-    /// f32 value to be converted to Big-ending bytes
-    BeF32(f32),
-    /// f32 value to be converted to Little-ending bytes
-    LeF32(f32),
-    /// f64 value to be converted to Big-ending bytes
-    BeF64(f64),
-    /// f64 value to be converted to Little-ending bytes
-    LeF64(f64),
+pub enum Field<T> {
+    /// Variable u8 to be converted to byte
+    ValueBe(T),
+    /// Variable u8 to be converted to byte
+    ValueLe(T),
     /// Value passed by already converted to the bytes
-    Data,
+    Byte(u8),
+    /// Value passed by already converted to the bytes
+    Bytes(Vec<u8>),
 }
 ///
 /// Socket Message
 pub struct Message<'a, FieldIn, FieldOut> {
-    build: Vec<BuildField>,
+    build: Vec<ConfField>,
     parse: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
     remainder: Bytes,
     dbg: Dbg,
@@ -126,7 +173,7 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
     /// Returns `Message` new instance 
     pub fn new(
         parent: impl Into<String>,
-        build: Vec<BuildField>,
+        build: Vec<ConfField>,
         parse: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static
     ) -> Self {
         Self {
@@ -138,44 +185,29 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
     }
     ///
     /// Returns message built according to specified fields and passed `bytes`
-    pub fn build(&mut self, mut data: VecDeque<Vec<u8>>) -> Vec<u8> {
-        let data_len = data.len();
+    pub fn build<T: ToBytes + Debug>(&mut self, data: &[Field<T>]) -> Vec<u8> {
         let mut message = vec![];
         for field in &self.build {
             match field {
-                BuildField::U8(val) => message.push(*val),
-                BuildField::BeU16(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeU16(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeU32(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeU32(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeU64(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeU64(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeU128(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeU128(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeI8(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeI8(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeI16(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeI16(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeI32(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeI32(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeI64(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeI64(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeI128(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeI128(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeF32(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeF32(val) => message.extend(val.to_le_bytes()),
-                BuildField::BeF64(val) => message.extend(val.to_be_bytes()),
-                BuildField::LeF64(val) => message.extend(val.to_le_bytes()),
-                BuildField::Data => {
-                    match data.pop_front() {
-                        Some(bytes) => message.extend(bytes),
-                        None => log::warn!(
-                            "{}.build | Argument `data` expected length {} but found {} elements",
-                            self.dbg,
-                            self.build.iter().filter(|field| **field == BuildField::Data).count(),
-                            data_len,
-                        ),
+                ConfField::Const(val) => message.extend(val),
+                ConfField::ValueBe(field) => match data.get(field.index) {
+                    Some(val) => message.extend(field.to_be_bytes(val)),
+                    None => todo!(),
+                },
+                ConfField::ValueLe(val) => message.extend(val.to_le_bytes()),
+                ConfField::Byte(i) => match data.get(*i) {
+                    Some(field) => match field {
+                        Field::Byte(byte) => message.push(*byte),
+                        _ => log::error!("{}.build | 'Field::Byte' expected in the field [{i}], but found {:?}", self.dbg, field),
                     }
+                    None => log::error!("{}.build | 'Field::Byte' configured with index [{i}], but input fields contains only {} elements", self.dbg, data.len()),
+                }
+                ConfField::Bytes(i) => match data.get(*i) {
+                    Some(field) => match field {
+                        Field::Bytes(byte) => message.extend_from_slice(byte),
+                        _ => log::error!("{}.build | 'Field::Bytes' expected in the field [{i}], but found {:?}", self.dbg, field),
+                    }
+                    None => log::error!("{}.build | 'Field::Bytes' configured with index [{i}], but input fields contains only {} elements", self.dbg, data.len()),
                 }
             }
         }
@@ -196,3 +228,21 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
         }
     }
 }
+//
+// //
+// impl ToBytes for u16 {
+//     fn to_be_bytes<const N: usize>(&self) -> [u8; N] {
+//         u16::to_be_bytes(*self)
+//     }
+//     fn to_le_bytes(&self) -> [u8; 2] {
+//         u16::to_le_bytes(*self).into_iter()
+//     }
+// }
+// impl ToBytes for &u16 {
+//     fn to_be_bytes(&self) -> [u8; 2] {
+//         u16::to_be_bytes(**self)
+//     }
+//     fn to_le_bytes(&self) -> [u8; 2] {
+//         u16::to_le_bytes(**self)
+//     }
+// }

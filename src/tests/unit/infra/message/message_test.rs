@@ -4,7 +4,7 @@ use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::{dbg::Dbg, error::Error};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::infra::message::{Bytes, FieldSize, FixedField, Message, BuildField, MessageParse, SizedField};
+use crate::infra::message::{Bytes, ConfField, Field, FieldSize, FixedField, Message, MessageParse, SizedField};
 ///
 ///
 static INIT: Once = Once::new();
@@ -59,7 +59,7 @@ fn parse() {
     let (dbg1, dbg2, dbg3, dbg4, dbg5, dbg6) = (dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone());
     let mut message = Message::new(
         &dbg,
-        vec![BuildField::U8(0)],
+        vec![ConfField::ConstU8(0)],
         SizedField::new(
             &dbg,
             |((_, size), _), _| *size as usize,
@@ -160,88 +160,41 @@ fn build() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    let test_data: &[(i32, Vec<u8>, Result<(u16, u16, u16, u8, u8, &'static str), ()>)] = &[
+    let test_data: &[(i32, (u16, u16, u16, u8, u8, &'static str))] = &[
         // (01, vec![0x00], Err(())),
-        (02, vec![0x00,0x07], Err(())),  // Transaction Identifier u16
-        (03, vec![0x00,0x00], Err(())),  // Protocol Identifier u16
-        (04, vec![0x00,0x0b], Err(())),  // Length Field u16
-        (05, vec![0x21], Err(())),  // Unit ID 33, u8
-        (06, vec![0x04], Err(())),  // Function Code 4, u8
-        (07, b"Hallo Wirld".to_vec(), Ok((07, 00, 11, 33, 04, "Hallo Wirld"))),
-        (12, vec![0x00,0x07], Err(())),  // Transaction Identifier u16
-        (13, vec![0x00,0x00], Err(())),  // Protocol Identifier u16
-        (14, vec![0x00,0x27], Err(())),  // Length Field u16
-        (15, vec![0x21], Err(())),  // Unit ID 33, u8
-        (16, vec![0x04], Err(())),  // Function Code 4, u8
-        (17, b"This is parsed field of variable length".to_vec(), Ok((07, 00, 39, 33, 04, "This is parsed field of variable length"))),
+        // (02, vec![0x00,0x07], Err(())),  // Transaction Identifier u16
+        // (03, vec![0x00,0x00], Err(())),  // Protocol Identifier u16
+        // (04, vec![0x00,0x0b], Err(())),  // Length Field u16
+        // (05, vec![0x21], Err(())),       // Unit ID 33, u8
+        // (06, vec![0x04], Err(())),       // Function Code 4, u8
+        // (07, b"Hallo Wirld".to_vec(), Ok((07, 00, 11, 33, 04, "Hallo Wirld"))),
+        // (12, vec![0x00,0x07], Err(())),  // Transaction Identifier u16
+        // (13, vec![0x00,0x00], Err(())),  // Protocol Identifier u16
+        // (14, vec![0x00,0x27], Err(())),  // Length Field u16
+        // (15, vec![0x21], Err(())),       // Unit ID 33, u8
+        // (16, vec![0x04], Err(())),       // Function Code 4, u8
+        (17, (07, 00, 39, 33, 04, "This is parsed field of variable length")),
     ];
     let (dbg1, dbg2, dbg3, dbg4, dbg5, dbg6) = (dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone());
     let mut message = Message::new(
         &dbg,
-        vec![BuildField::U8(0)],
-        SizedField::new(
-            &dbg,
-            |((_, size), _), _| *size as usize,
-            move |bytes| {
-                log::debug!("{dbg1} | Bytes to String: {:?}", bytes);
-                let val = String::from_utf8_lossy(bytes.try_into().expect(&format!("{dbg1} | Error parsing String from bytes {:?}", bytes))).into_owned();
-                log::debug!("{dbg1} | Value String: {:?}", val);
-                Ok(val)
-            },
-            FixedField::new(
-                &dbg, 1,    // Function Code 4, u8
-                move |bytes| {
-                    log::debug!("{dbg2} | Bytes to u8: {:?}", bytes);
-                    let val = u8::from_be_bytes(bytes.try_into().expect(&format!("{dbg2} | Error parsing u8 from bytes {:?}", bytes)));
-                    log::debug!("{dbg2} | Value u8: {:?}", val);
-                    Ok(val)
-                },
-                FixedField::new(
-                    &dbg, 1,    // Unit ID 33, u8
-                    move |bytes| {
-                        log::debug!("{dbg3} | Bytes to u8: {:?}", bytes);
-                        let val = u8::from_be_bytes(bytes.try_into().expect(&format!("{dbg3} | Error parsing u8 from bytes {:?}", bytes)));
-                        log::debug!("{dbg3} | Value u8: {:?}", val);
-                        Ok(val)
-                    },
-                    FixedField::new(
-                        &dbg, 2,    // Length Field u16
-                        move |bytes| {
-                            log::debug!("{dbg4} | Bytes to u16: {:?}", bytes);
-                            let val = u16::from_be_bytes(bytes.try_into().expect(&format!("{dbg4} | Error parsing u16 from bytes {:?}", bytes)));
-                            log::debug!("{dbg4} | Value u16: {:?}", val);
-                            Ok(val)
-                        },
-                        FixedField::new(
-                            &dbg, 2,    // Protocol Identifier u16
-                            move |bytes| {
-                                log::debug!("{dbg5} | Bytes to u16: {:?}", bytes);
-                                let val = u16::from_be_bytes(bytes.try_into().expect(&format!("{dbg5} | Error parsing u16 from bytes {:?}", bytes)));
-                                log::debug!("{dbg5} | Value u16: {:?}", val);
-                                Ok(val)
-                            },
-                            FixedField::new(
-                                &dbg, 2,    // Transaction Identifier u16
-                                move |bytes| {
-                                    log::debug!("{dbg6} | Bytes to u16: {:?}", bytes);
-                                    let val = u16::from_be_bytes(bytes.try_into().expect(&format!("{dbg6} | Error parsing u16 from bytes {:?}", bytes)));
-                                    log::debug!("{dbg6} | Value u16: {:?}", val);
-                                    Ok(val)
-                                },
-                                Terminator::new(),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
+        vec![
+            ConfField::ValueBe(0),      // Transaction Identifier u16       , index 0
+            ConfField::Const(vec![0x00, 0x00]),   // Protocol Identifier u16
+            ConfField::ValueBe(1),      // Length Field u16                 , index 1
+            ConfField::ValueBe(2),      // Unit ID, u8                      , index 2
+            ConfField::ValueBe(3),      // Function Code, u8                , index 3
+            ConfField::ValueBe(4),      // Bytes, Vec<u8>                   , index 4
+        ],
+        Terminator::new(),
     );
-    for (step, bytes, target) in test_data {
+    for (step, (id, prot, size, unit, code, bytes)) in test_data {
         log::debug!("{dbg} | Bytes: {:?}", bytes);
         let t = Instant::now();
-        match (message.parse(bytes.to_owned()), target) {
+        let result = message.build(&[Field::ValueBe(Box::new(id)), Field::ValueBe(Box::new(size)), Field::ValueBe(unit), Field::ValueBe(code), Field::ValueBe(bytes)]);
+        match (, target) {
             // (((((((), ()), u16), u16), u16), u8), u8), String
-            (Ok(((((((_, id), prot), size), unit), code), result)), Ok((target_id, target_prot, target_size, target_unit, target_code, target))) => {
+            (Ok(((((((_, id), prot), size), unit), code), result)), ) => {
                 log::debug!("{dbg} | Elapsed: {:?}", t.elapsed());
                 assert!(id == *target_id, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, id, target_id);
                 assert!(prot == *target_prot, "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, prot, target_prot);
