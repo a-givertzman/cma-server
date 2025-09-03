@@ -191,7 +191,7 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
             match field {
                 ConfField::Const(val) => message.extend(val),
                 ConfField::ValueBe(field) => match data.get(field.index) {
-                    Some(val) => message.extend(field.to_be_bytes(val)),
+                    Some(field) => match message.extend(field.to_be_bytes(val)),
                     None => todo!(),
                 },
                 ConfField::ValueLe(val) => message.extend(val.to_le_bytes()),
