@@ -1,18 +1,10 @@
 //!
-//! # Implements communication with Vibro-analytics microcontroller (Sub MC) over udp simple protocol.
+//! # FRDM (Fiber Rope Defects Monitoring)
 //! 
-//! - Cyclically reads data from the device 
-//! and yields changed to the specified destination service.
-//! 
-//! - Writes Point to the device specific address.
-//! 
-//! Configuration example for single Sub MC:
-//! 
-//! ```yaml
-//! service UdpClient UdpClientSencor01:
-//!     cycle: 10ms
-//!     ...
-//! ```
+//! - Communication with Camera 
+//! - Receives current rope position
+//! - Scanning the rope for defects
+//! - Calculates Rope Depreciation Rate
 //! 
 mod rope_defect;
 mod rope_deprecation;

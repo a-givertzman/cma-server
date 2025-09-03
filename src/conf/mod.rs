@@ -1,5 +1,5 @@
 //!
-//! Implementations for read all kind of configurations
+//! Tools usefull for all kind of configurations
 //! used in the application
 ///
 pub mod app;

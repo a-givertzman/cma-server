@@ -1,3 +1,6 @@
+//!
+//! Construct the Service by it's name in the runtime
+//! 
 use std::sync::Arc;
 use sal_core::dbg::Dbg;
 use sal_sync::{services::{conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::Scheduler};
