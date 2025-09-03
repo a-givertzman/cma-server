@@ -32,8 +32,9 @@
 //!     - 49, Duration
 //!     - .., ...
 //! 
+use std::collections::VecDeque;
+
 use sal_core::{dbg::Dbg, error::Error};
-use super::fields::{FieldData, FieldId, FieldSize, FieldSyn};
 ///
 /// 
 pub type Bytes = Vec<u8>;
@@ -47,16 +48,62 @@ pub trait MessageParse<'a, FieldIn, FieldOut, Out> {
 /// 
 /// 
 #[derive(Debug, Clone, PartialEq)]
-pub enum MessageField {
-    Syn(FieldSyn),
-    Id(FieldId),
-    Size(FieldSize),
-    Data(FieldData),
+pub enum BuildField {
+    /// u8 to be converted to byte
+    U8(u8),
+    /// u16 value to be converted to Big-ending bytes
+    BeU16(u16),
+    /// u16 value to be converted to Little-ending bytes
+    LeU16(u16),
+    /// u32 value to be converted to Big-ending bytes
+    BeU32(u32),
+    /// u32 value to be converted to Little-ending bytes
+    LeU32(u32),
+    /// u64 value to be converted to Big-ending bytes
+    BeU64(u64),
+    /// u64 value to be converted to Little-ending bytes
+    LeU64(u64),
+    /// u128 value to be converted to Big-ending bytes
+    BeU128(u128),
+    /// u128 value to be converted to Little-ending bytes
+    LeU128(u128),
+
+    /// i8 to be converted to Big-ending bytes
+    BeI8(i8),
+    /// i8 to be converted to Little-ending bytes
+    LeI8(i8),
+    /// i16 value to be converted to Big-ending bytes
+    BeI16(i16),
+    /// i16 value to be converted to Little-ending bytes
+    LeI16(i16),
+    /// i32 value to be converted to Big-ending bytes
+    BeI32(i32),
+    /// i32 value to be converted to Little-ending bytes
+    LeI32(i32),
+    /// i64 value to be converted to Big-ending bytes
+    BeI64(i64),
+    /// i64 value to be converted to Little-ending bytes
+    LeI64(i64),
+    /// i128 value to be converted to Big-ending bytes
+    BeI128(i128),
+    /// i128 value to be converted to Little-ending bytes
+    LeI128(i128),
+
+    /// f32 value to be converted to Big-ending bytes
+    BeF32(f32),
+    /// f32 value to be converted to Little-ending bytes
+    LeF32(f32),
+    /// f64 value to be converted to Big-ending bytes
+    BeF64(f64),
+    /// f64 value to be converted to Little-ending bytes
+    LeF64(f64),
+    /// Value passed by already converted to the bytes
+    Data,
 }
 ///
 /// Socket Message
 pub struct Message<'a, FieldIn, FieldOut> {
-    build: Vec<MessageField>, 
+    build: Vec<BuildField>,
     parse: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
     remainder: Bytes,
     dbg: Dbg,
@@ -79,7 +126,7 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
     /// Returns `Message` new instance 
     pub fn new(
         parent: impl Into<String>,
-        build: Vec<MessageField>,
+        build: Vec<BuildField>,
         parse: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static
     ) -> Self {
         Self {
@@ -91,16 +138,44 @@ impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
     }
     ///
     /// Returns message built according to specified fields and passed `bytes`
-    pub fn build(&mut self, bytes: &[u8], id: u32) -> Vec<u8> {
+    pub fn build(&mut self, mut data: VecDeque<Vec<u8>>) -> Vec<u8> {
+        let data_len = data.len();
         let mut message = vec![];
-        for field in &mut self.build {
+        for field in &self.build {
             match field {
-                MessageField::Syn(field_syn) => message.push(field_syn.0),
-                MessageField::Id(_) => message.extend(FieldId(id).to_be_bytes()),
-                // MessageField::Kind(field_kind) => message.extend(field_kind.to_bytes()),
-                MessageField::Size(field_size) => message.extend(field_size.to_be_bytes(bytes.len() as u32)),
-                MessageField::Data(_) => {
-                    message.extend_from_slice(bytes);
+                BuildField::U8(val) => message.push(*val),
+                BuildField::BeU16(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeU16(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeU32(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeU32(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeU64(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeU64(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeU128(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeU128(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeI8(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeI8(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeI16(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeI16(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeI32(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeI32(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeI64(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeI64(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeI128(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeI128(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeF32(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeF32(val) => message.extend(val.to_le_bytes()),
+                BuildField::BeF64(val) => message.extend(val.to_be_bytes()),
+                BuildField::LeF64(val) => message.extend(val.to_le_bytes()),
+                BuildField::Data => {
+                    match data.pop_front() {
+                        Some(bytes) => message.extend(bytes),
+                        None => log::warn!(
+                            "{}.build | Argument `data` expected length {} but found {} elements",
+                            self.dbg,
+                            self.build.iter().filter(|field| **field == BuildField::Data).count(),
+                            data_len,
+                        ),
+                    }
                 }
             }
         }

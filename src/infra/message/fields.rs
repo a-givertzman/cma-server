@@ -76,7 +76,7 @@ impl FieldSize {
 ///
 /// Data field
 #[derive(Clone, PartialEq)]
-pub struct FieldData(pub Vec<u8>);
+pub struct FieldData;
 // impl FieldData {
 //     pub fn len(&self) -> usize {
 //         self.0.len()
@@ -84,6 +84,6 @@ pub struct FieldData(pub Vec<u8>);
 // }
 impl std::fmt::Debug for FieldData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "FieldData({:?})", self.0)
+        write!(f, "FieldData")
     }
 }
