@@ -39,15 +39,12 @@ fn parse() {
         (05, vec![0x21], Err(())),  // Unit ID 33, u8
         (06, vec![0x04], Err(())),  // Function Code 4, u8
         (07, b"Hallo Wirld".to_vec(), Ok((07, 00, 11, 33, 04, "Hallo Wirld"))),
-        // (08, vec![0x6f,0x20], Err(())),
-        // (11, vec![0x00], Err(())),
-        // (12, vec![0x27], Err(())),
-        // (13, vec![0x54,0x68,0x69], Err(())),
-        // (14, vec![0x73,0x20,0x69,0x73,0x20], Err(())),
-        // (15, vec![0x70,0x61,0x72,0x73,0x65,0x64,0x20,0x66], Err(())),
-        // (16, vec![0x69,0x65,0x6c,0x64,0x20,0x6f,0x66], Err(())),
-        // (17, vec![0x20,0x76,0x61,0x72,0x69,0x61,0x62,0x6c,0x65], Err(())),
-        // (18, vec![0x20,0x6c,0x65,0x6e,0x67,0x74,0x68,0x01,0x02,0x03], Ok((39, "This is parsed field of variable length", vec![0x01,0x02,0x03]))),
+        (12, vec![0x00,0x07], Err(())),  // Transaction Identifier u16
+        (13, vec![0x00,0x00], Err(())),  // Protocol Identifier u16
+        (14, vec![0x00,0x27], Err(())),  // Length Field u16
+        (15, vec![0x21], Err(())),  // Unit ID 33, u8
+        (16, vec![0x04], Err(())),  // Function Code 4, u8
+        (17, b"This is parsed field of variable length".to_vec(), Ok((07, 00, 39, 33, 04, "This is parsed field of variable length"))),
     ];
     let (dbg1, dbg2, dbg3, dbg4, dbg5, dbg6) = (dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone(), dbg.clone());
     let mut message = Message::new(
