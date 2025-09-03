@@ -21,6 +21,16 @@ fn init_once() {
 fn init_each() -> () {}
 ///
 /// Testing [Message].parse
+/// ## Data messages (PDU)
+/// 
+///  Modbus Application Protocol, Protocol Data Unit (PDU) 7 Bytes length
+/// 
+/// ```ignore
+///  Transaction ID | Protocol ID | Length Field |  Unit ID | Function Code | Data
+///  ---            | ---         | ---          | ---      | ---           | ---
+/// 2 Bytes         | 2 Bytes     | 2 Bytes      | 1 Bytes  | 1 Byte        | Varies
+/// ```
+/// 
 #[test]
 fn parse() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
