@@ -1,10 +1,10 @@
-mod fields;
+mod field;
 mod find_field;
 mod fixed_field;
 mod message;
 mod sized_field;
 
-pub use fields::*;
+pub use field::*;
 pub use find_field::*;
 pub use fixed_field::*;
 pub use message::*;
