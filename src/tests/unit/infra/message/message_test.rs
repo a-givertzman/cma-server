@@ -160,20 +160,21 @@ fn build_all_fields() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    println!(" 11 -> {:x?} be", ( 11i8).to_be_bytes());
-    println!("-12 -> {:x?} le", (-12i8).to_le_bytes());
-    println!(" 13 -> {:x?} be", ( 13i16).to_be_bytes());
-    println!("-14 -> {:x?} le", (-14i16).to_le_bytes());
-    println!(" 15 -> {:x?} be", ( 15i32).to_be_bytes());
-    println!("-16 -> {:x?} le", (-16i32).to_le_bytes());
-    println!(" 17 -> {:x?} be", ( 17i64).to_be_bytes());
-    println!("-18 -> {:x?} le", (-18i64).to_le_bytes());
-    println!(" 19 -> {:x?} be", ( 19i128).to_be_bytes());
-    println!("-20 -> {:x?} le", (-20i128).to_le_bytes());
-    println!(" 21.21 -> {:x?} be", ( 21.21f32).to_be_bytes());
-    println!("-22.22 -> {:x?} le", (-22.22f32).to_le_bytes());
-    println!(" 23.23 -> {:x?} be", ( 23.23f64).to_be_bytes());
-    println!("-24.24 -> {:x?} le", (-24.24f64).to_le_bytes());
+    log::debug!("{dbg} |  11 -> {:x?} be", ( 11i8).to_be_bytes());
+    log::debug!("{dbg} | -12 -> {:x?} le", (-12i8).to_le_bytes());
+    log::debug!("{dbg} |  13 -> {:x?} be", ( 13i16).to_be_bytes());
+    log::debug!("{dbg} | -14 -> {:x?} le", (-14i16).to_le_bytes());
+    log::debug!("{dbg} |  15 -> {:x?} be", ( 15i32).to_be_bytes());
+    log::debug!("{dbg} | -16 -> {:x?} le", (-16i32).to_le_bytes());
+    log::debug!("{dbg} |  17 -> {:x?} be", ( 17i64).to_be_bytes());
+    log::debug!("{dbg} | -18 -> {:x?} le", (-18i64).to_le_bytes());
+    log::debug!("{dbg} |  19 -> {:x?} be", ( 19i128).to_be_bytes());
+    log::debug!("{dbg} | -20 -> {:x?} le", (-20i128).to_le_bytes());
+    log::debug!("{dbg} |  21.21 -> {:x?} be", ( 21.21f32).to_be_bytes());
+    log::debug!("{dbg} | -22.22 -> {:x?} le", (-22.22f32).to_le_bytes());
+    log::debug!("{dbg} |  23.23 -> {:x?} be", ( 23.23f64).to_be_bytes());
+    log::debug!("{dbg} | -24.24 -> {:x?} le", (-24.24f64).to_le_bytes());
+    log::debug!("{dbg} | 'TestString' -> {:x?} le", "TestString".as_bytes());
     let test_data: &[(i32, Vec<Field>, Vec<u8>)] = &[
         (01,
             vec![
@@ -229,6 +230,10 @@ fn build_all_fields() {
                 0x41,0xa9,0xae,0x14, 0x8f,0xc2,0xb1,0xc1,
                 // 23.23 be                              -24.24 le
                 0x40,0x37,0x3a,0xe1,0x47,0xae,0x14,0x7b, 0x3d,0x0a,0xd7,0xa3,0x70,0x3d,0x38,0xc0,
+                // const
+                0x00, 0x04,
+                // "TestString",
+                0x54,0x65,0x73,0x74,0x53,0x74,0x72,0x69,0x6e,0x67,
             ],
         ),
     ];
