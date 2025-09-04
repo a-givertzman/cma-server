@@ -3,21 +3,21 @@ use sal_core::{dbg::Dbg, error::Error};
 use super::message::{Bytes, MessageParse};
 ///
 /// Extracting `Data` field from the input bytes fixed length
-pub struct FindField<'a, FieldIn, FieldOut, Out> {
+pub struct FindField<FieldIn, FieldOut, Out> {
     dbg: Dbg,
     size: usize,
-    field: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
+    field: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,
     field_data: Option<(FieldIn, FieldOut)>,
-    from_bytes: Box<dyn Fn(&[u8]) -> Result<Option<Out>, Error>>,
+    from_bytes: Box<dyn Fn(&Dbg, &[u8]) -> Result<Option<Out>, Error>>,
     remainder: Bytes,
 }
 //
 //
-impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
+impl<FieldIn, FieldOut, Out> FindField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [FindField] new instance
     /// - `size` - Field length in the bytes
-    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&[u8]) -> Result<Option<Out>, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Option<Out>, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
         let dbg = Dbg::new(parent, format!("FindField(size {size})"));
         if size == 0 {
             panic!("{dbg}.new | Size should be >= 1");
@@ -40,7 +40,7 @@ impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
                 .windows(self.size)
                 .enumerate()
                 .find_map(|(i, bytes)| {
-                    match (self.from_bytes)(bytes) {
+                    match (self.from_bytes)(&self.dbg, bytes) {
                         Ok(data) => match data {
                             Some(data) => if remainder.len() >= self.size + i {
                                 Some((data, remainder[(self.size + i)..].to_vec()))
@@ -83,7 +83,7 @@ impl<'a, FieldIn, FieldOut, Out> FindField<'a, FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for FindField<'a, FieldIn, FieldOut, Out> {
+impl<FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<(FieldIn, FieldOut), Out, Bytes> for FindField<FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`

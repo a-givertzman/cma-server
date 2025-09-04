@@ -1,33 +1,51 @@
 use sal_sync::{
     collections::FxIndexMap,
-    services::{conf::{ConfTree, ConfTreeGet, DiagKeywd},
+    services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet, DiagKeywd},
     entity::{Name, PointConf},
-    task::functions::{FnConfKeywd, FnConfKindName}, LinkName}
+    LinkName}
 };
 use std::{fs, str::FromStr, time::Duration};
+
+use crate::services::ModbusTcpBlockConf;
 
 ///
 /// ## Config for `ModbusTcp` format:
 /// ```yaml
 /// service ModbusTcp FrdmService1:
-///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+///     wait-started: 10 ms             # optional, next service will wait until current completely started plus specified time
 ///     subscribe: Multiqueue
 ///     send-to: MultiQueue.in-queue
 ///     description: 'S7-IED-01.01'
 ///     ip: '192.168.100.243'
 ///     port: 502
 ///     cycle: 100 ms
-///     diagnosis:                          # internal diagnosis
-///         point Status:                   # Ok(0) / Invalid(10)
+///     diagnosis:                      # internal diagnosis
+///         point Status:               # Ok(0) / Invalid(10)
 ///             type: 'Int'
 ///             # history: r
-///         point Connection:               # Ok(0) / Invalid(10)
+///         point Connection:           # Ok(0) / Invalid(10)
 ///             type: 'Int'
 ///             # history: r
-///     function:                       # Modbus function code, groups multiple registers
-///         point Drive.Speed: 
-///             type: 'Real'
-///             offset: 0
+///     unit 00:                        # Modbus Unit 
+///         id: 00                      # Modbus Unit ID, used to identify a remote server located behaind the TCP/IP network (for serial bridging), ignored in a typical Modbus TCP/IP server
+///         01:                         # Modbus function code, groups multiple registers
+///             point Drive.Speed: 
+///                 type: 'Real'
+///                 offset: 0           # Modbus register addres
+///         02:                         # Modbus function code, groups multiple registers
+///             point Drive.Speed: 
+///                 type: 'Real'
+///                 offset: 0           # Modbus register addres
+///     unit 01:                        # Modbus Unit
+///         id: 01                      # Modbus Unit ID, used to identify a remote server located behaind the TCP/IP network (for serial bridging), ignored in a typical Modbus TCP/IP server
+///         01:                         # Modbus function code, groups multiple registers
+///             point Drive.Speed: 
+///                 type: 'Real'
+///                 offset: 0           # Modbus register addres
+///         02:                         # Modbus function code, groups multiple registers
+///             point Drive.Speed: 
+///                 type: 'Real'
+///                 offset: 0           # Modbus register addres
 ///```
 #[derive(Debug, PartialEq, Clone)]
 pub struct ModbusTcpConf {
@@ -45,8 +63,8 @@ pub struct ModbusTcpConf {
     /// The Device TCP/IP port, default 502
     pub port: u64,
     pub diagnosis: FxIndexMap<DiagKeywd, PointConf>,
-    /// Defined registers and corresponding `Point`'s
-    pub points: Vec<PointConf>,
+    /// Modbus units
+    pub units: Vec<ModbusTcpBlockConf>,
 }
 //
 // 
@@ -74,10 +92,10 @@ impl ModbusTcpConf {
         log::trace!("{dbg}.new | port: {:?}", port);
         let diagnosis = conf.get_diagnosis(&name);
         log::trace!("{dbg}.new | diagnosis: {:?}", diagnosis);
-        let points = conf.nodes()
-            .filter(|node| FnConfKeywd::from_str(&node.key).map_or(false, |keywd| keywd.kind() == FnConfKindName::Point))
-            .map(|point| {
-                PointConf::new(&name, &point)
+        let units = conf.nodes()
+            .filter(|node| ConfCustomKeywd::from_str(&node.key).map_or(false, |keywd| keywd.name().to_lowercase() == "unit"))
+            .map(|unit| {
+                ModbusTcpBlockConf::new(&name, unit)
             }).collect();
         Self {
             name,
@@ -88,12 +106,12 @@ impl ModbusTcpConf {
             ip,
             port,
             diagnosis,
-            points,
+            units,
         }
     }
     ///
     /// creates config from serde_yaml::Value of following format:
-    pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> ModbusTcpConf {
+    pub(crate) fn from_yaml(parent: impl Into<String>, value: &serde_yaml::Value) -> Self {
         match value.as_mapping().unwrap().into_iter().next() {
             Some((key, value)) => {
                 Self::new(parent, ConfTree::new(key.as_str().unwrap(), value.clone()))
@@ -106,12 +124,12 @@ impl ModbusTcpConf {
     ///
     /// reads config from path
     #[allow(dead_code)]
-    pub fn read(parent: impl Into<String>, path: &str) -> ModbusTcpConf {
+    pub fn read(parent: impl Into<String>, path: &str) -> Self {
         match fs::read_to_string(path) {
             Ok(yaml_string) => {
                 match serde_yaml::from_str(&yaml_string) {
                     Ok(config) => {
-                        ModbusTcpConf::from_yaml(parent, &config)
+                        Self::from_yaml(parent, &config)
                     }
                     Err(err) => {
                         panic!("ModbusTcpConf.read | Error in config: {:?}\n\terror: {:?}", yaml_string, err)

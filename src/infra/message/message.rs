@@ -39,23 +39,23 @@ use crate::infra::message::{Field, FieldConf};
 pub type Bytes = Vec<u8>;
 ///
 /// Parse Message structure from bytes Interface 
-pub trait MessageParse<'a, FieldIn, FieldOut, Out> {
+pub trait MessageParse<FieldIn, FieldOut, Out> {
     ///
     /// Extracting some pattern from input `bytes`
     fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut, Bytes), Error>;
 }
 ///
 /// Socket Message
-pub struct Message<'a, FieldIn, FieldOut> {
+pub struct Message<FieldIn, FieldOut> {
     build: Vec<FieldConf>,
-    parse: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
+    parse: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,
     remainder: Bytes,
     dbg: Dbg,
 }
 
 //
 //
-impl<'a, FieldIn, FieldOut> std::fmt::Debug for Message<'a, FieldIn, FieldOut> {
+impl<FieldIn, FieldOut> std::fmt::Debug for Message<FieldIn, FieldOut> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Message")
             .field("dbg", &self.dbg)
@@ -65,13 +65,13 @@ impl<'a, FieldIn, FieldOut> std::fmt::Debug for Message<'a, FieldIn, FieldOut> {
 }
 //
 //
-impl<'a, FieldIn, FieldOut> Message<'a, FieldIn, FieldOut> {
+impl<FieldIn, FieldOut> Message<FieldIn, FieldOut> {
     ///
     /// Returns `Message` new instance 
     pub fn new(
         parent: impl Into<String>,
         build: Vec<FieldConf>,
-        parse: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static
+        parse: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static
     ) -> Self {
         Self {
             dbg: Dbg::new(parent.into(), "Message"),

@@ -44,37 +44,35 @@ fn parse() {
         (10, vec![0x00,0x00,0x01,0xBC], Err(())),   // 444
         (11, vec![0x00,0x21,0x01,0x02], Ok((87, 444, 33, vec![0x01,0x02]))),
     ];
-    let dbg1 = dbg.clone();
-    let dbg2 = dbg.clone();
     let mut fixed_field = FixedField::new(
         &dbg, 2,
-        move |bytes| {
-            log::debug!("{dbg1} | Bytes to u16: {:?}", bytes);
+        |dbg, bytes| {
+            log::debug!("{dbg} | Bytes to u16: {:?}", bytes);
             match bytes.try_into() {
                 Ok(bytes) => {
                     let val = u16::from_be_bytes(bytes);
-                    log::debug!("{dbg1} | Value u16: {:?}", val);
+                    log::debug!("{dbg} | Value u16: {:?}", val);
                     Ok(val)
                 }
-                Err(_) => panic!("{dbg1} | Error parsing u16 from bytes {:?}", bytes),
+                Err(_) => panic!("{dbg} | Error parsing u16 from bytes {:?}", bytes),
             }
         },
         FixedField::new(
             &dbg, 4,
-            move |bytes| {
-                log::debug!("{dbg2} | Bytes to u32: {:?}", bytes);
+            |dbg, bytes| {
+                log::debug!("{dbg} | Bytes to u32: {:?}", bytes);
                 match bytes.try_into() {
                     Ok(bytes) => {
                         let val = u32::from_be_bytes(bytes);
-                        log::debug!("{dbg2} | Value u32: {:?}", val);
+                        log::debug!("{dbg} | Value u32: {:?}", val);
                         Ok(val)
                     }
-                    Err(_) => panic!("{dbg2} | Error parsing u32 from bytes {:?}", bytes),
+                    Err(_) => panic!("{dbg} | Error parsing u32 from bytes {:?}", bytes),
                 }
             },
             FixedField::new(
                 &dbg, 1,
-                move |bytes| {
+                |_, bytes| {
                     match bytes.try_into() {
                         Ok(bytes) => Ok(u8::from_be_bytes(bytes)),
                         Err(_) => todo!(),

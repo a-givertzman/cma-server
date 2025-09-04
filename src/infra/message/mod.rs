@@ -1,9 +1,11 @@
+mod field_terminator;
 mod field;
 mod find_field;
 mod fixed_field;
 mod message;
 mod sized_field;
 
+pub use field_terminator::*;
 pub use field::*;
 pub use find_field::*;
 pub use fixed_field::*;

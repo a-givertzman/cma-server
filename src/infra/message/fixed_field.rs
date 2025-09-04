@@ -3,21 +3,21 @@ use sal_core::{dbg::Dbg, error::Error};
 use super::message::{Bytes, MessageParse};
 ///
 /// Extracting `Data` field from the input bytes fixed length
-pub struct FixedField<'a, FieldIn, FieldOut, Out> {
+pub struct FixedField<FieldIn, FieldOut, Out> {
     dbg: Dbg,
     size: usize,
-    field: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
+    field: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,
     field_data: Option<(FieldIn, FieldOut)>,
-    from_bytes: Box<dyn Fn(&[u8]) -> Result<Out, Error>>,
+    from_bytes: Box<dyn Fn(&Dbg, &[u8]) -> Result<Out, Error>>,
     remainder: Bytes,
 }
 //
 //
-impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
+impl<FieldIn, FieldOut, Out> FixedField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [FixedField] new instance
     /// - `size` - Field length in the bytes
-    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
         Self {
             size,
             from_bytes: Box::new(from_bytes),
@@ -34,7 +34,7 @@ impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
             let bytes = &remainder[..self.size];
             log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, self.size, bytes);
             self.reset();
-            match (self.from_bytes)(bytes) {
+            match (self.from_bytes)(&self.dbg, bytes) {
                 Ok(data) => if remainder.len() >= self.size {
                     Ok((data, remainder[self.size..].to_vec()))
                 } else {
@@ -56,7 +56,7 @@ impl<'a, FieldIn, FieldOut, Out> FixedField<'a, FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for FixedField<'a, FieldIn, FieldOut, Out> {
+impl<FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<(FieldIn, FieldOut), Out, Bytes> for FixedField<FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`

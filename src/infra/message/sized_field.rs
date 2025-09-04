@@ -3,21 +3,21 @@ use sal_core::{dbg::Dbg, error::Error};
 use super::message::{Bytes, MessageParse};
 ///
 /// Extracting `Data` field from the input bytes of calculated length
-pub struct SizedField<'a, FieldIn, FieldOut, Out> {
+pub struct SizedField<FieldIn, FieldOut, Out> {
     dbg: Dbg,
     size: Box<dyn Fn(&FieldIn, &FieldOut) -> usize>,
-    field: Box<dyn MessageParse<'a, FieldIn, FieldOut, Bytes>>,
+    field: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,
     field_data: Option<(FieldIn, FieldOut)>,
-    from_bytes: Box<dyn Fn(&[u8]) -> Result<Out, Error>>,
+    from_bytes: Box<dyn Fn(&Dbg, &[u8]) -> Result<Out, Error>>,
     remainder: Bytes,
 }
 //
 //
-impl<'a, FieldIn, FieldOut, Out> SizedField<'a, FieldIn, FieldOut, Out> {
+impl<FieldIn, FieldOut, Out> SizedField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [SizedField] new instance
     /// - `size` - Field length in the bytes calculated from previous fields
-    pub fn new(parent: impl Into<String>, size: impl Fn(&FieldIn, &FieldOut) -> usize + 'static, from_bytes: impl Fn(&[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<'a, FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    pub fn new(parent: impl Into<String>, size: impl Fn(&FieldIn, &FieldOut) -> usize + 'static, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
         Self {
             size: Box::new(size),
             from_bytes: Box::new(from_bytes),
@@ -34,7 +34,7 @@ impl<'a, FieldIn, FieldOut, Out> SizedField<'a, FieldIn, FieldOut, Out> {
             let bytes = &remainder[..size];
             log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, size, bytes);
             self.reset();
-            match (self.from_bytes)(bytes) {
+            match (self.from_bytes)(&self.dbg, bytes) {
                 Ok(data) => if remainder.len() >= size {
                     Ok((data, remainder[size..].to_vec()))
                 } else {
@@ -56,7 +56,7 @@ impl<'a, FieldIn, FieldOut, Out> SizedField<'a, FieldIn, FieldOut, Out> {
 }
 //
 //
-impl<'a, FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<'a, (FieldIn, FieldOut), Out, Bytes> for SizedField<'a, FieldIn, FieldOut, Out> {
+impl<FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<(FieldIn, FieldOut), Out, Bytes> for SizedField<FieldIn, FieldOut, Out> {
     ///
     /// Extracting `Data` field from the input bytes
     /// - returns `Id`, `Kind`, `Size` & `Bytes` following by the `Size`

@@ -19,10 +19,12 @@
 //!  ---            | ---         | ---          | ---      | ---           | ---
 //!   2 Bytes       | 2 Bytes     | 2 Bytes      | 1 Bytes  | 1 Byte        | Varies
 //! 
-//! - **Transaction ID (2 Bytes):** This identification field is used for transaction pairing when multiple messages are sent along the same TCP connection by a client without waiting for a prior response.
+//! - **Transaction ID (2 Bytes):** This identification field is used for transaction pairing when multiple messages are sent along
+//! the same TCP connection by a client without waiting for a prior response.
 //! - **Protocol ID (2 bytes):** This field is always 0 for Modbus services and other values are reserved for future extensions.
 //! - **Length (2 bytes):** This field is a byte count of the remaining fields and includes the `Unit ID` byte, `Function Code` byte, and the `Data` fields.
-//! - **Unit ID (1 byte):** This field is used to identify a remote server located on a non TCP/IP network (for serial bridging). In a typical Modbus TCP/IP server application, the `Unit ID` is set to 00 or FF, ignored by the server, and simply echoed back in the response.
+//! - **Unit ID (1 byte):** This field is used to identify a remote server located on a non TCP/IP network (for serial bridging).
+//! In a typical Modbus TCP/IP server application, the `Unit ID` is set to 00 or FF, ignored by the server, and simply echoed back in the response.
 //! 
 //! ## Functions
 //! 
@@ -69,15 +71,19 @@
 //! function codes 65-72 and 100-110 for user-defined services.
 //! 
 mod modbus;
-mod modbus_block;
+mod modbus_message;
 mod modbus_tcp_conf;
 mod modbus_tcp_read;
 mod modbus_tcp_write;
 mod modbus_tcp;
+mod modbus_unit_conf;
+mod modbus_unit;
 
 pub use modbus::*;
-pub use modbus_block::*;
-pub use modbus_tcp::*;
+pub use modbus_message::*;
+pub use modbus_tcp_conf::*;
 pub use modbus_tcp_read::*;
 pub use modbus_tcp_write::*;
-pub use modbus_tcp_conf::*;
+pub use modbus_tcp::*;
+pub use modbus_unit_conf::*;
+pub use modbus_unit::*;

@@ -40,15 +40,14 @@ fn parse_u8() {
         (06, vec![0x40,0x01,0x02], Ok((64, vec![0x01,0x02]))),   // dec 64
         (07, vec![0xDE], Err(())),  // dec 222
     ];
-    let dbg1 = dbg.clone();
     let mut fixed_field = FindField::new(
         &dbg, 1,
-        move |bytes| {
-            log::debug!("{dbg1} | Bytes to u8: {:?}", bytes);
+        |dbg, bytes| {
+            log::debug!("{dbg} | Bytes to u8: {:?}", bytes);
             match bytes.try_into() {
                 Ok(bytes) => {
                     let val = u8::from_be_bytes(bytes);
-                    log::debug!("{dbg1} | Value u8: {:?}", val);
+                    log::debug!("{dbg} | Value u8: {:?}", val);
                     match val == 64 {
                         true => Ok(Some(val)),
                         false => Ok(None),
@@ -99,15 +98,14 @@ fn parse_u16() {
         (09, vec![0x04], Err(())),  // dec 12
         (10, vec![0xF0], Ok((1264, vec![]))), // dec 64
     ];
-    let dbg1 = dbg.clone();
     let mut fixed_field = FindField::new(
         &dbg, 2,
-        move |bytes| {
-            log::debug!("{dbg1} | Bytes to u8: {:?}", bytes);
+        |dbg, bytes| {
+            log::debug!("{dbg} | Bytes to u8: {:?}", bytes);
             match bytes.try_into() {
                 Ok(bytes) => {
                     let val = u16::from_be_bytes(bytes);
-                    log::debug!("{dbg1} | Value u8: {:?}", val);
+                    log::debug!("{dbg} | Value u8: {:?}", val);
                     match val == 1264 {
                         true => Ok(Some(val)),
                         false => Ok(None),
@@ -165,21 +163,20 @@ fn parse_u32() {
         (16, vec![0x03], Err(())),  // dec 12
         (17, vec![0x04], Ok((16909060, vec![]))), // dec 64
     ];
-    let dbg1 = dbg.clone();
     let mut fixed_field = FindField::new(
         &dbg, 4,
-        move |bytes| {
-            log::debug!("{dbg1} | Bytes to u8: {:?}", bytes);
+        move |dbg, bytes| {
+            log::debug!("{dbg} | Bytes to u8: {:?}", bytes);
             match bytes.try_into() {
                 Ok(bytes) => {
                     let val = u32::from_be_bytes(bytes);
-                    log::debug!("{dbg1} | Value u8: {:?}", val);
+                    log::debug!("{dbg} | Value u8: {:?}", val);
                     match val == 16909060 {
                         true => Ok(Some(val)),
                         false => Ok(None),
                     }
                 }
-                Err(_) => panic!("{dbg1} | Error parsing u32 from bytes {:?}", bytes),
+                Err(_) => panic!("{dbg} | Error parsing u32 from bytes {:?}", bytes),
             }
         },
         Terminator::new(),

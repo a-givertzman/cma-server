@@ -49,33 +49,31 @@ fn parse() {
         (17, vec![0x20,0x76,0x61,0x72,0x69,0x61,0x62,0x6c,0x65], Err(())),   // 444
         (18, vec![0x20,0x6c,0x65,0x6e,0x67,0x74,0x68,0x01,0x02,0x03], Ok((39, "This is parsed field of variable length", vec![0x01,0x02,0x03]))),
     ];
-    let dbg1 = dbg.clone();
-    let dbg2 = dbg.clone();
     let mut fixed_field = SizedField::new(
         &dbg,
         |((), ()), size| *size as usize,
-        move |bytes| {
-            log::debug!("{dbg1} | Bytes to String: {:?}", bytes);
+        |dbg, bytes| {
+            log::debug!("{dbg} | Bytes to String: {:?}", bytes);
             match bytes.try_into() {
                 Ok(bytes) => {
                     let val = String::from_utf8_lossy(bytes).into_owned();
-                    log::debug!("{dbg1} | Value String: {:?}", val);
+                    log::debug!("{dbg} | Value String: {:?}", val);
                     Ok(val)
                 }
-                Err(_) => panic!("{dbg1} | Error parsing String from bytes {:?}", bytes),
+                Err(_) => panic!("{dbg} | Error parsing String from bytes {:?}", bytes),
             }
         },
         FixedField::new(
             &dbg, 2,
-            move |bytes| {
-                log::debug!("{dbg2} | Bytes to u16: {:?}", bytes);
+            |dbg, bytes| {
+                log::debug!("{dbg} | Bytes to u16: {:?}", bytes);
                 match bytes.try_into() {
                     Ok(bytes) => {
                         let val = u16::from_be_bytes(bytes);
-                        log::debug!("{dbg2} | Value u16: {:?}", val);
+                        log::debug!("{dbg} | Value u16: {:?}", val);
                         Ok(val)
                     }
-                    Err(_) => panic!("{dbg2} | Error parsing u16 from bytes {:?}", bytes),
+                    Err(_) => panic!("{dbg} | Error parsing u16 from bytes {:?}", bytes),
                 }
             },
             Terminator::new(),
