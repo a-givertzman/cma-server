@@ -71,7 +71,6 @@
 //! function codes 65-72 and 100-110 for user-defined services.
 //! 
 mod modbus;
-mod modbus_message;
 mod modbus_tcp_conf;
 mod modbus_tcp_read;
 mod modbus_tcp_write;
@@ -80,7 +79,6 @@ mod modbus_unit_conf;
 mod modbus_unit;
 
 pub use modbus::*;
-pub use modbus_message::*;
 pub use modbus_tcp_conf::*;
 pub use modbus_tcp_read::*;
 pub use modbus_tcp_write::*;

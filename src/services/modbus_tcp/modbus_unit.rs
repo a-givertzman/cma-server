@@ -2,7 +2,7 @@ use std::{fs, io::{BufReader, Read, Write}, net::TcpStream};
 use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use sal_core::dbg::Dbg;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
     domain::{
@@ -14,7 +14,7 @@ use crate::{
         slmp::{
             c_slmp_const::FrameType, slmp_packet::SlmpPacket,
         }
-    }, ModbusMessage, ModbusParseBool, ModbusParseInt, ModbusParseReal, ModbusTcpBlockConf},
+    }, FunctionCode, ModbusMessage, ModbusParseBool, ModbusParseInt, ModbusParseReal, ModbusUnitConf},
     tcp::tcp_stream_write::OpResult,
 };
 ///
@@ -27,7 +27,7 @@ pub struct ModbusUnit {
     // size: u16,
     // cycle: Option<Duration>,
     modbus_message: ModbusMessage,
-    pub points: IndexMap<String, Box<dyn ParsePoint>>,
+    pub points: IndexMap<String, (FunctionCode, Box<dyn ParsePoint>)>,
     dbg: Dbg,
 }
 //
@@ -38,7 +38,7 @@ impl ModbusUnit {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [ModbusDb]
-    pub fn new(txid: usize, conf: &ModbusTcpBlockConf) -> Self {
+    pub fn new(txid: usize, conf: &ModbusUnitConf) -> Self {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
@@ -54,7 +54,7 @@ impl ModbusUnit {
     }
     ///
     /// Writes Point's to the log file
-    fn log(self_id: &str, parent: &Name, point: &Point) {
+    fn log(dbg: &Dbg, parent: &Name, point: &Point) {
         let path = concat_string!("./logs", parent.join(), "/points.log");
         match fs::OpenOptions::new().create(true).append(true).open(&path) {
             Ok(mut f) => {
@@ -62,7 +62,7 @@ impl ModbusUnit {
             }
             Err(err) => {
                 if log::max_level() >= log::LevelFilter::Trace {
-                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", self_id, path, err)
+                    log::warn!("{}.log | Error open file: '{}'\n\terror: {:?}", dbg, path, err)
                 }
             }
         }
@@ -71,7 +71,7 @@ impl ModbusUnit {
     /// Sends all configured points from the current DB with the given status
     pub fn yield_status(&mut self, status: Status, tx_send: &Sender<Point>) -> Result<(), String> {
         let mut message = String::new();
-        for (_key, parse_point) in &mut self.points {
+        for (_key, (_, parse_point)) in &mut self.points {
             if let Some(point) = parse_point.next_status(status) {
                 match tx_send.send(point) {
                     Ok(_) => {}
@@ -89,23 +89,17 @@ impl ModbusUnit {
     }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(dbg: &Dbg, tx_id: usize, conf: &ModbusTcpBlockConf) -> IndexMap<String, Box<dyn ParsePoint>> {
-        conf.points.iter().map(|point_conf| {
-            match point_conf.type_ {
-                PointConfType::Bool => {
-                    (point_conf.name.clone(), Self::box_bool(tx_id, point_conf.name.clone(), point_conf))
+    fn configure_parse_points(dbg: &Dbg, txid: usize, conf: &ModbusUnitConf) -> IndexMap<String, (FunctionCode, Box<dyn ParsePoint>)> {
+        conf.functions.iter().flat_map(|(code, points)| {
+            points.iter().map(|point| {
+                match point.type_ {
+                    PointConfType::Bool => (point.name.clone(), (*code, Self::box_bool(txid, point.name.clone(), point))),
+                    PointConfType::Int => (point.name.clone(), (*code, Self::box_int(txid, point.name.clone(), point))),
+                    PointConfType::Real => (point.name.clone(), (*code, Self::box_real(txid, point.name.clone(), point))),
+                    PointConfType::Double => (point.name.clone(), (*code, Self::box_real(txid, point.name.clone(), point))),
+                    _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for Device", dbg, point.type_)
                 }
-                PointConfType::Int => {
-                    (point_conf.name.clone(), Self::box_int(tx_id, point_conf.name.clone(), point_conf))
-                }
-                PointConfType::Real => {
-                    (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
-                }
-                PointConfType::Double => {
-                    (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
-                }
-                _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for Device", dbg, point_conf.type_)
-            }
+            })
         }).collect()
     }
     ///
@@ -114,19 +108,19 @@ impl ModbusUnit {
     /// - returns Closed:
     ///    - if read 0 bytes
     ///    - if on error
-    fn read_all(self_id: &str, bytes: &mut Vec<u8>, mut stream: impl Read) -> ConnectionStatus<OpResult<(), String>, String> {
+    fn read_all(dbg: &Dbg, bytes: &mut Vec<u8>, mut stream: impl Read) -> ConnectionStatus<OpResult<(), String>, String> {
         let chank_len = 1024;
         loop {
             let mut buf = vec![0u8; chank_len];
             match stream.read(&mut buf) {
                 Ok(0) => {
-                    log::trace!("{}.read_all | socket closed by peer", self_id);
-                    return ConnectionStatus::Closed(format!("{}.read_all | TcpStream closed by peer", self_id))
+                    log::trace!("{}.read_all | socket closed by peer", dbg);
+                    return ConnectionStatus::Closed(format!("{}.read_all | TcpStream closed by peer", dbg))
                 }
                 Ok(len) => {
-                    log::trace!("{}.read_all | bytes read: {}", self_id, len);
-                    log::trace!("{}.read_all | bytes read: \n\t{:02X?}", self_id, buf);
-                    log::trace!("{}.read_all | appending bytes: \n\t{:02X?}", self_id, &buf[..len]);
+                    log::trace!("{}.read_all | bytes read: {}", dbg, len);
+                    log::trace!("{}.read_all | bytes read: \n\t{:02X?}", dbg, buf);
+                    log::trace!("{}.read_all | appending bytes: \n\t{:02X?}", dbg, &buf[..len]);
                     bytes.extend_from_slice(&buf[..len]);
                     if len < chank_len {
                         return ConnectionStatus::Active(OpResult::Ok(()))
@@ -137,10 +131,10 @@ impl ModbusUnit {
                     // warn!("{}.read_all | error kind: {:?}", self_id, err.kind());
                     return match SocketState::match_error_kind(err.kind()) {
                         SocketState::Active => {
-                            ConnectionStatus::Active(OpResult::Err(format!("{}.read_all | Tcp stream is empty", self_id)))
+                            ConnectionStatus::Active(OpResult::Err(format!("{}.read_all | Tcp stream is empty", dbg)))
                         }
                         SocketState::Closed => {
-                            ConnectionStatus::Closed(format!("{}.read_all | Tcp stream is closed, error: {:?}", self_id, err))
+                            ConnectionStatus::Closed(format!("{}.read_all | Tcp stream is closed, error: {:?}", dbg, err))
                         }
                         SocketState::Timeout => {
                             ConnectionStatus::Active(OpResult::Timeout())
@@ -151,72 +145,68 @@ impl ModbusUnit {
         }
     }
     /// Returns updated points from the current DB
-    ///     - sends read request to the device (TcpStream)
-    ///     - reads data slice from the device (TcpStream),
-    ///     - parses raw data into the configured points
-    ///     - sends to the [dest] only points with updated value or status
-    pub fn read(&mut self, tcp_stream: &mut TcpStream, dest: &Sender<Point>) -> Result<(), String> {
-        log::trace!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.dbg, self.unit, self.offset, self.size);
+    /// - sends read request to the device (TcpStream)
+    /// - reads data slice from the device (TcpStream),
+    /// - parses raw data into the configured points
+    /// - sends to the [dest] only points with updated value or status
+    pub fn read(&mut self, tcp_stream: &mut TcpStream, dest: &Sender<Point>) -> Result<(), Error> {
+        let error = Error::new(&self.dbg, "read");
         let read_tcp_stream = BufReader::new(tcp_stream.try_clone().unwrap());
-        match self.modbus_message.read_packet(FrameType::BinReqSt) {
-            Ok(packet) => {
-                log::trace!("{}.read | Sending SLMP request: \n\t{:02X?} ...", self.dbg, packet);
-                match tcp_stream.write_all(&packet) {
-                    Ok(_) => {
-                        log::trace!("{}.read | Sending SLMP request - ok", self.dbg);
-                        // debug!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset, self.size);
-                        let mut bytes = vec![];
-                        log::trace!("{}.read | Reading SLMP reply...", self.dbg);
-                        match Self::read_all(&self.dbg, &mut bytes, read_tcp_stream) {
-                            ConnectionStatus::Active(_) => {
-                                log::trace!("{}.read | bytes: {:?}", self.dbg, bytes);
-                                let timestamp = Utc::now();
-                                let mut message = String::new();
-                                if bytes.len() >= 11 {
-                                    let data_bytes = &bytes[11..];
-                                    for (_key, parse_point) in &mut self.points {
-                                        if let Some(point) = parse_point.next(data_bytes, timestamp) {
-                                            log::trace!("{}.read | point: {:?}", self.dbg, point);
-                                            match dest.send(point.clone()) {
-                                                Ok(_) => {
-                                                    Self::log(&self.dbg, &self.name, &point);
-                                                }
-                                                Err(err) => {
-                                                    message = format!("{}.read | send error: {}", self.dbg, err);
-                                                    log::warn!("{}", message);
-                                                }
+        for (name, (code, point)) in self.points {
+            log::trace!("{}.read | Reading unit: '{:?}', offset: '{}', size: '{}'", self.dbg, self.unit, self.offset, self.size);
+            self.modbus_message.build(self.unit, code, point.address())
+            log::trace!("{}.read | Sending SLMP request: \n\t{:02X?} ...", self.dbg, bytes);
+            match tcp_stream.write_all(&bytes) {
+                Ok(_) => {
+                    log::trace!("{}.read | Sending SLMP request - ok", self.dbg);
+                    // debug!("{}.read | Reading device-code: '{:?}', offset: '{}', size: '{}'", self.id, self.device_code, self.offset, self.size);
+                    let mut bytes = vec![];
+                    log::trace!("{}.read | Reading SLMP reply...", self.dbg);
+                    match Self::read_all(&self.dbg, &mut bytes, read_tcp_stream) {
+                        ConnectionStatus::Active(_) => {
+                            log::trace!("{}.read | bytes: {:?}", self.dbg, bytes);
+                            let timestamp = Utc::now();
+                            let mut message = String::new();
+                            if bytes.len() >= 11 {
+                                let data_bytes = &bytes[11..];
+                                for (_key, parse_point) in &mut self.points {
+                                    if let Some(point) = parse_point.next(data_bytes, timestamp) {
+                                        log::trace!("{}.read | point: {:?}", self.dbg, point);
+                                        match dest.send(point.clone()) {
+                                            Ok(_) => {
+                                                Self::log(&self.dbg, &self.name, &point);
+                                            }
+                                            Err(err) => {
+                                                message = format!("{}.read | send error: {}", self.dbg, err);
+                                                log::warn!("{}", message);
                                             }
                                         }
                                     }
-                                } else {
-                                    message = format!("{}.read | Empty message received", self.dbg);
-                                    log::warn!("{}", message);
                                 }
-                                match message.is_empty() {
-                                    true => Ok(()),
-                                    false => Err(message),
-                                }
-                            }
-                            ConnectionStatus::Closed(err) => {
-                                let message = format!("{}.read | Read socket error: {}", self.dbg, err);
+                            } else {
+                                message = format!("{}.read | Empty message received", self.dbg);
                                 log::warn!("{}", message);
-                                Err(message)
+                            }
+                            match message.is_empty() {
+                                true => Ok(()),
+                                false => Err(message),
                             }
                         }
-                    }
-                    Err(err) => {
-                        let message = format!("{}.read | Write socket error: {}", self.dbg, err);
-                        log::warn!("{}", message);
-                        Err(message)
+                        ConnectionStatus::Closed(err) => {
+                            let message = format!("{}.read | Read socket error: {}", self.dbg, err);
+                            log::warn!("{}", message);
+                            Err(message)
+                        }
                     }
                 }
-            }
-            Err(err) => {
-                let message = format!("{}.read | Build read packet error: {}", self.dbg, err);
-                log::error!("{}", message);
-                Err(message)
+                Err(err) => {
+                    let message = format!("{}.read | Write socket error: {}", self.dbg, err);
+                    log::warn!("{}", message);
+                    Err(message)
+                }
             }
         }
+        Ok(())
     }
     ///
     /// Writes point to the current DB
@@ -300,14 +290,14 @@ impl ModbusUnit {
     }
     ///
     ///
-    fn box_bool(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
-        Box::new(ModbusParseBool::new(tx_id, name, config))
+    fn box_bool(txid: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
+        Box::new(ModbusParseBool::new(txid, name, config))
     }
     ///
     ///
-    fn box_int(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
+    fn box_int(txid: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
         Box::new(ModbusParseInt::new(
-            tx_id,
+            txid,
             name,
             config,
             Self::int_filter(config.filters.clone()),
@@ -315,9 +305,9 @@ impl ModbusUnit {
     }
     ///
     ///
-    fn box_real(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
+    fn box_real(txid: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
         Box::new(ModbusParseReal::new(
-            tx_id,
+            txid,
             name,
             config,
             Self::real_filter(config.filters.clone()),

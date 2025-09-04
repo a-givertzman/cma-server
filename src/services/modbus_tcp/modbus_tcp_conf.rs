@@ -6,7 +6,7 @@ use sal_sync::{
 };
 use std::{fs, str::FromStr, time::Duration};
 
-use crate::services::ModbusTcpBlockConf;
+use crate::services::ModbusUnitConf;
 
 ///
 /// ## Config for `ModbusTcp` format:
@@ -64,7 +64,7 @@ pub struct ModbusTcpConf {
     pub port: u64,
     pub diagnosis: FxIndexMap<DiagKeywd, PointConf>,
     /// Modbus units
-    pub units: Vec<ModbusTcpBlockConf>,
+    pub units: Vec<ModbusUnitConf>,
 }
 //
 // 
@@ -93,9 +93,17 @@ impl ModbusTcpConf {
         let diagnosis = conf.get_diagnosis(&name);
         log::trace!("{dbg}.new | diagnosis: {:?}", diagnosis);
         let units = conf.nodes()
-            .filter(|node| ConfCustomKeywd::from_str(&node.key).map_or(false, |keywd| keywd.name().to_lowercase() == "unit"))
-            .map(|unit| {
-                ModbusTcpBlockConf::new(&name, unit)
+            .filter_map(|node| {
+                match ConfCustomKeywd::from_str(&node.key) {
+                    Ok(keywd) => match keywd.name().to_lowercase() == "unit" {
+                        true => {
+                            let unit = keywd.title().parse().expect(&format!("{dbg}.new | Can't parse Modbus 'Unit ID' from {:?}", keywd));
+                            Some(ModbusUnitConf::new(&name, unit, node))
+                        }
+                        false => None,
+                    }
+                    Err(_) => None,
+                }
             }).collect();
         Self {
             name,

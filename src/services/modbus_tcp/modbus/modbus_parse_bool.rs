@@ -10,7 +10,7 @@ use crate::services::slmp_client::parse_point::ParsePoint;
 pub struct ModbusParseBool {
     id: String,
     pub type_: PointConfType,
-    pub tx_id: usize,
+    pub txid: usize,
     pub name: String,
     pub value: i64,
     pub status: Status,
@@ -29,7 +29,7 @@ impl ModbusParseBool {
     ///
     /// Creates new instance of the SlmpPArseBool
     pub fn new(
-        tx_id: usize,
+        txid: usize,
         name: String,
         config: &PointConf,
         // filter: Filter<T>,
@@ -37,7 +37,7 @@ impl ModbusParseBool {
         ModbusParseBool {
             id: format!("ModbusParseBool"),
             type_: config.type_.clone(),
-            tx_id,
+            txid,
             name,
             value: 0i64,
             status: Status::Invalid,
@@ -78,7 +78,7 @@ impl ModbusParseBool {
     fn to_point(&self) -> Option<Point> {
         if self.is_changed {
             Some(Point::Bool(PointHlr::new(
-                self.tx_id,
+                self.txid,
                 &self.name,
                 Bool(self.get_bit(self.value, self.bit.unwrap() as usize)),
                 self.status,

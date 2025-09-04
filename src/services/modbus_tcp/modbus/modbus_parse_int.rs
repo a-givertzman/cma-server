@@ -9,7 +9,7 @@ use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client
 pub struct ModbusParseInt {
     id: String,
     pub type_: PointConfType,
-    pub tx_id: usize,
+    pub txid: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = i64> + Send>,
     pub status: Box<dyn Filter<Item = Status> + Send>,
@@ -28,7 +28,7 @@ impl ModbusParseInt {
     ///
     ///
     pub fn new(
-        tx_id: usize,
+        txid: usize,
         name: String,
         config: &PointConf,
         filter: Box<dyn Filter<Item = i64> + Send>,
@@ -36,7 +36,7 @@ impl ModbusParseInt {
         ModbusParseInt {
             id: format!("ModbusParseInt({})", name),
             type_: config.type_.clone(),
-            tx_id,
+            txid,
             name,
             value: filter,
             status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
@@ -84,7 +84,7 @@ impl ModbusParseInt {
         };
         if let Some((value, status)) = value_status {
             Some(Point::Int(PointHlr::new(
-                self.tx_id,
+                self.txid,
                 &self.name,
                 value,
                 status.unwrap_or(Status::Invalid),
