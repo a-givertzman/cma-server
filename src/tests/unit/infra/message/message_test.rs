@@ -160,16 +160,20 @@ fn build_all_fields() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    println!(" 11 -> {:?} be", ( 11i8).to_be_bytes());
-    println!("-12 -> {:?} le", (-12i8).to_le_bytes());
-    println!(" 13 -> {:?} be", ( 13i16).to_be_bytes());
-    println!("-14 -> {:?} le", (-14i16).to_le_bytes());
-    println!(" 15 -> {:?} be", ( 15i32).to_be_bytes());
-    println!("-16 -> {:?} le", (-16i32).to_le_bytes());
-    println!(" 17 -> {:?} be", ( 17i64).to_be_bytes());
-    println!("-18 -> {:?} le", (-18i64).to_le_bytes());
-    println!(" 19 -> {:?} be", ( 19i128).to_be_bytes());
-    println!("-20 -> {:?} le", (-20i128).to_le_bytes());
+    println!(" 11 -> {:x?} be", ( 11i8).to_be_bytes());
+    println!("-12 -> {:x?} le", (-12i8).to_le_bytes());
+    println!(" 13 -> {:x?} be", ( 13i16).to_be_bytes());
+    println!("-14 -> {:x?} le", (-14i16).to_le_bytes());
+    println!(" 15 -> {:x?} be", ( 15i32).to_be_bytes());
+    println!("-16 -> {:x?} le", (-16i32).to_le_bytes());
+    println!(" 17 -> {:x?} be", ( 17i64).to_be_bytes());
+    println!("-18 -> {:x?} le", (-18i64).to_le_bytes());
+    println!(" 19 -> {:x?} be", ( 19i128).to_be_bytes());
+    println!("-20 -> {:x?} le", (-20i128).to_le_bytes());
+    println!(" 21.21 -> {:x?} be", ( 21.21f32).to_be_bytes());
+    println!("-22.22 -> {:x?} le", (-22.22f32).to_le_bytes());
+    println!(" 23.23 -> {:x?} be", ( 23.23f64).to_be_bytes());
+    println!("-24.24 -> {:x?} le", (-24.24f64).to_le_bytes());
     let test_data: &[(i32, Vec<Field>, Vec<u8>)] = &[
         (01,
             vec![
@@ -212,17 +216,19 @@ fn build_all_fields() {
                 // 11 be   -12 le
                 0x0b,      0xf4, 
                 // 13 be   -14 le
-                0x00,0x0d, 0xf1,0xff, 
+                0x00,0x0d, 0xf2,0xff, 
                 // 15 be             -16 le
-                0x00,0x00,0x00,0x0f, 0xef,0xff,0xff,0xff,
+                0x00,0x00,0x00,0x0f, 0xf0,0xff,0xff,0xff,
                 // const
                 0x00, 0x03,
                 // 17 be                                 -18 le
-                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x11, 0xed,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x11, 0xee,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
                 // 19 be                                                                         -20 le
-                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x13, 0xeb,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x13, 0xec,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
                 // 21.21 be          -22.22 le
-                0x41,0xa9,0xae,0x14, 0x8f,0xc2,0xb1,0x41,
+                0x41,0xa9,0xae,0x14, 0x8f,0xc2,0xb1,0xc1,
+                // 23.23 be                              -24.24 le
+                0x40,0x37,0x3a,0xe1,0x47,0xae,0x14,0x7b, 0x3d,0x0a,0xd7,0xa3,0x70,0x3d,0x38,0xc0,
             ],
         ),
     ];
