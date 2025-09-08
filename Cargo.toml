@@ -50,9 +50,9 @@ coco = "~0.3"
 #
 # Collections
 linked-hash-map = "~0.5"
-indexmap = "~2.10"
+indexmap = "~2.11"
 hashers = "~1.0"
-circular-buffer = "~1.1"
+circular-buffer = "~1.2"
 
 #
 # CPP integrations
