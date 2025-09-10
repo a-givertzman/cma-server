@@ -1,6 +1,6 @@
 use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::{Duration, Instant}};
 use chrono::Datelike;
-use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, GeometryDefectType, Image, Initial, InitialCtx, Mad};
+use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, Cropping, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, GeometryDefectType, Image, Initial, InitialCtx, Mad};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object}, Service, ServiceWaiting}, sync::Handles, thread_pool::Scheduler};
 use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::rope_defect::{Rope, RopeDefectConf}};
@@ -228,15 +228,24 @@ impl Service for RopeDefect {
                 conf.defect_detection.fast_scan.geometry_defect_threshold,
                 *Box::new(Mad::new()),
                 EdgeDetection::new(
+                    conf.defect_detection.edge_detection.otsu_tune,
                     conf.defect_detection.edge_detection.threshold,
                     DetectingContoursCv::new(
-                        conf.defect_detection.detecting_contours.clone(),
+                        conf.defect_detection.contours.clone(),
                         AutoBrightnessAndContrast::new(
-                            conf.defect_detection.detecting_contours.brightness_contrast.histogram_clipping,
+                            conf.defect_detection.contours.brightness_contrast.hist_clip_left,
+                            conf.defect_detection.contours.brightness_contrast.hist_clip_right,
                             AutoGamma::new(
-                                Initial::new(
-                                    InitialCtx::new(),
-                                ),
+                                conf.defect_detection.contours.gamma.factor,
+                                Cropping::new(
+                                    conf.defect_detection.contours.cropping.x,
+                                    conf.defect_detection.contours.cropping.width,
+                                    conf.defect_detection.contours.cropping.y,
+                                    conf.defect_detection.contours.cropping.height,
+                                    Initial::new(
+                                        InitialCtx::new(),
+                                    ),
+                                )
                             ),
                         ),
                     ),

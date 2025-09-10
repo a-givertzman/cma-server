@@ -101,17 +101,31 @@ impl ModbusMessage {
         }
     }
     ///
-    /// ## Returns Modbus message bytes built from fields:
+    /// ## Returns Modbus message 'Read Multiple Registers Query' bytes built from fields:
     /// - `unit` - u8, Modbus Unit ID
     /// - `code` - u8, Function code
-    /// - `start` - Address of the first register (40108-40001 = 107 = 6B hex)
+    /// - `start` - Address (relative, dec) of the first register (40108-40001 = 107 = 6B hex)
     /// - `count` - The number of required registers (reading 3 registers from 40108 to 40110)
-    pub fn build(&mut self, unit: u8, code: u8, start: u16, count: u16) -> Vec<u8> {
+    pub fn read_multiple(&mut self, unit: u8, code: u8, start: u16, count: u16) -> Vec<u8> {
         self.transaction += 1;
         self.message.build(&[
             Field::Byte(unit),
             Field::Byte(code),
             Field::Bytes([start.to_be_bytes(), count.to_be_bytes()].concat())
+        ])
+    }
+    ///
+    /// ## Returns Modbus message 'Write Register' bytes built from fields:
+    /// - `unit` - u8, Modbus Unit ID
+    /// - `code` - u8, Function code
+    /// - `addr` - Address (relative, dec) of the first register (40108-40001 = 107 = 6B hex)
+    /// - `value` - The value to be written to the registers address
+    pub fn write<T>(&mut self, unit: u8, code: u8, addr: u16, value: u16) -> Vec<u8> {
+        self.transaction += 1;
+        self.message.build(&[
+            Field::Byte(unit),
+            Field::Byte(code),
+            Field::Bytes([addr.to_be_bytes(), value.to_be_bytes()].concat())
         ])
     }
 }

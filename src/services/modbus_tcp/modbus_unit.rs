@@ -3,7 +3,7 @@ use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
+use sal_sync::{collections::FxIndexMap, services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
     domain::{
         filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
@@ -27,7 +27,7 @@ pub struct ModbusUnit {
     // size: u16,
     // cycle: Option<Duration>,
     modbus_message: ModbusMessage,
-    pub points: IndexMap<String, (FunctionCode, Box<dyn ParsePoint>)>,
+    pub points: IndexMap<FunctionCode, FxIndexMap<String, Box<dyn ParsePoint>>>,
     dbg: Dbg,
 }
 //
@@ -89,17 +89,22 @@ impl ModbusUnit {
     }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(dbg: &Dbg, txid: usize, conf: &ModbusUnitConf) -> IndexMap<String, (FunctionCode, Box<dyn ParsePoint>)> {
-        conf.functions.iter().flat_map(|(code, points)| {
-            points.iter().map(|point| {
+    fn configure_parse_points(dbg: &Dbg, txid: usize, conf: &ModbusUnitConf) -> IndexMap<FunctionCode, IndexMap<String, Box<dyn ParsePoint>>> {
+        conf.functions.iter().map(|(code, points)| {
+            let mut points = IndexMap::new();
+            for point in points {
                 match point.type_ {
-                    PointConfType::Bool => (point.name.clone(), (*code, Self::box_bool(txid, point.name.clone(), point))),
+                    PointConfType::Bool => {
+                        let entry = points.entry(code).or_insert(IndexMap::new());
+                         (point.name.clone(), (*code, Self::box_bool(txid, point.name.clone(), point))),
+                    }
                     PointConfType::Int => (point.name.clone(), (*code, Self::box_int(txid, point.name.clone(), point))),
                     PointConfType::Real => (point.name.clone(), (*code, Self::box_real(txid, point.name.clone(), point))),
                     PointConfType::Double => (point.name.clone(), (*code, Self::box_real(txid, point.name.clone(), point))),
                     _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for Device", dbg, point.type_)
                 }
-            })
+            }
+            points
         }).collect()
     }
     ///
@@ -154,7 +159,7 @@ impl ModbusUnit {
         let read_tcp_stream = BufReader::new(tcp_stream.try_clone().unwrap());
         for (name, (code, point)) in self.points {
             log::trace!("{}.read | Reading unit: '{:?}', offset: '{}', size: '{}'", self.dbg, self.unit, self.offset, self.size);
-            self.modbus_message.build(self.unit, code, point.address())
+            let bytes = self.modbus_message.read_multiple(self.unit, code, point.address());
             log::trace!("{}.read | Sending SLMP request: \n\t{:02X?} ...", self.dbg, bytes);
             match tcp_stream.write_all(&bytes) {
                 Ok(_) => {
