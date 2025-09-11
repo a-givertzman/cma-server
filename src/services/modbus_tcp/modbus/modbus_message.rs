@@ -120,7 +120,7 @@ impl ModbusMessage {
     /// - `code` - u8, Function code
     /// - `addr` - Address (relative, dec) of the first register (40108-40001 = 107 = 6B hex)
     /// - `value` - The value to be written to the registers address
-    pub fn write<T>(&mut self, unit: u8, code: u8, addr: u16, value: u16) -> Vec<u8> {
+    pub fn write(&mut self, unit: u8, code: u8, addr: u16, value: u16) -> Vec<u8> {
         self.transaction += 1;
         self.message.build(&[
             Field::Byte(unit),

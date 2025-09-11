@@ -19,8 +19,7 @@ pub enum ModbusError {
 //
 // 
 impl ModbusError {
-    pub fn text(code: i32) -> String {
-        let as_str = &format!("{}", code);
+    pub fn text(code: u16) -> String {
         let err = match code {
             0x01 => "The function code received in the query is not allowed or invalid",
             0x02 => "The data address received in the query is not an allowable address for the slave or is invalid",
@@ -33,15 +32,15 @@ impl ModbusError {
             0x0A => "Gateway path(s) not available",
             0x0B => "The target device failed to respond (the gateway generates this exception)",
             0xFF => "The exception response PDU contains extended exception information. A subsequent 2 byte length field indicates the size in bytes of this function-code specific exception information",
-            _ => as_str,
+            _ => &format!("{}", code),
         };
         err.to_owned()
     }    
 }
 //
 // 
-impl From<i32> for ModbusError {
-    fn from(value: i32) -> Self {
+impl From<u16> for ModbusError {
+    fn from(value: u16) -> Self {
         match value {
             0x01 => Self::IllegalFunction,
             0x02 => Self::IllegalDataAddress,
@@ -55,7 +54,7 @@ impl From<i32> for ModbusError {
             0x0B => Self::DeviceNotRespond,
             0xFF => Self::ExtendedExceptionResponse(String::new()),
             _ => {
-                Self::Inner(format!("{} ({})", Self::text(value), value))
+                Self::ExtendedExceptionResponse(format!("{} ({})", Self::text(value), value))
             }
         }
     }

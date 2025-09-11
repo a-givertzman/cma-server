@@ -3,7 +3,7 @@ use sal_sync::services::{
     entity::{Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status},
     types::Bool,
 };
-use crate::services::slmp_client::parse_point::ParsePoint;
+use crate::services::modbus_tcp::modbus::ParsePoint;
 ///
 /// Used for parsing configured point from slice of bytes read from device
 #[derive(Debug, Clone)]

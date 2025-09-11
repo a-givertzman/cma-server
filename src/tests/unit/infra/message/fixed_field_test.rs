@@ -108,7 +108,7 @@ impl Terminator {
         Self {}
     }
 }
-impl<'a> MessageParse<'a, (), (), Bytes> for Terminator {
+impl MessageParse<(), (), Bytes> for Terminator {
     ///
     /// Resets passed `bytes`
     fn parse(&mut self, bytes: Bytes) -> Result<((), (), Bytes), Error> {

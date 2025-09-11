@@ -25,17 +25,17 @@ enum State {
 }
 ///
 /// Reads data from Vibro-analytics microcontroller (Sub MC)
-pub struct UdpClientDb {
+pub struct UdpClientDb<'a> {
     id: String,
     pub name: Name,
     pub description: String,
     mtu: usize,
     pub points: IndexMap<String, Box<dyn ParsePoint>>,
-    notify: ChangeNotify<State, String>,
+    notify: ChangeNotify<'a, State, String>,
 }
 //
 //
-impl UdpClientDb {
+impl<'a> UdpClientDb<'a> {
     ///
     /// Creates new instance of the [UdpClientDb]
     /// - app - string represents application name, for point path

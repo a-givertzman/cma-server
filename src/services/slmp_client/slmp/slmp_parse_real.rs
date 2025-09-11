@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{
     Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status,
 };
-use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client::parse_point::ParsePoint};
+use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client::slmp::ParsePoint};
 ///
 /// Used for parsing configured point from slice of bytes read from device
 #[derive(Debug)]

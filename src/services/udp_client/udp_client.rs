@@ -87,7 +87,7 @@ impl UdpClient {
     }
     ///
     /// Returns UdpClint's DB blokcs
-    pub fn build_dbs(dbg: &Dbg, tx_id: usize, conf: &UdpClientConf) -> FxIndexMap<Dbs, UdpClientDb> {
+    pub fn build_dbs<'a>(dbg: &Dbg, tx_id: usize, conf: &UdpClientConf) -> FxIndexMap<Dbs, UdpClientDb<'a>> {
         let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
         for (db_name, db_conf) in &conf.dbs {
             log::info!("{}.build_dbs | Configuring UdpClientDb: {:?}...", dbg, db_name);
