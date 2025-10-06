@@ -1097,7 +1097,7 @@ service ProfinetClient ied14:
     db db906_visual_data:
         number: 906
         offset: 0
-        size: 246
+        size: 248
         point CraneMovement.RotateLeft: 
             type: Int
             address:
@@ -1524,6 +1524,12 @@ service ProfinetClient ied14:
             address:
                 offset: 242
             comment: 'Температура масла (градусы)'
+        point HPU.OilHeating:
+            type: Bool
+            address:
+                offset: 246
+                bit: 0
+
 
 service ProfinetClient ied15:
     cycle: 7 ms
