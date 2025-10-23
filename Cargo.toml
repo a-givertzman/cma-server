@@ -24,7 +24,7 @@ debugging = { tag = "0.0.1", git = "https://github.com/a-givertzman/rust-debugin
 api-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/rust-api-tools.git" }
 # sal-sync = { path = "../sal-sync" }
 sal-sync = { tag = "0.3.0", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
-frdm-tools = { tag = "0.1.0", git = "https://github.com/a-givertzman/frdm-server.git" }
+frdm-tools = { tag = "0.2.0", git = "https://github.com/a-givertzman/frdm-server.git" }
 #
 # Serde
 serde = { version = "~1.0", features = ["derive"] }
@@ -76,10 +76,10 @@ clap = { version = "~4.5", features = ["derive"] }
 
 #
 # UI
-egui = "~0.32"
-egui_plot = "~0.33"
-egui_extras = "~0.32"
-eframe = "~0.32"
+egui = "~0.33"
+egui_plot = "~0.34"
+egui_extras = "~0.33"
+eframe = "~0.33"
 hsl = "~0.1"
 winit = { version = "~0.30", optional = true }
 #winit = { version = "~0.30" }
