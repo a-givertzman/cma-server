@@ -1,6 +1,6 @@
 use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::{Duration, Instant}};
 use chrono::Datelike;
-use frdm_tools::{camera::Camera, AutoBrightnessAndContrast, AutoGamma, ContextRead, Cropping, DetectingContoursCv, EdgeDetection, Eval, GeometryDefect, GeometryDefectCtx, GeometryDefectType, Image, Initial, InitialCtx, Mad};
+use frdm_tools::{camera::Camera, AutoGamma, Context, Cropping, Eval, FastScan, FineScan, FineScanCtx, Gray, Image, Initial, InitialCtx, RopeDefectCtx, RopeDefectKind};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object}, Service, ServiceWaiting}, sync::Handles, thread_pool::Scheduler};
 use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::rope_defect::{Rope, RopeDefectConf}};
@@ -87,7 +87,7 @@ impl RopeDefect {
     fn detection(
         dbg: &Dbg,
         frame: Image,
-        defect: &GeometryDefect,
+        defect: &FineScan,
         rope: &Rope,
         camera_name: &str,
         camera_id: usize,
@@ -109,17 +109,17 @@ impl RopeDefect {
                     log::debug!("{dbg}.detection | Analizing rope at: {:.2?} mm ({:.3?} m) index {slice_ix}, prev_ix {:?}...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0), prev_index);
                     match defect.eval(frame.clone()) {
                         Ok(ctx) => {
-                            let geometry_defect_ctx: &GeometryDefectCtx = ctx.read();
-                            let defects = &geometry_defect_ctx.result;
+                            let defect_ctx: &RopeDefectCtx<FineScanCtx> = ctx.read();
+                            let defects = &defect_ctx.result;
                             if !defects.is_empty() {
                                 log::warn!("{dbg}.run | Slice {slice_ix} - Defects detected");
                                 defects.iter().for_each(|defect| {
                                     log::warn!("{dbg}.run | Slice {slice_ix} - Defect {:?} detected", defect);
                                     let defect_id = match defect {
-                                        GeometryDefectType::Expansion => "expansion",
-                                        GeometryDefectType::Compressing => "compressing",
-                                        GeometryDefectType::Hill => "hill",
-                                        GeometryDefectType::Pit => "pit",
+                                        RopeDefectKind::Expansion(_, _) => "expansion",
+                                        RopeDefectKind::Compressing(_, _) => "compressing",
+                                        RopeDefectKind::Hill(_, _) => "hill",
+                                        RopeDefectKind::Pit(_, _) => "pit",
                                     };
                                     let now = chrono::Utc::now();
                                     let img_name = format!("{:0>2}-{:0>2}-{:0>4}_{defect_id}.jpg", now.day(), now.month(), now.year());
@@ -222,35 +222,63 @@ impl Service for RopeDefect {
         let service_release = service_waiting.release();
         let handles_clone = self.handles.clone();
         log::debug!("{}.run | Preparing thread...", dbg);
+        let scheduler = self.scheduler.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let defect = GeometryDefect::new(
-                conf.defect_detection.fast_scan.geometry_defect_threshold,
-                *Box::new(Mad::new()),
-                EdgeDetection::new(
-                    conf.defect_detection.edge_detection.otsu_tune,
-                    conf.defect_detection.edge_detection.threshold,
-                    DetectingContoursCv::new(
-                        conf.defect_detection.contours.clone(),
-                        AutoBrightnessAndContrast::new(
-                            conf.defect_detection.contours.brightness_contrast.hist_clip_left,
-                            conf.defect_detection.contours.brightness_contrast.hist_clip_right,
-                            AutoGamma::new(
-                                conf.defect_detection.contours.gamma.factor,
-                                Cropping::new(
-                                    conf.defect_detection.contours.cropping.x,
-                                    conf.defect_detection.contours.cropping.width,
-                                    conf.defect_detection.contours.cropping.y,
-                                    conf.defect_detection.contours.cropping.height,
-                                    Initial::new(
-                                        InitialCtx::new(),
-                                    ),
-                                )
+            let defect = FineScan::new(
+                conf.defect_detection.fine_scan,
+                scheduler.clone(),
+                None::<Box<dyn Fn(&Context) + Send + Sync>>,
+                FastScan::new(
+                    conf.defect_detection.fast_scan,
+                    scheduler,
+                    Gray::new(
+                        AutoGamma::new(
+                            conf.defect_detection.normalize.gamma.factor,
+                            Cropping::new(
+                                conf.defect_detection.normalize.cropping.x,
+                                conf.defect_detection.normalize.cropping.width,
+                                conf.defect_detection.normalize.cropping.y,
+                                conf.defect_detection.normalize.cropping.height,
+                                Initial::new(
+                                    InitialCtx::new(),
+                                ),
+                                false,
                             ),
+                            false,
                         ),
                     ),
+                    false,
                 ),
+                false,
             );
+            // GeometryDefect::new(
+            //     conf.defect_detection.fast_scan.geometry_defect_threshold,
+            //     *Box::new(Mad::new()),
+            //     EdgeDetection::new(
+            //         conf.defect_detection.edge_detection.otsu_tune,
+            //         conf.defect_detection.edge_detection.threshold,
+            //         DetectingContoursCv::new(
+            //             conf.defect_detection.contours.clone(),
+            //             AutoBrightnessAndContrast::new(
+            //                 conf.defect_detection.contours.brightness_contrast.hist_clip_left,
+            //                 conf.defect_detection.contours.brightness_contrast.hist_clip_right,
+            //                 AutoGamma::new(
+            //                     conf.defect_detection.contours.gamma.factor,
+            //                     Cropping::new(
+            //                         conf.defect_detection.contours.cropping.x,
+            //                         conf.defect_detection.contours.cropping.width,
+            //                         conf.defect_detection.contours.cropping.y,
+            //                         conf.defect_detection.contours.cropping.height,
+            //                         Initial::new(
+            //                             InitialCtx::new(),
+            //                         ),
+            //                     )
+            //                 ),
+            //             ),
+            //         ),
+            //     ),
+            // );
             let mut prev_index = None;
             let mut camera = Camera::new(camera_conf.clone());
             let camera_name = camera.name().join();
