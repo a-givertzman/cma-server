@@ -4,7 +4,7 @@ use sal_sync::{
     services::{entity::{Cot, Name, Object}, Service, ServiceWaiting, Services, SubscriptionCriteria, RECV_TIMEOUT}, sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{RopeDeprecationConf, RopeSlices}, sync::AtomicUsizeOption};
+use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, LooseRopeSections, RopeDeprecationConf}, sync::AtomicUsizeOption};
 
 ///
 /// ## Rope deprecation rate
@@ -122,26 +122,60 @@ impl Service for RopeDeprecation where {
             //     (NotifyState::SendError,      Box::new(|message| log::error!("{}", message))),
             // ]);
             let conf_table = conf.table.clone();
-            let mut rope_slices = RopeSlices::new(&name, conf.crane.clone(), |ix, deprecation| {
-                let dbg = &dbg.clone();
-                log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", ix, deprecation);
-                let sql = format!(r"
-                    insert into {conf_table} (id, deprecation) values ({ix}, {deprecation})
-                    on conflict (id) do update 
-                        set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {ix};
-                ");
-                log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
-                let reply = api_client.fetch(sql).wait();
-                log::trace!("{dbg}.run | Sql reply: {:?}", reply);
-            });
+            let mut subscriptions = vec![];
+            let mut deprecation = Deprecation::new(
+                dbg,
+                &conf.crane,
+                Bendings::new(
+                    dbg,
+                    conf.crane.rope.pos.clone(),
+                    &conf.crane.rope,
+                    BlockArcs::new(
+                        dbg,
+                        LooseRopeSections::new(
+                            dbg,
+                            Blocks::new(
+                                dbg,
+                                &conf.crane.blocks,
+                                Booms::new(dbg, &conf.crane.booms, &mut subscriptions),
+                            ),
+                        ),
+                    ),
+                ),
+                subscriptions,
+                |slice_ix, deprecation| {
+                    let dbg = &dbg.clone();
+                    log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", slice_ix, deprecation);
+                    let sql = format!(r"
+                        insert into {conf_table} (id, deprecation) values ({slice_ix}, {deprecation})
+                        on conflict (id) do update 
+                            set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {slice_ix};
+                    ");
+                    log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
+                    let reply = api_client.fetch(sql).wait();
+                    log::trace!("{dbg}.run | Sql reply: {:?}", reply);
+                },
+            );
+            // let mut rope_slices = RopeSlices::new(&name, conf.crane.clone(), |ix, deprecation| {
+            //     let dbg = &dbg.clone();
+            //     log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", ix, deprecation);
+            //     let sql = format!(r"
+            //         insert into {conf_table} (id, deprecation) values ({ix}, {deprecation})
+            //         on conflict (id) do update 
+            //             set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {ix};
+            //     ");
+            //     log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
+            //     let reply = api_client.fetch(sql).wait();
+            //     log::trace!("{dbg}.run | Sql reply: {:?}", reply);
+            // });
             service_release.add(Ok(()));
             loop {
                 log::trace!("{dbg}.run | Receiving points...");
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
                         log::debug!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
-                        rope_slices.eval(&point);
-                        if let Some(pos) = rope_slices.get(&conf.crane.rope.pos) {
+                        deprecation.eval(&point);
+                        if let Some(pos) = deprecation.get(&conf.crane.rope.pos) {
                             log::debug!("{dbg}.run | Received rope pos: {:.4?} m", pos);
                             rope_pos.store(Some((pos * 1000.0).round() as usize));
                         }

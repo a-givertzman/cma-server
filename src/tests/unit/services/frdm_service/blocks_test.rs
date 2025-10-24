@@ -35,8 +35,8 @@ fn new() {
     let test_data = [
         (01,  [
             // Input Events
-            ("Load.MainBoomAngle",    69.71),
-            ("Load.RotaryBoomAngle", 155.30)
+            ("MainBoom.Angle",    69.71),
+            ("RotaryBoom.Angle", 155.30)
         ], 
         // Targets
         [
@@ -51,8 +51,8 @@ fn new() {
         ]),
         (02,  [
             // Input Events
-            ("Load.MainBoomAngle",    74.00),
-            ("Load.RotaryBoomAngle", 128.00)
+            ("MainBoom.Angle",    74.00),
+            ("RotaryBoom.Angle", 128.00)
         ], 
         // Targets
         [
@@ -102,15 +102,6 @@ fn new() {
     //  Блоки (5, 6) | Схема 3 | L_block=904.54 | Alpha_rope=11.89° | L_rope=390.29
     //  Блоки (6, 7) | Схема 1 | L_block=1080.03 | Alpha_rope=90.00° | L_rope=1000.00
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
-        bendings:           # Rope bloks with diameter, inter and exit
-            # Block Diameter   inter   exit
-            - D200mm           5.0  .. 5.15 m
-            - D300mm           7.23 .. 7.30 mm
-        boom:
-            main-len: 5.3 m                                        # length of the main boom
-            main-angle: point real '/App/Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
-            rotary-len: 2.1 m                                      # length of the rotary boom
-            rotary-angle: point real '/App/Load.RotaryBoomAngle'    # degrees, current angle of the rotary boom (jib) to boom axis
         booms:
             - Main-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -118,14 +109,14 @@ fn new() {
                 l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 11200.0 mm                                         # length of the boom
-                angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+                angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
             - Rotary-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
                 l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.0 mm                                          # length of the rotary boom
-                angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+                angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
         blocks:
             - '1':
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -163,11 +154,12 @@ fn new() {
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
         rope:
-            width: 35 mm        # Diameter of the rome
-            length: 3000 m      # Total working length of the rope
-            segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-            pos: point real '/App/Winch.EncoderBR2'      # meters, current rope position
-            load: point real '/App/Winch.Load'          # tonn, current rope load
+            width: 35 mm            # Diameter of the rome
+            length: 3000 m          # Total working length of the rope
+            winch-length: 2985 m    # Rope length on the winch drum
+            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+            pos: point real 'Winch.EncoderBR2'      # meters, current rope position
+            load: point real 'Winch.Load'          # tonn, current rope load
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let mut inputs = FxIndexMap::default();

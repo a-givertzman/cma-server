@@ -37,12 +37,11 @@ use crate::{infra::ApiClientConf, services::frdm_service::CraneConf};
 ///                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
 ///                 len: 7984.1 mm                                          # length of the rotary boom
 ///                 angle: point real 'App/MultiQueue/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
-/// 
 ///         rope:
 ///             width: 35 mm        # Diameter of the rome
 ///             length: 3000 m      # Total working length of the rope
 ///             segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///             pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position
+///             pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
 ///             load: point real 'App/MultiQueue/Winch.Load'           # tonn, current rope load
 /// ```
 #[derive(Debug, PartialEq, Clone)]

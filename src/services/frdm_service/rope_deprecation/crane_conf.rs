@@ -1,22 +1,19 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::Name};
-use crate::services::frdm_service::{BendingsConf, BlockConf, BoomConf, RopeConf};
+use crate::services::frdm_service::{BlockConf, BoomConf, RopeConf};
 ///
 /// ## The configuration parameters for the rope
 /// 
 /// ### Example:
 /// ```yaml
 /// crane:
-///     # bendings:           # Rope bloks with diameter, inter and exit
-///     #     # Block Diameter   inter   exit
-///     #     - D200mm           5.0  .. 5.15 m
-///     #     - D300mm           7.23 .. 7.30 mm
 ///     rope:
-///         width: 35 mm        # Diameter of the rome
-///         length: 3000 m      # Total working length of the rope
-///         segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///         pos: point real 'App/Winch.EncoderBR2'      # meters, current rope position
-///         load: point real '/App/Winch.Load'          # tonn, current rope load 
+///         width: 35 mm            # Diameter of the rome
+///         length: 3000 m          # Total working length of the rope
+///         winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
+///         segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///         pos: point real 'Winch.EncoderBR2'     # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
+///         load: point real 'Winch.Load'          # tonn, current rope load 
 ///     booms:
 ///         - Main-Boom:
 ///             l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -71,7 +68,6 @@ use crate::services::frdm_service::{BendingsConf, BlockConf, BoomConf, RopeConf}
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct CraneConf {
-    // pub bendings: BendingsConf,
     pub booms: Vec<(String, BoomConf)>,
     pub blocks: Vec<(String, BlockConf)>,
     pub rope: RopeConf,
@@ -88,9 +84,6 @@ impl CraneConf {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
-        // let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong config"));
-        // let bendings = BendingsConf::new(&name, bendings);
-        // log::trace!("{dbg}.new | bendings: {:#?}", bendings);
         let booms: &Vec<serde_yaml::Value> = conf.get("booms").expect(&format!("{dbg}.new | 'booms' - not found or wrong config"));
         let booms = booms.iter().map(|boom| {
             let (key, boom) = boom.as_mapping()
@@ -110,7 +103,14 @@ impl CraneConf {
                 .iter()
                 .next()
                 .expect(&format!("{dbg}.new | 'block' config can't be empty, but found: {:#?}", block));
-            let block = ConfTree::new(key.as_str().unwrap(), block.to_owned());
+            let key = if key.is_number() {
+                format!("{}", key.as_u64().expect(&format!("{dbg}.new | Block's key expected positive number or string")))
+            } else if key.is_string() {
+                format!("{}", key.as_str().expect(&format!("{dbg}.new | Block's key expected positive number or string")))
+            } else {
+                panic!("{dbg}.new | Block's key expected positive number or string");
+            };
+            let block = ConfTree::new(key, block.to_owned());
             (block.key.clone(), BlockConf::new(&name, block))
         }).collect();
         log::trace!("{dbg}.new | blocks: {:#?}", blocks);
@@ -118,7 +118,6 @@ impl CraneConf {
         let rope = RopeConf::new(&name, rope);
         log::trace!("{dbg}.new | rope: {:#?}", rope);
         Self {
-            // bendings,
             booms,
             blocks,
             rope,

@@ -118,17 +118,23 @@ def distance_point_to_line(Y1, Y2, X1, X2, x, y):
         return 0
     return numerator / denominator
 
-class RopeParams:
+class RopeLooseSection:
     l_block: float
-    "Расстояние бежду текущим блоком и следующим"
+    "Расстояние между блоками"
     alpha_block: float
+    "угол между линией между блоками и горизонтом, градусы"
     alpha_rope: float
-    "Угол ..."
-    X1_block: float
-    Y1_block: float
-    X2_block: float
-    Y2_block: float
+    "угол между линией каната между блоками и горизонтом, градусы"
+    block1_x: float
+    "точка входа на блок по X"
+    block1_y: float
+    "точка входа на блок по Y"
+    block2_x: float
+    "точка выхода с блока по X"
+    block2_y: float
+    "точка выхода с блока по Y"
     l_rope: float
+    "Длина каната между точками выхода с текущего блока и входа в следующий"
     alpha_rope_list: list
     # block_pair: tuple[int, int]
     scheme: int
@@ -140,20 +146,23 @@ class RopeParams:
         else: raise ValueError(f"Некорректная схема: {scheme}")
         l_block = l_section(Y1, Y2, X1, X2)
         alpha_block = alpha_horiz(Y1, Y2, X1, X2)
+        logging.debug(f"alpha_block: {alpha_block}")
         alpha_rope = alpha_block + j * math.degrees(math.asin(0.5 * (D1 + k * D2) / l_block))
-        X1_block = X1 + j * 0.5 * D1 * math.sin(math.radians(alpha_rope))
-        Y1_block = Y1 + j * 0.5 * D1 * math.cos(math.radians(alpha_rope))
-        X2_block = X2 - j * k * 0.5 * D2 * math.sin(math.radians(alpha_rope))
-        Y2_block = Y2 - j * k * 0.5 * D2 * math.cos(math.radians(alpha_rope))
-        l_rope = l_section(Y2_block, Y1_block, X2_block, X1_block)
+        logging.debug(f"alpha_rope: {alpha_rope}")
+        block1_x = X1 + j * 0.5 * D1 * math.sin(math.radians(alpha_rope))
+        block1_y = Y1 + j * 0.5 * D1 * math.cos(math.radians(alpha_rope))
+        block2_x = X2 - j * k * 0.5 * D2 * math.sin(math.radians(alpha_rope))
+        block2_y = Y2 - j * k * 0.5 * D2 * math.cos(math.radians(alpha_rope))
+        logging.debug(f"block1: {block1_x}, {block1_y} | block2: {block2_x}, {block2_y}")
+        l_rope = l_section(block2_y, block1_y, block2_x, block1_x)
         self.scheme = scheme
         self.l_block = l_block
         self.alpha_block = alpha_block
         self.alpha_rope = alpha_rope
-        self.X1_block = X1_block
-        self.Y1_block = Y1_block
-        self.X2_block = X2_block
-        self.Y2_block = Y2_block
+        self.block1_x = block1_x
+        self.block1_y = block1_y
+        self.block2_x = block2_x
+        self.block2_y = block2_y
         self.l_rope = l_rope
     def __str__(self):
         return f"""RopeParams(
@@ -161,10 +170,10 @@ class RopeParams:
             l_block: {self.l_block},
             alpha_block: {self.alpha_block},
             alpha_rope: {self.alpha_rope},
-            X1_block: {self.X1_block},
-            Y1_block: {self.Y1_block},
-            X2_block: {self.X2_block},
-            Y2_block: {self.Y2_block},
+            X1_block: {self.block1_x},
+            Y1_block: {self.block1_y},
+            X2_block: {self.block2_x},
+            Y2_block: {self.block2_y},
             l_rope: {self.l_rope},
             # block_pair: {self.block_pair},
         )"""
@@ -172,7 +181,7 @@ class RopeParams:
 # -----------------------------
 # 7. Углы обхвата и длины дуг каждого блока
 # -----------------------------
-def calc_block_angles_and_arcs(blocks: list[Block], rope_data: list[RopeParams]):
+def calc_block_angles_and_arcs(blocks: list[Block], loose_rope_sections: list[RopeLooseSection]):
     
     wrap_angles = []
     arc_lengths = []
@@ -180,9 +189,8 @@ def calc_block_angles_and_arcs(blocks: list[Block], rope_data: list[RopeParams])
 
     prev_alpha = None  # предыдущий угол для формирования alpha_rope_list
 
-    for block, r in zip(blocks[:-1], rope_data):
+    for block, r in zip(blocks[:-1], loose_rope_sections):
         alpha_rope = r.alpha_rope or 0
-        logging.debug(f"alpha_rope: {alpha_rope}")
 
         # Формируем alpha_rope_list
         if prev_alpha is None:
@@ -214,10 +222,10 @@ def calc_block_angles_and_arcs(blocks: list[Block], rope_data: list[RopeParams])
 # -----------------------------
 # 8. Общая длина каната и остаток на барабане
 # -----------------------------
-def calc_rope_sums(blocks: list[Block], rope_data: list[RopeParams], D_pitch, a_n, Lstock, Lfact):
-    l_section_summ = sum(r.l_rope for r in rope_data)
+def calc_rope_sums(blocks: list[Block], loose_rope_sections: list[RopeLooseSection], D_pitch, a_n, Lstock, Lfact):
+    l_section_summ = sum(r.l_rope for r in loose_rope_sections)
     L_stock_total = 3 * math.pi * D_pitch * a_n + Lstock
-    block_results = calc_block_angles_and_arcs(blocks, rope_data)
+    block_results = calc_block_angles_and_arcs(blocks, loose_rope_sections)
     L_rope_sum = l_section_summ + block_results["L_sys_arc"] + L_stock_total
     L_winch = Lfact - l_section_summ - block_results["L_sys_arc"]
     return {
@@ -231,7 +239,7 @@ def calc_rope_sums(blocks: list[Block], rope_data: list[RopeParams], D_pitch, a_
 # -----------------------------
 # 10. Определение опорных точек по длине каната
 # -----------------------------    
-def build_support_points(rope_results, rope_data: list[RopeParams], block_results):
+def build_support_points(rope_results, rope_loose_sections: list[RopeLooseSection], block_results):
     
     """
     Формируем 12 опорных точек (в метрах):
@@ -246,7 +254,7 @@ def build_support_points(rope_results, rope_data: list[RopeParams], block_result
         F12 = F11 + l_rope_6
     """
     L_winch = rope_results["L_winch"]               # мм
-    l_sections = [r.l_rope for r in rope_data]      # мм, 6 прямых отрезков
+    l_sections = [r.l_rope for r in rope_loose_sections]      # мм, 6 прямых отрезков
     arcs       = block_results["arc_lengths"]       # мм, 6 значений
     F = [L_winch]  # F1 (мм)
 
@@ -272,8 +280,10 @@ if __name__ == "__main__":
 
     # Стрелы
     booms = [
-        Boom(alpha_rel= 69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
-        Boom(alpha_rel= 155.3, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+        # Boom(alpha_rel=  69.71, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        # Boom(alpha_rel= 155.30, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+        Boom(alpha_rel=  74.00, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        Boom(alpha_rel= 128.00, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
     ]
 
     # Блоки
@@ -286,17 +296,6 @@ if __name__ == "__main__":
         Block(lF=Offset(  136.0,  -35.0), D=816.195, scheme=1, bind=BlockBindBoom(1)),
         Block(lF=Offset(    0.0,    0.0), D=    0.0, scheme=0, bind=BlockBindHook()),
     ]
-
-    block_bind = [
-        BlockBindFixed(),   # Блок 1
-        BlockBindBoom(1),   # Блок 2
-        BlockBindBoom(2),   # Блок 3
-        BlockBindBoom(2),   # Блок 4
-        BlockBindBoom(2),   # Блок 5
-        BlockBindBoom(2),   # Блок 6
-        BlockBindHook(),    # Блок 7
-    ]
-
     
     # Дополнительные параметры крюковой подвески
     hook_params = {
@@ -398,21 +397,19 @@ if __name__ == "__main__":
                   # f"{blocks[hook_block_num - 1].coord.y})")
 
     # ---------------------------
-    # 6. Расчёт параметров каната
+    # 6. Расчёт участков каната между блоками
     # ---------------------------
-    rope_data: list[RopeParams] = []
+    loose_rope_sections: list[RopeLooseSection] = []
     for i, block in enumerate(blocks[:-1]):
         X1, Y1 = block.coord.x, block.coord.y
         X2, Y2 = blocks[i + 1].coord.x, blocks[i + 1].coord.y
-        D1 = block.D
-        D2 = blocks[i + 1].D
-        params = RopeParams(X1, Y1, X2, Y2, D1, D2, block.scheme)
+        params = RopeLooseSection(X1, Y1, X2, Y2, block.D, blocks[i + 1].D, block.scheme)
         # params.block_pair = (i + 1, i + 2)
-        rope_data.append(params)
+        loose_rope_sections.append(params)
    
     rope_results = calc_rope_sums(
         blocks,
-        rope_data,
+        loose_rope_sections,
         D_pitch=rope_calc_params["D_pitch"],
         a_n=rope_calc_params["a_n"],
         Lstock=rope_calc_params["Lstock"],
@@ -492,10 +489,12 @@ if __name__ == "__main__":
 
 
     #############################################################
-    block_results = calc_block_angles_and_arcs(blocks, rope_data)
 
-    # Строим опорные точки
-    support_points = build_support_points(rope_results, rope_data, block_results)
+    # 7. Углы обхвата и длины дуг каждого блока
+    block_results = calc_block_angles_and_arcs(blocks, loose_rope_sections)
+
+    # 10. Определение опорных точек по длине каната
+    support_points = build_support_points(rope_results, loose_rope_sections, block_results)
 
     # Считаем перегибы
     counts = count_bends(L_rope_vector, support_points, H_sus, t)
@@ -518,15 +517,15 @@ if __name__ == "__main__":
     for i, block in enumerate(blocks, start=1):
         logging.debug(f"Блок {i}: Координаты блока {block.coord}")
     logging.debug('-'*40)
-    for i, r in enumerate(rope_data):
+    for i, r in enumerate(loose_rope_sections):
         logging.debug(f"Блоки {i} | Схема {r.scheme} | "
                     f"L_block={r.l_block:.2f} | Alpha_rope={r.alpha_rope:.2f}° | "
                     f"L_rope={r.l_rope:.2f}")
     logging.debug('-'*40)
-    for r in rope_data:
+    for r in loose_rope_sections:
         logging.debug(
-            f'Вход X {r.X1_block:.2f}, Выход X {r.X2_block:.2f} | '
-            f'Вход Y {r.Y1_block:.2f}, Выход Y {r.Y2_block:.2f}'
+            f'Вход X {r.block1_x:.2f}, Выход X {r.block2_x:.2f} | '
+            f'Вход Y {r.block1_y:.2f}, Выход Y {r.block2_y:.2f}'
         )
     logging.debug('-'*40)
     logging.debug("Углы обхвата и длины дуг (по каждой паре блоков):")
@@ -546,7 +545,7 @@ if __name__ == "__main__":
     logging.debug('-'*40)
     logging.debug("Опорные точки")
     for i, v in enumerate(support_points, start=1):
-        logging.debug(f"F{i:02d}: {v:8.3f}")
+        logging.debug(f"F{i:02d}: {v * 1000:.4f}")
     logging.debug('-'*40)
     logging.debug(f"Число перегибов --> Чаще всего: {most}, Минимальное: {mini}, Максимальное: {maxi}")
 
@@ -579,10 +578,10 @@ if __name__ == "__main__":
         plt.text(x + radius, y + radius, f'Блок {i+1}', fontsize=8, color='black')
 
     # Канаты
-    for r in rope_data:
-        plt.plot([r.X1_block, r.X2_block], [r.Y1_block, r.Y2_block],
+    for r in loose_rope_sections:
+        plt.plot([r.block1_x, r.block2_x], [r.block1_y, r.block2_y],
                 color='blue', linestyle='--')
-        plt.scatter([r.X1_block, r.X2_block], [r.Y1_block, r.Y2_block],
+        plt.scatter([r.block1_x, r.block2_x], [r.block1_y, r.block2_y],
                     color='orange', s=25)
 
 

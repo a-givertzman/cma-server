@@ -35,18 +35,12 @@ impl Rope {
         }
     }
     ///
-    /// Returns cerrent rope position (mm)
-    pub fn pos(&self) -> Option<f64> {
-        self.pos.rope_pos()
-    }
-    ///
     /// Returns cerrent rope position (mm) under the camera
     pub fn pos_at_camera(&self) -> Option<f64> {
         self.pos.rope_pos().map(|pos| pos + self.camera_offset)
     }
     ///
     /// Returns segment index from 0, 
-    /// - `pos` - camera position from the begining of the rope (hook side) in meters
     /// - Returns Some(index) if camera position located at the begining of segment with acceptable error in relation to exact segment position
     pub fn segment_index(&self) -> Option<usize> {
         // Index of the current slice located under the camera (from hook)

@@ -4,19 +4,21 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Boom, BoomConf,
 
 ///
 /// Evaluation for the crane boom's collection
+/// 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
+/// 3. Матрица T (D и G для каждой стрелы)
 pub struct Booms {
     items: Vec<Boom>,
     dbg: Dbg,
 }
 impl Booms {
     ///
-    /// Returns [Boom] new instance
+    /// Returns [Booms] new instance
     /// - `subscribe` - List of `Event` names, wich required for calculation, and will acessed from the `inpurs`
     pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, subscriptions: &mut Vec<String>) -> Self {
         Self {
             items: conf.iter().map(|(name, conf)| {
                 let alpha = match &conf.angle {
-                    InputKind::Const(len) => InputKind::Const(len.as_mm()),
+                    InputKind::Const(angle) => InputKind::Const(*angle),
                     InputKind::Point(key) => {
                         subscriptions.push(key.clone());
                         InputKind::Point(key.clone())
@@ -46,20 +48,26 @@ impl Booms {
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Boom>> {
         match self.angles(inputs) {
-            Some(_) => self.boom_d_g_points(inputs).map(|_| self.items.clone()),
+            Some(booms) => {
+                for (i, boom) in booms.iter().enumerate() {
+                    log::debug!("{}.eval | Boom[{i}] '{}':  alpha: {:.4}", self.dbg, boom.name, boom.alpha);
+                }
+                self.boom_d_g_points(inputs, booms)
+            }
             None => None,
         }
     }
     ///
     /// 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
-    fn angles(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<()> {
+    fn angles(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Boom>> {
         let mut alpha_sum = 0.0;
+        let mut result = vec![];
         for (i, boom) in self.items.iter_mut().enumerate() {
             let alpha_rel = match &boom.alpha_input {
                 Some(input) => match inputs.get(input) {
                     Some(alpha) => alpha,
                     None => {
-                        log::warn!("{}.angles | Boom[{i}] '{}':  Input '{:?}' - Not found", self.dbg, boom.name, boom.alpha_input);
+                        log::warn!("{}.angles | Boom[{i}] '{}':  Input '{}' - Not found", self.dbg, boom.name, input);
                         return None
                     }
                 }
@@ -67,18 +75,19 @@ impl Booms {
             };
             alpha_sum += *alpha_rel;
             boom.alpha = alpha_sum - (i as f64) * 180.0;
+            result.push(boom.clone());
             // log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
         }
-        Some(())
+        Some(result)
     }
     ///
     /// 3. D и G для каждой стрелы
-    fn boom_d_g_points(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<()> {
-        match self.items.first() {
+    fn boom_d_g_points(&mut self, inputs: &FxIndexMap<String, f64>, mut booms: Vec<Boom>) -> Option<Vec<Boom>> {
+        match booms.first() {
             Some(first) => {
                 let mut prev_gpt = first.gpt;
                 let mut prev_alpha = first.alpha;
-                for (i, boom) in self.items.iter_mut().enumerate() {
+                for (i, boom) in booms.iter_mut().enumerate() {
                     // Начало стрелы
                     let (x0, y0, alpha_prime) = if i == 0 {
                         (0.0, 0.0, 90.0)
@@ -111,7 +120,7 @@ impl Booms {
                     prev_gpt = boom.gpt;
                     prev_alpha = boom.alpha;
                 }
-                Some(())
+                Some(booms)
             }
             None => {
                 log::warn!("{}.boom_d_g_points | No Boom's found", self.dbg);

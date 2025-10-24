@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Booms, CraneConf, Offset};
+use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, LooseRopeSections};
 
 ///
 ///
@@ -21,14 +21,14 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [RopeSlices]
+/// Testing [BlockArcs]
 #[test]
 fn new() {
     DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
-    let dbg = Dbg::own("Booms-test");
+    let dbg = Dbg::own("BlockArcs-test");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
@@ -39,12 +39,14 @@ fn new() {
             ("RotaryBoom.Angle", 155.30)
         ], 
         // Targets
-        // boom[i].alpha
-        [69.71, 45.01],
         [
-            // boom[i].D                              boom[i].G
-            ((6.32530071759608e-13, 10330.0),    (3883.8458824556724, 20835.034086633517)), 
-            ((3883.8458824556724, 20835.034086633517),    (9528.40100476262, 26481.55987434036)),
+            // wrap_alpha, deg     wrap_length, mm
+            (  0.000,                0.000),
+            (  0.127,                0.903),
+            ( 28.393,              202.232),
+            ( 32.597,              232.176),
+            ( 6.674,                47.540),
+            (101.150,              720.452),
         ]),
         (02,  [
             // Input Events
@@ -52,23 +54,39 @@ fn new() {
             ("RotaryBoom.Angle", 128.00)
         ], 
         // Targets
-        // boom[i].alpha
-        [74.0, 22.0],
         [
-            // boom.D                              boom.G
-            ((6.32530071759608e-13, 10330.0), (3087.138385150391, 21096.13099450917)), 
-            ((3087.138385150391, 21096.13099450917), (10489.774280011621, 24086.990036341813)),
+            // wrap_alpha, deg     wrap_length, mm
+            ( 0.000,                 0.000),
+            (26.619,               189.599),
+            (28.930,               206.057),
+            (32.597,               232.176),
+            ( 6.674,                47.540),
+            (78.140,               556.560),
         ]),
     ];
-    //  Число стрел: 2
-    //  alpha_boom: [69.71, 45.01]
-    //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3883.8458824556724, 20835.034086633517)
-    //  Стрела 2: D=(3883.8458824556724, 20835.034086633517), G=(9528.40100476262, 26481.55987434036)
-    //  Число стрел: 2
-    //  alpha_boom: [74.0, 22.0]
-    //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3087.138385150391, 21096.13099450917)
-    //  Стрела 2: D=(3087.138385150391, 21096.13099450917), G=(10489.774280011621, 24086.990036341813)
+
+    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
+    // Блок 2: угол обхвата = 0.127 deg, длина дуги = 0.903 mm
+    // Блок 3: угол обхвата = 28.393 deg, длина дуги = 202.232 mm
+    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
+    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
+    // Блок 6: угол обхвата = 101.150 deg, длина дуги = 720.452 mm
+
+    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
+    // Блок 2: угол обхвата = 26.619 deg, длина дуги = 189.599 mm
+    // Блок 3: угол обхвата = 28.930 deg, длина дуги = 206.057 mm
+    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
+    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
+    // Блок 6: угол обхвата = 78.140 deg, длина дуги = 556.560 mm
+
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
+        rope:
+            width: 35 mm            # Diameter of the rome
+            length: 3000 m          # Total working length of the rope
+            winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
+            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+            pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
+            load: point real 'Winch.Load'       # tonn, current rope load 
         booms:
             - Main-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -85,69 +103,67 @@ fn new() {
                 len: 7984.0 mm                                          # length of the rotary boom
                 angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
         blocks:
-            - '1':
+            - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 844.0 mm                 # Диаметры блоков, мм
+                d: 845.670 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-            - '2':
+            - 2:
                 lf: 308.0 mm, 1100.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-            - '3':
+            - 3:
                 lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-            - '4':
+            - 4:
                 lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-            - '5':
+            - 5:
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-            - '6':
+            - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.0 mm                 # Диаметры блоков, мм
+                d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-            - '7':
+            - 7:
                 lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 0.0 mm                   # Диаметры блоков, мм
+                d: 0.0 mm                   # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-        rope:
-            width: 35 mm            # Diameter of the rome
-            length: 3000 m          # Total working length of the rope
-            winch-length: 2985 m    # Rope length on the winch drum
-            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-            pos: point real 'Winch.EncoderBR2'      # meters, current rope position
-            load: point real 'Winch.Load'          # tonn, current rope load
+
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let mut inputs = FxIndexMap::default();
-    let mut booms = Booms::new(&dbg, &conf.booms, &mut vec![]);
+    let mut block_arcs = BlockArcs::new(
+        &dbg,
+        LooseRopeSections::new(
+            &dbg,
+            Blocks::new(
+                &dbg,
+                &conf.blocks,
+                Booms::new(&dbg, &conf.booms, &mut vec![]),
+            ),
+        ),
+    );
     let t = Instant::now();
-    for (step, events, target_alpha, target_pos) in test_data {
+    for (step, events, target) in test_data {
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
-        let result = booms.eval(&inputs).unwrap();
-        log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        for (i, target) in target_alpha.into_iter().enumerate() {
-            assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);
-        }
-        for (i, ((target_dx, target_dy), (target_gx, target_gy))) in target_pos.into_iter().enumerate() {
-            let (Offset{x: dx, y: dy}, Offset{x: gx, y: gy}) = (result[i].dpt, result[i].gpt);
-            assert!(dx == target_dx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dx, target_dx);
-            assert!(dy == target_dy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dy, target_dy);
-            assert!(gx == target_gx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gx, target_gx);
-            assert!(gy == target_gy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gy, target_gy);
+        let result = block_arcs.eval(&inputs).unwrap();
+        log::debug!("{dbg} | step {step}  result: {:#?}", result);
+        for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
+            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
+            assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }

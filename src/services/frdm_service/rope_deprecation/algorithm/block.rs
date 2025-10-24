@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Range, str::FromStr};
 use regex::Regex;
 use sal_core::error::Error;
 use crate::services::frdm_service::Offset;
@@ -7,10 +7,14 @@ use crate::services::frdm_service::Offset;
 /// Схема схода каната с блоком к следующему
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockScheme {
-    TopTop,
-    TopBottom,
-    BottomTop,
-    BottomBottom,
+    /// Schema "1", Rope exits from top of the block, enters to the next on the top
+    TopTop = 1,
+    /// Schema "2", Rope exits from top of the block, enters to the next on the bottom
+    TopBottom = 2,
+    /// Schema "3", Rope exits from bottom of the block, enters to the next on the top
+    BottomTop = 3,
+    /// Schema "4", Rope exits from bottom of the block, enters to the next on the bottom
+    BottomBottom = 4,
 }
 impl FromStr for BlockScheme {
     type Err = Error;
@@ -63,18 +67,34 @@ impl FromStr for BlockBind {
 /// Crane Block
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
-    name: String,
+    pub name: String,
     /// Block position relative to boom G (end of boom)
     pub lf: Offset<f64>,
     /// Block diameter
-    pub d: f64,
+    pub diameter: f64,
     /// Схема схода каната с блоком к следующему
-    scheme: BlockScheme,
-    /// Привязка блока стреле (нумерация с 0)
+    pub scheme: BlockScheme,
+    /// Привязка блока к стреле (нумерация с 0)
     pub bind: BlockBind,
     /// Координаты блока в ГСК
-    pub pos: Offset<f64>
+    pub pos: Offset<f64>,
+    /// Угол линии каната между текущим блоком и следующим к горизонту, градусы
+    pub rope_alpha_fwd: f64,
+    /// Угол линии каната между текущим блоком и предыдущим к горизонту, градусы
+    pub rope_alpha_bck: f64,
+    /// угол обхвата каната огибающего блок
+    pub wrap_alpha: f64,
+    /// Длина каната огибающего блок, для барабана длина каната на барабане до точки схода
+    pub wrap_length: f64,
+    /// Длина каната от точки схода с текущего блока до точки входа на следующий, мм
+    pub rope_len_fwd: f64,
+    /// Длина каната от точки входа на текущий блок до точки схода с предыдущего, мм
+    pub rope_len_bck: f64,
+    /// Текущие точки входа и схода каната с блока, считая от его начала каната 
+    pub bending: Range<f64>,
 }
+//
+//
 impl Block {
     ///
     /// Returns [Block] new instance
@@ -82,14 +102,41 @@ impl Block {
     /// - `D` - Диаметры блоков, мм
     /// - `schemes` - Схема схода каната на блоке
     /// - `boom` - К какой стреле относится блок (нумерация с 0)
-    pub fn new(name: impl Into<String>, lf: Offset<f64>, d: f64, scheme:BlockScheme, bind: BlockBind) -> Self {
+    /// - `rope_alpha_fwd` - Угол линии каната между текущим блоком и следующим к горизонту, градусы
+    /// - `rope_alpha_bck` - Угол линии каната между текущим блоком и предыдущим к горизонту, градусы
+    /// - `wrap_alpha` - Угол обхвата каната огибающего блок, градусы
+    /// - `wrap_length` - Длина дуги каната огибающего блок, мм
+    /// - `rope_len_fwd` - Длина каната от точки схода с текущего блока до точки входа на следующий, мм
+    /// - `rope_len_bck` - Длина каната от точки входа на текущий блок до точки схода с предыдущего, мм
+    /// - `bending` - 
+    pub fn new(
+        name: impl Into<String>,
+        lf: Offset<f64>,
+        diameter: f64,
+        scheme:BlockScheme,
+        bind: BlockBind,
+        rope_alpha_fwd: f64,
+        rope_alpha_bck: f64,
+        wrap_alpha: f64,
+        wrap_length: f64,
+        rope_len_fwd: f64,
+        rope_len_bck: f64,
+        bending: Range<f64>,
+    ) -> Self {
         Self {
             name: name.into(),
             lf,
-            d,
+            diameter,
             scheme: scheme,
             bind: bind,
             pos: Offset::new(0.0, 0.0),
+            rope_alpha_fwd,
+            rope_alpha_bck,
+            wrap_alpha,
+            wrap_length,
+            rope_len_fwd,
+            rope_len_bck,
+            bending,
         }
     }
 }
