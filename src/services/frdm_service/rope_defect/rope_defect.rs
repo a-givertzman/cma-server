@@ -1,9 +1,9 @@
 use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::{Duration, Instant}};
 use chrono::Datelike;
-use frdm_tools::{camera::Camera, AutoGamma, Context, Cropping, Eval, FastScan, FineScan, FineScanCtx, Gray, Image, Initial, InitialCtx, RopeDefectCtx, RopeDefectKind};
+use frdm_tools::{camera::Camera, AutoGamma, Context, ContextRead, Cropping, CroppingCtx, Eval, FastScan, FineScan, FineScanCtx, Gray, Image, Initial, InitialCtx, MetaCtx, RopeDefectCtx, RopeDefectKind};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object}, Service, ServiceWaiting}, sync::Handles, thread_pool::Scheduler};
-use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::rope_defect::{Rope, RopeDefectConf}};
+use crate::{domain::{constants::constants::RECV_TIMEOUT}, infra::ApiClient, services::frdm_service::rope_defect::{Rope, RopeDefectConf}};
 
 ///
 /// Dects defect on the frames coming from the camera
@@ -89,12 +89,6 @@ impl RopeDefect {
         frame: Image,
         defect: &FineScan,
         rope: &Rope,
-        camera_name: &str,
-        camera_id: usize,
-        table_defect: &str,
-        table_defect_image: &str,
-        storage_path: &PathBuf,
-        api_client: &ApiClient,
         prev_index: Option<usize>,
     ) -> Option<usize> {
         // Position of the rope under the camera, meter
@@ -107,67 +101,8 @@ impl RopeDefect {
             Some(slice_ix) => {
                 if Some(slice_ix) != prev_index {
                     log::debug!("{dbg}.detection | Analizing rope at: {:.2?} mm ({:.3?} m) index {slice_ix}, prev_ix {:?}...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0), prev_index);
-                    match defect.eval(frame.clone()) {
-                        Ok(ctx) => {
-                            let defect_ctx: &RopeDefectCtx<FineScanCtx> = ctx.read();
-                            let defects = &defect_ctx.result;
-                            if !defects.is_empty() {
-                                log::warn!("{dbg}.run | Slice {slice_ix} - Defects detected");
-                                defects.iter().for_each(|defect| {
-                                    log::warn!("{dbg}.run | Slice {slice_ix} - Defect {:?} detected", defect);
-                                    let defect_id = match defect {
-                                        RopeDefectKind::Expansion(_, _) => "expansion",
-                                        RopeDefectKind::Compressing(_, _) => "compressing",
-                                        RopeDefectKind::Hill(_, _) => "hill",
-                                        RopeDefectKind::Pit(_, _) => "pit",
-                                    };
-                                    let now = chrono::Utc::now();
-                                    let img_name = format!("{:0>2}-{:0>2}-{:0>4}_{defect_id}.jpg", now.day(), now.month(), now.year());
-                                    let img_path = storage_path.join(format!("{slice_ix}")).join(img_name);
-                                    match img_path.as_path().to_str() {
-                                        Some(img_path) => {
-                                            let sql = format!(r"
-                                                do $$
-                                                begin
-                                                    insert into {table_defect} (id, defect, first, last, score)
-                                                        values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
-                                                    on conflict (id, defect) do update 
-                                                        set (last, score) = (current_timestamp, {table_defect}.count + 1);
-                                                    insert into {table_defect_image} (frdm_defect_id, camera, path)
-                                                        values ({slice_ix}, {camera_id}, '{img_path}');
-                                                    exception
-                                                        when others then
-                                                            rollback;
-                                                end; $$
-                                                language plpgsql;
-                                            ");
-                                            api_client.fetch(sql).then(
-                                                |_| {
-                                                    if let Err(err) = Self::save_image(
-                                                        &dbg,
-                                                        &api_client,
-                                                        defect_id,
-                                                        camera_id,
-                                                        &frame,
-                                                        &img_path,
-                                                    ) {
-                                                        log::warn!("{dbg}.run | Save image error: {:?}", err);
-                                                    }
-                                                },
-                                                |err| {
-                                                    log::warn!("{dbg}.run | Send sql error: {:?}", err);
-                                                },
-                                            );
-                                        }
-                                        None => log::warn!("{dbg}.run | Wrong image path {}", img_path.display()),
-                                    };
-                                });
-                            } else {
-                                log::info!("{dbg}.run | Slice {slice_ix} - No defects detected");
-                            }
-                        }
-                        Err(err) => log::debug!("{dbg}.run | {}, Defect detection error: {:?}", camera_name, err),
-                    }
+                    let frame = Image { mat: frame.mat, meta: slice_ix };
+                    defect.eval(frame.clone());
                     log::debug!("{dbg}.detection | Elapsed: {:?}", time.elapsed());
                     Some(slice_ix)
                 } else {
@@ -224,11 +159,70 @@ impl Service for RopeDefect {
         log::debug!("{}.run | Preparing thread...", dbg);
         let scheduler = self.scheduler.clone();
         let handle = self.scheduler.spawn(move || {
-            let dbg = &dbg;
+            let dbg1 = dbg.clone();
             let defect = FineScan::new(
                 conf.defect_detection.fine_scan,
                 scheduler.clone(),
-                None::<Box<dyn Fn(&Context) + Send + Sync>>,
+                Some(move |ctx: &Context| {
+                    let defect_ctx: &RopeDefectCtx<FineScanCtx> = ctx.read();
+                    let defects = &defect_ctx.result;
+                    let slice_ix = *ContextRead::<MetaCtx>::read(ctx);
+                    if !defects.is_empty() {
+                        log::warn!("{dbg1}.run | Slice {slice_ix} - Defects detected");
+                        defects.iter().for_each(|defect| {
+                            log::warn!("{dbg1}.run | Slice {slice_ix} - Defect {:?} detected", defect);
+                            let defect_id = match defect {
+                                RopeDefectKind::Expansion(_, _) => "expansion",
+                                RopeDefectKind::Compressing(_, _) => "compressing",
+                                RopeDefectKind::Hill(_, _) => "hill",
+                                RopeDefectKind::Pit(_, _) => "pit",
+                            };
+                            let now = chrono::Utc::now();
+                            let img_name = format!("{:0>2}-{:0>2}-{:0>4}_{defect_id}.jpg", now.day(), now.month(), now.year());
+                            let img_path = storage_path.join(format!("{slice_ix}")).join(img_name);
+                            match img_path.as_path().to_str() {
+                                Some(img_path) => {
+                                    let sql = format!(r"
+                                        do $$
+                                        begin
+                                            insert into {table_defect} (id, defect, first, last, score)
+                                                values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
+                                            on conflict (id, defect) do update 
+                                                set (last, score) = (current_timestamp, {table_defect}.count + 1);
+                                            insert into {table_defect_image} (frdm_defect_id, camera, path)
+                                                values ({slice_ix}, {camera_id}, '{img_path}');
+                                            exception
+                                                when others then
+                                                    rollback;
+                                        end; $$
+                                        language plpgsql;
+                                    ");
+                                    api_client.fetch(sql).then(
+                                        |_| {
+                                            let frame = &ContextRead::<CroppingCtx>::read(ctx).result;
+                                            if let Err(err) = Self::save_image(
+                                                &dbg1,
+                                                &api_client,
+                                                defect_id,
+                                                camera_id,
+                                                frame,
+                                                &img_path,
+                                            ) {
+                                                log::warn!("{dbg1}.run | Save image error: {:?}", err);
+                                            }
+                                        },
+                                        |err| {
+                                            log::warn!("{dbg1}.run | Send sql error: {:?}", err);
+                                        },
+                                    );
+                                }
+                                None => log::warn!("{dbg1}.run | Wrong image path {}", img_path.display()),
+                            };
+                        });
+                    } else {
+                        log::info!("{dbg1}.run | Slice {slice_ix} - No defects detected");
+                    }
+                }),
                 FastScan::new(
                     conf.defect_detection.fast_scan,
                     scheduler,
@@ -252,33 +246,6 @@ impl Service for RopeDefect {
                 ),
                 false,
             );
-            // GeometryDefect::new(
-            //     conf.defect_detection.fast_scan.geometry_defect_threshold,
-            //     *Box::new(Mad::new()),
-            //     EdgeDetection::new(
-            //         conf.defect_detection.edge_detection.otsu_tune,
-            //         conf.defect_detection.edge_detection.threshold,
-            //         DetectingContoursCv::new(
-            //             conf.defect_detection.contours.clone(),
-            //             AutoBrightnessAndContrast::new(
-            //                 conf.defect_detection.contours.brightness_contrast.hist_clip_left,
-            //                 conf.defect_detection.contours.brightness_contrast.hist_clip_right,
-            //                 AutoGamma::new(
-            //                     conf.defect_detection.contours.gamma.factor,
-            //                     Cropping::new(
-            //                         conf.defect_detection.contours.cropping.x,
-            //                         conf.defect_detection.contours.cropping.width,
-            //                         conf.defect_detection.contours.cropping.y,
-            //                         conf.defect_detection.contours.cropping.height,
-            //                         Initial::new(
-            //                             InitialCtx::new(),
-            //                         ),
-            //                     )
-            //                 ),
-            //             ),
-            //         ),
-            //     ),
-            // );
             let mut prev_index = None;
             let mut camera = Camera::new(camera_conf.clone());
             let camera_name = camera.name().join();
@@ -289,16 +256,10 @@ impl Service for RopeDefect {
                     service_release.add(Ok(()));
                     for frame in frames {
                         prev_index = Self::detection(
-                            dbg,
+                            &dbg,
                             frame,
                             &defect,
                             &rope,
-                            &camera_name,
-                            camera_id,
-                            &table_defect,
-                            &table_defect_image,
-                            &storage_path,
-                            &api_client,
                             prev_index,
                         );
                         std::thread::sleep(Duration::from_millis(100));
@@ -318,16 +279,10 @@ impl Service for RopeDefect {
                                     match camera_stream.recv_timeout(RECV_TIMEOUT) {
                                         Ok(frame) => {
                                             prev_index = Self::detection(
-                                                dbg,
+                                                &dbg,
                                                 frame,
                                                 &defect,
                                                 &rope,
-                                                &camera_name,
-                                                camera_id,
-                                                &table_defect,
-                                                &table_defect_image,
-                                                &storage_path,
-                                                &api_client,
                                                 prev_index,
                                             );
                                         }

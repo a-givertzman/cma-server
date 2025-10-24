@@ -1,5 +1,5 @@
 use sal_core::dbg::Dbg;
-use crate::services::frdm_service::BendingsConf;
+use crate::services::frdm_service::{BendingsConf, BlockConf};
 
 /// 
 /// A atomic part of a rope, used for rope deprecation rate calculation.
@@ -18,10 +18,10 @@ impl RopeSlice {
     ///
     /// Returns [RopeSlice] new instance
     /// - `id` - index of the current slice, keep in mind the rope devided by number of equal slices
-    pub fn new(id: usize, bendings: &BendingsConf, offset: f64) -> Self {
+    pub fn new(id: usize, blocks: usize, offset: f64) -> Self {
         Self {
             ix: id,
-            state: (0..bendings.bendings.len()).map(|ix| (ix, RopeSliceSate::Out)).collect(),
+            state: (0..blocks).map(|ix| (ix, RopeSliceSate::Out)).collect(),
             offset,
             pos: None,
             load: None,

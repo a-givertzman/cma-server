@@ -7,10 +7,10 @@ use crate::services::frdm_service::{BendingsConf, BlockConf, BoomConf, RopeConf}
 /// ### Example:
 /// ```yaml
 /// crane:
-///     bendings:           # Rope bloks with diameter, inter and exit
-///         # Block Diameter   inter   exit
-///         - D200mm           5.0  .. 5.15 m
-///         - D300mm           7.23 .. 7.30 mm
+///     # bendings:           # Rope bloks with diameter, inter and exit
+///     #     # Block Diameter   inter   exit
+///     #     - D200mm           5.0  .. 5.15 m
+///     #     - D300mm           7.23 .. 7.30 mm
 ///     rope:
 ///         width: 35 mm        # Diameter of the rome
 ///         length: 3000 m      # Total working length of the rope
@@ -71,7 +71,7 @@ use crate::services::frdm_service::{BendingsConf, BlockConf, BoomConf, RopeConf}
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct CraneConf {
-    pub bendings: BendingsConf,
+    // pub bendings: BendingsConf,
     pub booms: Vec<(String, BoomConf)>,
     pub blocks: Vec<(String, BlockConf)>,
     pub rope: RopeConf,
@@ -88,9 +88,9 @@ impl CraneConf {
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let name = Name::new(parent, me);
         log::debug!("{}.new | name: {:?}", dbg, name);
-        let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong config"));
-        let bendings = BendingsConf::new(&name, bendings);
-        log::trace!("{dbg}.new | bendings: {:#?}", bendings);
+        // let bendings = conf.get("bendings").expect(&format!("{dbg}.new | 'bendings' - not found or wrong config"));
+        // let bendings = BendingsConf::new(&name, bendings);
+        // log::trace!("{dbg}.new | bendings: {:#?}", bendings);
         let booms: &Vec<serde_yaml::Value> = conf.get("booms").expect(&format!("{dbg}.new | 'booms' - not found or wrong config"));
         let booms = booms.iter().map(|boom| {
             let (key, boom) = boom.as_mapping()
@@ -118,7 +118,7 @@ impl CraneConf {
         let rope = RopeConf::new(&name, rope);
         log::trace!("{dbg}.new | rope: {:#?}", rope);
         Self {
-            bendings,
+            // bendings,
             booms,
             blocks,
             rope,

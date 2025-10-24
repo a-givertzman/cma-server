@@ -22,31 +22,66 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
 ///         camera-offset: 5.5 m                        # camera position from the begin of the rope (hook side)
 ///         defect-detection:
-///             contours:
+///             normalize:
+///                 cropping:
+///                     x: 230              # New left edge
+///                     y: 300              # New top edge
+///                     width: 1410         # New image width
+///                     height: 1000        # New image height
 ///                 gamma:
-///                     no-param: not parameters implemented 
-///                 brightness-contrast:
-///                     histogram-clipping: 1     # optional histogram clipping, default = 0 %
-///                 gausian:
-///                     kernel-size:
-///                         width: 3
-///                         heidht: 3
-///                     sigma-x: 0.0
-///                     sigma-y: 0.0
-///                 sobel:
-///                     kernel-size: 3
-///                     scale: 1.0
-///                     delta: 0.0
-///                 overlay:
-///                     src1-weight: 0.5
-///                     src2-weight: 0.5
-///                     gamma: 0.0
-///             edge-detection:
-///                 threshold: 1                        # 0...255
+///                     factor: 120.0       # Percent of influence of [AutoGamma] algorythm bigger the value more the effect of [AutoGamma] algorythm, %
+///             
 ///             fast-scan:
-///                 geometry-defect-threshold: 1.2      # 1.1...1.3, absolute threshold to detect the geometry deffects
+///                 fast-contours:
+///                     otsu-tune: 0.40
+///                 temporal-filter:
+///                     gaussian:
+///                         kernel: [11, 11]    # Gausian blur kernel size, must be odd
+///                         sigma: [0.0, 0.0]   # Standard deviation in [X, Y] direction, The higher the value, the more pixels are used to count each pixel and the smoother blur will be
+///                     open-kernel: [3, 3]     # Morphology open operation kernel size [w, h], default [5, 5]
+///                     erode-kernel: [3, 3]    # Morphology erode operation kernel size [w, h], default [5, 5]
+///                     threshold: 12.0         # Threshold to detect the pixel whas changed or not in the each next frame
+///                 fast-edges:
+///                     otsu-tune: 1.40         # Multiplier to otsu auto threshold, 1.0 - do nothing, just use otsu auto threshold, default 1.0
+///                     # threshold: 128        # 0...255, used if otsu-tune is not specified
+///                     smooth: 36              # Smoothing of edge line factor. The higher the factor the smoother the line.
+///                 union:
+///                     add-weighted:
+///                         weight1: 1.0            # Weight of the first array elements.
+///                         weight2: 1.0            # Weight of the second array elements.
+///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                     rope-width: 380               # Standart rope width, px
+///                     width-tolerance: 50.0         # Tolerance for rope width, %
+///                     square-tolerance: 100.0       # Tolerance for rope square, %
+///                 distortion-threshold: 1.2    # 1.1..1.3, absolute threshold to detect the geometry deffects
+///             
 ///             fine-scan:
-///                 no-params: not implemented yet
+///                 fine-contours:
+///                     otsu-tune: 0.40         # Auto threshold factor, 1 - no correction, 0..1 - more, 1.. - less sensitive
+///                     merge-distance: 24.0    # Maximum distance between contours to be merged
+///                 temporal-filter:
+///                     gaussian:
+///                         kernel: [11, 11]    # Gausian blur kernel size, must be odd
+///                         sigma: [0.0, 0.0]   # Standard deviation in [X, Y] direction, The higher the value, the more pixels are used to count each pixel and the smoother blur will be
+///                     open-kernel: [3, 3]     # Morphology open operation kernel size [w, h], default [5, 5]
+///                     erode-kernel: [3, 3]    # Morphology erode operation kernel size [w, h], default [5, 5]
+///                     threshold: 12.0         # Threshold to detect the pixel whas changed or not in the each next frame
+///                 fine-edges:
+///                     # otsu-tune: 1.40       # Multiplier to otsu auto threshold, 1.0 - do nothing, just use otsu auto threshold, default 1.0
+///                     threshold: 16           # 0...255, used if otsu-tune is not specified
+///                     smooth: 16              # Smoothing of edge line factor. The higher the factor the smoother the line.
+///                 union:
+///                     # add-weighted:
+///                     #     weight1: 1.0            # Weight of the first array elements.
+///                     #     weight2: 1.0            # Weight of the second array elements.
+///                     bitwise-and:
+///                         no-params: ~
+///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                     rope-width: 380               # Standart rope width, px
+///                     width-tolerance: 30.0         # Tolerance for rope width, %
+///                     square-tolerance: 100.0       # Tolerance for rope square, %
+///                 distortion-threshold: 1.4    # 1.1..1.3, absolute threshold to detect the geometry deffects
+///                 defect-threshold: 2.5        # 1.1..1.3, absolute threshold to detect the geometry deffects
 ///         camera Camera1:
 ///             fps: Max                    # Max / Min / 30.0
 ///             resolution: 
@@ -70,31 +105,27 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         table: 'public.frdm_deprecation'
 ///         subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///         crane:
-///             bendings:           # Rope bloks with diameter, inter and exit
-///                 # Block Diameter   inter   exit
-///                 - D200mm           5.0  .. 5.15 m
-///                 - D300mm           7.23 .. 7.30 mm
 ///             rope:
 ///                 width: 35 mm        # Diameter of the rome
 ///                 length: 3000 m      # Total working length of the rope
 ///                 segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///                 pos: point real 'App/MultiQueue/Winch.EncoderBR2'      # meters, current rope position
-///                 load: point real 'App/MultiQueue/Winch.Load'           # tonn, current rope load
+///                 pos: point real 'Winch.EncoderBR2'      # meters, current rope position
+///                 load: point real 'Winch.Load'           # tonn, current rope load
 ///             booms:
 ///                 - Main-Boom:
 ///                     l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
 ///                     l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
 ///                     l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
-///                     len: 11200.0 mm                                         # length of the boom
-///                     angle: point real 'App/MultiQueue/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+///                     len: 11200.0 mm                          # length of the boom
+///                     angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
 ///                 - Rotary-Boom:
 ///                     l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
 ///                     l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
 ///                     l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
-///                     len: 7984.1 mm                                          # length of the rotary boom
-///                     angle: point real 'App/MultiQueue/Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+///                     len: 7984.1 mm                           # length of the rotary boom
+///                     angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
 ///             blocks:
 ///                 - 1:
 ///                     lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм

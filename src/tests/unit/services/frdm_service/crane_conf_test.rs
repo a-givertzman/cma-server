@@ -4,7 +4,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::{ConfDistance, ConfDistanceUnit, ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{BendingsConf, BlockBind, BlockConf, BlockScheme, BoomConf, InputKind, CraneConf, Offset, RopeConf};
+use crate::services::frdm_service::{BlockBind, BlockConf, BlockScheme, BoomConf, InputKind, CraneConf, Offset, RopeConf};
 
 ///
 ///
@@ -104,12 +104,6 @@ fn new() {
                     load: point real '/App/Winch.Load'          # tonn, current rope load
             ").unwrap(),
             CraneConf {
-                bendings: BendingsConf {
-                    bendings: vec![
-                        (ConfDistance::new(200.0, ConfDistanceUnit::Millimeter), 5.0..5.15),
-                        (ConfDistance::new(300.0, ConfDistanceUnit::Millimeter), 7.23*0.001..7.3*0.001),
-                    ],
-                },
                 booms: vec![
                     ("Main-Boom".to_owned(), BoomConf {
                         l1: ConfDistance::new(0.1, ConfDistanceUnit::Millimeter),
