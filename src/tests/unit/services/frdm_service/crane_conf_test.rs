@@ -170,7 +170,7 @@ fn new() {
                 rope: RopeConf {
                     width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                     length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
-                    winch_len: ConfDistance::new(2985.0, ConfDistanceUnit::Meter),
+                    // winch_len: ConfDistance::new(2985.0, ConfDistanceUnit::Meter),
                     segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
                     pos: "Winch.EncoderBR2".to_owned(),
                     load: "Winch.Load".to_owned(),

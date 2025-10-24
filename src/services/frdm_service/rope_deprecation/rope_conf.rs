@@ -8,7 +8,6 @@ use sal_sync::services::{conf::{ConfDistance, ConfTree}, entity::Name};
 /// rope:
 ///     width: 35 mm            # Diameter of the rome
 ///     length: 3000 m          # Total working length of the rope
-///     winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
 ///     segment: 100 mm         # Rope segmetn length. Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
 ///     pos: point real 'Winch.EncoderBR2'      # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
 ///     load: point real 'Winch.Load'           # tonn, current rope load 
@@ -19,8 +18,8 @@ pub struct RopeConf {
     pub width: ConfDistance,
     /// Total working length of the rope
     pub length: ConfDistance,
-    /// Length of the rope on the winch drum in the parking position, when rope pos is zero
-    pub winch_len: ConfDistance,
+    // /// Length of the rope on the winch drum in the parking position, when rope pos is zero
+    // pub winch_len: ConfDistance,
     /// Rope segmetn length.
     /// Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
     pub segment: ConfDistance,
@@ -45,8 +44,8 @@ impl RopeConf {
         log::trace!("{dbg}.new | width: {:?}", width);
         let length = conf.get_distance("length").expect(&format!("{dbg}.new | 'length' - not found or wrong configuration"));
         log::trace!("{dbg}.new | length: {:?}", length);
-        let winch_len = conf.get_distance("winch-length").expect(&format!("{dbg}.new | 'winch-length' - not found or wrong configuration"));
-        log::trace!("{dbg}.new | winch-length: {:?}", winch_len);
+        // let winch_len = conf.get_distance("winch-length").expect(&format!("{dbg}.new | 'winch-length' - not found or wrong configuration"));
+        // log::trace!("{dbg}.new | winch-length: {:?}", winch_len);
         let segment = conf.get_distance("segment").expect(&format!("{dbg}.new | 'segment' - not found or wrong configuration"));
         log::trace!("{dbg}.new | segment: {:?}", segment);
         let pos = conf.get_fn_config(&dbg, "pos", &mut vec![]).unwrap().name();
@@ -56,7 +55,7 @@ impl RopeConf {
         Self {
             width,
             length,
-            winch_len,
+            // winch_len,
             segment,
             pos,
             load,

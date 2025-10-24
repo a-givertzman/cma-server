@@ -99,6 +99,7 @@ impl RopeDefect {
         // log::warn!("{dbg}.detection | Rope under camera at: {:.2?} mm ({:.3?} m)...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0));
         match rope.segment_index() {
             Some(slice_ix) => {
+                log::debug!("{dbg}.detection | Rope position at: {:.2?} mm ({:.3?} m) index {slice_ix}, prev_ix {:?}...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0), prev_index);
                 if Some(slice_ix) != prev_index {
                     log::debug!("{dbg}.detection | Analizing rope at: {:.2?} mm ({:.3?} m) index {slice_ix}, prev_ix {:?}...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0), prev_index);
                     let frame = Image { mat: frame.mat, meta: slice_ix };
@@ -248,13 +249,13 @@ impl Service for RopeDefect {
             );
             let mut prev_index = None;
             let mut camera = Camera::new(camera_conf.clone());
-            let camera_name = camera.name().join();
             match &camera_conf.from_path {
                 Some(path) => {
                     log::info!("{dbg}.run | Starting camera from path '{path}'...");
                     let frames = camera.from_images(path).unwrap();
                     service_release.add(Ok(()));
                     for frame in frames {
+                        log::debug!("{dbg}.run | Receiving frames from camera - Ok");
                         prev_index = Self::detection(
                             &dbg,
                             frame,

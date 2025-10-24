@@ -33,26 +33,48 @@ fn run() {
     test_duration.run().unwrap();
     let events = vec![
         vec![   // SendService0
+            ("Load.MainBoomAngle", Value::Real(68.0)),
+            ("Load.RotaryBoomAngle", Value::Real(155.3)),
             ("Winch.RopePos", Value::Real(0.000)),  // 55          // EncoderBR0
+            ("Winch.RopePos", Value::Real(0.050)),  // 55
             ("Winch.RopePos", Value::Real(0.100)),  // 55
+            ("Winch.RopePos", Value::Real(0.150)),  // 55
             ("Winch.RopePos", Value::Real(0.200)),  // 55
+            ("Winch.RopePos", Value::Real(0.250)),  // 55
             ("Winch.RopePos", Value::Real(0.300)),  // 55
+            ("Winch.RopePos", Value::Real(0.350)),  // 55
             ("Winch.RopePos", Value::Real(0.400)),
+            ("Winch.RopePos", Value::Real(0.450)),
             ("Winch.RopePos", Value::Real(0.500)),
+            ("Winch.RopePos", Value::Real(0.550)),
             ("Winch.RopePos", Value::Real(0.600)),
+            ("Winch.RopePos", Value::Real(0.650)),
             ("Winch.RopePos", Value::Real(0.700)),  // 56
+            ("Winch.RopePos", Value::Real(0.750)),  // 56
             ("Winch.RopePos", Value::Real(0.800)),  // 56
+            ("Winch.RopePos", Value::Real(0.850)),  // 56
             ("Winch.RopePos", Value::Real(0.900)),  // 56
+            ("Winch.RopePos", Value::Real(0.950)),  // 56
             ("Winch.RopePos", Value::Real(1.000)),  // 56
+            ("Winch.RopePos", Value::Real(1.050)),  // 56
             ("Winch.RopePos", Value::Real(1.100)),  // 56
+            ("Winch.RopePos", Value::Real(1.150)),  // 56
             ("Winch.RopePos", Value::Real(1.200)),  // 56
+            ("Winch.RopePos", Value::Real(1.250)),  // 56
             ("Winch.RopePos", Value::Real(1.300)),
+            ("Winch.RopePos", Value::Real(1.350)),
             ("Winch.RopePos", Value::Real(1.400)),
+            ("Winch.RopePos", Value::Real(1.450)),
             ("Winch.RopePos", Value::Real(1.500)),  // 57
+            ("Winch.RopePos", Value::Real(1.550)),  // 57
             ("Winch.RopePos", Value::Real(1.600)),  // 57
+            ("Winch.RopePos", Value::Real(1.650)),  // 57
             ("Winch.RopePos", Value::Real(1.700)),  // 57
-            ("Winch.RopePos", Value::Real(1.700)),  // 57
+            ("Winch.RopePos", Value::Real(1.750)),  // 57
+            ("Winch.RopePos", Value::Real(1.800)),  // 57
+            ("Winch.RopePos", Value::Real(1.850)),  // 57
             ("Winch.RopePos", Value::Real(1.900)),  // 57
+            ("Winch.RopePos", Value::Real(1.950)),  // 57
             ("Winch.RopePos", Value::Real(2.000)),  // 57
             // ("Winch.Load", Value::Int(1)),
             // ("Load.MainBoomAngle", Value::Int(2)),
@@ -183,10 +205,6 @@ fn run() {
                     table: public.frdm_deprecation
                     subscribe: /{dbg}/MultiQueue    # Service name, to subscribe for rope positin and crane angles event's
                     crane:
-                        # bendings:
-                        #     - D200mm 2.4..2.5 m
-                        #     - D200mm 2.7..2.9 m
-                        #     - D200mm 3.1..3.2 m
                         rope:
                             width: 35 mm        # Diameter of the rome
                             length: 3000 m      # Total working length of the rope
@@ -212,37 +230,37 @@ fn run() {
                             - 1:
                                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
                                 d: 844.0 mm                 # Диаметры блоков, мм
-                                schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                                scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                                 bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
                             - 2:
                                 lf: 308.0 mm, 1090.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
                                 d: 816.0 mm                 # Диаметры блоков, мм
-                                schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                                scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
                             - 3:
                                 lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
                                 d: 816.0 mm                 # Диаметры блоков, мм
-                                schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                                scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
                             - 4:
                                 lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
                                 d: 816.0 mm                 # Диаметры блоков, мм
-                                schemes: TopBottom          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                                scheme: TopBottom          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                                 bind: Boom 2                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
                             - 5:
                                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                                 d: 816.0 mm                 # Диаметры блоков, мм
-                                schemes: BottomTop          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                                scheme: BottomTop          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                                 bind: Boom 3                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
                             - 6:
                                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                                 d: 816.0 mm                 # Диаметры блоков, мм
-                                schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                                scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                                 bind: Boom 4                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
                             - 7:
                                 lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
                                 d: 0.0 mm                   # Диаметры блоков, мм
-                                schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+                                scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 
             service SendService SendService0:
@@ -263,7 +281,7 @@ fn run() {
         move |txid, ix, name: &str, event: &Value| {
             let dbg = builder_dbg.clone();
             log::debug!("{dbg}.event_builder | test event {ix}: '{name}': {:?}", event);
-            std::thread::sleep(Duration::from_millis(300));
+            std::thread::sleep(Duration::from_millis(50));
             event.to_point(txid, name)
         },
         events.clone(),
