@@ -50,7 +50,9 @@ impl FrdmService {
             dbg,
         }
     }
-    pub fn update_db_settings(&self, winch: usize, api_client: Arc<ApiClient>, exit: Arc<AtomicBool>) -> Result<(), Error> {
+    ///
+    /// Stores rope parameters from local settings to thr database
+    fn update_db_settings(&self, winch: usize, api_client: Arc<ApiClient>, exit: Arc<AtomicBool>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let table = self.conf.table_settings.clone();
         let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
@@ -95,6 +97,11 @@ impl FrdmService {
         })?;
         Ok(())
     }
+    ///
+    /// Creates path to store rope defects images
+    fn create_rope_defects_dir(&self, path: &Path) -> Result<(), Error> {
+        std::fs::create_dir_all(path).map_err(|err| Error::new(&self.dbg, "create_rope_defects_dir").pass(err.to_string()))
+    }
 }
 //
 //
@@ -123,7 +130,7 @@ impl Service for FrdmService {
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
-        let storage_path = Path::new("./files").join(
+        let storage_path = Path::new("assets/files").join(
             self.name.join()
                 .chars()
                 .enumerate()
@@ -131,6 +138,9 @@ impl Service for FrdmService {
                 .map(|(_, ch)| ch)
                 .collect::<String>()
         );
+        if let Err(err) = self.create_rope_defects_dir(&storage_path) {
+            log::warn!("{}.run | Can't create folder for rope defects images: {:?}", self.dbg, err);
+        }
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
         self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run()?;

@@ -52,11 +52,12 @@ impl RopeDefect {
     /// Saving camera images to local store
     /// and clenong obsoleted images
     fn save_image(dbg: &Dbg, api_client: &ApiClient, defect_id: &str, camera_id: usize, frame: &Image, img_path: &str) -> Result<(), Error> {
-        // let error = Error::new(dbg, "save_image");
-        let sql = format!(r"select * from clean_frdm_defect_image({defect_id}, {camera_id})");
-        api_client.fetch(&sql).then(
+        let error = Error::new(dbg, "save_image");
+        let sql = format!("select * from clean_frdm_defect_image('{defect_id}', {camera_id});");
+        let result = api_client.fetch(&sql).then(
             |reply| match reply {
                 Ok(reply) => {
+                    let mut errors = vec![];
                     for entry in reply {
                         match entry.get("path") {
                             Some(path) => {
@@ -64,23 +65,26 @@ impl RopeDefect {
                                     Ok(path) => {
                                         let path: String = path;
                                         if let Err(err) = fs::remove_file(&path) {
-                                            log::warn!("{dbg}.save_image | Delete image '{path}' error: {:?}", err);
+                                            errors.push(error.pass_with(format!("Can't delete image '{path}'"), err.to_string()));
                                         }
                                     }
-                                    Err(err) => {
-                                        log::warn!("{dbg}.save_image | Deserialize path '{path}' error: {:?}", err);
-                                    }
+                                    Err(err) => errors.push(error.pass_with(format!("Can't deserialize path '{path}'"), err.to_string())),
                                 }
                             }
-                            None => log::warn!("{dbg}.save_image | Field 'path' not found in sql reply: {:#?}", entry),
+                            None => errors.push(error.err(format!("Field 'path' not found in sql reply: {:#?}", entry))),
                         }
                     }
+                    match errors.is_empty() {
+                        true => Ok(()),
+                        false => Err(error.err(errors.iter().fold(String::new(), |acc, err| format!("{acc}\n\t{err}")))),
+                    }
                 }
-                Err(err) => log::warn!("{dbg}.save_image | Sql error: {:?}", err),
+                Err(err) => Err(error.pass_with("Sql error", err)),
             },
-            |err| log::warn!("{dbg}.save_image | Error: {:?}", err),
+            |err| Err(error.pass(err)),
         );
-        frame.save(img_path)
+        frame.save(img_path).map_err(|err| error.pass(err))?;
+        result
     }
     ///
     /// Defect detection
@@ -165,8 +169,7 @@ impl Service for RopeDefect {
                 conf.defect_detection.fine_scan,
                 scheduler.clone(),
                 Some(move |ctx: &Context| {
-                    let defect_ctx: &RopeDefectCtx<FineScanCtx> = ctx.read();
-                    let defects = &defect_ctx.result;
+                    let defects = ContextRead::<RopeDefectCtx<FineScanCtx>>::read(ctx).result.clone();
                     let slice_ix = *ContextRead::<MetaCtx>::read(ctx);
                     if !defects.is_empty() {
                         log::warn!("{dbg1}.run | Slice {slice_ix} - Defects detected");
@@ -191,7 +194,7 @@ impl Service for RopeDefect {
                                             on conflict (id, defect) do update 
                                                 set (last, score) = (current_timestamp, {table_defect}.count + 1);
                                             insert into {table_defect_image} (frdm_defect_id, camera, path)
-                                                values ({slice_ix}, {camera_id}, '{img_path}');
+                                                values ('{defect_id}', {camera_id}, '{img_path}');
                                             exception
                                                 when others then
                                                     rollback;

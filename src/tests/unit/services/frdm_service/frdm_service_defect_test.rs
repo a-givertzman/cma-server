@@ -87,7 +87,7 @@ fn run() {
     let recv_limit0 = events[0].len();    //events[0].len();
     let conf = ConfTree::new_root(
         serde_yaml::from_str(&format!(r#"
-            thread-pool: 12
+            thread-pool: 24
             services:
                 retain:
                     path: assets/testing/retain/
