@@ -28,7 +28,7 @@ pub struct BoomConf {
     /// Length of the boom
     pub len: InputKind<ConfDistance>,
     /// Current angle of the boom (relative axis), degrees
-    pub angle: InputKind<ConfDistance>,
+    pub angle: InputKind<f64>,
 }
 //
 // 
@@ -52,9 +52,9 @@ impl BoomConf {
                 .expect(&format!("{dbg}.new | 'len' - can be Const: 11200.0 mm or point real 'App/MultiQueue/Load.MainBoomAngle', but found '{:?}'", ConfTreeGet::<String>::get(&conf, "len")))
                 .name()),
         };
-        let angle = match conf.get_distance("angle") {
-            Ok(angle) => InputKind::Const(angle),
-            Err(_) => InputKind::Point(conf.get_fn_config(&dbg, "angle", &mut vec![])
+        let angle = match conf.get("angle") {
+            Some(angle) => InputKind::Const(angle),
+            None => InputKind::Point(conf.get_fn_config(&dbg, "angle", &mut vec![])
                 .expect(&format!("{dbg}.new | 'angle' - can be Const: 11200.0 mm or point real 'App/MultiQueue/Load.MainBoomAngle', but found '{:?}'", ConfTreeGet::<String>::get(&conf, "len")))
                 .name()),
         };

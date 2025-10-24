@@ -3,7 +3,10 @@ use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBind, BlockConf, Boom, Booms, Offset};
 
 ///
-/// Evaluation for the crane boom's collection
+/// Evaluation for the crane `Block`'s collection
+/// 4. Координаты блоков X, Y
+/// - First one is always a `Winch drum`
+/// - Next - are regular block from `Winch` towards `Hook`
 pub struct Blocks {
     items: Vec<Block>,
     booms: Booms,
@@ -22,6 +25,13 @@ impl Blocks {
                 conf.d.as_mm(),
                 conf.scheme,
                 conf.bind,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0..0.0,
             )).collect(),
             booms,
             dbg: Dbg::new(parent, "Blocks"),
@@ -32,7 +42,10 @@ impl Blocks {
     pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
         match self.booms.eval(inputs) {
             Some(booms) => {
-                self.blocks_pos(&booms).map(|_| self.items.clone())
+                self.blocks_pos(&booms).map(|_| {
+                    // log::debug!("{} | Blocks: {:?}", self.dbg, self.items.len());
+                    self.items.clone()
+                })
             },
             None => None,
         }
@@ -40,13 +53,13 @@ impl Blocks {
     ///
     /// 4. Координаты блоков X, Y
     fn blocks_pos(&mut self, booms: &Vec<Boom>) -> Option<()> {
+        // TODO: replace with config or calculated value
         let hook_l = 1000.0;
         match self.items.first() {
             Some(first) => {
                 let mut prev = first.pos;
-                let mut prev_d = first.d;
-                for (idx, block) in self.items.iter_mut().enumerate() {
-                    log::trace!("{}.blocks_pos | Блок {idx}", self.dbg);
+                let mut prev_d = first.diameter;
+                for (_, block) in self.items.iter_mut().enumerate() {
                     match block.bind {
                         BlockBind::Fixed => {
                             // Формула из алгоритма:
@@ -58,8 +71,6 @@ impl Blocks {
                             block.pos.y = y;
                         }
                         BlockBind::Boom(boom_index) => {
-                            // Определяем номер стрелы
-                            // boom_num = int(feature.split()[0]) - 1
                             let base_point = booms[boom_index].gpt;  // точка G
                             let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
                             block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
@@ -69,8 +80,9 @@ impl Blocks {
                             block.pos.y = prev.y - hook_l;
                         }
                     }
+                    // log::debug!("{}.blocks_pos | Блок {} [{idx}]: pos: {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
                     prev = block.pos;
-                    prev_d = block.d;
+                    prev_d = block.diameter;
                 }
                 Some(())
             }
