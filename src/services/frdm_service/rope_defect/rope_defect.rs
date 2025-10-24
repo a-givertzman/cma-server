@@ -238,7 +238,7 @@ impl Service for RopeDefect {
                                 Initial::new(
                                     InitialCtx::new(),
                                 ),
-                                false,
+                                true,
                             ),
                             false,
                         ),
