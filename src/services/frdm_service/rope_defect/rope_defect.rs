@@ -192,7 +192,7 @@ impl Service for RopeDefect {
                                             insert into {table_defect} (id, defect, first, last, score)
                                                 values ({slice_ix}, '{defect_id}', current_timestamp, current_timestamp, 1)
                                             on conflict (id, defect) do update 
-                                                set (last, score) = (current_timestamp, {table_defect}.count + 1);
+                                                set (last, score) = (current_timestamp, {table_defect}.score + 1);
                                             insert into {table_defect_image} (frdm_defect_id, camera, path)
                                                 values ('{defect_id}', {camera_id}, '{img_path}');
                                             exception
