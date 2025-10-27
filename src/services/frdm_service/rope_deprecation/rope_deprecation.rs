@@ -1,11 +1,11 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    services::{entity::{Cot, Name, Object}, Service, ServiceWaiting, Services, SubscriptionCriteria, RECV_TIMEOUT},
-    sync::{channel::RecvTimeoutError, AtomicUsizeOption, Handles},
+    services::{entity::{Name, Object}, Service, ServiceWaiting, RECV_TIMEOUT},
+    sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, LooseRopeSections, RopeDeprecationConf}};
+use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, Inputs, LooseRopeSections, RopeDeprecationConf}};
 
 ///
 /// ## Rope deprecation rate
@@ -17,10 +17,8 @@ use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Bloc
 pub struct RopeDeprecation {
     name: Name,
     conf: RopeDeprecationConf,
-    /// rope position, mm
-    rope_pos: Arc<AtomicUsizeOption>,
+    inputs: Arc<Inputs>,
     api_client: Arc<ApiClient>,
-    services: Arc<Services>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
     exit: Arc<AtomicBool>,
@@ -34,8 +32,8 @@ impl RopeDeprecation {
     pub fn new(
         parent: impl Into<String>,
         conf: RopeDeprecationConf,
+        inputs: Arc<Inputs>,
         api_client: Arc<ApiClient>,
-        services: Arc<Services>,
         scheduler: Scheduler,
     ) -> Self {
         let name = Name::new(parent, "RopeDeprecation");
@@ -43,21 +41,12 @@ impl RopeDeprecation {
         Self {
             name,
             conf,
-            rope_pos: Arc::new(AtomicUsizeOption::new(None)),
+            inputs,
             api_client,
-            services,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
-        }
-    }
-    ///
-    /// Returns current rope pos, mm
-    pub fn rope_pos(&self) -> Option<f64> {
-        match self.rope_pos.load() {
-            Some(val) => Some(val as f64),
-            None => None,
         }
     }
 }
@@ -98,38 +87,21 @@ impl Service for RopeDeprecation where {
         let conf = self.conf.clone();
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
-        let rope_pos = self.rope_pos.clone();
-        let services = self.services.clone();
+        let inputs = self.inputs.clone();
         let exit = self.exit.clone();
-        let points = [
-            &conf.crane.rope.pos,
-            &conf.crane.rope.load,
-            // &conf.crane.booms.main_angle,
-            // &conf.crane.booms.rotary_angle,
-        ].map(|point| {
-            let subscription = SubscriptionCriteria::new(point, Cot::Inf);
-            log::trace!("{dbg}.run | Subscription: {:?}", subscription);
-            subscription
-        });
         let api_client = self.api_client.clone();   // Arc::new(ApiClient::new(&name, conf.api.clone(), self.scheduler.clone()));
         let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &points);
-            // let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, NotifyState::Start, vec![
-            //     (NotifyState::Start,          Box::new(|message| log::info!("{}", message))),
-            //     (NotifyState::Exit,           Box::new(|message| log::info!("{}", message))),
-            //     (NotifyState::SendError,      Box::new(|message| log::error!("{}", message))),
-            // ]);
+            let recv = inputs.listen();
             let conf_table = conf.table.clone();
-            let mut subscriptions = vec![];
             let mut deprecation = Deprecation::new(
                 dbg,
                 &conf.crane,
+                inputs.clone(),
                 Bendings::new(
                     dbg,
-                    conf.crane.rope.pos.clone(),
                     &conf.crane.rope,
                     BlockArcs::new(
                         dbg,
@@ -138,12 +110,11 @@ impl Service for RopeDeprecation where {
                             Blocks::new(
                                 dbg,
                                 &conf.crane.blocks,
-                                Booms::new(dbg, &conf.crane.booms, &mut subscriptions),
+                                Booms::new(dbg, &conf.crane.booms, inputs),
                             ),
                         ),
                     ),
                 ),
-                subscriptions,
                 |slice_ix, deprecation| {
                     let dbg = &dbg.clone();
                     log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", slice_ix, deprecation);
@@ -157,29 +128,13 @@ impl Service for RopeDeprecation where {
                     log::trace!("{dbg}.run | Sql reply: {:?}", reply);
                 },
             );
-            // let mut rope_slices = RopeSlices::new(&name, conf.crane.clone(), |ix, deprecation| {
-            //     let dbg = &dbg.clone();
-            //     log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", ix, deprecation);
-            //     let sql = format!(r"
-            //         insert into {conf_table} (id, deprecation) values ({ix}, {deprecation})
-            //         on conflict (id) do update 
-            //             set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {ix};
-            //     ");
-            //     log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
-            //     let reply = api_client.fetch(sql).wait();
-            //     log::trace!("{dbg}.run | Sql reply: {:?}", reply);
-            // });
             service_release.add(Ok(()));
             loop {
-                log::trace!("{dbg}.run | Receiving points...");
+                log::trace!("{dbg}.run | Receiving events...");
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
-                        log::debug!("{dbg}.run | Received point: {:?}: {}", point.name(), point.to_string().as_string().value);
-                        deprecation.eval(&point);
-                        if let Some(pos) = deprecation.get(&conf.crane.rope.pos) {
-                            log::debug!("{dbg}.run | Received rope pos: {:.4?} m", pos);
-                            rope_pos.store(Some((pos * 1000.0).round() as usize));
-                        }
+                        log::debug!("{dbg}.run | Received event: {:?}: {}", point.name(), point.to_string().as_string().value);
+                        deprecation.eval();
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}

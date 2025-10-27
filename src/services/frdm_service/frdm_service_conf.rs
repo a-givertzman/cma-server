@@ -8,6 +8,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+///     subscribe: MultiQueue       # Service name, to subscribe for event's required for the calculations like rope positin and crane angles
 ///     api-client:
 ///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///         address: "0.0.0.0:8081",
@@ -103,7 +104,6 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 /// 
 ///     rope-deprecation:
 ///         table: 'public.frdm_deprecation'
-///         subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///         crane:
 ///             rope:
 ///                 width: 35 mm        # Diameter of the rome
@@ -163,12 +163,14 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///```
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FrdmServiceConf {
     pub name: Name,
     /// Next service will wait until current completely started plus specified time, optional
     pub wait_started: Option<Duration>,
     // pub cycle: Option<Duration>,
+    /// Service name, to subscribe for rope positin and crane angles event's
+    pub subscribe: String,
     /// API configuration parametes
     pub api: ApiClientConf,
     /// Names of the database table used for storing common settings for the clients
@@ -191,6 +193,8 @@ impl FrdmServiceConf {
         log::trace!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
         log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
+        let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
+        log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
         let api: ConfTree = conf.get("api-client").expect(&format!("{dbg}.new | 'api-client' - not found or wrong config"));
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
@@ -205,6 +209,7 @@ impl FrdmServiceConf {
         Self {
             name,
             wait_started,
+            subscribe,
             api,
             table_settings,
             rope_defect,

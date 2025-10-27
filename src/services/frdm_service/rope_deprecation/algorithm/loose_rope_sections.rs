@@ -1,5 +1,4 @@
 use sal_core::dbg::Dbg;
-use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{Block, Blocks, Offset};
 
 ///
@@ -21,8 +20,8 @@ impl LooseRopeSections {
     }
     ///
     /// Evaluates Boom's values using passed new parameters
-    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
-        match self.blocks.eval(inputs) {
+    pub fn eval(&mut self) -> Option<Vec<Block>> {
+        match self.blocks.eval() {
             Some(blocks) => {
                 let mut rope_alpha_bck = 0.0;
                 let mut rope_len_bck = 0.0;

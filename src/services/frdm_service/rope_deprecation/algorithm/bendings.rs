@@ -1,13 +1,10 @@
-use std::time::Instant;
-
+use std::{sync::Arc, time::Instant};
 use sal_core::dbg::Dbg;
-use sal_sync::collections::FxIndexMap;
-use crate::services::frdm_service::{Block, BlockArcs, BlockBind, RopeConf};
+use crate::services::frdm_service::{Block, BlockArcs, BlockBind, Inputs, RopeConf};
 
 ///
 /// 10. Определение опорных точек по длине каната
 pub struct Bendings {
-    pos_input: String,
     rope_len: f64,
     segment: f64,
     block_arcs: BlockArcs,
@@ -18,13 +15,8 @@ pub struct Bendings {
 impl Bendings {
     ///
     /// Returns [Bendings] new instance
-    /// - `pos_input` - Name of input og the `Rope` position, mm
-    /// rope_results,
-    /// rope_loose_sections: list[RopeLooseSection],
-    /// block_results
-    pub fn new(parent: impl Into<String>, pos_input: String, conf: &RopeConf, block_arcs: BlockArcs) -> Self {
+    pub fn new(parent: impl Into<String>, conf: &RopeConf, block_arcs: BlockArcs) -> Self {
         Self {
-            pos_input,
             rope_len: conf.length.as_mm(),
             segment: conf.segment.as_mm(),
             block_arcs,
@@ -45,16 +37,16 @@ impl Bendings {
     ///     F10 = F9  + l_rope_5
     ///     F11 = F10 + arc_5
     ///     F12 = F11 + l_rope_6
-    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
+    pub fn eval(&mut self, inputs: &Arc<Inputs>) -> Option<Vec<Block>> {
         let t = Instant::now();
-        match self.block_arcs.eval(inputs) {
+        match self.block_arcs.eval() {
             Some(blocks) => {
                 let mut result = vec![];
-                match inputs.get(&self.pos_input) {
+                match inputs.rope_pos() {
                     Some(rope_pos) => {
-                        let mut start = self.rope_len - *rope_pos * 1000.0;                                       // Точка входа каната на блок
-                        let mut end = 0.0;   // Точка схода каната с барабана, а в общем с блока
-                        let mut bend = start .. end;                       // Первый сход считаем с барабана
+                        let mut start = self.rope_len - rope_pos * 1000.0;  // Точка входа каната на блок
+                        let mut end = 0.0;                                  // Точка схода каната с барабана, а в общем с блока
+                        let mut bend = start .. end;                 // Первый сход считаем с барабана
                         for block in blocks.iter().rev() {
                             end = bend.start - block.rope_len_fwd;
                             start = match block.bind {
@@ -84,7 +76,7 @@ impl Bendings {
                         Some(result)
                     }
                     None => {
-                        log::warn!("{}.eval | Input '{:?}' - Not found", self.dbg, self.pos_input);
+                        log::warn!("{}.eval | Rope position isn't ready", self.dbg);
                         return None;
                     }
                 }

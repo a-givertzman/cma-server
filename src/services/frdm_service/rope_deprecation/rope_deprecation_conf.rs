@@ -11,7 +11,6 @@ use crate::{infra::ApiClientConf, services::frdm_service::CraneConf};
 /// rope-deprecation:
 ///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///     table: 'public.frdm_deprecation'
-///     subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///     crane:
 ///         bendings:           # Rope bloks with diameter, inter and exit
 ///             # Block Diameter   inter   exit
@@ -53,8 +52,6 @@ pub struct RopeDeprecationConf {
     pub api: ApiClientConf,
     /// Names of the database table used for storing rope deprecation values
     pub table: String,
-    /// Service name, to subscribe for rope positin and crane angles event's
-    pub subscribe: String,
     /// The configuration parameters for the crane elements and rope rope
     pub crane: CraneConf,
 }
@@ -75,8 +72,6 @@ impl RopeDeprecationConf {
         log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
         let table = conf.get("table").expect(&format!("{dbg}.new | 'table' - not found or wrong config"));
         log::trace!("{dbg}.new | table: {:?}", table);
-        let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
-        log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
         let crane = conf.get("crane").expect(&format!("{dbg}.new | 'crane' - not found or wrong config"));
         let crane = CraneConf::new(&name, crane);
         log::trace!("{dbg}.new | crane: {:?}", crane);
@@ -85,7 +80,6 @@ impl RopeDeprecationConf {
             wait_started,
             api,
             table,
-            subscribe,
             crane,
         }
     }

@@ -2,8 +2,8 @@ use std::{fs, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc}
 use chrono::Datelike;
 use frdm_tools::{camera::Camera, AutoGamma, Context, ContextRead, Cropping, CroppingCtx, Eval, FastScan, FineScan, FineScanCtx, Gray, Image, Initial, InitialCtx, MetaCtx, RopeDefectCtx, RopeDefectKind};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Name, Object}, Service, ServiceWaiting}, sync::{AtomicUsizeOption, Handles}, thread_pool::Scheduler};
-use crate::{domain::{constants::constants::RECV_TIMEOUT}, infra::ApiClient, services::frdm_service::rope_defect::{Rope, RopeDefectConf}};
+use sal_sync::{services::{entity::{Name, Object}, Service, ServiceWaiting}, sync::Handles, thread_pool::Scheduler};
+use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::{rope_defect::RopeDefectConf, Inputs}};
 
 ///
 /// Dects defect on the frames coming from the camera
@@ -11,8 +11,8 @@ pub struct RopeDefect {
     name: Name,
     conf: RopeDefectConf,
     camera_id: usize,
-    starage_path: PathBuf,
-    rope: Arc<Rope>,
+    storage_path: PathBuf,
+    inputs: Arc<Inputs>,
     api_client: Arc<ApiClient>,
     scheduler: Scheduler,
     handles: Arc<Handles<()>>,
@@ -28,8 +28,8 @@ impl RopeDefect {
         parent: impl Into<String>,
         conf: RopeDefectConf,
         camera_id: usize,
-        starage_path: impl AsRef<Path>,
-        rope: Arc<Rope>,
+        storage_path: impl AsRef<Path>,
+        inputs: Arc<Inputs>,
         api_client: Arc<ApiClient>,
         scheduler: Scheduler,
     ) -> Self {
@@ -39,8 +39,8 @@ impl RopeDefect {
             name,
             conf,
             camera_id,
-            starage_path: starage_path.as_ref().join("rope-defects"),
-            rope,
+            storage_path: storage_path.as_ref().join("rope-defects"),
+            inputs,
             api_client,
             scheduler,
             handles: Arc::new(Handles::new(&dbg)),
@@ -92,35 +92,18 @@ impl RopeDefect {
         dbg: &Dbg,
         frame: Image,
         defect: &FineScan,
-        rope: &Rope,
         prev_index: Option<usize>,
     ) -> Option<usize> {
-        // Position of the rope under the camera, meter
-        // let rope_pos = rope.pos();
-        // log::warn!("{dbg}.detection | Rope at: {:.2?} mm ({:.3?} m)...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0));
         let time = Instant::now();
-        let rope_pos = rope.pos_at_camera();
-        // log::warn!("{dbg}.detection | Rope under camera at: {:.2?} mm ({:.3?} m)...", rope_pos.map(|pos| pos).unwrap_or(-0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(-0.0));
-        match rope.segment_index() {
-            Some(_) => {
-                let slice_ix = frame.meta;
-                log::debug!("{dbg}.detection | Rope position at: {:.2?} mm ({:.3?} m) index {slice_ix}, prev_ix {:?}...", rope_pos.map(|pos| pos).unwrap_or(0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(0.0), prev_index);
-                if Some(slice_ix) != prev_index {
-                    log::debug!("{dbg}.detection | Analizing rope at: {:.2?} mm ({:.3?} m) index {slice_ix}, prev_ix {:?}...", rope_pos.map(|pos| pos).unwrap_or(0.0), rope_pos.map(|pos| pos * 0.001).unwrap_or(0.0), prev_index);
-                    let frame = Image { mat: frame.mat, meta: slice_ix };
-                    defect.eval(frame.clone());
-                    log::debug!("{dbg}.detection | Rope slice {}, Elapsed: {:?}", frame.meta, time.elapsed());
-                    Some(slice_ix)
-                } else {
-                    log::trace!("{dbg}.detection | Elapsed: {:?}", time.elapsed());
-                    prev_index
-                }
-            }
-            None => {
-                log::trace!("{dbg}.detection | Rope pos not under segment or not received");
-                log::trace!("{dbg}.detection | Elapsed: {:?}", time.elapsed());
-                prev_index
-            }
+        let slice_ix = frame.meta;
+        if Some(slice_ix) != prev_index {
+            let frame = Image { mat: frame.mat, meta: slice_ix };
+            defect.eval(frame.clone());
+            log::debug!("{dbg}.detection | Rope slice {}, Elapsed: {:?}", frame.meta, time.elapsed());
+            Some(slice_ix)
+        } else {
+            log::trace!("{dbg}.detection | Elapsed: {:?}", time.elapsed());
+            prev_index
         }
     }
 }
@@ -154,11 +137,10 @@ impl Service for RopeDefect {
         let conf = self.conf.clone();
         let camera_id = self.camera_id;
         let exit = self.exit.clone();
-        let storage_path = self.starage_path.clone();
+        let storage_path = self.storage_path.clone();
         let table_defect = conf.tables.defect.clone();
         let table_defect_image = conf.tables.defect_image.clone();
-        let rope = self.rope.clone();
-        let segment_ix = Arc::new(AtomicUsizeOption::new(None));
+        let inputs = self.inputs.clone();
         let api_client = self.api_client.clone();
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
@@ -253,7 +235,7 @@ impl Service for RopeDefect {
                 false,
             );
             let mut prev_index = None;
-            let mut camera = Camera::new(segment_ix.clone(), camera_conf.clone());
+            let mut camera = Camera::new(inputs.cam_segment_ix().clone(), camera_conf.clone());
             match &camera_conf.from_path {
                 Some(path) => {
                     log::info!("{dbg}.run | Starting camera from path '{path}'...");
@@ -265,7 +247,6 @@ impl Service for RopeDefect {
                             &dbg,
                             frame,
                             &defect,
-                            &rope,
                             prev_index,
                         );
                         std::thread::sleep(Duration::from_millis(50));
@@ -288,13 +269,12 @@ impl Service for RopeDefect {
                                                 &dbg,
                                                 frame,
                                                 &defect,
-                                                &rope,
                                                 prev_index,
                                             );
                                         }
                                         Err(err) => {
                                             match err {
-                                                crate::domain::RecvTimeoutError::Timeout => {}
+                                                kanal::ReceiveErrorTimeout::Timeout => {}
                                                 _ => {
                                                     break 'camera;
                                                 }

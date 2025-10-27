@@ -1,5 +1,4 @@
 use sal_core::dbg::Dbg;
-use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBind, BlockConf, Boom, Booms, Offset};
 
 ///
@@ -39,8 +38,8 @@ impl Blocks {
     }
     ///
     /// Evaluates Boom's values using passed new parameters
-    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
-        match self.booms.eval(inputs) {
+    pub fn eval(&mut self) -> Option<Vec<Block>> {
+        match self.booms.eval() {
             Some(booms) => {
                 self.blocks_pos(&booms).map(|_| {
                     // log::debug!("{} | Blocks: {:?}", self.dbg, self.items.len());

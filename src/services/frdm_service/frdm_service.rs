@@ -21,7 +21,7 @@ use sal_sync::{
     services::{entity::{Name, Object}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{FrdmServiceConf, Rope, RopeDefect, RopeDeprecation}};
+use crate::{infra::ApiClient, services::frdm_service::{FrdmServiceConf, Inputs, RopeDefect, RopeDeprecation}};
 ///
 /// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
@@ -127,6 +127,7 @@ impl Service for FrdmService {
     // 
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
+        let name = self.name.clone();
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
@@ -146,23 +147,37 @@ impl Service for FrdmService {
         api_client.run()?;
         log::info!("{}.run | ApiClient ready", self.dbg);
         self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
+        // let subscription: Vec<SubscriptionCriteria> = [
+        //         conf.rope_deprecation.crane.rope.pos.clone(),
+        //         conf.rope_deprecation.crane.rope.load.clone(),
+        //     ]
+        //     .iter().chain(
+        //         conf.rope_deprecation.crane.booms.iter().filter_map(|(_, b)| {
+        //             match &b.angle {
+        //                 crate::services::frdm_service::InputKind::Const(_) => None,
+        //                 crate::services::frdm_service::InputKind::Point(v) => Some(v),
+        //             }
+        //         }),
+        //     )
+        //     .map(|point| {
+        //         let subscription = SubscriptionCriteria::new(point, Cot::Inf);
+        //         log::trace!("{dbg}.run | Subscription: {:?}", subscription);
+        //         subscription
+        //     })
+        //     .collect();
+        // let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &subscription);
+        let inputs = Arc::new(Inputs::new(&name, &conf, services.clone(), scheduler.clone(), self.exit.clone()));
+        self.tasks.insert(inputs.name().join(), inputs.clone());
         let rope_deprecation = Arc::new(RopeDeprecation::new(
             &self.name,
             conf.rope_deprecation,
+            inputs.clone(),
             api_client.clone(),
-            services.clone(),
             scheduler.clone(),
         ));
         self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
         rope_deprecation.run()?;
         log::info!("{}.run | RopeDeprecation ready", self.dbg);
-        let rope = Arc::new(Rope::new(
-            &self.name,
-            conf.rope_defect.camera_offset,
-            conf.rope_defect.segment,
-            conf.rope_defect.segment_threshold,
-            rope_deprecation,
-        ));
         if !conf.rope_defect.cameras.is_empty() {
             log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.cameras.len());
             for (camera_id, camera_conf) in &conf.rope_defect.cameras {
@@ -172,7 +187,7 @@ impl Service for FrdmService {
                     conf.rope_defect.clone(),
                     **camera_id,
                     storage_path.clone(),
-                    rope.clone(),
+                    inputs.clone(),
                     api_client.clone(),
                     scheduler.clone(),
                 ));
@@ -182,6 +197,7 @@ impl Service for FrdmService {
         } else {
             log::warn!("{}.run | No Camera's configured", self.dbg);
         }
+        inputs.run()?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
         log::info!("{}.run | RopeDefect's ready", self.dbg);
         log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())

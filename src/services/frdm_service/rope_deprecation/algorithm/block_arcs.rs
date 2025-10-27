@@ -1,6 +1,5 @@
 use std::f64::consts::PI;
 use sal_core::dbg::Dbg;
-use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{Block, BlockBind, LooseRopeSections};
 
 ///
@@ -23,8 +22,8 @@ impl BlockArcs {
     }
     ///
     /// Evaluates Block arck's
-    pub fn eval(&mut self, inputs: &FxIndexMap<String, f64>) -> Option<Vec<Block>> {
-        match self.loose_rope_sections.eval(inputs) {
+    pub fn eval(&mut self) -> Option<Vec<Block>> {
+        match self.loose_rope_sections.eval() {
             Some(blocks) => {
                 let mut l_sys_arc = 0.0;
                 let blocks: Vec<Block> = blocks.iter().map(|block| {
