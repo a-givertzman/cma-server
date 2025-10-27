@@ -13,6 +13,7 @@ pub struct Rope {
     segment: f64,
     segment_threshold: f64,
     pos: Arc<RopeDeprecation>,
+    #[allow(unused)]
     dbg: Dbg,
 }
 //
@@ -35,6 +36,8 @@ impl Rope {
         }
     }
     ///
+    /// Returns 
+    ///
     /// Returns cerrent rope position (mm) under the camera
     pub fn pos_at_camera(&self) -> Option<f64> {
         self.pos.rope_pos().map(|pos| pos + self.camera_offset)
@@ -55,10 +58,10 @@ impl Rope {
                 // Current rope pos Delta in relation to exact segment position
                 let delta = (slices - ix).abs() * self.segment;
                 if delta <= self.segment_threshold {
-                    log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Use slice {ix}", self.dbg, pos, pos * 0.001, slices, delta);
+                    // log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Use slice {ix}", self.dbg, pos, pos * 0.001, slices, delta);
                     Some(ix as usize)
                 } else {
-                    log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Skip", self.dbg, pos, pos * 0.001, slices, delta);
+                    // log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Skip", self.dbg, pos, pos * 0.001, slices, delta);
                     None
                 }
             }
