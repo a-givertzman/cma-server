@@ -251,7 +251,11 @@ impl Service for RopeDefect {
                 false,
             );
             let mut prev_index = None;
-            let mut camera = Camera::new(camera_conf.clone());
+            let rope_clone = rope.clone();
+            let mut camera = Camera::new(
+                Some(move || rope_clone.segment_index().unwrap_or(0)),
+                camera_conf.clone(),
+            );
             match &camera_conf.from_path {
                 Some(path) => {
                     log::info!("{dbg}.run | Starting camera from path '{path}'...");
