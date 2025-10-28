@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections, RopeDeprecationConf};
 
 ///
 ///
@@ -43,7 +43,7 @@ fn new() {
         // Targets
         [
             // enter .. exit, mm
-                0.0000 .. 65565.5016,
+                0.0000 .. 65565.5016,   // start from the end of the ropr on the winch
             77074.5163 .. 77075.4196,
             78797.8560 .. 79000.0876,
             84481.6102 .. 84713.7866,
@@ -60,7 +60,7 @@ fn new() {
         // Targets
         [
             // enter .. exit, mm
-                0.0000 .. 65144.9469,
+                0.0000 .. 65144.9469,   // start from the end of the ropr on the winch
             76507.0587 .. 76696.6577,
             78957.9230 .. 79163.9797,
             84645.5023 .. 84877.6787,
@@ -162,7 +162,13 @@ fn new() {
     let conf = CraneConf::new(&dbg, conf);
     let inputs = Arc::new(Inputs::fake(
         &dbg,
-        &FrdmServiceConf::default(),
+        &FrdmServiceConf {
+            rope_deprecation: RopeDeprecationConf {
+                crane: conf.clone(),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));

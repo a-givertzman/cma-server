@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.patches as patches
 from dataclasses import dataclass
 
+plt.set_loglevel(level="INFO")
 logging.getLogger("PIL").setLevel(logging.WARNING)
 logging.basicConfig(level = logging.DEBUG, force = True)
 

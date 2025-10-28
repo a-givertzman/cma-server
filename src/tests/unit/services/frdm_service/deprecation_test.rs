@@ -191,7 +191,7 @@ fn new() {
             ),
         ),
         |slice_ix, deprecation| {
-            let dbg = &dbg.clone();
+            // let dbg = &dbg.clone();
             // log::debug!("{dbg} | Deprication slice[{slice_ix}]: {:?}", deprecation);
             result.replace_with(|r| {
                 r[*slice_ix] += deprecation;
@@ -203,8 +203,8 @@ fn new() {
         },
     );
     for (step, event_name, event_value, target_i, target_count_i) in test_data {
-        target = target_i;
-        target_count = target_count_i;
+        // target = target_i;
+        // target_count = target_count_i;
         log::debug!("{dbg} | step {step}  Event '{}': {:.4}", event_name, event_value);
         let time = Instant::now();
         inputs.insert(event_name, event_value);

@@ -5,8 +5,8 @@ use crate::services::frdm_service::{Block, BlockArcs, BlockBind, Inputs, RopeCon
 ///
 /// 10. Определение опорных точек по длине каната
 pub struct Bendings {
+    /// Total working length of the rope, mm
     rope_len: f64,
-    segment: f64,
     block_arcs: BlockArcs,
     dbg: Dbg,
 }
@@ -18,7 +18,6 @@ impl Bendings {
     pub fn new(parent: impl Into<String>, conf: &RopeConf, block_arcs: BlockArcs) -> Self {
         Self {
             rope_len: conf.length.as_mm(),
-            segment: conf.segment.as_mm(),
             block_arcs,
             dbg: Dbg::new(parent, "Bendings"),
         }
@@ -44,13 +43,14 @@ impl Bendings {
                 let mut result = vec![];
                 match inputs.rope_pos() {
                     Some(rope_pos) => {
-                        let mut start = self.rope_len - rope_pos * 1000.0;  // Точка входа каната на блок
+                        let mut start = self.rope_len - rope_pos; // * 1000.0;  // Точка входа каната на блок
                         let mut end = 0.0;                                  // Точка схода каната с барабана, а в общем с блока
                         let mut bend = start .. end;                 // Первый сход считаем с барабана
                         for block in blocks.iter().rev() {
+                            // log::trace!("{}.eval | Block {} {:?}", self.dbg, block.name, block.bind);
                             end = bend.start - block.rope_len_fwd;
                             start = match block.bind {
-                                BlockBind::Fixed => end - self.segment,
+                                BlockBind::Fixed => 0.0, // На барабане считаем весь канат от конца до точки схода,
                                 BlockBind::Boom(_) => end - block.wrap_length,
                                 BlockBind::Hook => end - block.wrap_length,
                             };

@@ -92,11 +92,18 @@ impl Inputs {
     /// Used for internal or testing purposes only
     /// 
     /// In nornal operation events should be received by the subscription
+    #[allow(unused)]
     pub(crate) fn insert(&self, key: impl Into<String>, val: f64) {
-        self.inputs.insert(key.into(), Some(val));
+        let key = key.into();
+        self.inputs.insert(key.clone(), Some(val));
+        if key == self.conf.rope_deprecation.crane.rope.pos {
+            let pos = (val * 1000.0) as usize;
+            self.rope_pos.store(Some(pos));
+            self.cam_segment_ix.store(self.rope.segment_index(pos));
+        }
     }
     ///
-    /// Returns callback with all internal events
+    /// Returns срфттуд with all internal events
     pub fn listen(&self) -> Receiver<Point> {
         let key = format!("listener-{}", self.listeners.len());
         let (send, recv) = unbounded();
