@@ -142,3 +142,20 @@ impl std::ops::DerefMut for CameraId {
         &mut self.0 // Mutably dereference to the inner usize
     }
 }
+//
+//
+impl Default for RopeDefectConf {
+    fn default() -> Self {
+        Self {
+            name: Name::new("", "RopeDefectConf"),
+            wait_started: Default::default(),
+            api: Default::default(),
+            tables: Default::default(),
+            segment: Default::default(),
+            segment_threshold: Default::default(),
+            camera_offset: Default::default(),
+            defect_detection: Default::default(),
+            cameras: Default::default(),
+        }
+    }
+}

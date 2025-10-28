@@ -84,3 +84,16 @@ impl RopeDeprecationConf {
         }
     }
 }
+//
+//
+impl Default for RopeDeprecationConf {
+    fn default() -> Self {
+        Self {
+            name: Name::new("", "RopeDeprecationConf"),
+            wait_started: Default::default(),
+            api: Default::default(),
+            table: Default::default(),
+            crane: Default::default(),
+        }
+    }
+}

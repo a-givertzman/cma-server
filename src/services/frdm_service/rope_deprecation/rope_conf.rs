@@ -62,3 +62,16 @@ impl RopeConf {
         }
     }
 }
+//
+//
+impl Default for RopeConf {
+    fn default() -> Self {
+        Self {
+            width: Default::default(),
+            length: Default::default(),
+            segment: Default::default(),
+            pos: Default::default(),
+            load: Default::default(),
+        }
+    }
+}

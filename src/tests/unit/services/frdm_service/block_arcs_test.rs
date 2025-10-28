@@ -1,10 +1,11 @@
+use std::sync::{Arc, atomic::AtomicBool};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
+use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, LooseRopeSections};
+use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections};
 
 ///
 ///
@@ -141,7 +142,12 @@ fn new() {
 
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
-    let mut inputs = FxIndexMap::default();
+    let inputs = Arc::new(Inputs::fake(
+        &dbg,
+        &FrdmServiceConf::default(),
+        [("", 0.0)],
+        Arc::new(AtomicBool::new(false)),
+    ));
     let mut block_arcs = BlockArcs::new(
         &dbg,
         LooseRopeSections::new(
@@ -149,7 +155,7 @@ fn new() {
             Blocks::new(
                 &dbg,
                 &conf.blocks,
-                Booms::new(&dbg, &conf.booms, &mut vec![]),
+                Booms::new(&dbg, &conf.booms, inputs.clone()),
             ),
         ),
     );
@@ -159,7 +165,7 @@ fn new() {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
-        let result = block_arcs.eval(&inputs).unwrap();
+        let result = block_arcs.eval().unwrap();
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
             assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);

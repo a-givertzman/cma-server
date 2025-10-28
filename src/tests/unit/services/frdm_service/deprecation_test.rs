@@ -1,11 +1,11 @@
 #[cfg(test)]
 use std::cell::RefCell;
-use std::{rc::Rc, sync::Once, time::{Duration, Instant}};
+use std::{rc::Rc, sync::{Arc, Once, atomic::AtomicBool}, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::ConfTree, entity::ToPoint};
+use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprecation, LooseRopeSections};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprecation, FrdmServiceConf, Inputs, LooseRopeSections};
 
 ///
 ///
@@ -165,13 +165,18 @@ fn new() {
     log::trace!("{dbg} | conf: {:#?}", conf);
     let result = Rc::new(RefCell::new(vec![0.00; (conf.rope.length.as_m() / conf.rope.segment.as_m()) as usize]));
     let result_count = Rc::new(RefCell::new(0));
-    let mut subscriptions = vec![];
+    let inputs = Arc::new(Inputs::fake(
+        &dbg,
+        &FrdmServiceConf::default(),
+        [("", 0.0)],
+        Arc::new(AtomicBool::new(false)),
+    ));
     let mut deprecation = Deprecation::new(
         &dbg,
         &conf,
+        inputs.clone(),
         Bendings::new(
             &dbg,
-            conf.rope.pos.clone(),
             &conf.rope,
             BlockArcs::new(
                 &dbg,
@@ -180,12 +185,11 @@ fn new() {
                     Blocks::new(
                         &dbg,
                         &conf.blocks,
-                        Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                        Booms::new(&dbg, &conf.booms, inputs.clone()),
                     ),
                 ),
             ),
         ),
-        subscriptions,
         |slice_ix, deprecation| {
             let dbg = &dbg.clone();
             // log::debug!("{dbg} | Deprication slice[{slice_ix}]: {:?}", deprecation);
@@ -203,7 +207,8 @@ fn new() {
         target_count = target_count_i;
         log::debug!("{dbg} | step {step}  Event '{}': {:.4}", event_name, event_value);
         let time = Instant::now();
-        deprecation.eval(&event_value.to_point(0, event_name));
+        inputs.insert(event_name, event_value);
+        deprecation.eval();
         log::debug!("{dbg} | step {step} elapsed: {:?}", time.elapsed());
         // assert!(
         //     result.borrow().iter().enumerate().all(|(ix, r)| {

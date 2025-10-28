@@ -1,10 +1,11 @@
+use std::sync::{Arc, atomic::AtomicBool};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
+use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Booms, CraneConf, Offset};
+use crate::services::frdm_service::{Booms, CraneConf, FrdmServiceConf, Inputs, Offset};
 
 ///
 ///
@@ -129,15 +130,20 @@ fn new() {
             load: point real 'Winch.Load'          # tonn, current rope load
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
-    let mut inputs = FxIndexMap::default();
-    let mut booms = Booms::new(&dbg, &conf.booms, &mut vec![]);
+    let inputs = Arc::new(Inputs::fake(
+        &dbg,
+        &FrdmServiceConf::default(),
+        [("", 0.0)],
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let mut booms = Booms::new(&dbg, &conf.booms, inputs.clone());
     let t = Instant::now();
     for (step, events, target_alpha, target_pos) in test_data {
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
-        let result = booms.eval(&inputs).unwrap();
+        let result = booms.eval().unwrap();
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, target) in target_alpha.into_iter().enumerate() {
             assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);

@@ -1,10 +1,11 @@
+use std::sync::{Arc, atomic::AtomicBool};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, math::AproxEq, services::conf::ConfTree};
+use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, LooseRopeSections};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections};
 
 ///
 ///
@@ -159,10 +160,14 @@ fn new() {
 
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
-    let mut inputs = FxIndexMap::default();
+    let inputs = Arc::new(Inputs::fake(
+        &dbg,
+        &FrdmServiceConf::default(),
+        [("", 0.0)],
+        Arc::new(AtomicBool::new(false)),
+    ));
     let mut bendings = Bendings::new(
         &dbg,
-        conf.rope.pos.clone(),
         &conf.rope,
         BlockArcs::new(
             &dbg,
@@ -171,7 +176,7 @@ fn new() {
                 Blocks::new(
                     &dbg,
                     &conf.blocks,
-                    Booms::new(&dbg, &conf.booms, &mut vec![]),
+                    Booms::new(&dbg, &conf.booms, inputs.clone()),
                 ),
             ),
         ),

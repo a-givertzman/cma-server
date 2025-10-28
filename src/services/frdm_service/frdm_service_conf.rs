@@ -249,3 +249,18 @@ impl FrdmServiceConf {
         }
     }
 }
+//
+//
+impl Default for FrdmServiceConf {
+    fn default() -> Self {
+        Self {
+            name: Name::new("", "FrdmServiceConf"),
+            wait_started: Default::default(),
+            subscribe: Default::default(),
+            api: Default::default(),
+            table_settings: Default::default(),
+            rope_defect: Default::default(),
+            rope_deprecation: Default::default(),
+        }
+    }
+}

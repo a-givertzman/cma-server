@@ -124,3 +124,14 @@ impl CraneConf {
         }
     }
 }
+//
+//
+impl Default for CraneConf {
+    fn default() -> Self {
+        Self {
+            booms: Default::default(),
+            blocks: Default::default(),
+            rope: Default::default(),
+        }
+    }
+}
