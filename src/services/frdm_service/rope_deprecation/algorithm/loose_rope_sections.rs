@@ -91,14 +91,11 @@ impl LooseRopeSections {
                             block1.rope_len_fwd,
                             0.0..0.0,
                         ));
+                        // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                         Some(result)
                     }
                     None => None,
                 }
-                // let mut result: Vec<Block> = blocks.windows(2).map(|pair| {
-                //     let (block1, block2) = (&pair[0], &pair[1]);
-                // }).collect();
-                // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
             }
             None => None,
         }
