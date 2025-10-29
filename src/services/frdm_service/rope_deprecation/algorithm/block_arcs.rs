@@ -30,6 +30,7 @@ impl BlockArcs {
                     let wrap_alpha = match block.bind {
                         BlockBind::Fixed => 0.0,
                         BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
+                        BlockBind::BoomPair(_) => todo!("{}.eval | BlockBind::BoomPair to be implemented", self.dbg),
                         BlockBind::Hook => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                     };
                     // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);

@@ -74,6 +74,11 @@ impl Blocks {
                             let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
                             block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
                         }
+                        BlockBind::BoomPair(boom_index) => {
+                            let base_point = booms[boom_index].gpt;  // точка G
+                            let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[boom_index].alpha);
+                            block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
+                        }
                         BlockBind::Hook => {
                             block.pos.x = prev.x + 0.5 * prev_d;
                             block.pos.y = prev.y - hook_l;

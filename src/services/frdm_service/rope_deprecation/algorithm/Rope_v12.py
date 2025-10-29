@@ -20,10 +20,16 @@ class BlockBindBoom:
     def __init__(self, boom: int):
         self.boom = boom
 @dataclass
+class BlockBindBoomPair:
+    """Блок спаренный (на нем происходит переброс канат) на стреле"""
+    boom: int
+    def __init__(self, boom: int):
+        self.boom = boom
+@dataclass
 class BlockBindHook:
     """Блок на подвеске"""
     pass
-BlockBind = BlockBindFixed | BlockBindBoom | BlockBindHook
+BlockBind = BlockBindFixed | BlockBindBoom | BlockBindBoomPair | BlockBindHook
 
 class Offset:
     x: float
@@ -157,34 +163,24 @@ if __name__ == "__main__":
     #     Boom(alpha_rel= 10.4538273, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
     #     Boom(alpha_rel= 155.3, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
     # ]
-    booms = [
-        Boom(alpha_rel= 68, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
-        Boom(alpha_rel= 155.3, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
-    ]
     # booms = [
     #     Boom(alpha_rel= 90, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
     #     Boom(alpha_rel= 100, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
     # ]
-
+    booms = [
+        Boom(alpha_rel= 68, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
+        Boom(alpha_rel= 155.3, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
+    ]
     blocks = [
         Block(lF=Offset( 1830.0,  710.0), D=845.000, scheme=1, bind=BlockBindFixed()),
         Block(lF=Offset(  308.0, 1100.0), D=816.000, scheme=1, bind=BlockBindBoom(0)),
         Block(lF=Offset(-6549.0, 1730.0), D=816.000, scheme=1, bind=BlockBindBoom(1)),
         Block(lF=Offset(-1121.0,  973.0), D=816.000, scheme=2, bind=BlockBindBoom(1)),
         Block(lF=Offset(  267.0,  860.0), D=816.000, scheme=3, bind=BlockBindBoom(1)),
-        Block(lF=Offset(  136.0,  -35.0), D=816.000, scheme=1, bind=BlockBindBoom(1)),
+        Block(lF=Offset(  136.0,  -35.0), D=816.000, scheme=1, bind=BlockBindBoomPair(1)),
         Block(lF=Offset(    0.0,    0.0), D=    0.0, scheme=0, bind=BlockBindHook()),
     ]
     
-    # block_bind = [
-    #     BlockBindFixed(),   # Блок 1
-    #     BlockBindBoom(1),   # Блок 2
-    #     BlockBindBoom(2),   # Блок 3
-    #     BlockBindBoom(2),   # Блок 4
-    #     BlockBindBoom(2),   # Блок 5
-    #     BlockBindBoom(2),   # Блок 6
-    #     BlockBindHook(),    # Блок 7
-    # ]
     """
     Lfact - фактическая длина каната
     L_winch - длина каната на лебедке в основном положении
@@ -242,6 +238,13 @@ if __name__ == "__main__":
                 block.coord.x = x
                 block.coord.y = y
             case BlockBindBoom(boom_index):
+                # Определяем номер стрелы
+                boom = booms[boom_index]
+                base_point = boom.G  # точка G
+                dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
+                block.coord.x = base_point.x + dx
+                block.coord.y = base_point.y + dy
+            case BlockBindBoomPair(boom_index):
                 # Определяем номер стрелы
                 boom = booms[boom_index]
                 base_point = boom.G  # точка G
@@ -351,27 +354,33 @@ if __name__ == "__main__":
         prev_alpha = None  # предыдущий угол для формирования alpha_rope_list
     
         for block, r in zip(blocks[:-1], rope_data):
-            alpha_rope = r.get("alpha_rope", 0)
+            if block.bind == BlockBindFixed:
+                alpha_rope = 90
+            else:
+                alpha_rope = r.get("alpha_rope", 0)
 
-            # Формируем alpha_rope_list
-            if prev_alpha is not None:
-                alpha_rope_list = [prev_alpha, alpha_rope]
+            if block.bind == BlockBindBoomPair:
+                pass
             else:
-                alpha_rope_list = [alpha_rope]  # для первого блока
-            r["alpha_rope_list"] = alpha_rope_list
-        
-            # Расчёт угла обхвата
-            if len(alpha_rope_list) > 1:
-                alpha_wrap = abs(alpha_rope_list[-1] - alpha_rope_list[0])
-            else:
-                alpha_wrap = 0
+                # Формируем alpha_rope_list
+                if prev_alpha is not None:
+                    alpha_rope_list = [prev_alpha, alpha_rope]
+                else:
+                    alpha_rope_list = [alpha_rope]  # для первого блока
+                r["alpha_rope_list"] = alpha_rope_list
             
-            R = block.D / 2
-            L_arc = (math.pi * R * alpha_wrap) / 180
-            
-            L_sys_arc += L_arc
-            wrap_angles.append(alpha_wrap)
-            arc_lengths.append(L_arc)
+                # Расчёт угла обхвата
+                if len(alpha_rope_list) > 1:
+                    alpha_wrap = abs(alpha_rope_list[-1] - alpha_rope_list[0])
+                else:
+                    alpha_wrap = 0
+                
+                R = block.D / 2
+                L_arc = (math.pi * R * alpha_wrap) / 180
+                
+                L_sys_arc += L_arc
+                wrap_angles.append(alpha_wrap)
+                arc_lengths.append(L_arc)
 
             prev_alpha = alpha_rope  # обновляем предыдущий угол
     
@@ -627,7 +636,7 @@ x2, y2 = r_last["X2_block"], r_last["Y2_block"]
 
 # Новый конец отрезка с учетом изменения длины
 x2_new = x1 
-y2_new = y1 - delta_last
+y2_new = y2 + delta_last
 if delta_last > 0:
     # Удлинение — от старого конца к новому (зелёным)
     plt.plot([x2, x2_new], [y2, y2_new], color='red', linewidth=3)

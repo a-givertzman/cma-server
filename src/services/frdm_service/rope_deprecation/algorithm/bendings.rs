@@ -52,6 +52,7 @@ impl Bendings {
                             start = match block.bind {
                                 BlockBind::Fixed => 0.0, // На барабане считаем весь канат от конца до точки схода,
                                 BlockBind::Boom(_) => end - block.wrap_length,
+                                BlockBind::BoomPair(_) => todo!("{}.eval | BlockBind::BoomPair to be implemented", self.dbg),
                                 BlockBind::Hook => end - block.wrap_length,
                             };
                             bend = start .. end;
