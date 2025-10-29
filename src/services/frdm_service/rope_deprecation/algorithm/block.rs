@@ -54,8 +54,6 @@ impl BlockBind {
             .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
         let kind = caps.get(1)
             .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'")))?;
-        // let kind: String = kind.as_str();
-            // .map_err(|_| Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'")))?;
         let bind = caps.get(2)
             .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
         let bind = bind.as_str().parse()
@@ -64,6 +62,17 @@ impl BlockBind {
             "boom" => Ok(Self::Boom(bind)),
             "boompair" => Ok(Self::BoomPair(bind)),
             _ => Err(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'"))),
+        }
+    }
+    ///
+    /// Returns `true` if `self` and `other` has same kind
+    pub fn is_same(&self, other: Self) -> bool {
+        match (self, other) {
+            (BlockBind::Fixed, BlockBind::Fixed) => true,
+            (BlockBind::Boom(_), BlockBind::Boom(_)) => true,
+            (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
+            (BlockBind::Hook, BlockBind::Hook) => true,
+            _ => false,
         }
     }
 }
@@ -75,16 +84,6 @@ impl FromStr for BlockBind {
         match s.to_lowercase() {
             key if key == "fixed" => Ok(Self::Fixed),
             key if key.starts_with("boom") => Self::boom(&key),
-            // {
-            //     let re = Regex::new(r"Boom[ \t](\d+)").unwrap();
-            //     let caps = re.captures(s)
-            //         .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
-            //     let bind = caps.get(1)
-            //         .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
-            //     let bind = bind.as_str().parse()
-            //         .map_err(|_| Error::new("BlockBind", "from_str").err(format!("Wring Block number in '{s}', Expecting integer >= 0")))?;
-            //     Ok(Self::Boom(bind))
-            // }
             key if key == "hook" => Ok(Self::Hook),
             _ => Err(Error::new("BlockBind", "from_str").err(format!("Unknown variant '{s}'"))),
         }

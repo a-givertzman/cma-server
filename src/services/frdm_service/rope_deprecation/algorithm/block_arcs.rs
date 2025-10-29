@@ -26,13 +26,15 @@ impl BlockArcs {
         match self.loose_rope_sections.eval() {
             Some(blocks) => {
                 let mut l_sys_arc = 0.0;
+                let mut prev_bind = BlockBind::Fixed;
                 let blocks: Vec<Block> = blocks.iter().map(|block| {
                     let wrap_alpha = match block.bind {
                         BlockBind::Fixed => 0.0,
                         BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
-                        BlockBind::BoomPair(_) => todo!("{}.eval | BlockBind::BoomPair to be implemented", self.dbg),
+                        BlockBind::BoomPair(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                         BlockBind::Hook => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                     };
+                    prev_bind = block.bind;
                     // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
                     let wrap_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
                     // log::trace!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);

@@ -128,12 +128,12 @@ fn new() {
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 816.195 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: BoomPair 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 816.195 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: BoomPair 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 7:
                 lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 0.0 mm                   # Диаметр блока, мм
@@ -168,8 +168,8 @@ fn new() {
         let result = block_arcs.eval().unwrap();
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
-            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
-            assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
+            assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
