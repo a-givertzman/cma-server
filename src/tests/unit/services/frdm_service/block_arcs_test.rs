@@ -154,6 +154,7 @@ fn new() {
             &dbg,
             Blocks::new(
                 &dbg,
+                1200.0,        // TODO: replace with config or calculated value
                 &conf.blocks,
                 Booms::new(&dbg, &conf.booms, inputs.clone()),
             ),

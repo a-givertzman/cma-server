@@ -8,6 +8,7 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBin
 /// - Next - are regular block from `Winch` towards `Hook`
 pub struct Blocks {
     items: Vec<Block>,
+    hook_l: f64,
     booms: Booms,
     dbg: Dbg,
 }
@@ -16,8 +17,9 @@ pub struct Blocks {
 impl Blocks {
     ///
     /// Returns [Boom] new instance
-    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BlockConf)>, booms: Booms) -> Self {
+    pub fn new(parent: impl Into<String>, hook_l: f64, conf: &Vec<(String, BlockConf)>, booms: Booms) -> Self {
         Self {
+            hook_l,
             items: conf.iter().map(|(key, conf)| Block::new(
                 key,
                 Offset::new(conf.lf.x.as_mm(), conf.lf.y.as_mm()),
@@ -52,8 +54,6 @@ impl Blocks {
     ///
     /// 4. Координаты блоков X, Y
     fn blocks_pos(&mut self, booms: &Vec<Boom>) -> Option<()> {
-        // TODO: replace with config or calculated value
-        let hook_l = 1000.0;
         match self.items.first() {
             Some(first) => {
                 let mut prev = first.pos;
@@ -81,7 +81,7 @@ impl Blocks {
                         }
                         BlockBind::Hook => {
                             block.pos.x = prev.x + 0.5 * prev_d;
-                            block.pos.y = prev.y - hook_l;
+                            block.pos.y = prev.y - self.hook_l;
                         }
                     }
                     // log::debug!("{}.blocks_pos | Блок {} [{idx}]: pos: {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);

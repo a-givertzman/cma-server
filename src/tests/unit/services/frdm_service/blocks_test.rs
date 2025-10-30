@@ -1,11 +1,11 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::services::conf::ConfTree;
+use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs};
+use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -33,75 +33,79 @@ fn new() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    let test_data = [
-        (01,  [
-            // Input Events
-            ("MainBoom.Angle",    69.71),
-            ("RotaryBoom.Angle", 155.30)
-        ], 
-        // Targets
-        [
-            // block.x,           block.y
-            (-1829.9999999999993, 11040.0),
-            (2958.9072250002687, 21505.37167318569),
-            (3674.151798369415, 23072.283377861302),
-            (8047.737692695379, 26376.6496446291),
-            (9108.947602987579, 27278.396020445285),
-            (9649.303797749028, 26552.998761846295),
-            (10057.303797749028, 25552.998761846295),
-        ]),
-        (02,  [
-            // Input Events
-            ("MainBoom.Angle",    74.00),
-            ("RotaryBoom.Angle", 128.00)
-        ], 
-        // Targets
-        [
-            // block.x,           block.y
-            (-1829.9999999999993, 11040.0),
-            (2114.646825209876, 21695.400688256872),
-            (3768.650625989636, 23237.344917868133),
-            (9085.90896364857, 24569.20593561606),
-            (10415.170698843269, 24984.388111711298),
-            (10628.98251500226, 24105.485098136538),
-            (11036.98251500226, 23105.485098136538),
-        ]),
-    ];
-    //  Число стрел: 2
-    //  alpha_boom: [69.71, 45.01]
-    //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3883.8458824556724, 20835.034086633517)
-    //  Стрела 2: D=(3883.8458824556724, 20835.034086633517), G=(9528.40100476262, 26481.55987434036)
-    //  Блок 1: (-1829.9999999999993, 11040.0)
-    //  Блок 2: (2958.9072250002687, 21505.37167318569)
-    //  Блок 3: (3674.151798369415, 23072.283377861302)
-    //  Блок 4: (8047.737692695379, 26376.6496446291)
-    //  Блок 5: (9108.947602987579, 27278.396020445285)
-    //  Блок 6: (9649.303797749028, 26552.998761846295)
-    //  Блок 7: (10057.303797749028, 25552.998761846295)
-    //  Блоки (1, 2) | Схема 1 | L_block=11509.02 | Alpha_rope=-65.34° | L_rope=11509.02
-    //  Блоки (2, 3) | Схема 1 | L_block=1722.44 | Alpha_rope=-65.46° | L_rope=1722.44
-    //  Блоки (3, 4) | Схема 1 | L_block=5481.52 | Alpha_rope=-37.07° | L_rope=5481.52
-    //  Блоки (4, 5) | Схема 2 | L_block=1392.59 | Alpha_rope=-4.49° | L_rope=1128.48
-    //  Блоки (5, 6) | Схема 3 | L_block=904.54 | Alpha_rope=-11.12° | L_rope=390.29
-    //  Блоки (6, 7) | Схема 1 | L_block=1080.03 | Alpha_rope=90.00° | L_rope=1000.00
-
-    //  Число стрел: 2
-    //  alpha_boom: [74.0, 22.0]
-    //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3087.138385150391, 21096.13099450917)
-    //  Стрела 2: D=(3087.138385150391, 21096.13099450917), G=(10489.774280011621, 24086.990036341813)
-    //  Блок 1: (-1829.9999999999993, 11040.0)
-    //  Блок 2: (2114.646825209876, 21695.400688256872)
-    //  Блок 3: (3768.650625989636, 23237.344917868133)
-    //  Блок 4: (9085.90896364857, 24569.20593561606)
-    //  Блок 5: (10415.170698843269, 24984.388111711298)
-    //  Блок 6: (10628.98251500226, 24105.485098136538)
-    //  Блок 7: (11036.98251500226, 23105.485098136538)
-    //  Блоки (1, 2) | Схема 1 | L_block=11362.12 | Alpha_rope=-69.61° | L_rope=11362.11
-    //  Блоки (2, 3) | Схема 1 | L_block=2261.27 | Alpha_rope=-42.99° | L_rope=2261.27
-    //  Блоки (3, 4) | Схема 1 | L_block=5481.52 | Alpha_rope=-14.06° | L_rope=5481.52
-    //  Блоки (4, 5) | Схема 2 | L_block=1392.59 | Alpha_rope=18.52° | L_rope=1128.48
-    //  Блоки (5, 6) | Схема 3 | L_block=904.54 | Alpha_rope=11.89° | L_rope=390.29
-    //  Блоки (6, 7) | Схема 1 | L_block=1080.03 | Alpha_rope=90.00° | L_rope=1000.00
+    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    log::debug!("{dbg} | reading csv: '{}'", path);
+    let csv = match OpenOptions::new().read(true).open(path) {
+        Ok(rdr) => {
+            let mut rdr = csv::Reader::from_reader(rdr);
+            log::debug!("{dbg} | Parse csv data...");
+            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let mut test_data = vec![];
+            for row in csv {
+                let row: CsvRecord = row.unwrap();
+                test_data.push((
+                    row.step,
+                    [
+                        ("MainBoom.Angle", row.a21),
+                        ("RotaryBoom.Angle", row.a22)
+                    ],
+                    [
+                        // block.x, block.y
+                        (-1829.9999999999993, 11040.0),
+                        // (row.x1,    row.y1)
+                        (row.x2,    row.y2),
+                        (row.x3,    row.y3),
+                        (row.x4,    row.y4),
+                        (row.x5,    row.y5),
+                        (row.x6,    row.y6),
+                        (row.x_hook,    row.y_hook),
+                    ]
+                ));
+            }
+            Some(test_data)
+        }
+        Err(err) => {
+            log::debug!("{dbg} | Can't read csv test data from '{}', error: {:?}", path, err);
+            None
+        },
+    };
+    let test_data = match csv {
+        Some(csv) => csv,
+        None => vec![
+            (01,  [
+                // Input Events
+                ("MainBoom.Angle",    69.71),
+                ("RotaryBoom.Angle", 155.30)
+            ], 
+            // Targets
+            [
+                // block.x,           block.y
+                (-1829.9999999999993, 11040.0),
+                (2958.9072250002687, 21505.37167318569),
+                (3674.151798369415, 23072.283377861302),
+                (8047.737692695379, 26376.6496446291),
+                (9108.947602987579, 27278.396020445285),
+                (9649.303797749028, 26552.998761846295),
+                (10057.303797749028, 25552.998761846295),
+            ]),
+            (02,  [
+                // Input Events
+                ("MainBoom.Angle",    74.00),
+                ("RotaryBoom.Angle", 128.00)
+            ], 
+            // Targets
+            [
+                // block.x,           block.y
+                (-1829.9999999999993, 11040.0),
+                (2114.646825209876, 21695.400688256872),
+                (3768.650625989636, 23237.344917868133),
+                (9085.90896364857, 24569.20593561606),
+                (10415.170698843269, 24984.388111711298),
+                (10628.98251500226, 24105.485098136538),
+                (11036.98251500226, 23105.485098136538),
+            ]),
+        ]
+    };
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         booms:
             - Main-Boom:
@@ -130,7 +134,7 @@ fn new() {
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - '3':
-                lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
+                lf: -6549.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 816.0 mm                 # Диаметры блоков, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
@@ -156,8 +160,8 @@ fn new() {
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
         rope:
             width: 35 mm            # Diameter of the rome
-            length: 3000 m          # Total working length of the rope
-            winch-length: 2985 m    # Rope length on the winch drum
+            length: 82.243 m          # Total working length of the rope
+            winch-length: 58.330 m    # Rope length on the winch drum
             segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.EncoderBR2'      # meters, current rope position
             load: point real 'Winch.Load'          # tonn, current rope load
@@ -171,6 +175,7 @@ fn new() {
     ));
     let mut blocks = Blocks::new(
         &dbg,
+        1200.0,        // TODO: replace with config or calculated value
         &conf.blocks,
         Booms::new(&dbg, &conf.booms, inputs.clone()),
     );
@@ -183,8 +188,8 @@ fn new() {
         let result = blocks.eval().unwrap();
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (target_x, target_y)) in target.into_iter().enumerate() {
-            assert!(result[i].pos.x == target_x, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].pos.x, target_x);
-            assert!(result[i].pos.y == target_y, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].pos.y, target_y);
+            assert!(result[i].pos.x.aprox_eq(target_x, 1), "{dbg} | step {step}  block[{i}] \nresult: {:?}\ntarget: {:?}", result[i].pos.x, target_x);
+            assert!(result[i].pos.y.aprox_eq(target_y, 1), "{dbg} | step {step}  block[{i}] \nresult: {:?}\ntarget: {:?}", result[i].pos.y, target_y);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }

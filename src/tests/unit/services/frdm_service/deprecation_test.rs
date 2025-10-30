@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprecation, FrdmServiceConf, Inputs, LooseRopeSections, RopeDeprecationConf};
+use crate::{services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprecation, FrdmServiceConf, Inputs, LooseRopeSections, RopeDeprecationConf}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -21,63 +21,6 @@ fn init_once() {
 /// returns:
 ///  - ...
 fn init_each() -> () {}
-///
-/// Representation of the csv data single row
-#[derive(Debug, Clone, serde::Deserialize)]
-struct CsvHeader {
-    step: String,
-    a21: String,       // a21, град, угол стрелы относительно предыдущей
-    a22: String,       // a22, град, угол стрелы относительно предыдущей
-    x_nok: String,     // Xнок, мм, - координата крайнего блока (5 или 6 блок в зависимости от переброса каната)
-    y_nok: String,     // Yнок, мм, - координата крайнего блока (5 или 6 блок в зависимости от переброса каната)
-    xg: String,        // XG, мм, - координаты конца стрелы
-    yg: String,        // YG, мм, - координаты конца стрелы
-    x_kp: String,       // Xкп, мм, - координаты Крюковой Подвески
-    y_kp: String,       // Yкп, мм, - координаты Крюковой Подвески
-    lpodv_min: String, // lподв_min, мм, - длина подвеса
-    lkan_прям: String, // Lкан_прям, мм, - сумма длин прямолинейных участков каната 
-    lkan_дуг: String,  // Lкан_дуг, мм, - сумма длин дуг каната
-    lкан_леб: String,  // Lкан_леб,мм, - длина каната на лебедке
-    x2: String,        // X2, мм, - координаты блока 2
-    y2: String,        // Y2, мм, - координаты блока 2 
-    x3: String,        // X3, мм, - координаты блока 3
-    y3: String,        // Y3, мм, - координаты блока 3 
-    x4: String,        // X4, мм, - координаты блока 4 
-    y4: String,        // Y4, мм, - координаты блока 4 
-    x5: String,        // X5, мм, - координаты блока 5 
-    y5: String,        // Y5, мм, - координаты блока 5 
-    x6: String,        // X6, мм, - координаты блока 6 
-    y6: String,        // Y6, мм, - координаты блока 6 
-}
-///
-/// Representation of the csv data single row
-#[derive(Debug, Clone, serde::Deserialize)]
-struct CsvRecord {
-    step: usize,
-    a21: f64,       // a21, град, угол стрелы относительно предыдущей
-    a22: f64,       // a22, град, угол стрелы относительно предыдущей
-    x_nok: f64,     // Xнок, мм,
-    y_nok: f64,     // Yнок, мм,
-    xg: f64,        // XG, мм,
-    yg: f64,        // YG, мм,
-    x_hook: f64,       // Xкп, мм,
-    y_hook: f64,       // Yкп, мм,
-    lrope_hook_min: f64, // lподв_min, мм,
-    lrope_straight: f64, // Lкан_прям, мм,
-    lrope_ark: f64,  // Lкан_дуг, мм,
-    lrope_winch: f64,  // Lкан_леб,мм,
-    x2: f64,        // X2, мм,
-    y2: f64,        // Y2, мм,
-    x3: f64,        // X3, мм,
-    y3: f64,        // Y3, мм,
-    x4: f64,        // X4, мм,
-    y4: f64,        // Y4, мм,
-    x5: f64,        // X5, мм,
-    y5: f64,        // Y5, мм,
-    x6: f64,        // X6, мм,
-    y6: f64,        // Y6, мм
-
-}
 ///
 /// Testing [Deprecation]
 #[test]
@@ -95,7 +38,7 @@ fn eval() {
     let rdr = OpenOptions::new().read(true).open(path).unwrap();
     let mut rdr = csv::Reader::from_reader(rdr);
     log::debug!("{dbg} | Parse csv data...");
-    let mut csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+    let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
     // log::debug!("{dbg} | csv header: '{:?}'", csv.next().unwrap());
     // for result in csv {
     //     // log::debug!("{dbg} | csv record: '{}'", path);
@@ -262,6 +205,7 @@ fn eval() {
                     &dbg,
                     Blocks::new(
                         &dbg,
+                        1200.0,        // TODO: replace with config or calculated value
                         &conf.blocks,
                         Booms::new(&dbg, &conf.booms, inputs.clone()),
                     ),

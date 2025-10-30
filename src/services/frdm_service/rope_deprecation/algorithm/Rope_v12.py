@@ -1,4 +1,4 @@
-import csv, gc
+import csv
 import matplotlib.pyplot as plt
 import math
 import logging
@@ -21,16 +21,10 @@ class BlockBindBoom:
     def __init__(self, boom: int):
         self.boom = boom
 @dataclass
-class BlockBindBoomPair:
-    """Блок спаренный (на нем происходит переброс канат) на стреле"""
-    boom: int
-    def __init__(self, boom: int):
-        self.boom = boom
-@dataclass
 class BlockBindHook:
     """Блок на подвеске"""
     pass
-BlockBind = BlockBindFixed | BlockBindBoom | BlockBindBoomPair | BlockBindHook
+BlockBind = BlockBindFixed | BlockBindBoom | BlockBindHook
 
 class Offset:
     x: float
@@ -170,33 +164,27 @@ def calc_block_angles_and_arcs(rope_data):
     prev_alpha = None  # предыдущий угол для формирования alpha_rope_list
 
     for block, r in zip(blocks[:-1], rope_data):
-        if block.bind == BlockBindFixed:
-            alpha_rope = 90
-        else:
-            alpha_rope = r.get("alpha_rope", 0)
+        alpha_rope = r.get("alpha_rope", 0)
 
-        if block.bind == BlockBindBoomPair:
-            pass
+        # Формируем alpha_rope_list
+        if prev_alpha is not None:
+            alpha_rope_list = [prev_alpha, alpha_rope]
         else:
-            # Формируем alpha_rope_list
-            if prev_alpha is not None:
-                alpha_rope_list = [prev_alpha, alpha_rope]
-            else:
-                alpha_rope_list = [alpha_rope]  # для первого блока
-            r["alpha_rope_list"] = alpha_rope_list
+            alpha_rope_list = [alpha_rope]  # для первого блока
+        r["alpha_rope_list"] = alpha_rope_list
+    
+        # Расчёт угла обхвата
+        if len(alpha_rope_list) > 1:
+            alpha_wrap = abs(alpha_rope_list[-1] - alpha_rope_list[0])
+        else:
+            alpha_wrap = 0
         
-            # Расчёт угла обхвата
-            if len(alpha_rope_list) > 1:
-                alpha_wrap = abs(alpha_rope_list[-1] - alpha_rope_list[0])
-            else:
-                alpha_wrap = 0
-            
-            R = block.D / 2
-            L_arc = (math.pi * R * alpha_wrap) / 180
-            
-            L_sys_arc += L_arc
-            wrap_angles.append(alpha_wrap)
-            arc_lengths.append(L_arc)
+        R = block.D / 2
+        L_arc = (math.pi * R * alpha_wrap) / 180
+        
+        L_sys_arc += L_arc
+        wrap_angles.append(alpha_wrap)
+        arc_lengths.append(L_arc)
 
         prev_alpha = alpha_rope  # обновляем предыдущий угол
 
@@ -340,7 +328,7 @@ def aproxEq(a, b, tolerance=1e-9):
 # Алгоритм расчета входа и исхода каната с блоков
 # ------------------------------------------------
 if __name__ == "__main__":
-    plot = False
+    plot = True
     # Данные стрел и блоков
     # booms = [
     #     Boom(alpha_rel= 10.4538273, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
@@ -376,6 +364,8 @@ if __name__ == "__main__":
         tblock[5 -1].coord.y = float(row[20])
         tblock[6 -1].coord.x = float(row[21])
         tblock[6 -1].coord.y = float(row[22])
+        tblock[7 -1].coord.x = float(row[7])
+        tblock[7 -1].coord.y = float(row[8])
         booms = [
             Boom(alpha_rel= a21, len=11200.0, l1=0.0, l2=0.0, l3=0.0, l4=10330.0),
             Boom(alpha_rel= a22, len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
@@ -386,7 +376,7 @@ if __name__ == "__main__":
             Block(lF=Offset(-6549.0, 1730.0), D=816.000, scheme=1, bind=BlockBindBoom(1)),
             Block(lF=Offset(-1121.0,  973.0), D=816.000, scheme=2, bind=BlockBindBoom(1)),
             Block(lF=Offset(  267.0,  860.0), D=816.000, scheme=3, bind=BlockBindBoom(1)),
-            Block(lF=Offset(  136.0,  -35.0), D=816.000, scheme=1, bind=BlockBindBoomPair(1)),
+            Block(lF=Offset(  136.0,  -35.0), D=816.000, scheme=1, bind=BlockBindBoom(1)),
             Block(lF=Offset(    0.0,    0.0), D=    0.0, scheme=0, bind=BlockBindHook()),
         ]
         
@@ -436,6 +426,7 @@ if __name__ == "__main__":
         # ---------------------------
         # 3. Координаты блоков XY_block
         # ---------------------------
+        prev_block: Block = None
         for idx, block in enumerate(blocks):
             match block.bind:
                 case BlockBindFixed():
@@ -453,34 +444,30 @@ if __name__ == "__main__":
                     dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
                     block.coord.x = base_point.x + dx
                     block.coord.y = base_point.y + dy
-                case BlockBindBoomPair(boom_index):
-                    # Определяем номер стрелы
-                    boom = booms[boom_index]
-                    base_point = boom.G  # точка G
-                    dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
-                    block.coord.x = base_point.x + dx
-                    block.coord.y = base_point.y + dy
                 case BlockBindHook():
-                    block.coord.x = float('nan')
-                    block.coord.y = float('nan')
+                    block.coord.x = prev_block.coord.x + 0.5 * prev_block.D
+                    block.coord.y = prev_block.coord.y - rope_calc_params["lhook_min"]
                 case _:
                     raise ValueError(f"Неизвестный тип блока [{idx}]: {bind}")
-            if idx > 0 and idx < 6:
+            prev_block = block
+            if idx > 0:
                 assert aproxEq(block.coord.x, tblock[idx].coord.x, 0.1), f"block[{idx}].x = {block.coord.x}, target = {tblock[idx].coord.x}"
                 assert aproxEq(block.coord.y, tblock[idx].coord.y, 0.1), f"block[{idx}].y = {block.coord.y}, target = {tblock[idx].coord.y}"
                     
-        # ---------------------------
-        # 4. Расчёт координат крюковой подвески
-        # ---------------------------
-        hook_block_num = rope_calc_params["hook_block_num"]
-        l_hook = rope_calc_params["lhook_min"]
+        # # ---------------------------
+        # # 4. Расчёт координат крюковой подвески
+        # # ---------------------------
+        # hook_block_num = rope_calc_params["hook_block_num"]
+        # l_hook = rope_calc_params["lhook_min"]
         
-        prev_idx = hook_block_num - 2
-        x_prev, y_prev = blocks[prev_idx].coord.x, blocks[prev_idx].coord.y
-        D_prev = blocks[prev_idx].D
+        # prev_idx = hook_block_num - 2
+        # x_prev, y_prev = blocks[prev_idx].coord.x, blocks[prev_idx].coord.y
+        # D_prev = blocks[prev_idx].D
         
-        blocks[hook_block_num - 1].coord.x = x_prev + 0.5 * D_prev
-        blocks[hook_block_num - 1].coord.y = y_prev - l_hook
+        # blocks[hook_block_num - 1].coord.x = x_prev + 0.5 * D_prev
+        # blocks[hook_block_num - 1].coord.y = y_prev - l_hook
+        # assert aproxEq(blocks[6].coord.x, tblock[6].coord.x, 0.1), f"block[{6}].x = {blocks[6].coord.x}, target = {tblock[6].coord.x}"
+        # assert aproxEq(blocks[6].coord.y, tblock[6].coord.y, 0.1), f"block[{6}].y = {blocks[6].coord.y}, target = {tblock[6].coord.y}"
 
         # ---------------------------
         # 5. Расчёт параметров каната

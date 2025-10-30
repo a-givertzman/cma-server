@@ -234,6 +234,7 @@ fn slices() {
                     &dbg,
                     Blocks::new(
                         &dbg,
+                        1200.0,        // TODO: replace with config or calculated value
                         &conf.rope_deprecation.crane.blocks,
                         Booms::new(&dbg, &conf.rope_deprecation.crane.booms, inputs),
                     ),
