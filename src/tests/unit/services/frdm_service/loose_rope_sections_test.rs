@@ -166,8 +166,8 @@ fn new() {
         let result = rope_sections.eval().unwrap();
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (rope_len_bck, rope_len_fwd)) in target.into_iter().enumerate() {
-            assert!(result[i].rope_len_bck.aprox_eq(rope_len_bck, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].rope_len_bck, rope_len_bck);
-            assert!(result[i].rope_len_fwd.aprox_eq(rope_len_fwd, 2), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+            assert!(result[i].rope_len_bck.aprox_eq(rope_len_bck, 2), "{dbg} | step {step}  \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+            assert!(result[i].rope_len_fwd.aprox_eq(rope_len_fwd, 2), "{dbg} | step {step}  \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }

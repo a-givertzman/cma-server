@@ -188,8 +188,8 @@ fn new() {
         let result = blocks.eval().unwrap();
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (target_x, target_y)) in target.into_iter().enumerate() {
-            assert!(result[i].pos.x.aprox_eq(target_x, 1), "{dbg} | step {step}  block[{i}] \nresult: {:?}\ntarget: {:?}", result[i].pos.x, target_x);
-            assert!(result[i].pos.y.aprox_eq(target_y, 1), "{dbg} | step {step}  block[{i}] \nresult: {:?}\ntarget: {:?}", result[i].pos.y, target_y);
+            assert!(result[i].pos.x.aprox_eq(target_x, 1), "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].pos.x, target_x);
+            assert!(result[i].pos.y.aprox_eq(target_y, 1), "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].pos.y, target_y);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
