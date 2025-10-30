@@ -98,6 +98,7 @@ impl Inputs {
         self.inputs.insert(key.clone(), Some(val));
         if key == self.conf.rope_deprecation.crane.rope.pos {
             let pos = (val * 1000.0) as usize;
+            log::warn!("{}.add | Rope position '{}': {:?}", self.dbg, key, pos);
             self.rope_pos.store(Some(pos));
             self.cam_segment_ix.store(self.rope.segment_index(pos));
         }

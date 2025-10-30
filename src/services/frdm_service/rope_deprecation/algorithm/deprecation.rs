@@ -4,10 +4,9 @@ use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{Bendings, CraneConf, Inputs};
 
 ///
-/// Evaluation for the crane rope deprication
+/// Evaluation for the crane rope Deprecation
 pub struct Deprecation<'a> {
     inputs: Arc<Inputs>,
-    // subscriptions: Vec<String>,
     conf: CraneConf,
     segment: f64,
     ///                Block     Slices
@@ -21,14 +20,13 @@ pub struct Deprecation<'a> {
 impl<'a> Deprecation<'a> {
     ///
     /// Returns [Boom] new instance
-    /// - `results` - Callback provides deprication results as index of slice and it new deprication value
+    /// - `results` - Callback provides Deprecation results as index of slice and it new Deprecation value
     pub fn new(parent: impl Into<String>, conf: &CraneConf, inputs: Arc<Inputs>, bendings: Bendings, results: impl Fn(&usize, f64) + 'a) -> Self {
-        let dbg = Dbg::new(parent, "Deprication");
+        let dbg = Dbg::new(parent, "Deprecation");
         inputs.subscribe(conf.rope.load.clone());
         inputs.subscribe(conf.rope.pos.clone());
         Self {
             inputs,
-            // subscriptions,
             conf: conf.clone(),
             segment: conf.rope.segment.as_mm(),
             slices: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
@@ -76,14 +74,6 @@ impl<'a> Deprecation<'a> {
     //                 false => log::warn!("{}.add | Unexpected Point '{}'", self.dbg, event.name()),
     //             }
     //         }
-    //     }
-    // }
-    // ///
-    // /// Returns current calue from inputs by the key if exists
-    // pub fn get(&self, key: &str) -> Option<f64> {
-    //     match self.inputs.get(key) {
-    //         Some(val) => Some(*val),
-    //         None => None,
     //     }
     // }
     ///

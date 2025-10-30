@@ -13,9 +13,11 @@ plot = ["dep:winit"]
 [dependencies]
 log = "~0.4"
 env_logger = "~0.11"
+
 #
 # date & time
 chrono = "~0.4"
+
 #
 # Internal
 sal-core = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-sal-core.git" }
@@ -25,13 +27,20 @@ api-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/rust-api-too
 # sal-sync = { path = "../sal-sync" }
 sal-sync = { tag = "0.3.0", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
 frdm-tools = { tag = "0.2.0", git = "https://github.com/a-givertzman/frdm-server.git" }
+
 #
 # Serde
 serde = { version = "~1.0", features = ["derive"] }
 serde_yaml = "~0.9"
 serde_json = "~1.0"
 
+#
+# Regex
 regex = "~1.11"
+
+#
+# IO
+csv = "~1.4"
 
 #
 # Math
