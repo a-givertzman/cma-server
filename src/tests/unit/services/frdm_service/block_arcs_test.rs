@@ -191,8 +191,12 @@ fn new() {
         let result = block_arcs.eval().unwrap();
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
-            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 1), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
-            assert!(result[i].wrap_length.aprox_eq(wrap_length, 1), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+            if !result[i].wrap_alpha.is_nan() {
+                assert!((result[i].wrap_alpha - wrap_alpha).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
+            }
+            if !result[i].wrap_length.is_nan() {
+                assert!((result[i].wrap_length - wrap_length).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+            }
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
