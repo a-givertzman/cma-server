@@ -59,7 +59,7 @@ fn new() {
                         (row.x5,    row.y5),
                         (row.x6,    row.y6),
                         (row.x_hook,    row.y_hook),
-                    ]
+                    ],
                 ));
             }
             Some(test_data)

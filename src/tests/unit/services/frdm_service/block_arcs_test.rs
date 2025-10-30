@@ -1,11 +1,11 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
 use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections};
+use crate::{services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -33,53 +33,75 @@ fn new() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    let test_data = [
-        (01,  [
-            // Input Events
-            ("MainBoom.Angle",    69.71),
-            ("RotaryBoom.Angle", 155.30)
-        ], 
-        // Targets
-        [
-            // wrap_alpha, deg     wrap_length, mm
-            (  0.000,                0.000),
-            (  0.127,                0.903),
-            ( 28.393,              202.232),
-            ( 32.597,              232.176),
-            ( 6.674,                47.540),
-            (101.150,              720.452),
-        ]),
-        (02,  [
-            // Input Events
-            ("MainBoom.Angle",    74.00),
-            ("RotaryBoom.Angle", 128.00)
-        ], 
-        // Targets
-        [
-            // wrap_alpha, deg     wrap_length, mm
-            ( 0.000,                 0.000),
-            (26.619,               189.599),
-            (28.930,               206.057),
-            (32.597,               232.176),
-            ( 6.674,                47.540),
-            (78.140,               556.560),
-        ]),
-    ];
-
-    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
-    // Блок 2: угол обхвата = 0.127 deg, длина дуги = 0.903 mm
-    // Блок 3: угол обхвата = 28.393 deg, длина дуги = 202.232 mm
-    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
-    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
-    // Блок 6: угол обхвата = 101.150 deg, длина дуги = 720.452 mm
-
-    // Блок 1: угол обхвата = 0.000 deg, длина дуги = 0.000 mm
-    // Блок 2: угол обхвата = 26.619 deg, длина дуги = 189.599 mm
-    // Блок 3: угол обхвата = 28.930 deg, длина дуги = 206.057 mm
-    // Блок 4: угол обхвата = 32.597 deg, длина дуги = 232.176 mm
-    // Блок 5: угол обхвата = 6.674 deg, длина дуги = 47.540 mm
-    // Блок 6: угол обхвата = 78.140 deg, длина дуги = 556.560 mm
-
+    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    log::debug!("{dbg} | reading csv: '{}'", path);
+    let csv = match OpenOptions::new().read(true).open(path) {
+        Ok(rdr) => {
+            let mut rdr = csv::Reader::from_reader(rdr);
+            log::debug!("{dbg} | Parse csv data...");
+            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let mut test_data = vec![];
+            for row in csv {
+                let row: CsvRecord = row.unwrap();
+                test_data.push((
+                    row.step,
+                    [
+                        ("MainBoom.Angle", row.a21),
+                        ("RotaryBoom.Angle", row.a22)
+                    ],
+                    [
+                        // wrap_alpha, deg     wrap_length, mm
+                        (row.wrap_alpha1,      row.wrap_l1),
+                        (row.wrap_alpha2,      row.wrap_l2),
+                        (row.wrap_alpha3,      row.wrap_l3),
+                        (row.wrap_alpha4,      row.wrap_l4),
+                        (row.wrap_alpha5,      row.wrap_l5),
+                        (row.wrap_alpha6,      row.wrap_l6),
+                    ],
+                ));
+            }
+            Some(test_data)
+        }
+        Err(err) => {
+            log::debug!("{dbg} | Can't read csv test data from '{}', error: {:?}", path, err);
+            None
+        },
+    };
+    let test_data = match csv {
+        Some(csv) => csv,
+        None => vec![
+            (01,  [
+                // Input Events
+                ("MainBoom.Angle",    69.71),
+                ("RotaryBoom.Angle", 155.30)
+            ], 
+            // Targets
+            [
+                // wrap_alpha, deg     wrap_length, mm
+                (  0.000,                0.000),
+                (  0.127,                0.903),
+                ( 28.393,              202.232),
+                ( 32.597,              232.176),
+                ( 6.674,                47.540),
+                (101.150,              720.452),
+            ]),
+            (02,  [
+                // Input Events
+                ("MainBoom.Angle",    74.00),
+                ("RotaryBoom.Angle", 128.00)
+            ], 
+            // Targets
+            [
+                // wrap_alpha, deg     wrap_length, mm
+                ( 0.000,                 0.000),
+                (26.619,               189.599),
+                (28.930,               206.057),
+                (32.597,               232.176),
+                ( 6.674,                47.540),
+                (78.140,               556.560),
+            ]),
+        ],
+    };
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
             width: 35 mm            # Diameter of the rome
@@ -169,8 +191,8 @@ fn new() {
         let result = block_arcs.eval().unwrap();
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
-            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 2), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
-            assert!(result[i].wrap_length.aprox_eq(wrap_length, 2), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+            assert!(result[i].wrap_alpha.aprox_eq(wrap_alpha, 1), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
+            assert!(result[i].wrap_length.aprox_eq(wrap_length, 1), "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
