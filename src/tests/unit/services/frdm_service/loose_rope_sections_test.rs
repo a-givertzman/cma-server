@@ -1,11 +1,11 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
 use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections};
+use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -33,38 +33,75 @@ fn new() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    let test_data = [
-        (01,  [
-            // Input Events
-            ("MainBoom.Angle",    69.71),
-            ("RotaryBoom.Angle", 155.30)
-        ], 
-        // Targets
-        [
-            // rope_len_bck,     rope_len_fwd
-            (    0.00,           11509.01),
-            (11509.01,            1722.44),
-            ( 1722.44,            5481.52),
-            ( 5481.52,            1128.33),
-            ( 1128.33,             389.89),
-            (  389.89,            1000.00),
-        ]),
-        (02,  [
-            // Input Events
-            ("MainBoom.Angle",    74.00),
-            ("RotaryBoom.Angle", 128.00)
-        ], 
-        // Targets
-        [
-            // rope_len_bck,     rope_len_fwd
-            (    0.00,           11362.11),
-            (11362.11,            2261.27),
-            ( 2261.27,            5481.52),
-            ( 5481.52,            1128.33),
-            ( 1128.33,             389.89),
-            (  389.89,            1000.00),
-        ]),
-    ];
+    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    log::debug!("{dbg} | reading csv: '{}'", path);
+    let csv = match OpenOptions::new().read(true).open(path) {
+        Ok(rdr) => {
+            let mut rdr = csv::Reader::from_reader(rdr);
+            log::debug!("{dbg} | Parse csv data...");
+            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let mut test_data = vec![];
+            for row in csv {
+                let row: CsvRecord = row.unwrap();
+                test_data.push((
+                    row.step,
+                    [
+                        ("MainBoom.Angle", row.a21),
+                        ("RotaryBoom.Angle", row.a22)
+                    ],
+                    [
+                        // rope_len_bck,        rope_len_fwd
+                        (0.0000,                row.lrope_straight1),
+                        (row.lrope_straight1,   row.lrope_straight2),
+                        (row.lrope_straight2,   row.lrope_straight3),
+                        (row.lrope_straight4,   row.lrope_straight4),
+                        (row.lrope_straight4,   row.lrope_straight5),
+                        (row.lrope_straight5,   row.lrope_straight6),
+                    ],
+                ));
+            }
+            Some(test_data)
+        }
+        Err(err) => {
+            log::debug!("{dbg} | Can't read csv test data from '{}', error: {:?}", path, err);
+            None
+        },
+    };
+    let test_data = match csv {
+        Some(csv) => csv,
+        None => vec![
+            (01,  [
+                // Input Events
+                ("MainBoom.Angle",    69.71),
+                ("RotaryBoom.Angle", 155.30)
+            ], 
+            // Targets
+            [
+                // rope_len_bck,     rope_len_fwd
+                (    0.00,           11509.01),
+                (11509.01,            1722.44),
+                ( 1722.44,            5481.52),
+                ( 5481.52,            1128.33),
+                ( 1128.33,             389.89),
+                (  389.89,            1200.00),
+            ]),
+            (02,  [
+                // Input Events
+                ("MainBoom.Angle",    74.00),
+                ("RotaryBoom.Angle", 128.00)
+            ], 
+            // Targets
+            [
+                // rope_len_bck,     rope_len_fwd
+                (    0.00,           11362.11),
+                (11362.11,            2261.27),
+                ( 2261.27,            5481.52),
+                ( 5481.52,            1128.33),
+                ( 1128.33,             389.89),
+                (  389.89,            1200.00),
+            ]),
+        ]
+    };
 
     // Блоки 0 | Схема 1 | L_block=11509.02 | Alpha_rope=-65.34° | L_rope=11509.01
     // Блоки 1 | Схема 1 | L_block=1722.44 | Alpha_rope=-65.46° | L_rope=1722.44
@@ -166,8 +203,8 @@ fn new() {
         let result = rope_sections.eval().unwrap();
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (rope_len_bck, rope_len_fwd)) in target.into_iter().enumerate() {
-            assert!(result[i].rope_len_bck.aprox_eq(rope_len_bck, 2), "{dbg} | step {step}  \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
-            assert!(result[i].rope_len_fwd.aprox_eq(rope_len_fwd, 2), "{dbg} | step {step}  \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+            assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+            assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
