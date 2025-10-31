@@ -44,10 +44,11 @@ impl LooseRopeSections {
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * (0.5 * (block1.diameter + k * block2.diameter) / l_block).asin().to_degrees();
                             // if block1.bind.is_same(BlockBind::BoomPair(0)) && block2.bind.is_same(BlockBind::BoomPair(0)) {
-                            //     if rope_alpha_fwd > 90.0 {
-                            //         continue;
-                            //     }
-                            // }
+                            if !block1.bind.is_same(BlockBind::BoomPair(0)) && block2.bind.is_same(BlockBind::BoomPair(0)) {
+                                if rope_alpha_fwd > 90.0 {
+                                    continue;
+                                }
+                            }
                             let block1_x = block1.pos.x + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().sin();
                             let block1_y = block1.pos.y + j * 0.5 * block1.diameter * rope_alpha_fwd.to_radians().cos();
                             let block2_x = block2.pos.x - j * k * 0.5 * block2.diameter * rope_alpha_fwd.to_radians().sin();

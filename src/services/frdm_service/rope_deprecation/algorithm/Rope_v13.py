@@ -241,7 +241,7 @@ def aproxEq(a, b, tolerance=1e-9):
 # Алгоритм расчета входа и исхода каната с блоков
 # ------------------------------------------------
 if __name__ == "__main__":
-    plot = False
+    plot = True
     # f = open("C:/Users/Liaman/Desktop/rope/unit test/deprecation_test.csv")
     f = open("src/tests/unit/services/frdm_service/deprecation_test.csv")
     rows = csv.reader(f, delimiter=',')
@@ -716,18 +716,18 @@ if __name__ == "__main__":
             
             # Канаты
             for r in rope_data:
-                plt.plot([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
+                plt.plot([r.X1_block, r.X2_block], [r.Y1_block, r.Y2_block],
                         color='blue', linestyle='--')
-                plt.scatter([r["X1_block"], r["X2_block"]], [r["Y1_block"], r["Y2_block"]],
+                plt.scatter([r.X1_block, r.X2_block], [r.Y1_block, r.Y2_block],
                             color='orange', s=25)
             
             # Изменения длины последнего участка (у КП)
-            last_len_after = rope_data[-1]['l_rope']
+            last_len_after = rope_data[-1].l_rope
             last_len_before = rope_calc_params['lhook_min']
             delta_last = last_len_after - last_len_before
             r_last = rope_data[-1]
-            x1, y1 = r_last["X1_block"], r_last["Y1_block"]
-            x2, y2 = r_last["X2_block"], r_last["Y2_block"]
+            x1, y1 = r_last.X1_block, r_last.Y1_block
+            x2, y2 = r_last.X2_block, r_last.Y2_block
             
             
             # Новый конец отрезка с учетом изменения длины
@@ -746,7 +746,7 @@ if __name__ == "__main__":
                 if need_payout > 0:
                     # Координаты лебёдки (первый участок каната начинается от неё)
                     if rope_data:
-                        winch_x, winch_y = rope_data[0]["X1_block"], rope_data[0]["Y1_block"]
+                        winch_x, winch_y = rope_data[0].X1_block, rope_data[0].Y1_block
                     else:
                         # запасной вариант — центр 1-го блока
                         winch_x, winch_y = blocks[0].coord.x, blocks[0].coord.y
@@ -766,4 +766,5 @@ if __name__ == "__main__":
                     )
             except Exception as e:
                 print("[plot winch] Не удалось показать вытравливание у лебёдки:", e)
+            plt.show()
             input("Press Enter to continue...")
