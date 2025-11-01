@@ -46,46 +46,39 @@ impl Blocks {
     pub fn eval(&mut self) -> Option<Vec<Block>> {
         match self.booms.eval() {
             Some(booms) => {
-                let mut rope_alpha_bck = 0.0;
-                let mut prev_pos = Offset::new(f64::NAN, f64::NAN);
-                let mut prev_diameter = f64::NAN;
                 let mut blocks = VecDeque::from(self.items.clone());
                 match blocks.pop_front() {
                     Some(mut block) => {
+                        block.pos = self.blocks_pos(&block, &booms, &Offset::new(f64::NAN, f64::NAN), 0.0);
                         let mut result = vec![];
-                        while let Some(next) = blocks.pop_front() {
-                            let pos = self.blocks_pos(&block, &booms, &prev_pos, prev_diameter);
-                            let next_pos = self.blocks_pos(&next, &booms, &pos, block.diameter);
+                        while let Some(mut next) = blocks.pop_front() {
+                            next.pos = self.blocks_pos(&next, &booms, &block.pos, block.diameter);
                             let (k, j) = block.scheme.kj();
-                            let l_block = block.pos.distance(next_pos);
+                            let l_block = block.pos.distance(next.pos);
                             // log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
-                            let alpha_block = block.pos.alpha_horiz(&next_pos, l_block);
+                            let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
-                            let rope_alpha_fwd = alpha_block + j * (0.5 * (block.diameter + k * next.diameter) / l_block).fract().asin().to_degrees();
+                            let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
                             if rope_alpha_fwd.is_nan() {
                                 log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
-                                log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next_pos.x, next_pos.y);
-                                // log::warn!("{}.eval | Block: {:?}", self.dbg, block);
-                                // log::warn!("{}.eval | Block: {:?}", self.dbg, next);
-                                log::warn!("{}.eval | rope_alpha_bck: {:.3}", self.dbg, rope_alpha_bck);
+                                log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
                             }
-                            // if block1.bind.is_same(BlockBind::BoomPair(0)) && block2.bind.is_same(BlockBind::BoomPair(0)) {
-                            if next.bind.is(BlockBind::BoomPair(0)) {
-                                log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
+                            if next.bind.is(BlockBind::BoomPair(0)) && rope_alpha_fwd > 90.0{
+                                log::debug!("{}.eval | Block {} rope_alpha_fwd: {:.3}", self.dbg, next.name, rope_alpha_fwd);
                                 if rope_alpha_fwd > 90.0 {
-                                    continue;
+                                    log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
+                                    // continue;
                                 }
+                            } else {
+                                block.rope_alpha_fwd = rope_alpha_fwd;
+                                next.rope_alpha_bck = rope_alpha_fwd;
+                                log::debug!("{}.blocks_pos | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
+                                result.push(block);
+                                block = next;
                             }
-                            block.pos = pos;
-                            log::debug!("{}.blocks_pos | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
-                            prev_pos = block.pos;
-                            prev_diameter = block.diameter;
-                            block.rope_alpha_fwd = rope_alpha_fwd;
-                            block.rope_alpha_bck = rope_alpha_bck;
-                            rope_alpha_bck = rope_alpha_fwd;
-                            result.push(block);
-                            block = next;
                         }
+                        log::debug!("{}.blocks_pos | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
+                        result.push(block);
                         Some(result)
                     }
                     None => None,

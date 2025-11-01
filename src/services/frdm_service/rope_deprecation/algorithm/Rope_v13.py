@@ -240,7 +240,7 @@ def aproxEq(a, b, tolerance=1e-9):
 # Алгоритм расчета входа и исхода каната с блоков
 # ------------------------------------------------
 if __name__ == "__main__":
-    plot = False
+    plot = True
     # f = open("C:/Users/Liaman/Desktop/rope/unit test/deprecation_test.csv")
     f = open("src/tests/unit/services/frdm_service/deprecation_test.csv")
     rows = csv.reader(f, delimiter=',')
