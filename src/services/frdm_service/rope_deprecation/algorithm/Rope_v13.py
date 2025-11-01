@@ -99,7 +99,7 @@ class RopeParams:
     l_block: float
     alpha_block: float
     alpha_rope: float
-    "Угол прямого участка каната, градусы"
+    "Угол прямого участка каната к горизонту, градусы"
     X1_block: float
     Y1_block: float
     X2_block: float
@@ -132,10 +132,9 @@ def XY_rotate(lx, ly, alpha):
     y = lx * math.sin(angle_rad) + ly * math.cos(angle_rad)
     return x, y
 
-def alpha_horiz(Y1, Y2, X1, X2):
+def alpha_horiz(length, Y1, Y2, X1, X2):
     """Угол наклона прямой к горизонту (в градусах)"""
     # Длина отрезка
-    length = math.sqrt((X2 - X1)**2 + (Y2 - Y1)**2)
     if length == 0:
         return 0
     a = math.degrees(math.asin((Y1 - Y2) / length))
@@ -168,7 +167,7 @@ def rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j) -> RopeParams:
     Y2_block - точка выхода на блок по Y
     """
     l_block = l_section(Y1, Y2, X1, X2)
-    alpha_block = alpha_horiz(Y1, Y2, X1, X2)
+    alpha_block = alpha_horiz(l_block, Y1, Y2, X1, X2)
     alpha_rope = alpha_block + j * math.degrees(math.asin(0.5 * (D1 + k * D2) / l_block))
     X1_block = X1 + j * 0.5 * D1 * math.sin(math.radians(alpha_rope))
     Y1_block = Y1 + j * 0.5 * D1 * math.cos(math.radians(alpha_rope))
@@ -387,9 +386,6 @@ if __name__ == "__main__":
                 case _:
                     raise ValueError(f"Неизвестный тип блока [{idx}]: {bind}")
             prev_block = block
-            if idx > 0 and idx < 6:
-                assert aproxEq(block.coord.x, tblock[idx].coord.x, 0.1), f"step {step}  block[{idx}].x = {block.coord.x}, target = {tblock[idx].coord.x}"
-                assert aproxEq(block.coord.y, tblock[idx].coord.y, 0.1), f"step {step}  block[{idx}].y = {block.coord.y}, target = {tblock[idx].coord.y}"
 
         # ---------------------------
         # 5. Расчёт параметров каната
@@ -464,6 +460,14 @@ if __name__ == "__main__":
                 rope_data.pop(idx)
             rope_data.insert(idx_56, new_params)
 
+        # Тест координат блоков и КП
+        for idx, block in enumerate(blocks):
+            if idx > 0:         # Не проверяем координаты барабана, у Вани их нет
+                assert aproxEq(block.coord.x, tblock[idx].coord.x, 0.1), f"step {step}  block[{idx}].x = {block.coord.x}, target = {tblock[idx].coord.x}"
+                if idx < 6:     # Не проверяем Y крюка, так как у Вани написано вытравливание каната по условию минимальной длины, а у нас этого нет
+                    assert aproxEq(block.coord.y, tblock[idx].coord.y, 0.1), f"step {step}  block[{idx}].y = {block.coord.y}, target = {tblock[idx].coord.y}"
+
+        # Тест прямых участков каната
         for i, r in enumerate(rope_data):
             l = list(map(lambda r: r.l_rope, rope_data))
             a = list(map(lambda r: r.alpha_rope, rope_data))
@@ -693,7 +697,7 @@ if __name__ == "__main__":
             
             # 1 График крана, блоков, каната
             plt.figure(figsize=(10, 8))
-            plt.title("Схема расположения стрел и блоков")
+            plt.title(f"Схема расположения стрел и блоков [{step}]")
             plt.xlabel("X координата (мм)")
             plt.ylabel("Y координата (мм)")
             plt.grid(True)
@@ -709,7 +713,10 @@ if __name__ == "__main__":
             for i, block in enumerate(blocks, start=1):
                 x, y = block.coord.x, block.coord.y
                 radius = block.D / 2
-                circle = patches.Circle((x, y), radius, fill=False, color='deepskyblue', linewidth=1)
+                color = 'deepskyblue'
+                if i == 6 and len(rope_data) < 6:
+                    color = 'lightgray'
+                circle = patches.Circle((x, y), radius, fill=False, color=color, linewidth=1)
                 plt.gca().add_patch(circle)
                 plt.text(x, y, f'{i}', fontsize=8, color='black', 
                         ha='center', va='center', weight='bold',

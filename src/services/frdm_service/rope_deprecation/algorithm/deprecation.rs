@@ -156,7 +156,7 @@ fn slices() {
     use std::{sync::atomic::AtomicBool, time::{Duration, Instant}};
     use sal_sync::{services::{conf::{ConfTree, ServicesConf}, Services}, thread_pool::ThreadPool};
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::services::frdm_service::{BlockArcs, Blocks, Booms, FrdmServiceConf, LooseRopeSections};
+    use crate::services::frdm_service::{BlockArcs, Blocks, Booms, FrdmServiceConf, RopeSections};
     env_logger::Builder::new().filter_level(log::LevelFilter::Debug).init();
     log::debug!("");
     let dbg = Dbg::own("Deprecation.slices");
@@ -230,7 +230,7 @@ fn slices() {
             &conf.rope_deprecation.crane.rope,
             BlockArcs::new(
                 &dbg,
-                LooseRopeSections::new(
+                RopeSections::new(
                     &dbg,
                     Blocks::new(
                         &dbg,

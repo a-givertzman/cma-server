@@ -67,12 +67,12 @@ pub struct CsvRecord {
     pub lrope_straight4: f64,            // Lпрям4, мм
     pub lrope_straight5: f64,            // Lпрям5, мм
     pub lrope_straight6: f64,            // Lпрям6, мм
-    pub угол_кан1: f64,         // Угол_кан1, град
-    pub угол_кан2: f64,         // Угол_кан2, град
-    pub угол_кан3: f64,         // Угол_кан3, град
-    pub угол_кан4: f64,         // Угол_кан4, град
-    pub угол_кан5: f64,         // Угол_кан5, град
-    pub угол_кан6: f64,         // Угол_кан6, град
+    pub rope_alpha1: f64,         // Угол_кан1, град
+    pub rope_alpha2: f64,         // Угол_кан2, град
+    pub rope_alpha3: f64,         // Угол_кан3, град
+    pub rope_alpha4: f64,         // Угол_кан4, град
+    pub rope_alpha5: f64,         // Угол_кан5, град
+    pub rope_alpha6: f64,         // Угол_кан6, град
     pub xсход: f64,             // Xсход
     pub xсход2: f64,            // Xсход2
     pub xсход3: f64,            // Xсход3

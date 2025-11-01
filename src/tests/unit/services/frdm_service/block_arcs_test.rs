@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -172,7 +172,7 @@ fn new() {
     ));
     let mut block_arcs = BlockArcs::new(
         &dbg,
-        LooseRopeSections::new(
+        RopeSections::new(
             &dbg,
             Blocks::new(
                 &dbg,

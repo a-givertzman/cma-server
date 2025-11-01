@@ -23,8 +23,23 @@ impl<T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + Sqrt<T>> Of
     pub fn distance(&self, other: Self) -> T {
         let dif_x = other.x - self.x;
         let dif_y = other.y - self.y;
-        let v = dif_x * dif_x + dif_y * dif_y;
-        v.sqrt_()
+        (dif_x * dif_x + dif_y * dif_y).sqrt_()
+    }
+}
+impl Offset<f64> {
+    ///
+    /// Угол наклона отрезка к горизонту (в градусах)
+    /// - `length` - длина отрезка
+    pub fn alpha_horiz(&self, other: &Self, length: f64) -> f64 {
+        if length == 0.0 {
+            return 0.0
+        }
+        let a =  (((self.y - other.y) / length).asin()).to_degrees();
+        if self.x <= other.x {
+            a
+        } else {
+            180.0 - a
+        }
     }
 }
 impl<T: std::fmt::Display> std::fmt::Display for Offset<T> {

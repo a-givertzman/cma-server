@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections, RopeDeprecationConf};
+use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections, RopeDeprecationConf};
 
 ///
 ///
@@ -177,7 +177,7 @@ fn new() {
         &conf.rope,
         BlockArcs::new(
             &dbg,
-            LooseRopeSections::new(
+            RopeSections::new(
                 &dbg,
                 Blocks::new(
                     &dbg,

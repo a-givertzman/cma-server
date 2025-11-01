@@ -5,16 +5,60 @@ use crate::services::frdm_service::Offset;
 
 ///
 /// Схема схода каната с блоком к следующему
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(usize)]
 pub enum BlockScheme {
     /// Schema "1", Rope exits from top of the block, enters to the next on the top
-    TopTop = 1,
+    TopTop((f64, f64)) = 1,
     /// Schema "2", Rope exits from top of the block, enters to the next on the bottom
-    TopBottom = 2,
+    TopBottom((f64, f64)) = 2,
     /// Schema "3", Rope exits from bottom of the block, enters to the next on the top
-    BottomTop = 3,
+    BottomTop((f64, f64)) = 3,
     /// Schema "4", Rope exits from bottom of the block, enters to the next on the bottom
-    BottomBottom = 4,
+    BottomBottom((f64, f64)) = 4,
+}
+impl BlockScheme {
+    // let (k, j) = match block.scheme {
+    //     super::BlockScheme::TopTop => (-1.0, 1.0),
+    //     super::BlockScheme::TopBottom => (1.0, 1.0),
+    //     super::BlockScheme::BottomTop => (1.0, -1.0),
+    //     super::BlockScheme::BottomBottom => (-1.0, -1.0),
+    // };
+    ///
+    /// Returns tuple (k, j) - coefficients depends on rope transition kind between blocks
+    pub fn kj(&self) -> (f64, f64) {
+        match self {
+            BlockScheme::TopTop(kj) => *kj,
+            BlockScheme::TopBottom(kj) => *kj,
+            BlockScheme::BottomTop(kj) => *kj,
+            BlockScheme::BottomBottom(kj) => *kj,
+        }
+    }
+    ///
+    /// Schema "1", Rope exits from top of the block, enters to the next on the top
+    #[allow(unused)]
+    pub fn top_top() -> Self {
+        Self::TopTop((-1.0, 1.0))
+    }
+    ///
+    /// Schema "2", Rope exits from top of the block, enters to the next on the bottom
+    #[allow(unused)]
+    pub fn top_bottom() -> Self {
+        Self::TopBottom((1.0, 1.0))
+    }
+    ///
+    /// Schema "3", Rope exits from bottom of the block, enters to the next on the top
+    #[allow(unused)]
+    pub fn bottom_top() -> Self {
+        Self::BottomTop((1.0, -1.0))
+    }
+    ///
+    /// Schema "4", Rope exits from bottom of the block, enters to the next on the bottom
+    #[allow(unused)]
+    pub fn bottom_bottom() -> Self {
+        Self::BottomBottom((-1.0, -1.0))
+    }
+
 }
 impl FromStr for BlockScheme {
     type Err = Error;
@@ -22,10 +66,10 @@ impl FromStr for BlockScheme {
     /// Retirns [BlockScheme] from str like `TopTop`, `TopBottom`, `BottomTop`, `BottomBottom`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "TopTop" => Ok(Self::TopTop),
-            "TopBottom" => Ok(Self::TopBottom),
-            "BottomTop" => Ok(Self::BottomTop),
-            "BottomBottom" => Ok(Self::BottomBottom),
+            "TopTop" => Ok(Self::TopTop((-1.0, 1.0))),
+            "TopBottom" => Ok(Self::TopBottom((1.0, 1.0))),
+            "BottomTop" => Ok(Self::BottomTop((1.0, -1.0))),
+            "BottomBottom" => Ok(Self::BottomBottom((-1.0, -1.0))),
             _ => Err(Error::new("BlockScheme", "from_str").err(format!("Unknown variant '{s}'"))),
         }
     }
@@ -66,7 +110,8 @@ impl BlockBind {
     }
     ///
     /// Returns `true` if `self` and `other` has same kind
-    pub fn is_same(&self, other: Self) -> bool {
+    #[allow(unused)]
+    pub fn is(&self, other: Self) -> bool {
         match (self, other) {
             (BlockBind::Fixed, BlockBind::Fixed) => true,
             (BlockBind::Boom(_), BlockBind::Boom(_)) => true,

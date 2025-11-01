@@ -5,7 +5,7 @@ use sal_sync::{
     sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, Inputs, LooseRopeSections, RopeDeprecationConf}};
+use crate::{infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, Inputs, RopeSections, RopeDeprecationConf}};
 
 ///
 /// ## Rope deprecation rate
@@ -105,7 +105,7 @@ impl Service for RopeDeprecation where {
                     &conf.crane.rope,
                     BlockArcs::new(
                         dbg,
-                        LooseRopeSections::new(
+                        RopeSections::new(
                             dbg,
                             Blocks::new(
                                 dbg,

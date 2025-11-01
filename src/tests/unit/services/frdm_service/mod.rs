@@ -7,7 +7,7 @@ mod csv_record;
 mod deprecation_test;
 mod frdm_service_defect_test;
 mod frdm_service_deprecation_test;
-mod loose_rope_sections_test;
 mod rope_conf_test;
+mod rope_sections_test;
 
 pub(super) use csv_record::*;

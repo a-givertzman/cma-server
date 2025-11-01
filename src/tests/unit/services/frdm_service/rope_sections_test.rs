@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, LooseRopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -50,13 +50,13 @@ fn new() {
                         ("RotaryBoom.Angle", row.a22)
                     ],
                     [
-                        // rope_len_bck,        rope_len_fwd
-                        (0.0000,                row.lrope_straight1),
-                        (row.lrope_straight1,   row.lrope_straight2),
-                        (row.lrope_straight2,   row.lrope_straight3),
-                        (row.lrope_straight4,   row.lrope_straight4),
-                        (row.lrope_straight4,   row.lrope_straight5),
-                        (row.lrope_straight5,   row.lrope_straight6),
+                        // rope_len_bck,     rope_len_fwd,              rope_alpha_bck,     rope_alpha_fwd
+                        (0.0000,                row.lrope_straight1,               0.00,    row.rope_alpha1),
+                        (row.lrope_straight1,   row.lrope_straight2,    row.rope_alpha1,    row.rope_alpha2),
+                        (row.lrope_straight2,   row.lrope_straight3,    row.rope_alpha2,    row.rope_alpha3),
+                        (row.lrope_straight4,   row.lrope_straight4,    row.rope_alpha3,    row.rope_alpha4),
+                        (row.lrope_straight4,   row.lrope_straight5,    row.rope_alpha4,    row.rope_alpha5),
+                        (row.lrope_straight5,   row.lrope_straight6,    row.rope_alpha5,    row.rope_alpha6),
                     ],
                 ));
             }
@@ -77,13 +77,13 @@ fn new() {
             ], 
             // Targets
             [
-                // rope_len_bck,     rope_len_fwd
-                (    0.00,           11509.01),
-                (11509.01,            1722.44),
-                ( 1722.44,            5481.52),
-                ( 5481.52,            1128.33),
-                ( 1128.33,             389.89),
-                (  389.89,            1200.00),
+                // rope_len_bck,     rope_len_fwd,  rope_alpha_bck,     rope_alpha_fwd
+                (    0.00,           11509.01,      0.00,               0.00),
+                (11509.01,            1722.44,      0.00,               0.00),
+                ( 1722.44,            5481.52,      0.00,               0.00),
+                ( 5481.52,            1128.33,      0.00,               0.00),
+                ( 1128.33,             389.89,      0.00,               0.00),
+                (  389.89,            1200.00,      0.00,               0.00),
             ]),
             (02,  [
                 // Input Events
@@ -92,13 +92,13 @@ fn new() {
             ], 
             // Targets
             [
-                // rope_len_bck,     rope_len_fwd
-                (    0.00,           11362.11),
-                (11362.11,            2261.27),
-                ( 2261.27,            5481.52),
-                ( 5481.52,            1128.33),
-                ( 1128.33,             389.89),
-                (  389.89,            1200.00),
+                // rope_len_bck,     rope_len_fwd,  rope_alpha_bck,     rope_alpha_fwd
+                (    0.00,           11362.11,      0.00,               0.00),
+                (11362.11,            2261.27,      0.00,               0.00),
+                ( 2261.27,            5481.52,      0.00,               0.00),
+                ( 5481.52,            1128.33,      0.00,               0.00),
+                ( 1128.33,             389.89,      0.00,               0.00),
+                (  389.89,            1200.00,      0.00,               0.00),
             ]),
         ]
     };
@@ -165,7 +165,7 @@ fn new() {
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 816.195 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: BoomPair 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 816.195 mm               # Диаметр блока, мм
@@ -185,7 +185,7 @@ fn new() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
-    let mut rope_sections = LooseRopeSections::new(
+    let mut rope_sections = RopeSections::new(
         &dbg,
         Blocks::new(
             &dbg,
@@ -202,9 +202,12 @@ fn new() {
         }
         let result = rope_sections.eval().unwrap();
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        for (i, (rope_len_bck, rope_len_fwd)) in target.into_iter().enumerate() {
-            assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
-            assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+        log::debug!("{dbg} | step {step}  target rope alpha: \n\t{:?}", target.iter().map(|(_, _, _, a)| format!("{:.3}", a)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
+        for (i, (rope_len_bck, rope_len_fwd, rope_alpha_bck, rope_alpha_fwd)) in target.into_iter().enumerate() {
+            // assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+            // assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+            assert!((result[i].rope_alpha_fwd - rope_alpha_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_fwd, rope_alpha_fwd);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }

@@ -1,11 +1,11 @@
 use std::f64::consts::PI;
 use sal_core::dbg::Dbg;
-use crate::services::frdm_service::{Block, BlockBind, LooseRopeSections};
+use crate::services::frdm_service::{Block, BlockBind, RopeSections};
 
 ///
 /// 7. Углы обхвата и длины дуг каждого блока
 pub struct BlockArcs {
-    loose_rope_sections: LooseRopeSections,
+    loose_rope_sections: RopeSections,
     #[allow(unused)]
     dbg: Dbg,
 }
@@ -14,7 +14,7 @@ pub struct BlockArcs {
 impl BlockArcs {
     ///
     /// Returns [BlockArcs] new instance
-    pub fn new(parent: impl Into<String>, loose_rope_sections: LooseRopeSections) -> Self {
+    pub fn new(parent: impl Into<String>, loose_rope_sections: RopeSections) -> Self {
         Self {
             loose_rope_sections,
             dbg: Dbg::new(parent, "BlockArcs"),
