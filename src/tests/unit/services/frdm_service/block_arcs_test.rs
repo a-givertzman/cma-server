@@ -2,7 +2,7 @@ use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{math::AproxEq, services::conf::ConfTree};
+use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::{services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
@@ -182,13 +182,14 @@ fn new() {
             ),
         ),
     );
-    let t = Instant::now();
     for (step, events, target) in test_data {
+        let t = Instant::now();
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
         let result = block_arcs.eval().unwrap();
+        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::debug!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
             if !result[i].wrap_alpha.is_nan() {
@@ -198,7 +199,6 @@ fn new() {
                 assert!((result[i].wrap_length - wrap_length).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
             }
         }
-        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
     test_duration.exit();
 }

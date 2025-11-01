@@ -205,21 +205,21 @@ def calc_block_angles_and_arcs(rope_data: list[RopeParams]):
         if block.bind == BlockBindBoomPair:
             pass
         else:
-            # Формируем alpha_rope_list
-            if prev_alpha is not None:
-                alpha_rope_list = [prev_alpha, alpha_rope]
-            else:
-                alpha_rope_list = [alpha_rope]  # для первого блока
-            r.alpha_rope_list = alpha_rope_list
+            # # Формируем alpha_rope_list
+            # if prev_alpha is not None:
+            #     alpha_rope_list = [prev_alpha, alpha_rope]
+            # else:
+            #     alpha_rope_list = [alpha_rope]  # для первого блока
+            # r.alpha_rope_list = alpha_rope_list
     
             # Расчёт угла обхвата
-            if len(alpha_rope_list) > 1:
-                alpha_wrap = abs(alpha_rope_list[-1] - alpha_rope_list[0])
+            if prev_alpha is not None:
+                alpha_wrap = abs(alpha_rope - prev_alpha)
+                # alpha_wrap = abs(alpha_rope_list[-1] - alpha_rope_list[0])
             else:
                 alpha_wrap = 0
             
-            R = block.D / 2
-            L_arc = (math.pi * R * alpha_wrap) / 180
+            L_arc = (math.pi * block.D * 0.5 * alpha_wrap) / 180
             
             L_sys_arc += L_arc
             wrap_angles.append(alpha_wrap)
@@ -558,12 +558,6 @@ if __name__ == "__main__":
     
             # Суммы прямых и дуг 
             block_results = calc_block_angles_and_arcs(rope_data)
-            logging.debug(f"block_results: {block_results}")
-            for i in range(0, len(blocks) - 2):
-                wrap_l = block_results["arc_lengths"][i]
-                wrap_arc = block_results["wrap_angles"][i]
-                assert aproxEq(wrap_l, tblock[i].wrap_l, 0.1), f"step {step}  block[{i}].wrap_l = {wrap_l}, target = {tblock[i].wrap_l}"
-                assert aproxEq(wrap_arc, tblock[i].wrap_arc, 0.1), f"step {step}  block[{i}].wrap_arc = {wrap_arc}, target = {tblock[i].wrap_arc}"
 
             l_section_summ = sum(r.l_rope for r in rope_data)
             L_sys_arc = block_results["L_sys_arc"]
@@ -628,6 +622,15 @@ if __name__ == "__main__":
         #############################################################
         # Расчет дуг и канатов
         block_results = calc_block_angles_and_arcs(rope_data)
+
+        # Тест углов и дуг обхвата
+        logging.debug(f"block_results: {block_results}")
+        for i in range(0, len(blocks) - 2):
+            wrap_l = block_results["arc_lengths"][i]
+            wrap_arc = block_results["wrap_angles"][i]
+            assert aproxEq(wrap_l, tblock[i].wrap_l, 0.1), f"step {step}  block[{i}].wrap_l = {wrap_l}, target = {tblock[i].wrap_l}"
+            assert aproxEq(wrap_arc, tblock[i].wrap_arc, 0.1), f"step {step}  block[{i}].wrap_arc = {wrap_arc}, target = {tblock[i].wrap_arc}"
+
         # Строим опорные точки
         support_points = build_support_points(rope_results, rope_data, block_results, rope_calc_params["Lfact"])
         # Запомним исходную длину последнего прямого участка (подвеса)
