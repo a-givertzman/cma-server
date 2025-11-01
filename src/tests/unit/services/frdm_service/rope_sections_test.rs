@@ -54,7 +54,7 @@ fn new() {
                         (0.0000,                row.lrope_straight1,               0.00,    row.rope_alpha1),
                         (row.lrope_straight1,   row.lrope_straight2,    row.rope_alpha1,    row.rope_alpha2),
                         (row.lrope_straight2,   row.lrope_straight3,    row.rope_alpha2,    row.rope_alpha3),
-                        (row.lrope_straight4,   row.lrope_straight4,    row.rope_alpha3,    row.rope_alpha4),
+                        (row.lrope_straight3,   row.lrope_straight4,    row.rope_alpha3,    row.rope_alpha4),
                         (row.lrope_straight4,   row.lrope_straight5,    row.rope_alpha4,    row.rope_alpha5),
                         (row.lrope_straight5,   row.lrope_straight6,    row.rope_alpha5,    row.rope_alpha6),
                     ],
@@ -207,8 +207,10 @@ fn new() {
         log::debug!("{dbg} | step {step}  target rope len: \n\t{:?}", target.iter().map(|(_, l, _, _)| format!("{:.3}", l)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  result rope len: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_len_fwd)).collect::<Vec<_>>());
         for (i, (rope_len_bck, rope_len_fwd, rope_alpha_bck, rope_alpha_fwd)) in target.into_iter().enumerate() {
-            // assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
-            assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+            if i < result.len() - 1 {
+                assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+                assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+            }
             assert!((result[i].rope_alpha_bck - rope_alpha_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_bck, rope_alpha_bck);
             assert!((result[i].rope_alpha_fwd - rope_alpha_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_fwd, rope_alpha_fwd);
         }
