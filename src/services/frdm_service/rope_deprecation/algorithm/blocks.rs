@@ -49,11 +49,11 @@ impl Blocks {
                 let mut blocks = VecDeque::from(self.items.clone());
                 match blocks.pop_front() {
                     Some(mut block) => {
-                        block.pos = self.blocks_pos(&block, &booms, &Offset::new(f64::NAN, f64::NAN), 0.0);
+                        block.pos = self.blocks_pos(&block, &booms, &Block::default());
                         let mut result = vec![];
                         let mut skipped = None;
                         while let Some(mut next) = blocks.pop_front() {
-                            next.pos = self.blocks_pos(&next, &booms, &block.pos, block.diameter);
+                            next.pos = self.blocks_pos(&next, &booms, &block);
                             let (k, j) = block.scheme.kj();
                             let l_block = block.pos.distance(next.pos);
                             // log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
@@ -92,7 +92,7 @@ impl Blocks {
     }
     ///
     /// 4. Координаты блоков X, Y
-    fn blocks_pos(&self, block: &Block, booms: &Vec<Boom>, prev_pos: &Offset<f64>, prev_diameter: f64) -> Offset<f64> {
+    fn blocks_pos(&self, block: &Block, booms: &Vec<Boom>, prev: &Block) -> Offset<f64> {
         match block.bind {
             BlockBind::Fixed => {
                 // Формула из алгоритма:
@@ -111,9 +111,10 @@ impl Blocks {
                 Offset::new(base_point.x + dx, base_point.y + dy)
             }
             BlockBind::Hook => {
+                log::debug!("{}.blocks_pos | Prev {} bind: {:?}", self.dbg, prev.name, prev.bind);
                 Offset::new(
-                    prev_pos.x + 0.5 * prev_diameter,
-                    prev_pos.y - self.hook_l,
+                    prev.pos.x + 0.5 * prev.diameter,
+                    prev.pos.y - self.hook_l,
                 )
             }
         }

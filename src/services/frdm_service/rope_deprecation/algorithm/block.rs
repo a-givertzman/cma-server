@@ -214,3 +214,25 @@ impl Block {
         }
     }
 }
+//
+//
+impl Default for Block {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            lf: Offset::new(0.0, 0.0),
+            diameter: Default::default(),
+            scheme: BlockScheme::top_top(),
+            bind: BlockBind::Fixed,
+            pos: Offset::new(0.0, 0.0),
+            rope_alpha_fwd: Default::default(),
+            rope_alpha_bck: Default::default(),
+            wrap_alpha: Default::default(),
+            wrap_length: Default::default(),
+            rope_len_fwd: Default::default(),
+            rope_len_bck: Default::default(),
+            bending: Default::default(),
+            skipped: Default::default(),
+        }
+    }
+}

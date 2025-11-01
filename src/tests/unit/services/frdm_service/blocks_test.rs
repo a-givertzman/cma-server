@@ -2,7 +2,7 @@ use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{math::AproxEq, services::conf::ConfTree};
+use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
 use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs}, tests::unit::services::frdm_service::CsvRecord};
@@ -188,12 +188,10 @@ fn new() {
         let result = blocks.eval().unwrap();
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (target_x, target_y)) in target.into_iter().enumerate() {
-            if !result[i].skipped {
-                if i < result.len() - 1 {
-                    assert!(result[i].pos.x.aprox_eq(target_x, 1), "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
-                }
-                assert!(result[i].pos.y.aprox_eq(target_y, 1), "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
+            if i < result.len() - 1 {
+                assert!((result[i].pos.x - target_x).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
             }
+            assert!((result[i].pos.y - target_y).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
