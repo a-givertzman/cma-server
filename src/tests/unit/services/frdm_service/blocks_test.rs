@@ -31,7 +31,7 @@ fn new() {
     log::debug!("");
     let dbg = Dbg::own("Blocks-test");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
     log::debug!("{dbg} | reading csv: '{}'", path);
