@@ -31,7 +31,7 @@ fn new() {
     log::debug!("");
     let dbg = Dbg::own("RopeSection-test");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
     log::debug!("{dbg} | reading csv: '{}'", path);
@@ -204,9 +204,12 @@ fn new() {
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         log::debug!("{dbg} | step {step}  target rope alpha: \n\t{:?}", target.iter().map(|(_, _, _, a)| format!("{:.3}", a)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  target rope len: \n\t{:?}", target.iter().map(|(_, l, _, _)| format!("{:.3}", l)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  result rope len: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_len_fwd)).collect::<Vec<_>>());
         for (i, (rope_len_bck, rope_len_fwd, rope_alpha_bck, rope_alpha_fwd)) in target.into_iter().enumerate() {
             // assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
-            // assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+            assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+            assert!((result[i].rope_alpha_bck - rope_alpha_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_bck, rope_alpha_bck);
             assert!((result[i].rope_alpha_fwd - rope_alpha_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_fwd, rope_alpha_fwd);
         }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());

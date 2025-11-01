@@ -438,7 +438,7 @@ if __name__ == "__main__":
             X1, Y1 = b5.coord.x, b5.coord.y
             X2, Y2 = b7.coord.x, b7.coord.y
             D1, D2 = b5.D, b7.D
-            scheme = getattr(b5, "scheme", 1)
+            scheme = b5.scheme if b5.scheme else 1
     
             if scheme == 1:
                 k, j = -1, 1
