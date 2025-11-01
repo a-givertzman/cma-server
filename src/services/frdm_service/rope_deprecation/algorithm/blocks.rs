@@ -54,34 +54,34 @@ impl Blocks {
                         let mut skipped = None;
                         while let Some(mut next) = blocks.pop_front() {
                             next.pos = self.blocks_pos(&next, &booms, &block, skipped.is_some());
-                            log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
+                            // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
                             let (k, j) = block.scheme.kj();
                             let l_block = block.pos.distance(next.pos);
                             // log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
                             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
-                            if rope_alpha_fwd.is_nan() {
-                                log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
-                                log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
-                            }
+                            // if rope_alpha_fwd.is_nan() {
+                            //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
+                            //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
+                            // }
                             if next.bind.is(BlockBind::BoomPair(0)) && rope_alpha_fwd > 90.0{
-                                log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
+                                // log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
                                 next.skipped = true;
                                 skipped = Some(next);
                             } else {
                                 block.rope_alpha_fwd = rope_alpha_fwd;
                                 next.rope_alpha_bck = rope_alpha_fwd;
-                                log::info!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
+                                // log::info!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
                                 result.push(block);
                                 if let Some(skipped) = skipped.take() {
-                                    log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, skipped.name, skipped.pos.x, skipped.pos.y);
+                                    // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, skipped.name, skipped.pos.x, skipped.pos.y);
                                     result.push(skipped);
                                 }
                                 block = next;
                             }
                         }
-                        log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
+                        // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
                         result.push(block);
                         Some(result)
                     }
@@ -112,13 +112,12 @@ impl Blocks {
                 Offset::new(base_point.x + dx, base_point.y + dy)
             }
             BlockBind::Hook => {
-                log::debug!("{}.blocks_pos | Prev  {} bind: {:?}  pos: {:.3}, {:.3}, D: {:.3}, new X: {:.3}", self.dbg, prev.name, prev.bind, prev.pos.x, prev.pos.y, prev.diameter * 0.5, prev.pos.x - 0.5 * prev.diameter);
-                log::debug!("{}.blocks_pos | Block {} bind: {:?}", self.dbg, block.name, block.bind);
+                // log::debug!("{}.blocks_pos | Prev  {} bind: {:?}  pos: {:.3}, {:.3}, D: {:.3}, new X: {:.3}", self.dbg, prev.name, prev.bind, prev.pos.x, prev.pos.y, prev.diameter * 0.5, prev.pos.x - 0.5 * prev.diameter);
+                // log::debug!("{}.blocks_pos | Block {} bind: {:?}", self.dbg, block.name, block.bind);
                 Offset::new(
-                    if skipped {
-                        prev.pos.x - 0.5 * prev.diameter
-                    } else {
-                        prev.pos.x + 0.5 * prev.diameter
+                    match skipped {
+                        true => prev.pos.x - 0.5 * prev.diameter,
+                        false => prev.pos.x + 0.5 * prev.diameter,
                     },
                     prev.pos.y - self.hook_l,
                 )
