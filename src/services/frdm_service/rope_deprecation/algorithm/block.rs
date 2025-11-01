@@ -163,6 +163,8 @@ pub struct Block {
     pub rope_len_bck: f64,
     /// Текущие точки входа и схода каната с блока, считая от его начала каната 
     pub bending: Range<f64>,
+    /// Блок исключен из вычислений
+    pub skipped: bool,
 }
 //
 //
@@ -208,6 +210,7 @@ impl Block {
             rope_len_fwd,
             rope_len_bck,
             bending,
+            skipped: false,
         }
     }
 }

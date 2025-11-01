@@ -51,6 +51,7 @@ impl Blocks {
                     Some(mut block) => {
                         block.pos = self.blocks_pos(&block, &booms, &Offset::new(f64::NAN, f64::NAN), 0.0);
                         let mut result = vec![];
+                        let mut skipped = None;
                         while let Some(mut next) = blocks.pop_front() {
                             next.pos = self.blocks_pos(&next, &booms, &block.pos, block.diameter);
                             let (k, j) = block.scheme.kj();
@@ -64,16 +65,18 @@ impl Blocks {
                                 log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
                             }
                             if next.bind.is(BlockBind::BoomPair(0)) && rope_alpha_fwd > 90.0{
-                                log::debug!("{}.eval | Block {} rope_alpha_fwd: {:.3}", self.dbg, next.name, rope_alpha_fwd);
-                                if rope_alpha_fwd > 90.0 {
-                                    log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
-                                    // continue;
-                                }
+                                log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
+                                next.skipped = true;
+                                log::debug!("{}.blocks_pos | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
+                                skipped = Some(next);
                             } else {
                                 block.rope_alpha_fwd = rope_alpha_fwd;
                                 next.rope_alpha_bck = rope_alpha_fwd;
                                 log::debug!("{}.blocks_pos | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
                                 result.push(block);
+                                if let Some(skipped) = skipped.take() {
+                                    result.push(skipped);
+                                }
                                 block = next;
                             }
                         }
