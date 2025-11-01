@@ -54,17 +54,7 @@ impl Blocks {
                     Some(mut block) => {
                         let mut result = vec![];
                         while let Some(next) = blocks.pop_front() {
-                            // let (k, j) = match block.scheme {
-                            //     super::BlockScheme::TopTop => (-1.0, 1.0),
-                            //     super::BlockScheme::TopBottom => (1.0, 1.0),
-                            //     super::BlockScheme::BottomTop => (1.0, -1.0),
-                            //     super::BlockScheme::BottomBottom => (-1.0, -1.0),
-                            // };
-                            block = self.blocks_pos(block, &booms, &prev_pos, prev_diameter);
-                            log::debug!("{}.blocks_pos | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
-                            prev_pos = block.pos;
-                            prev_diameter = block.diameter;
-
+                            let pos = self.blocks_pos(&block, &booms, &prev_pos, prev_diameter);
                             let (k, j) = block.scheme.kj();
                             let l_block = block.pos.distance(next.pos);
                             // log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
@@ -72,22 +62,27 @@ impl Blocks {
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * (0.5 * (block.diameter + k * next.diameter) / l_block).fract().asin().to_degrees();
                             if rope_alpha_fwd.is_nan() {
-                                log::debug!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
-                                log::debug!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
-                                // log::debug!("{}.eval | Block: {:?}", self.dbg, block);
-                                // log::debug!("{}.eval | Block: {:?}", self.dbg, next);
-                                log::debug!("{}.eval | rope_alpha_bck: {:.3}", self.dbg, rope_alpha_bck);
+                                log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
+                                log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
+                                // log::warn!("{}.eval | Block: {:?}", self.dbg, block);
+                                // log::warn!("{}.eval | Block: {:?}", self.dbg, next);
+                                log::warn!("{}.eval | rope_alpha_bck: {:.3}", self.dbg, rope_alpha_bck);
                             }
                             // if block1.bind.is_same(BlockBind::BoomPair(0)) && block2.bind.is_same(BlockBind::BoomPair(0)) {
                             if next.bind.is(BlockBind::BoomPair(0)) {
+                                log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
                                 if rope_alpha_fwd > 90.0 {
                                     continue;
                                 }
                             }
+                            log::debug!("{}.blocks_pos | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
+                            block.pos = pos;
+                            prev_pos = block.pos;
+                            prev_diameter = block.diameter;
                             block.rope_alpha_fwd = rope_alpha_fwd;
                             block.rope_alpha_bck = rope_alpha_bck;
-                            result.push(block);
                             rope_alpha_bck = rope_alpha_fwd;
+                            result.push(block);
                             block = next;
                         }
                         Some(result)
@@ -100,35 +95,31 @@ impl Blocks {
     }
     ///
     /// 4. Координаты блоков X, Y
-    fn blocks_pos(&self, mut block: Block, booms: &Vec<Boom>, prev_pos: &Offset<f64>, prev_diameter: f64) -> Block {
+    fn blocks_pos(&self, block: &Block, booms: &Vec<Boom>, prev_pos: &Offset<f64>, prev_diameter: f64) -> Offset<f64> {
         match block.bind {
             BlockBind::Fixed => {
                 // Формула из алгоритма:
                 let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
                 let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
-                let x = dx1 + dx2;
-                let y = dy1 + dy2;
-                block.pos.x = x;
-                block.pos.y = y;
+                Offset::new(dx1 + dx2, dy1 + dy2)
             }
             BlockBind::Boom(index) => {
                 let base_point = booms[index].gpt;  // точка G
                 let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[index].alpha);
-                block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
+                Offset::new(base_point.x + dx, base_point.y + dy)
             }
             BlockBind::BoomPair(index) => {
                 let base_point = booms[index].gpt;  // точка G
                 let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[index].alpha);
-                block.pos = Offset::new(base_point.x + dx, base_point.y + dy);
+                Offset::new(base_point.x + dx, base_point.y + dy)
             }
             BlockBind::Hook => {
-                block.pos = Offset::new(
+                Offset::new(
                     prev_pos.x + 0.5 * prev_diameter,
                     prev_pos.y - self.hook_l,
-                );
+                )
             }
         }
         // log::debug!("{}.blocks_pos | Block {} [{idx}]: pos: {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
-        block
     }
 }
