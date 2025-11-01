@@ -179,13 +179,14 @@ fn new() {
         &conf.blocks,
         Booms::new(&dbg, &conf.booms, inputs.clone()),
     );
-    let t = Instant::now();
     for (step, events, target) in test_data {
+        let t = Instant::now();
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
         let result = blocks.eval().unwrap();
+        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         for (i, (target_x, target_y)) in target.into_iter().enumerate() {
             assert!((result[i].pos.x - target_x).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
@@ -193,7 +194,6 @@ fn new() {
                 assert!((result[i].pos.y - target_y).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
             }
         }
-        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
     }
     test_duration.exit();
 }
