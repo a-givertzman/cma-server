@@ -143,32 +143,32 @@ fn new() {
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 845.670 mm               # Диаметр блока, мм
+                d: 844.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 2:
                 lf: 308.0 mm, 1100.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 3:
                 lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 4:
                 lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 5:
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: BoomPair 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 7:
@@ -176,7 +176,6 @@ fn new() {
                 d: 0.0 mm                   # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let inputs = Arc::new(Inputs::fake(
@@ -203,10 +202,10 @@ fn new() {
         let result = rope_sections.eval().unwrap();
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        log::debug!("{dbg} | step {step}  target rope alpha: \n\t{:?}", target.iter().map(|(_, _, _, a)| format!("{:.3}", a)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
-        log::debug!("{dbg} | step {step}  target rope len: \n\t{:?}", target.iter().map(|(_, l, _, _)| format!("{:.3}", l)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  target rope alpha: \n\t{:?}", target.iter().map(|(_, _, _, a)| format!("{:.3}", a)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  result rope len: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_len_fwd)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  target rope len: \n\t{:?}", target.iter().map(|(_, l, _, _)| format!("{:.3}", l)).collect::<Vec<_>>());
         for (i, (rope_len_bck, rope_len_fwd, rope_alpha_bck, rope_alpha_fwd)) in target.into_iter().enumerate() {
             if i < result.len() - 2 {
                 assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);

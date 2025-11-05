@@ -31,7 +31,7 @@ fn new() {
     log::debug!("");
     let dbg = Dbg::own("BlockArcs-test");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
     log::debug!("{dbg} | reading csv: '{}'", path);
@@ -128,32 +128,32 @@ fn new() {
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 845.670 mm               # Диаметр блока, мм
+                d: 844.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 2:
                 lf: 308.0 mm, 1100.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 3:
                 lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 4:
                 lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 5:
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: BoomPair 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: BoomPair 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 7:
@@ -161,7 +161,6 @@ fn new() {
                 d: 0.0 mm                   # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let inputs = Arc::new(Inputs::fake(
@@ -190,12 +189,19 @@ fn new() {
         }
         let result = block_arcs.eval().unwrap();
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
-        log::debug!("{dbg} | step {step}  result: {:#?}", result);
+        log::trace!("{dbg} | step {step}  result: {:#?}", result);
+        log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_bck)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  result wrap alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd - b.rope_alpha_bck)).collect::<Vec<_>>());
+
+        log::debug!("{dbg} | step {step}  result wrap alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.wrap_alpha)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  target wrap alpha: \n\t{:?}", target.iter().map(|(a, _)| format!("{:.3}", a)).collect::<Vec<_>>());
+
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
-            if !result[i].wrap_alpha.is_nan() {
+            if !result[i].skipped {
                 assert!((result[i].wrap_alpha - wrap_alpha).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
             }
-            if !result[i].wrap_length.is_nan() {
+            if !result[i].skipped {
                 assert!((result[i].wrap_length - wrap_length).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
             }
         }

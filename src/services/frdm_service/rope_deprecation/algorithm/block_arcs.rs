@@ -29,13 +29,16 @@ impl BlockArcs {
                 // let mut prev_bind = BlockBind::Fixed;
                 let blocks: Vec<Block> = blocks.iter().filter_map(|block| {
                     match block.skipped {
-                        true => None,
+                        true => {
+                            log::debug!("{}.eval | Block {} SKIPED", self.dbg, block.name);
+                            None
+                        }
                         false => {
                             let wrap_alpha = match block.bind {
                                 BlockBind::Fixed => 0.0,
                                 BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                                 BlockBind::BoomPair(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
-                                BlockBind::Hook => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
+                                BlockBind::Hook => 0.0,     // TODO: implement caclultions for Hook block if exists
                             };
                             // prev_bind = block.bind;
                             // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
