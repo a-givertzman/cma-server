@@ -40,37 +40,44 @@ impl Bendings {
         let t = Instant::now();
         match self.block_arcs.eval() {
             Some(blocks) => {
-                let mut result = vec![];
                 match inputs.rope_pos() {
                     Some(rope_pos) => {
-                        let mut start = self.rope_len - rope_pos; // * 1000.0;  // Точка входа каната на блок
-                        let mut end = 0.0;                                  // Точка схода каната с барабана, а в общем с блока
+                        let mut start = self.rope_len - rope_pos;             // Точка входа каната на блок
+                        let mut end = 0.0;                                  // Точка схода каната с блока
                         let mut bend = start .. end;                 // Первый сход считаем с барабана
-                        for block in blocks.iter().rev() {
-                            // log::trace!("{}.eval | Block {} {:?}", self.dbg, block.name, block.bind);
-                            end = bend.start - block.rope_len_fwd;
-                            start = match block.bind {
-                                BlockBind::Fixed => 0.0, // На барабане считаем весь канат от конца до точки схода,
-                                BlockBind::Boom(_) => end - block.wrap_length,
-                                BlockBind::BoomPair(_) => todo!("{}.eval | BlockBind::BoomPair to be implemented", self.dbg),
-                                BlockBind::Hook => end - block.wrap_length,
-                            };
-                            bend = start .. end;
-                            result.push(Block::new(
-                                block.name.clone(),
-                                block.lf,
-                                block.diameter,
-                                block.scheme,
-                                block.bind,
-                                block.rope_alpha_fwd,
-                                block.rope_alpha_bck,
-                                block.wrap_alpha,
-                                block.wrap_length,
-                                block.rope_len_fwd,
-                                block.rope_len_bck,
-                                bend.clone(),
-                            ));
-                        }
+                        let mut result: Vec<Block> = blocks.iter().rev().filter_map(|block| {
+                            log::debug!("{}.eval | Block {} {:?}", self.dbg, block.name, block.bind);
+                            match block.skipped {
+                                true => None,
+                                false => {
+                                    end = bend.start - block.rope_len_fwd;
+                                    start = match block.bind {
+                                        BlockBind::Fixed => 0.0, // На барабане считаем весь канат от конца до точки схода,
+                                        BlockBind::Boom(_) => end - block.wrap_length,
+                                        BlockBind::BoomPair(_) => end - block.wrap_length,
+                                        BlockBind::Hook => end - block.wrap_length,
+                                    };
+                                    bend = start .. end;
+                                    match (end - start).abs() > 0.0 {
+                                        true => Some(Block::new(
+                                            block.name.clone(),
+                                            block.lf,
+                                            block.diameter,
+                                            block.scheme,
+                                            block.bind,
+                                            block.rope_alpha_fwd,
+                                            block.rope_alpha_bck,
+                                            block.wrap_alpha,
+                                            block.wrap_length,
+                                            block.rope_len_fwd,
+                                            block.rope_len_bck,
+                                            start .. end,
+                                        )),
+                                        false => None,
+                                    }
+                                }
+                            }
+                        }).collect();
                         result.reverse();
                         log::debug!("{}.eval | Elapsed: {:?}", self.dbg, t.elapsed());
                         // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());

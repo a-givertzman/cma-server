@@ -190,13 +190,11 @@ fn new() {
         let result = block_arcs.eval().unwrap();
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
-        log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_bck)).collect::<Vec<_>>());
-        log::debug!("{dbg} | step {step}  result wrap alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd - b.rope_alpha_bck)).collect::<Vec<_>>());
-
+        log::trace!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
+        log::trace!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_bck)).collect::<Vec<_>>());
+        log::trace!("{dbg} | step {step}  result wrap alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd - b.rope_alpha_bck)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  result wrap alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.wrap_alpha)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  target wrap alpha: \n\t{:?}", target.iter().map(|(a, _)| format!("{:.3}", a)).collect::<Vec<_>>());
-
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
             if !result[i].skipped {
                 assert!((result[i].wrap_alpha - wrap_alpha).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);

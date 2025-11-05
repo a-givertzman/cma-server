@@ -1,11 +1,11 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
 use sal_sync::{math::AproxEq, services::conf::ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections, RopeDeprecationConf};
+use crate::{services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeDeprecationConf, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -31,45 +31,82 @@ fn new() {
     log::debug!("");
     let dbg = Dbg::own("Bendings-test");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
-    let test_data = [
-        (01,  [
-            // Input Events
-            ("Winch.Pos",          0.00),
-            ("MainBoom.Angle",    69.71),
-            ("RotaryBoom.Angle", 155.30)
-        ], 
-        // Targets
-        [
-            // enter .. exit, mm
-                0.0000 .. 65565.5016,   // start from the end of the ropr on the winch
-            77074.5163 .. 77075.4196,
-            78797.8560 .. 79000.0876,
-            84481.6102 .. 84713.7866,
-            85842.1211 .. 85889.6608,
-            86279.5476 .. 87000.0000,
-    // F12: 88000.0000
-        ]),
-        (02,  [
-            // Input Events
-            ("Winch.Pos",          0.00),
-            ("MainBoom.Angle",    74.00),
-            ("RotaryBoom.Angle", 128.00)
-        ], 
-        // Targets
-        [
-            // enter .. exit, mm
-                0.0000 .. 65144.9469,   // start from the end of the ropr on the winch
-            76507.0587 .. 76696.6577,
-            78957.9230 .. 79163.9797,
-            84645.5023 .. 84877.6787,
-            86006.0132 .. 86053.5528,
-            86443.4396 .. 87000.0000,
-    // F12: 88000.0000
-        ]),
-    ];
-
+    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    log::debug!("{dbg} | reading csv: '{}'", path);
+    let csv = match OpenOptions::new().read(true).open(path) {
+        Ok(rdr) => {
+            let mut rdr = csv::Reader::from_reader(rdr);
+            log::debug!("{dbg} | Parse csv data...");
+            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let mut test_data = vec![];
+            for row in csv {
+                let row: CsvRecord = row.unwrap();
+                test_data.push((
+                    row.step,
+                    [
+                        ("Winch.Pos",           0.00),
+                        ("MainBoom.Angle",   row.a21),
+                        ("RotaryBoom.Angle", row.a22)
+                    ],
+                    [
+                        // enter        ..      exit, mm
+                        row.xвход       ..      row.xсход,
+                        row.xвход       ..      row.xсход,
+                        row.xвход       ..      row.xсход,
+                        row.xвход       ..      row.xсход,
+                        row.xвход       ..      row.xсход,
+                        row.xвход       ..      row.xсход,
+                    ],
+                ));
+            }
+            Some(test_data)
+        }
+        Err(err) => {
+            log::debug!("{dbg} | Can't read csv test data from '{}', error: {:?}", path, err);
+            None
+        },
+    };
+    let test_data = match csv {
+        Some(csv) => csv,
+        None => vec![
+            (01,  [
+                // Input Events
+                ("Winch.Pos",          0.00),
+                ("MainBoom.Angle",    69.71),
+                ("RotaryBoom.Angle", 155.30),
+            ], 
+            // Targets
+            [
+                // enter .. exit, mm
+                    0.0000 .. 65565.5016,   // start from the end of the ropr on the winch
+                77074.5163 .. 77075.4196,
+                78797.8560 .. 79000.0876,
+                84481.6102 .. 84713.7866,
+                85842.1211 .. 85889.6608,
+                86279.5476 .. 87000.0000,
+        // F12: 88000.0000
+            ]),
+            (02,  [
+                // Input Events
+                ("Winch.Pos",          0.00),
+                ("MainBoom.Angle",    74.00),
+                ("RotaryBoom.Angle", 128.00)
+            ], 
+            // Targets
+            [
+                // enter .. exit, mm
+                    0.0000 .. 65144.9469,   // start from the end of the ropr on the winch
+                76507.0587 .. 76696.6577,
+                78957.9230 .. 79163.9797,
+                84645.5023 .. 84877.6787,
+                86006.0132 .. 86053.5528,
+                86443.4396 .. 87000.0000,
+        // F12: 88000.0000
+            ]),
+        ],
+    };
     // Опорные точки
     // F01: 65565.5016
     // F02: 77074.5163
@@ -188,15 +225,17 @@ fn new() {
             ),
         ),
     );
-    let t = Instant::now();
     for (step, events, target) in test_data {
+        let t = Instant::now();
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
         let result = bendings.eval(&inputs).unwrap();
-        log::trace!("{dbg} | step {step}  result: {:#?}", result);
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
+        log::trace!("{dbg} | step {step}  result: {:#?}", result);
+        log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
+        // log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|(a, _)| format!("{:.3}", a)).collect::<Vec<_>>());
         for (i, bending) in target.into_iter().enumerate() {
             assert!(result[i].bending.start.aprox_eq(bending.start, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
             assert!(result[i].bending.end.aprox_eq(bending.end, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
