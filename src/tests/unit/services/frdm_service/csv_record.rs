@@ -103,4 +103,16 @@ pub struct CsvRecord {
     pub wrap_alpha4: f64,              // угол обхв4
     pub wrap_alpha5: f64,              // угол обхв5
     pub wrap_alpha6: f64,              // угол обхв6
+    pub f01: f64,
+    pub f02: f64,
+    pub f03: f64,
+    pub f04: f64,
+    pub f05: f64,
+    pub f06: f64,
+    pub f07: f64,
+    pub f08: f64,
+    pub f09: f64,
+    pub f10: f64,
+    pub f11: f64,
+    pub f12: f64,
 }

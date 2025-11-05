@@ -52,12 +52,13 @@ fn new() {
                     ],
                     [
                         // enter        ..      exit, mm
-                        row.xвход       ..      row.xсход,
-                        row.xвход       ..      row.xсход,
-                        row.xвход       ..      row.xсход,
-                        row.xвход       ..      row.xсход,
-                        row.xвход       ..      row.xсход,
-                        row.xвход       ..      row.xсход,
+                           0.00         ..      row.f01,
+                        row.f02         ..      row.f03,
+                        row.f04         ..      row.f05,
+                        row.f06         ..      row.f07,
+                        row.f08         ..      row.f09,
+                        row.f10         ..      row.f11,
+                        // row.f12         ..      f64::NAN,
                     ],
                 ));
             }
@@ -107,40 +108,12 @@ fn new() {
             ]),
         ],
     };
-    // Опорные точки
-    // F01: 65565.5016
-    // F02: 77074.5163
-    // F03: 77075.4196
-    // F04: 78797.8560
-    // F05: 79000.0876
-    // F06: 84481.6102
-    // F07: 84713.7866
-    // F08: 85842.1211
-    // F09: 85889.6608
-    // F10: 86279.5476
-    // F11: 87000.0000
-    // F12: 88000.0000
-
-    // Опорные точки
-    // F01: 65144.9469
-    // F02: 76507.0587
-    // F03: 76696.6577
-    // F04: 78957.9230
-    // F05: 79163.9797
-    // F06: 84645.5023
-    // F07: 84877.6787
-    // F08: 86006.0132
-    // F09: 86053.5528
-    // F10: 86443.4396
-    // F11: 87000.0000
-    // F12: 88000.0000
-
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
-            width: 35 mm            # Diameter of the rome
-            length: 88 m          # Total working length of the rope
-            winch-length: 65.5655 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
-            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+            width: 35 mm               # Diameter of the rome
+            length: 82.243 m           # Total working length of the rope
+            winch-length: 58.330 m     # Length of the rope on the winch drum in the parking position, when rope pos is zero
+            segment: 100 mm            # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
             load: point real 'Winch.Load'       # tonn, current rope load 
         booms:
@@ -235,7 +208,7 @@ fn new() {
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
-        // log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|(a, _)| format!("{:.3}", a)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>());
         for (i, bending) in target.into_iter().enumerate() {
             assert!(result[i].bending.start.aprox_eq(bending.start, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
             assert!(result[i].bending.end.aprox_eq(bending.end, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);

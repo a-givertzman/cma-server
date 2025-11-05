@@ -42,37 +42,27 @@ impl Bendings {
             Some(blocks) => {
                 match inputs.rope_pos() {
                     Some(rope_pos) => {
-                        let mut start = self.rope_len - rope_pos;             // Точка входа каната на блок
-                        let mut end = 0.0;                                  // Точка схода каната с блока
-                        let mut bend = start .. end;                 // Первый сход считаем с барабана
-                        let mut result: Vec<Block> = blocks.iter().rev().filter_map(|block| {
-                            log::debug!("{}.eval | Block {} {:?}", self.dbg, block.name, block.bind);
+                        let mut start = self.rope_len - rope_pos;           // Точка входа каната на блок (по направлению от барабана к крюку)
+                        let mut end =  start;                               // Точка схода каната с блока (по направлению от барабана к крюку)
+                        let mut prev_bend = start .. end;                 // Первый вход..сход считаем на крюке
+                        let mut result: Vec<Block> = blocks.into_iter().rev().filter_map(|mut block| {
+                            log::debug!("{}.eval | Block {} {:?}, rope_len_fwd: {:.3}, wrap_length: {:.3}", self.dbg, block.name, block.bind, block.rope_len_fwd, block.wrap_length);
                             match block.skipped {
                                 true => None,
                                 false => {
-                                    end = bend.start - block.rope_len_fwd;
+                                    end = prev_bend.start - block.rope_len_fwd;
                                     start = match block.bind {
-                                        BlockBind::Fixed => 0.0, // На барабане считаем весь канат от конца до точки схода,
+                                        BlockBind::Fixed => 0.0, // На барабане считаем весь канат от начала до точки схода,
                                         BlockBind::Boom(_) => end - block.wrap_length,
                                         BlockBind::BoomPair(_) => end - block.wrap_length,
                                         BlockBind::Hook => end - block.wrap_length,
                                     };
-                                    bend = start .. end;
+                                    prev_bend = start .. end;
                                     match (end - start).abs() > 0.0 {
-                                        true => Some(Block::new(
-                                            block.name.clone(),
-                                            block.lf,
-                                            block.diameter,
-                                            block.scheme,
-                                            block.bind,
-                                            block.rope_alpha_fwd,
-                                            block.rope_alpha_bck,
-                                            block.wrap_alpha,
-                                            block.wrap_length,
-                                            block.rope_len_fwd,
-                                            block.rope_len_bck,
-                                            start .. end,
-                                        )),
+                                        true => {
+                                            block.bending = start .. end;
+                                            Some(block)
+                                        }
                                         false => None,
                                     }
                                 }

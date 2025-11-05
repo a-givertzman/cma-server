@@ -76,8 +76,9 @@ class Block:
     scheme: int
     bind: BlockBind
     coord: Offset
-    wrap_l: float
+    wrap_len: float
     wrap_arc: float
+    L_sys_arc: float
     def __init__(self, lF: Offset, D: float, scheme: int, bind: BlockBind):
         """
         :lF: Растояние от **конца** стрелы до оси блока, мм
@@ -90,8 +91,9 @@ class Block:
         self.scheme = scheme
         self.bind = bind
         self.coord = Offset(0.0, 0.0)
-        self.wrap_l = 0.0
-        self.wrap_arc = 0.0
+        self.wrap_len = None
+        self.wrap_arc = None
+        self.L_sys_arc = None
     def empty():
         return Block(lF=Offset( 0.0,  0.0), D=0.000, scheme=0, bind=BlockBindFixed)
 
@@ -189,7 +191,7 @@ def rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j) -> RopeParams:
 # -----------------------------
 # 6. Углы обхвата и длины дуг каждого блока
 # -----------------------------
-def calc_block_angles_and_arcs(rope_data: list[RopeParams]):
+def calc_block_angles_and_arcs(blocks: list[Block], rope_data: list[RopeParams]):
     wrap_angles = []
     arc_lengths = []
     L_sys_arc = 0
@@ -240,12 +242,19 @@ def aproxEq(a, b, tolerance=1e-9):
 # Алгоритм расчета входа и исхода каната с блоков
 # ------------------------------------------------
 if __name__ == "__main__":
-    plot = True
+    plot = False
+    target_csv = "src/tests/unit/services/frdm_service/deprecation_test.csv"
     # f = open("C:/Users/Liaman/Desktop/rope/unit test/deprecation_test.csv")
-    f = open("src/tests/unit/services/frdm_service/deprecation_test.csv")
-    rows = csv.reader(f, delimiter=',')
+    forigin = open("src/tests/unit/services/frdm_service/deprecation_test_orig.csv", mode='r')
+    rows = csv.reader(forigin, delimiter=',')
     # logging.debug(f"csv rows {rows}")
-    next(rows)
+    row = next(rows)
+    if row:
+        f = open(target_csv, mode='w')
+        frow = ",".join(map(lambda x: f'{x}', row))
+        f.write(f'{frow}\n')
+        f.close()
+
     tblock: list[Block] = [Block.empty() for _ in range(7)]
     trope: list[RopeParams] = [Block.empty() for _ in range(7)]
     for row in rows:
@@ -268,17 +277,17 @@ if __name__ == "__main__":
         tblock[7 -1].coord.x = float(row[7])
         tblock[7 -1].coord.y = float(row[8])
 
-        tblock[1 -1].wrap_l = float(row[23])
+        tblock[1 -1].wrap_len = float(row[23])
         tblock[1 -1].wrap_arc = float(row[65])
-        tblock[2 -1].wrap_l = float(row[24])
+        tblock[2 -1].wrap_len = float(row[24])
         tblock[2 -1].wrap_arc = float(row[66])
-        tblock[3 -1].wrap_l = float(row[25])
+        tblock[3 -1].wrap_len = float(row[25])
         tblock[3 -1].wrap_arc = float(row[67])
-        tblock[4 -1].wrap_l = float(row[26])
+        tblock[4 -1].wrap_len = float(row[26])
         tblock[4 -1].wrap_arc = float(row[68])
-        tblock[5 -1].wrap_l = float(row[27])
+        tblock[5 -1].wrap_len = float(row[27])
         tblock[5 -1].wrap_arc = float(row[69])
-        tblock[6 -1].wrap_l = float(row[28])
+        tblock[6 -1].wrap_len = float(row[28])
         tblock[6 -1].wrap_arc = float(row[70])
 
         trope[1 -1].l_rope = float(row[29])
@@ -484,14 +493,15 @@ if __name__ == "__main__":
         # -----------------------------
         # 7. Общая длина каната, сумма длин прямолинейных участков и сумма длин дуг
         # -----------------------------
-        def calc_rope_sums(rope_data: list[RopeParams], Lfact):
+        def calc_rope_sums(blocks: list[Block], rope_data: list[RopeParams], Lfact):
             l_section_summ = sum(r.l_rope for r in rope_data)
-            block_results = calc_block_angles_and_arcs(rope_data)
+            block_results = calc_block_angles_and_arcs(blocks, rope_data)
             return {
                 "l_section_summ": l_section_summ,
                 "block_results": block_results
             }
         rope_results = calc_rope_sums(
+            blocks,
             rope_data,
             Lfact=rope_calc_params["Lfact"]
         )
@@ -557,7 +567,7 @@ if __name__ == "__main__":
             """
     
             # Суммы прямых и дуг 
-            block_results = calc_block_angles_and_arcs(rope_data)
+            block_results = calc_block_angles_and_arcs(blocks, rope_data)
 
             l_section_summ = sum(r.l_rope for r in rope_data)
             L_sys_arc = block_results["L_sys_arc"]
@@ -621,14 +631,14 @@ if __name__ == "__main__":
     
         #############################################################
         # Расчет дуг и канатов
-        block_results = calc_block_angles_and_arcs(rope_data)
+        block_results = calc_block_angles_and_arcs(blocks, rope_data)
 
         # Тест углов и дуг обхвата
         logging.debug(f"block_results: {block_results}")
         for i in range(0, len(blocks) - 2):
             wrap_l = block_results["arc_lengths"][i]
             wrap_arc = block_results["wrap_angles"][i]
-            assert aproxEq(wrap_l, tblock[i].wrap_l, 0.1), f"step {step}  block[{i}].wrap_l = {wrap_l}, target = {tblock[i].wrap_l}"
+            assert aproxEq(wrap_l, tblock[i].wrap_len, 0.1), f"step {step}  block[{i}].wrap_l = {wrap_l}, target = {tblock[i].wrap_len}"
             assert aproxEq(wrap_arc, tblock[i].wrap_arc, 0.1), f"step {step}  block[{i}].wrap_arc = {wrap_arc}, target = {tblock[i].wrap_arc}"
 
         # Строим опорные точки
@@ -638,7 +648,26 @@ if __name__ == "__main__":
         # Cчитаем количество каната которое надо вытравить 
         need_payout, new_L_winch, x, rope_data[-1].l_rope = ensure_min_hook_length(booms, blocks, rope_calc_params)
         
-                      
+        # Запись опорных точек в CSV
+        for _ in range(71, 83):
+            row.append(0.0) 
+        row[71] = support_points[0] * 1000.0     # f01
+        row[72] = support_points[1] * 1000.0     # f02
+        row[73] = support_points[2] * 1000.0     # f03
+        row[74] = support_points[3] * 1000.0     # f04
+        row[75] = support_points[4] * 1000.0     # f05
+        row[76] = support_points[5] * 1000.0     # f06
+        row[77] = support_points[6] * 1000.0     # f07
+        row[78] = support_points[7] * 1000.0     # f08
+        row[79] = support_points[8] * 1000.0     # f09
+        row[80] = support_points[9] * 1000.0     # f10
+        row[81] = support_points[10] * 1000.0 if len(support_points) > 10 else 0.0     # f11
+        row[82] = support_points[11] * 1000.0 if len(support_points) > 11 else 0.0     # f12
+
+        f = open(target_csv, mode='a')
+        frow = ",".join(map(lambda x: f'{x}', row))
+        f.write(f'{frow}\n')
+
         # ---------------------------
         # Логи
         # ---------------------------
