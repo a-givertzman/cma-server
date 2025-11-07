@@ -95,12 +95,15 @@ impl Inputs {
     #[allow(unused)]
     pub(crate) fn insert(&self, key: impl Into<String>, val: f64) {
         let key = key.into();
-        self.inputs.insert(key.clone(), Some(val));
         if key == self.conf.rope_deprecation.crane.rope.pos {
-            let pos = (val * 1000.0) as usize;
-            log::warn!("{}.add | Rope position '{}': {:?}", self.dbg, key, pos);
+            let pos = val * 1000.0;
+            log::warn!("{}.insert | Rope position '{}' mm: {:?}", self.dbg, key, pos);
+            self.inputs.insert(key.clone(), Some(pos));
+            let pos = pos.round() as usize;
             self.rope_pos.store(Some(pos));
             self.cam_segment_ix.store(self.rope.segment_index(pos));
+        } else {
+            self.inputs.insert(key.clone(), Some(val));
         }
     }
     ///
@@ -122,7 +125,7 @@ impl Inputs {
         match self.inputs.get(key) {
             Some(input) => *input.value(),
             None => {
-                log::warn!("{}.add | Unexpected Event '{}' requested", self.dbg, key);
+                log::warn!("{}.get | Unexpected Event '{}' requested", self.dbg, key);
                 None
             }
         }
@@ -134,8 +137,8 @@ impl Inputs {
     /// 
     /// Rope position increments as it's unwound from the winch
     pub fn rope_pos(&self) -> Option<f64> {
-        match self.rope_pos.load() {
-            Some(val) => Some(val as f64),
+        match self.inputs.get(&self.conf.rope_deprecation.crane.rope.pos) {
+            Some(entry) => *entry.value(),
             None => None,
         }
     }
@@ -206,27 +209,27 @@ impl Service for Inputs where {
                         let name = event.name();
                         match inputs.get_mut(&name) {
                             Some(mut input) => {
-                                log::debug!("{dbg}.add | Event '{}', value: {:?}", name, event.value());
+                                log::debug!("{dbg}.run | Event '{}', value: {:?}", name, event.value());
                                 if name == conf.rope_deprecation.crane.rope.pos {
                                     let pos = (event.to_int().as_int().value * 1000) as usize;
                                     rope_pos.store(Some(pos));
                                     cam_segment_ix.store(rope.segment_index(pos));
                                 }
                                 match &event {
-                                    Point::Bool(_) => log::warn!("{dbg}.add | Event '{}' - expected numeric type, but has 'Bool'", name),
+                                    Point::Bool(_) => log::warn!("{dbg}.run | Event '{}' - expected numeric type, but has 'Bool'", name),
                                     Point::Int(point) => _ = input.replace(point.value as f64),
                                     Point::Real(point) => _ = input.replace(point.value as f64),
                                     Point::Double(point) => _ = input.replace(point.value),
-                                    Point::String(_) => log::warn!("{dbg}.add | Event '{}' - expected numeric type, but has 'String'", name),
-                                    Point::Bytes(_) => log::warn!("{dbg}.add | Event '{}' - expected numeric type, but has 'Bytes'", name),
+                                    Point::String(_) => log::warn!("{dbg}.run | Event '{}' - expected numeric type, but has 'String'", name),
+                                    Point::Bytes(_) => log::warn!("{dbg}.run | Event '{}' - expected numeric type, but has 'Bytes'", name),
                                 }
                                 for send in listeners.iter() {
                                     if let Err(err) = send.value().send(event.clone()) {
-                                        log::warn!("{dbg}.add | Send error {:?}", err);
+                                        log::warn!("{dbg}.run | Send error {:?}", err);
                                     }
                                 }
                             }
-                            None => log::warn!("{dbg}.add | Unexpected Event '{}'", name),
+                            None => log::warn!("{dbg}.run | Unexpected Event '{}'", name),
                         }
                         // Self::add_(dbg, &inputs, &listeners, &event);
                     }

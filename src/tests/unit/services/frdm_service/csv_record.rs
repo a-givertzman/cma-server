@@ -127,4 +127,5 @@ pub struct CsvRecord {
     pub t22: f64,
     pub t23: f64,
     pub t24: f64,
+    pub pos: f64,   // позиция каната, мм
 }
