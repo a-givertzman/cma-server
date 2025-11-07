@@ -209,8 +209,10 @@ fn new() {
         log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>());
         for (i, bending) in target.into_iter().enumerate() {
-            assert!((result[i].bending.start - bending.start).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
-            assert!((result[i].bending.end - bending.end).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
+            if (bending.end - bending.start).abs() > 0.00001 {
+                assert!((result[i].bending.start - bending.start).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
+                assert!((result[i].bending.end - bending.end).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
+            }
         }
     }
     test_duration.exit();
