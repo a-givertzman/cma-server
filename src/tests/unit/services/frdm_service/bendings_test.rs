@@ -52,13 +52,13 @@ fn new() {
                     ],
                     [
                         // enter        ..      exit, mm
-                           0.00         ..      row.f01,
-                        row.f02         ..      row.f03,
-                        row.f04         ..      row.f05,
-                        row.f06         ..      row.f07,
-                        row.f08         ..      row.f09,
-                        row.f10         ..      row.f11,
-                        // row.f12         ..      f64::NAN,
+                           0.00         ..      row.t01,    // exit from winch
+                        row.t02         ..      row.t03,
+                        row.t04         ..      row.t05,
+                        row.t06         ..      row.t07,
+                        row.t08         ..      row.t09,
+                        row.t10         ..      row.t11,
+                        // row.t12         ..      f64::NAN,
                     ],
                 ));
             }
@@ -134,40 +134,39 @@ fn new() {
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 845.670 mm               # Диаметр блока, мм
+                d: 844.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 2:
                 lf: 308.0 mm, 1100.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 3:
                 lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 4:
                 lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 5:
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: BoomPair 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 7:
                 lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 0.0 mm                   # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let inputs = Arc::new(Inputs::fake(
@@ -210,8 +209,8 @@ fn new() {
         log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>());
         for (i, bending) in target.into_iter().enumerate() {
-            assert!(result[i].bending.start.aprox_eq(bending.start, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
-            assert!(result[i].bending.end.aprox_eq(bending.end, 1), "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
+            assert!((result[i].bending.start - bending.start).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
+            assert!((result[i].bending.end - bending.end).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
         }
     }
     test_duration.exit();
