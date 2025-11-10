@@ -5,7 +5,7 @@ use crate::services::frdm_service::{Block, BlockBind, RopeSections};
 ///
 /// 7. Углы обхвата и длины дуг каждого блока
 pub struct BlockArcs {
-    loose_rope_sections: RopeSections,
+    rope_sections: RopeSections,
     #[allow(unused)]
     dbg: Dbg,
 }
@@ -14,16 +14,16 @@ pub struct BlockArcs {
 impl BlockArcs {
     ///
     /// Returns [BlockArcs] new instance
-    pub fn new(parent: impl Into<String>, loose_rope_sections: RopeSections) -> Self {
+    pub fn new(parent: impl Into<String>, rope_sections: RopeSections) -> Self {
         Self {
-            loose_rope_sections,
+            rope_sections,
             dbg: Dbg::new(parent, "BlockArcs"),
         }
     }
     ///
     /// Evaluates Block arck's
     pub fn eval(&mut self) -> Option<Vec<Block>> {
-        match self.loose_rope_sections.eval() {
+        match self.rope_sections.eval() {
             Some(blocks) => {
                 // let mut l_sys_arc = 0.0;
                 // let mut prev_bind = BlockBind::Fixed;
