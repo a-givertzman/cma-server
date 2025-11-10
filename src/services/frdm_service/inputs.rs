@@ -144,6 +144,7 @@ impl Inputs {
     }
     ///
     /// Returns cerrent rope position (mm) under the camera
+    #[allow(unused)]
     pub fn pos_at_cam(&self) -> Option<f64> {
         self.rope_pos.load().map(|pos| self.rope.pos_at_cam(pos) as f64)
     }

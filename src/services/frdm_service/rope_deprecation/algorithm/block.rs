@@ -141,7 +141,7 @@ pub struct Block {
     pub name: String,
     /// Block position relative to boom G (end of boom)
     pub lf: Offset<f64>,
-    /// Block diameter
+    /// Block diameter, mm
     pub diameter: f64,
     /// Схема схода каната с блоком к следующему
     pub scheme: BlockScheme,

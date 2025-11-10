@@ -4,13 +4,29 @@ use sal_sync::collections::FxIndexMap;
 use crate::services::frdm_service::{Bendings, CraneConf, Inputs};
 
 ///
-/// Evaluation for the crane rope Deprecation
+/// ## Evaluation for the crane rope Deprecation
+/// 
+/// ### Use [Inputs] to pass a new Event contains a value for the calculation
+/// - Expected boom len / angle, rope pos / load events, for example:
+///     - [Load.MainBoomAngle], current angle of the boom (relative axis), degrees
+///     - [Load.RotaryBoomLen], length of the rotary boom, meter
+///     - [Winch.EncoderBR2], current rope position, meter
+///     - [Winch.Load], current rope load, tonn
+/// - Event mast have proper name, defined in the configured inputs, else it will be ignored
+/// - Event mast have value in proper units:
+///     - angle: degrees
+///     - distances: millimeters
+///     - weight: tonn
+/// - Event can have type (else it will be ignores):
+///     - `Int`
+///     - `Real`
+///     - `Double`
 pub struct Deprecation<'a> {
     inputs: Arc<Inputs>,
     conf: CraneConf,
     segment: f64,
     ///                Block     Slices
-    slices: FxIndexMap<usize, Vec<usize>>,
+    blocks: FxIndexMap<usize, Vec<usize>>,
     bendings: Bendings,
     results: Box<dyn Fn(&usize, f64) + 'a>,
     dbg: Dbg,
@@ -29,53 +45,12 @@ impl<'a> Deprecation<'a> {
             inputs,
             conf: conf.clone(),
             segment: conf.rope.segment.as_mm(),
-            slices: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
+            blocks: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
             bendings,
             results: Box::new(results),
             dbg,
         }
     }
-    // ///
-    // /// ### Use this method to pass a new Event contains a value for the calculation
-    // /// - Expected boom len / angle, rope pos / load events, for example:
-    // ///     - [Load.MainBoomAngle], current angle of the boom (relative axis), degrees
-    // ///     - [Load.RotaryBoomLen], length of the rotary boom, meter
-    // ///     - [Winch.EncoderBR2], current rope position, meter
-    // ///     - [Winch.Load], current rope load, tonn
-    // /// - Event mast have proper name, defined in the configured inputs, else it will be ignored
-    // /// - Event mast have value in proper units:
-    // ///     - angle: degrees
-    // ///     - distances: millimeters
-    // ///     - weight: tonn
-    // /// - Event can have type (else it will be ignores):
-    // ///     - `Int`
-    // ///     - `Real`
-    // ///     - `Double`
-    // fn add(&mut self, event: &Point) {
-    //     match self.inputs.get_mut(&event.name()) {
-    //         Some(input) => {
-    //             match event {
-    //                 Point::Bool(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bool'", self.dbg, event.name()),
-    //                 Point::Int(point) => *input = point.value as f64,
-    //                 Point::Real(point) => *input = point.value as f64,
-    //                 Point::Double(point) => *input = point.value,
-    //                 Point::String(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'String'", self.dbg, event.name()),
-    //                 Point::Bytes(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bytes'", self.dbg, event.name()),
-    //             }
-    //             log::debug!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), event.value());
-    //         }
-    //         None => {
-    //             match self.subscriptions.contains(&event.name()) {
-    //                 true => {
-    //                     let val = event.to_double().as_double().value;
-    //                     self.inputs.insert(event.name(), val);
-    //                     log::warn!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), val);
-    //                 }
-    //                 false => log::warn!("{}.add | Unexpected Point '{}'", self.dbg, event.name()),
-    //             }
-    //         }
-    //     }
-    // }
     ///
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self) -> Option<()> {
@@ -103,9 +78,9 @@ impl<'a> Deprecation<'a> {
                     (Some(_), Some(load)) => {
                         for (block_ix, block) in blocks.iter().enumerate() {
                             let deprecation = load / (block.diameter * 0.001);
-                            let mut current = self.slices(&block.bending);
+                            let current = self.slices(&block.bending);
                             // Exit: the Slices that are in self.slices but not in current
-                            for slice in &self.slices[block_ix] {
+                            for slice in &self.blocks[block_ix] {
                                 // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
                                 if let Err(_) = current.binary_search(slice) {
                                     (self.results)(&slice, deprecation);
@@ -113,13 +88,12 @@ impl<'a> Deprecation<'a> {
                             }
                             // Enter: the Slices that are in current but not in self.slices
                             for slice in &current {
-                                if let Err(_) = self.slices[block_ix].binary_search(slice) {
+                                if let Err(_) = self.blocks[block_ix].binary_search(slice) {
                                 // log::debug!("{dbg} | Slice[{}] -> Enter ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
                                     (self.results)(&slice, deprecation);
                                 }
                             }
-                            current.sort();
-                            self.slices[block_ix] = current;
+                            self.blocks[block_ix] = current;
                             // log::debug!("{} | Slices: {:?}", self.dbg, self.slices);
                         }
                         Some(())
@@ -130,7 +104,7 @@ impl<'a> Deprecation<'a> {
         }
     }
     ///
-    /// Returns slices (indexes) intersects with the bend range
+    /// Returns slices (indexes) sorted ASC, intersects with the bend range
     fn slices(&self, bend: &Range<f64>) -> Vec<usize> {
         // Количество Слайсов которые приходятся на начало Бенда
         // log::debug!("{}.slices | rope_len: {}", self.dbg, self.rope_len);
