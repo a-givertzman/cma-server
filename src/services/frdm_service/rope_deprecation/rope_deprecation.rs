@@ -109,7 +109,7 @@ impl Service for RopeDeprecation where {
                             dbg,
                             Blocks::new(
                                 dbg,
-                                1200.0,        // TODO: replace with config or calculated value
+                                conf.crane.rope.aux_length,
                                 &conf.crane.blocks,
                                 Booms::new(dbg, &conf.crane.booms, inputs),
                             ),

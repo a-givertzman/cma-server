@@ -70,6 +70,13 @@ fn new() {
     //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3087.138385150391, 21096.13099450917)
     //  Стрела 2: D=(3087.138385150391, 21096.13099450917), G=(10489.774280011621, 24086.990036341813)
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
+        rope:
+            width: 35 mm            # Diameter of the rome
+            length: 3000 m          # Total working length of the rope
+            aux-length: 1.200 m     # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
+            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+            pos: point real 'Winch.EncoderBR2'      # meters, current rope position
+            load: point real 'Winch.Load'          # tonn, current rope load
         booms:
             - Main-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -121,13 +128,6 @@ fn new() {
                 d: 0.0 mm                   # Диаметры блоков, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-        rope:
-            width: 35 mm            # Diameter of the rome
-            length: 3000 m          # Total working length of the rope
-            winch-length: 2985 m    # Rope length on the winch drum
-            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-            pos: point real 'Winch.EncoderBR2'      # meters, current rope position
-            load: point real 'Winch.Load'          # tonn, current rope load
     ").unwrap());
     let conf = CraneConf::new(&dbg, conf);
     let inputs = Arc::new(Inputs::fake(

@@ -136,19 +136,16 @@ fn run() {
                     table: public.frdm_deprecation
                     subscribe: /{dbg}/MultiQueue    # Service name, to subscribe for rope positin and crane angles event's
                     crane:
-                        bendings:
-                        # Block Diameter   inter    exit
-                        - D300mm           0.500 .. 0.600 m
-                        - D300mm           0.700 .. 0.800 m
                         boom:
                             main-len: 5.3 m                                         # length of the main boom
                             main-angle: point real 'Load.MainBoomAngle'      # degrees, current angle of the main boom to vertical axis
                             rotary-len: 2.1 m                                       # length of the rotary boom
                             rotary-angle: point real 'Load.RotaryBoomAngle'  # degrees, current angle of the rotary boom (jib) to boom axis
                         rope:
-                            width: 35 mm        # Diameter of the rome
-                            length: 10 m      # Total working length of the rope
-                            segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+                            width: 35 mm            # Diameter of the rome
+                            length: 10 m            # Total working length of the rope
+                            aux-length: 1.200 m     # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
+                            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
                             pos: point real 'Winch.RopePos'      # meters, current rope position
                             load: point real 'Winch.Load'        # tonn, current rope load
 

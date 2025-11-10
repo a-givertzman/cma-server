@@ -205,7 +205,7 @@ fn eval() {
                     &dbg,
                     Blocks::new(
                         &dbg,
-                        1200.0,        // TODO: replace with config or calculated value
+                        conf.rope.aux_length,
                         &conf.blocks,
                         Booms::new(&dbg, &conf.booms, inputs.clone()),
                     ),

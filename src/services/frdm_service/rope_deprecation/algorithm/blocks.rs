@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use sal_core::dbg::Dbg;
+use sal_sync::services::conf::ConfDistance;
 use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBind, BlockConf, Boom, Booms, Offset};
 
 ///
@@ -10,7 +11,7 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBin
 /// - Next - are regular block from `Winch` towards `Hook`
 pub struct Blocks {
     items: Vec<Block>,
-    hook_l: f64,
+    aux_length: f64,
     booms: Booms,
     #[allow(unused)]
     dbg: Dbg,
@@ -20,9 +21,10 @@ pub struct Blocks {
 impl Blocks {
     ///
     /// Returns [Boom] new instance
-    pub fn new(parent: impl Into<String>, hook_l: f64, conf: &Vec<(String, BlockConf)>, booms: Booms) -> Self {
+    /// - `hook_l` - Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
+    pub fn new(parent: impl Into<String>, aux_length: ConfDistance, conf: &Vec<(String, BlockConf)>, booms: Booms) -> Self {
         Self {
-            hook_l,
+            aux_length: aux_length.as_mm(),
             items: conf.iter().map(|(key, conf)| Block::new(
                 key,
                 Offset::new(conf.lf.x.as_mm(), conf.lf.y.as_mm()),
@@ -119,7 +121,7 @@ impl Blocks {
                         true => prev.pos.x - 0.5 * prev.diameter,
                         false => prev.pos.x + 0.5 * prev.diameter,
                     },
-                    prev.pos.y - self.hook_l,
+                    prev.pos.y - self.aux_length,
                 )
             }
         }

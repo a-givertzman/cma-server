@@ -35,10 +35,13 @@ fn new() {
     let test_data = [
         (01,
             serde_yaml::from_str(r"
-                bendings:           # Rope bloks with diameter, inter and exit
-                    # Block Diameter   inter   exit
-                    - D200mm           5.0  .. 5.15 m
-                    - D300mm           7.23 .. 7.30 mm
+                rope:
+                    width: 35 mm          # Diameter of the rome
+                    length: 3000 m        # Total working length of the rope
+                    aux-length: 1.200 m
+                    segment: 100 mm       # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+                    pos: point real 'Winch.EncoderBR2'      # meters, current rope position
+                    load: point real 'Winch.Load'          # tonn, current rope load
                 boom:
                     main-len: 5.3 m                                        # length of the main boom
                     main-angle: point real 'Load.MainBoomAngle'        # degrees, current angle of the main boom to vertical axis
@@ -95,14 +98,6 @@ fn new() {
                         d: 0.0 mm                   # Диаметры блоков, мм
                         scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                         bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-
-                rope:
-                    width: 35 mm          # Diameter of the rome
-                    length: 3000 m        # Total working length of the rope
-                    winch-length: 2985 m  # Rope length on the winch drum
-                    segment: 100 mm       # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-                    pos: point real 'Winch.EncoderBR2'      # meters, current rope position
-                    load: point real 'Winch.Load'          # tonn, current rope load
             ").unwrap(),
             CraneConf {
                 booms: vec![
@@ -170,6 +165,7 @@ fn new() {
                 rope: RopeConf {
                     width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                     length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
+                    aux_length: ConfDistance::new(1.2, ConfDistanceUnit::Meter),
                     // winch_len: ConfDistance::new(2985.0, ConfDistanceUnit::Meter),
                     segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
                     pos: "Winch.EncoderBR2".to_owned(),

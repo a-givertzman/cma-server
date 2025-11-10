@@ -106,7 +106,7 @@ fn new() {
         rope:
             width: 35 mm            # Diameter of the rome
             length: 3000 m          # Total working length of the rope
-            winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
+            aux-length: 1.200 m     # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
             segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
             load: point real 'Winch.Load'       # tonn, current rope load 
@@ -175,7 +175,7 @@ fn new() {
             &dbg,
             Blocks::new(
                 &dbg,
-                1200.0,        // TODO: replace with config or calculated value
+                conf.rope.aux_length,
                 &conf.blocks,
                 Booms::new(&dbg, &conf.booms, inputs.clone()),
             ),

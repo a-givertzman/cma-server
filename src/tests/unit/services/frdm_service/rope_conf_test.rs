@@ -38,6 +38,7 @@ fn new() {
             serde_yaml::from_str(r"
                 width: 35 mm
                 length: 3000m
+                aux-length: 1.200 m
                 # winch-length: 2985m
                 segment: 100 mm
                 pos: point real 'Winch.EncoderBR2'      # in meters
@@ -46,6 +47,7 @@ fn new() {
             RopeConf {
                 width: ConfDistance::new(35.0, ConfDistanceUnit::Millimeter),
                 length: ConfDistance::new(3000.0, ConfDistanceUnit::Meter),
+                aux_length: ConfDistance::new(1.2, ConfDistanceUnit::Meter),
                 // winch_len: ConfDistance::new(2985.0, ConfDistanceUnit::Meter),
                 segment: ConfDistance::new(100.0, ConfDistanceUnit::Millimeter),
                 pos: "Winch.EncoderBR2".to_owned(),
