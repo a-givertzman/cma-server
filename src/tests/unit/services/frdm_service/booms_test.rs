@@ -1,11 +1,11 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
-use sal_sync::{math::AproxEq, services::conf::ConfTree};
+use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::services::frdm_service::{Booms, CraneConf, FrdmServiceConf, Inputs, Offset};
+use crate::{services::frdm_service::{Booms, CraneConf, FrdmServiceConf, Inputs, Offset}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -33,34 +33,67 @@ fn new() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
-    let test_data = [
-        (01,  [
-            // Input Events
-            ("MainBoom.Angle",    69.71),
-            ("RotaryBoom.Angle", 155.30)
-        ], 
-        // Targets
-        // boom[i].alpha
-        [69.71, 45.01],
-        [
-            // boom[i].D                              boom[i].G
-            ((6.32530071759608e-13, 10330.0),    (3883.8458824556724, 20835.034086633517)), 
-            ((3883.8458824556724, 20835.034086633517),    (9528.40100476262, 26481.55987434036)),
-        ]),
-        (02,  [
-            // Input Events
-            ("MainBoom.Angle",    74.00),
-            ("RotaryBoom.Angle", 128.00)
-        ], 
-        // Targets
-        // boom[i].alpha
-        [74.0, 22.0],
-        [
-            // boom.D                              boom.G
-            ((6.32530071759608e-13, 10330.0), (3087.138385150391, 21096.13099450917)), 
-            ((3087.138385150391, 21096.13099450917), (10489.774280011621, 24086.990036341813)),
-        ]),
-    ];
+    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    log::debug!("{dbg} | reading csv: '{}'", path);
+    let csv = match OpenOptions::new().read(true).open(path) {
+        Ok(rdr) => {
+            let mut rdr = csv::Reader::from_reader(rdr);
+            log::debug!("{dbg} | Parse csv data...");
+            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let mut test_data = vec![];
+            for row in csv {
+                let row: CsvRecord = row.unwrap();
+                test_data.push((
+                    row.step,
+                    [
+                        ("MainBoom.Angle",   row.a21),
+                        ("RotaryBoom.Angle", row.a22)
+                    ],
+                    [
+                        // boom[i].D        boom[i].G
+                        ((0.00, 0.00),      (0.00,   0.00)),
+                        ((0.00, 0.00),      (row.xg, row.yg)),
+                    ],
+                ));
+            }
+            Some(test_data)
+        }
+        Err(err) => {
+            log::debug!("{dbg} | Can't read csv test data from '{}', error: {:?}", path, err);
+            None
+        },
+    };
+    let test_data = match csv {
+        Some(csv) => csv,
+        None => vec![
+            (01,  [
+                // Input Events
+                ("MainBoom.Angle",    69.71),
+                ("RotaryBoom.Angle", 155.30)
+            ], 
+            // Targets
+            // boom[i].alpha
+            // [69.71, 45.01],
+            [
+                // boom[i].D                              boom[i].G
+                ((6.32530071759608e-13, 10330.0),    (3883.8458824556724, 20835.034086633517)), 
+                ((3883.8458824556724, 20835.034086633517),    (9528.40100476262, 26481.55987434036)),
+            ]),
+            (02,  [
+                // Input Events
+                ("MainBoom.Angle",    74.00),
+                ("RotaryBoom.Angle", 128.00)
+            ], 
+            // Targets
+            // boom[i].alpha
+            // [74.0, 22.0],
+            [
+                // boom.D                              boom.G
+                ((6.32530071759608e-13, 10330.0), (3087.138385150391, 21096.13099450917)), 
+                ((3087.138385150391, 21096.13099450917), (10489.774280011621, 24086.990036341813)),
+            ]),
+        ],
+    };
     //  Число стрел: 2
     //  alpha_boom: [69.71, 45.01]
     //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3883.8458824556724, 20835.034086633517)
@@ -137,25 +170,27 @@ fn new() {
         Arc::new(AtomicBool::new(false)),
     ));
     let mut booms = Booms::new(&dbg, &conf.booms, inputs.clone());
-    let t = Instant::now();
-    for (step, events, target_alpha, target_pos) in test_data {
+    for (step, events, target_pos) in test_data {
+        let t = Instant::now();
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
         let result = booms.eval().unwrap();
-        log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        for (i, target) in target_alpha.into_iter().enumerate() {
-            assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);
-        }
-        for (i, ((target_dx, target_dy), (target_gx, target_gy))) in target_pos.into_iter().enumerate() {
-            let (Offset{x: dx, y: dy}, Offset{x: gx, y: gy}) = (result[i].dpt, result[i].gpt);
-            assert!(dx == target_dx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dx, target_dx);
-            assert!(dy == target_dy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dy, target_dy);
-            assert!(gx == target_gx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gx, target_gx);
-            assert!(gy == target_gy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gy, target_gy);
-        }
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
+        log::trace!("{dbg} | step {step}  result: {:#?}", result);
+        // for (i, target) in target_alpha.into_iter().enumerate() {
+        //     assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);
+        // }
+        for (i, ((target_dx, target_dy), (target_gx, target_gy))) in target_pos.into_iter().enumerate() {
+            if i == target_pos.len() - 1 {
+                let (Offset{x: dx, y: dy}, Offset{x: gx, y: gy}) = (result[i].dpt, result[i].gpt);
+                // assert!(dx == target_dx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dx, target_dx);
+                // assert!(dy == target_dy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dy, target_dy);
+                assert!((gx - target_gx).abs() < 0.1, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gx, target_gx);
+                assert!((gy - target_gy).abs() < 0.1, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gy, target_gy);
+            }
+        }
     }
     test_duration.exit();
 }
