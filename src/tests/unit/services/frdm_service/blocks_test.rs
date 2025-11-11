@@ -179,21 +179,32 @@ fn new() {
         &conf.blocks,
         Booms::new(&dbg, &conf.booms, inputs.clone()),
     );
+    let mut log = vec![];
     for (step, events, target) in test_data {
         let t = Instant::now();
         for (key, val) in events {
-            log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
+            log::trace!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
         let result = blocks.eval().unwrap();
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
+        // log::debug!("{dbg} | step {step}  result block pos: \n\t{:?}", result.iter().map(|b| format!("{:.3}, {:.3}", b.pos.x, b.pos.y)).collect::<Vec<_>>());
+        // log::debug!("{dbg} | step {step}  target block pos: \n\t{:?}", target.iter().map(|(x, y)| format!("{:.3}, {:.3}", x, y)).collect::<Vec<_>>());
+        log.push(format!("step {step}  result block pos: {:?}", result.iter().map(|b| format!("{:.3}, {:.3}", b.pos.x, b.pos.y)).collect::<Vec<_>>()));
+        log.push(format!("step {step}  target block pos: {:?}", target.iter().map(|(x, y)| format!("{:.3}, {:.3}", x, y)).collect::<Vec<_>>()));
+        if target.iter().zip(&result).any(|((x, y), b)| (x - b.pos.x).abs() > 1.0 || (y - b.pos.y).abs() > 1.0) {
+            log.push(format!("step {step}  target delta    : {:?}", target.iter().zip(&result).map(|((x, y), b)| format!("{:.3}, {:.3}", x - b.pos.x, y - b.pos.y)).collect::<Vec<_>>()));
+        }
         for (i, (target_x, target_y)) in target.into_iter().enumerate() {
             assert!((result[i].pos.x - target_x).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
             if i < result.len() - 1 {
                 assert!((result[i].pos.y - target_y).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
             }
         }
+    }
+    for row in log {
+        println!("{row}");
     }
     test_duration.exit();
 }

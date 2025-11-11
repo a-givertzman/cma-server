@@ -51,9 +51,9 @@ impl Booms {
     pub fn eval(&mut self,) -> Option<Vec<Boom>> {
         match self.angles() {
             Some(booms) => {
-                for (i, boom) in booms.iter().enumerate() {
-                    log::debug!("{}.eval | Boom[{i}] '{}':  alpha: {:.4}", self.dbg, boom.name, boom.alpha);
-                }
+                // for (i, boom) in booms.iter().enumerate() {
+                //     log::debug!("{}.eval | Boom[{i}] '{}':  alpha: {:.4}", self.dbg, boom.name, boom.alpha);
+                // }
                 self.boom_d_g_points(booms)
             }
             None => None,

@@ -233,13 +233,13 @@ fn eval() {
         inputs.insert("RotaryBoom.Angle", row.a22);
         let time = Instant::now();
         deprecation.eval();
+        log::debug!("{dbg} | step {step} elapsed: {:?}", time.elapsed());
         let r = result.borrow();
         let r: Vec<&f64> = r
             .iter()
             .filter(|v| **v > 0.0)
             .collect();
         log::debug!("{dbg} | step {step} result: {:?}", r);
-        log::debug!("{dbg} | step {step} elapsed: {:?}", time.elapsed());
     }
 
     // for (step, event_name, event_value, target_i, target_count_i) in test_data {

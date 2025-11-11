@@ -42,11 +42,12 @@ impl Bendings {
             Some(blocks) => {
                 match inputs.rope_pos() {
                     Some(rope_pos) => {
+                        // log::debug!("{}.eval | rope pos: {:.3} mm", self.dbg, rope_pos);
                         let mut start = self.rope_len - rope_pos;           // Точка входа каната на блок (по направлению от барабана к крюку)
                         let mut end =  start;                               // Точка схода каната с блока (по направлению от барабана к крюку)
                         let mut prev_bend = start .. end;                 // Первый вход..сход считаем на крюке
                         let mut result: Vec<Block> = blocks.into_iter().rev().filter_map(|mut block| {
-                            log::debug!("{}.eval | Block {} {:?}, rope_len_fwd: {:.3}, wrap_length: {:.3}", self.dbg, block.name, block.bind, block.rope_len_fwd, block.wrap_length);
+                            // log::debug!("{}.eval | Block {} {:?}, rope_len_fwd: {:.3}, wrap_length: {:.3}", self.dbg, block.name, block.bind, block.rope_len_fwd, block.wrap_length);
                             match block.skipped {
                                 true => None,
                                 false => {
@@ -69,7 +70,7 @@ impl Bendings {
                             }
                         }).collect();
                         result.reverse();
-                        log::debug!("{}.eval | Elapsed: {:?}", self.dbg, t.elapsed());
+                        // log::debug!("{}.eval | Elapsed: {:?}", self.dbg, t.elapsed());
                         // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                         Some(result)
                     }

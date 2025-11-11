@@ -173,7 +173,7 @@ fn new() {
     for (step, events, target_pos) in test_data {
         let t = Instant::now();
         for (key, val) in events {
-            log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
+            log::trace!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
         let result = booms.eval().unwrap();
