@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::entity::{
-    Cot, Name, Point, PointConf, PointConfType, PointHlr, Status
+    Cot, Name, Point, PointConf, PointHlr, PointType, Status
 };
 use crate::services::udp_client::parse_point::ParsePoint;
 ///
@@ -9,8 +9,8 @@ use crate::services::udp_client::parse_point::ParsePoint;
 #[derive(Debug)]
 pub struct UdpcParseU16 {
     pub txid: usize,
-    pub typ: PointConfType,
-    pub name: Name,
+    pub typ: PointType,
+    pub name: String,
     pub status: Status,
     dbg: Dbg,
 }
@@ -18,7 +18,7 @@ pub struct UdpcParseU16 {
 //
 impl UdpcParseU16 {
     ///
-    /// Size in the bytes in the Device address area
+    /// Size in the bytes in the single value of the Device address area
     const SIZE: usize = 2;
     ///
     /// - `size` - `Values<i16>` in the array coming from the associated channel
@@ -27,25 +27,21 @@ impl UdpcParseU16 {
         parent: impl Into<String>,
         conf: &PointConf,
     ) -> UdpcParseU16 {
-        let name = Name::new(parent, format!("UdpcParseU16({})", conf.name));
-        let dbg =  Dbg::new(name.parent(), name.me());
+        let dbg =  Dbg::new(parent, format!("UdpcParseU16({})", conf.name));
         UdpcParseU16 {
             txid,
             typ: conf.type_.clone(),
-            name,
+            name: conf.name.clone(),
             status: Status::Invalid,
             dbg,
         }
     }
     ///
     /// Returns u16 values converted from butes or `Err`
-    fn convert(
-        &mut self,
-        bytes: &[u8],
-    ) -> Result<impl Iterator<Item = u16>, Error> {
+    fn convert(&mut self, bytes: &[u8]) -> Result<impl Iterator<Item = u16>, Error> {
         log::trace!("{}.convert | bytes: {:?}", self.dbg, bytes);
         if !bytes.is_empty() {
-            let (words, remainder) = bytes.as_chunks::<2>();
+            let (words, remainder) = bytes.as_chunks::<{ Self::SIZE }>();
             log::trace!("{}.convert | words: {:?}", self.dbg, words.len());
             if remainder.len() > 0 {
                 Err(Error::new(&self.name, "convert").err(format!("Wrong input len {}, must be divisible by 2", remainder.len())))
@@ -62,33 +58,8 @@ impl UdpcParseU16 {
             Err(Error::new(&self.name, "convert").err("Input is empty"))
         }
     }
-    // ///
-    // ///
-    // fn to_point(&mut self, val: u16) -> Option<Point> {
-    //     match self.values.pop_front() {
-    //         Some(value) => {
-    //             let (status, value) = match value {
-    //                 Some(value) => {
-    //                     self.prev = value;
-    //                     (Status::Ok, value)
-    //                 }
-    //                 None => (Status::Invalid, self.prev),
-    //             };
-    //             Some(Point::Int(PointHlr::new(
-    //                 self.txid,
-    //                 &self.name,
-    //                 value as i64,
-    //                 if status > self.status {status} else {self.status},
-    //                 Cot::Inf,
-    //                 self.timestamp,
-    //             )))
-    //         }
-    //         None => None,
-    //     }
-    //     // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
-    // }
-    //
-    //
+    ///
+    /// Returns [Point]'s of type `Int` parsed from specified bytes
     fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) -> Result<Vec<Point>, Error> {
         let dbg = self.dbg.clone();
         self.status = status;
@@ -114,7 +85,7 @@ impl UdpcParseU16 {
 impl ParsePoint for UdpcParseU16 {
     //
     //
-    fn typ(&self) -> PointConfType {
+    fn typ(&self) -> PointType {
         self.typ.clone()
     }
     //
@@ -125,7 +96,7 @@ impl ParsePoint for UdpcParseU16 {
     //
     //
     fn name(&self) -> String {
-        self.name.join()
+        self.name.clone()
     }
     //
     //

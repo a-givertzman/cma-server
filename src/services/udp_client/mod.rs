@@ -94,16 +94,16 @@
 //!     ...
 //! ```
 //! 
-mod conf;
 mod input_type;
 mod parse_point;
+mod udp_client_conf;
 mod udp_client_connect;
 mod udp_client;
 mod udpc_parse_u16;
 
-pub use conf::*;
 pub(crate) use input_type::*;
 pub(crate) use parse_point::*;
+pub use udp_client_conf::*;
 pub(crate) use udp_client_connect::*;
 pub use udp_client::*;
 pub(crate) use udpc_parse_u16::*;

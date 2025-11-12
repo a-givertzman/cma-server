@@ -49,7 +49,7 @@ fn random_i16() {
     ////////////////////////////////////////////////////////
     // Messages sent per second
     let messages_per_sec = freq / (message_length as f64);
-    let test_data: Vec<i16> = (0..count).map(|_| rng.random_range(-2048..2048) as i16).collect();
+    let test_data: Vec<u16> = (0..count).map(|_| rng.random_range(0000..4096) as u16).collect();
     // let test_data: Vec<i16> = (0..count).collect();
     log::info!("{}.random_i16 | test data len: {}", dbg, test_data.len());
     let tp = ThreadPool::new(dbg, Some(8));
@@ -125,8 +125,8 @@ fn random_i16() {
     log::info!("Total elapsed: {:?}", elapsed);
     let mut test_data_clone = test_data.clone();
     for (_, point) in received.iter().enumerate() {
-        let result = point.value().as_int() as i16;
-        if let Some(index) = test_data_clone.iter().position(|value| *value == result) {
+        let result = point.value().as_int();
+        if let Some(index) = test_data_clone.iter().position(|value| *value as i64 == result) {
             test_data_clone.swap_remove(index);
         } else {
             log::warn!("missed: {:?}", result);
@@ -136,7 +136,7 @@ fn random_i16() {
     for (step, point) in received.iter().enumerate() {
         log::trace!("point: {:?} | {}", point.value(), point.name());
         let result = point.name();
-        let target = "/test/UdpClient/data/Sensor1".to_owned();
+        let target = "/test/UdpClient/Sensor1".to_owned();
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         let result = point.value().as_int();
         let target = test_data_iter.next().unwrap();

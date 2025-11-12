@@ -85,10 +85,13 @@ impl UdpClientConf {
                 Ok(keyword) => {
                     match keyword.kind() {
                         FnConfKindName::Point => {
-                            let point: ConfTree = conf.get(key).expect(&format!("{dbg}.new | '{key}' - not found or wrong configuration"));
+                            let point_conf: ConfTree = conf.get(key).expect(&format!("{dbg}.new | '{key}' - not found or wrong configuration"));
                             log::trace!("{dbg}.new | Point '{}'", keyword.data());
-                            log::trace!("{dbg}.new | Point '{}'   |   conf: {:?}", keyword.data(), point);
-                            Some(PointConf::new(&name, &point))
+                            log::trace!("{dbg}.new | Point '{}'   |   conf: {:?}", keyword.data(), point_conf);
+                            let mut point = PointConf::new(&name, &point_conf);
+                            let input: u64 = point_conf.get("input").expect(&format!("{dbg}.new | {key}: 'input' - not found or wrong configuration"));
+                            point.id = input as usize;
+                            Some(point)
                         }
                         _ => {
                             log::warn!("{dbg}.new | Device input conf (point Sensor...) expected, but found {:?}", keyword);
@@ -148,6 +151,7 @@ impl UdpClientConf {
     }
     ///
     /// Returns list of configurations of the defined points
+    #[allow(unused)]
     pub fn points(&self) -> Vec<PointConf> {
         self.points
             .iter()

@@ -24,6 +24,37 @@ enum State {
 }
 ///
 /// Reads data from Vibro-analytics microcontroller (Sub MC)
+/// 
+/// - **Message structure**
+/// 
+///     |Field name:   | FUN | ADDR | TYPE | COUNT | DATA        |
+///     |---           | --- | ---- | ---- | ----- | ----        |
+///     |Data type:    | u8  | u8   | u8   | u32   | [T; COUNT]  | 
+///     |Example value:| 22  | 0    | 16   | 512   | [u16; 512]  |
+///     
+///     - `FUN` Functional byte, 
+///         - `0x22` - Initialization message
+///         - `0x02` - Data message
+///         - `0x05` - Command message
+///         - `0x07` - Error message
+///     - `ADDR` = 0...255 - Index of the input channel (0 - first input channel)
+///     - `TYPE` - type of values in the array in `DATA` field
+///         - 8 - u8, 1 byte unsigned integer value
+///         - 9 - i8, 1 byte signed integer value
+///         - 16 - u16, 2 byte unsigned integer value
+///         - 17 - i16, 2 byte signed integer value
+///         - 32 - u32, 4 byte unsigned integer value
+///         - 33 - i32, 4 byte signed integer value
+///         - 132 - f32, 4 bytes float value
+///     - `COUNT` - length of the array in the `DATA` field, number of values of type specified in the `TYPE` field
+///     - `DATA` - array of values of type specified in the `TYPE` field
+/// 
+/// - **Error codes**
+///     `0x01` - System error
+///     `0x02` - ADC Error
+///     `0x03` - DMA Error
+///     `0x04` - Network error
+///     `...` - To be extended if necessary
 pub struct UdpClient {
     txid: usize,
     name: Name,
@@ -89,12 +120,12 @@ impl UdpClient {
         // log::debug!("{}.parse | message: {:?}", self.id, buf);
         match buf {
             // Data message received
-            &[UdpClient::DAT, addr, _type_, c1,c2,c3, c4, ..] => {
+            &[UdpClient::DAT, addr, typ, c1,c2,c3, c4, ..] => {
                 count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                // log::debug!("{}.parse | addr: {} type: {} count: {}  |  {:?}", self.id, addr, type_, count, &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)]);
-                match &buf[UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)].try_into() {
-                    Ok(data) => {
-                        let bytes: &Vec<u8> = data;
+                log::debug!("{dbg}.parse | addr: {} type: {} count: {}  |  {:?}", addr, typ, count, &buf[UdpClient::HEAD_LEN..(if buf.len() < 10 {buf.len()} else {10})]);
+                match buf.get(UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)) {
+                    Some(bytes) => {
+                        // let bytes: &Vec<u8> = bytes;
                         log::trace!("{}.parse | bytes: {:?}", dbg, bytes);
                         log::trace!("{}.parse | points: {:?}", dbg, points.iter().map(|(id, point)| format!("{}[{}]", point.name(), id)).collect::<Vec<String>>());
                         match points.get_mut(&addr) {
@@ -111,16 +142,25 @@ impl UdpClient {
                                     Err(err) => log::warn!("{}.parse | Error: {}", dbg, err),
                                 }
                             }
-                            None => todo!(),
+                            None => log::warn!("{dbg}.parse | Can't find Input with addr '{}'", addr),
                         }
                     }
-                    Err(err) => {
-                        log::error!("{}.parse | Error message length: {}, expected {}, \n\t error: {:#?}", dbg, buf.len(), UdpClient::HEAD_LEN + count, err);
+                    None => {
+                        log::error!("{dbg}.parse | Wrong message length: {}, expected {}", buf.len(), UdpClient::HEAD_LEN + count);
                     }
                 }
             }
+            &[UdpClient::ERR, err] | &[UdpClient::ERR, err, ..] => {
+                log::warn!("{dbg}.parse | Error received: {:?}", err);
+            }
+            &[UdpClient::SYN] | &[UdpClient::SYN, ..] => {
+                log::warn!("{dbg}.parse | Data message expected, but SYN received: {:?}...", &buf[..=10]);
+            }
+            &[] => {
+                log::warn!("{dbg}.parse | Empty message received");
+            }
             _ => {
-                log::warn!("{}.parse | Unknown message format: {:#?}...", dbg, &buf[..=10]);
+                log::warn!("{dbg}.parse | Unknown message format: {:?}...", &buf[..=10]);
             }
         }
     }
@@ -133,8 +173,7 @@ impl UdpClient {
         let mut buf = vec![0; mtu];
         match socket.recv_from(&mut buf) {
             Ok((_, _)) => {
-                let timestamp = Utc::now();
-                Self::parse(dbg, points, buf.as_slice(), timestamp, tx_send);
+                Self::parse(dbg, points, buf.as_slice(), Utc::now(), tx_send);
                 Ok(())
             }
             Err(err) => {

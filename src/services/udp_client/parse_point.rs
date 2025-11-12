@@ -1,12 +1,12 @@
 use chrono::{DateTime, Utc};
 use sal_core::error::Error;
-use sal_sync::services::entity::{{Point, PointConfType}, Status};
+use sal_sync::services::entity::{{Point, PointType}, Status};
 ///
 /// Returns updated points parsed from the data slice from the S7 device,
 pub trait ParsePoint: Send {
     ///
     /// Returns the type of the configured point
-    fn typ(&self) -> PointConfType;
+    fn typ(&self) -> PointType;
     ///
     /// Adding new raw data to be parsed 
     fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) -> Result<Vec<Point>, Error> ;

@@ -27,9 +27,9 @@ fn new() {
     init_once();
     init_each();
     log::debug!("");
-    let self_id = "test";
-    log::debug!("\n{}", self_id);
-    let test_duration = TestDuration::new(self_id, Duration::from_secs(1));
+    let dbg = "test";
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(1));
     test_duration.run().unwrap();
     // fn FxIndexMap() {
     //     IndexMap::with_hasher(BuildHasherDefault::)
@@ -55,13 +55,13 @@ fn new() {
                         # history: r
                 point Sensor1:                  # Device input sensor
                     type: 'Int'
-                    id: 0                    # the number of input 0..8 (0 - first input channel)
+                    input: 0                    # the number of input 0..8 (0 - first input channel)
                 point Sensor2:                  # Device input sensor
                     type: 'Int'
-                    id: 1                    # the number of input 0..8 (0 - first input channel)
+                    input: 1                    # the number of input 0..8 (0 - first input channel)
             "#),
             UdpClientConf {
-                name: Name::new(self_id, "UdpClient"),
+                name: Name::new(dbg, "UdpClient"),
                 description: "UDP-IED-01.01".to_owned(),
                 subscribe: ConfSubscribe::new(serde_yaml::from_str("Multiqueue").unwrap()),
                 send_to: LinkName::from_str("MultiQueue.in-queue").unwrap(),
@@ -76,7 +76,7 @@ fn new() {
                 diagnosis: FxIndexMap::from_iter([
                     (DiagKeywd::Status, PointConf {
                         id: 0,
-                        name: Name::new(self_id, "UdpClient/Status").join(),
+                        name: Name::new(dbg, "UdpClient/Status").join(),
                         type_: PointConfType::Int,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -86,7 +86,7 @@ fn new() {
                     }),
                     (DiagKeywd::Connection, PointConf {
                         id: 0,
-                        name: Name::new(self_id, "UdpClient/Connection").join(),
+                        name: Name::new(dbg, "UdpClient/Connection").join(),
                         type_: PointConfType::Int,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -98,7 +98,7 @@ fn new() {
                 points: Vec::from([
                     PointConf {
                         id: 0,
-                        name: Name::new(self_id, "UdpClient/data/Sensor1").join(),
+                        name: Name::new(dbg, "UdpClient/Sensor1").join(),
                         type_: PointConfType::Int,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -107,8 +107,8 @@ fn new() {
                         comment: None,
                     },
                     PointConf {
-                        id: 0,
-                        name: Name::new(self_id, "UdpClient/data/Sensor2").join(),
+                        id: 1,
+                        name: Name::new(dbg, "UdpClient/Sensor2").join(),
                         type_: PointConfType::Int,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -135,19 +135,19 @@ fn new() {
                 mtu: 4096
                 point Sensor1: 
                     type: 'Int'
-                    id: 0                    # the number of input 0..8 (0 - first input channel)
+                    input: 0                    # the number of input 0..8 (0 - first input channel)
                 point Sensor2: 
                     type: 'Int'
-                    id: 1                    # the number of input 0..8 (0 - first input channel)
+                    input: 1                    # the number of input 0..8 (0 - first input channel)
                 point Sensor3: 
                     type: 'Real'
-                    id: 2                    # the number of input 0..8 (0 - first input channel)
+                    input: 2                    # the number of input 0..8 (0 - first input channel)
                 point Sensor4: 
                     type: 'Double'
-                    id: 3                    # the number of input 0..8 (0 - first input channel)
+                    input: 3                    # the number of input 0..8 (0 - first input channel)
             "#),
             UdpClientConf {
-                name: Name::new(self_id, "UdpIed01"),
+                name: Name::new(dbg, "UdpIed01"),
                 description: "UDP-IED-01.01".to_owned(),
                 subscribe: ConfSubscribe::new(serde_yaml::from_str(r#"Multiqueue: 
                                                                             Act: []"#).unwrap()),
@@ -164,7 +164,7 @@ fn new() {
                 points: Vec::from([
                     PointConf {
                         id: 0,
-                        name: Name::new(self_id, "UdpIed01/data/Sensor1").join(),
+                        name: Name::new(dbg, "UdpIed01/Sensor1").join(),
                         type_: PointConfType::Int,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -173,8 +173,8 @@ fn new() {
                         comment: None,
                     },
                     PointConf {
-                        id: 0,
-                        name: Name::new(self_id, "UdpIed01/data/Sensor2").join(),
+                        id: 1,
+                        name: Name::new(dbg, "UdpIed01/Sensor2").join(),
                         type_: PointConfType::Int,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -183,8 +183,8 @@ fn new() {
                         comment: None,
                     },
                     PointConf {
-                        id: 0,
-                        name: Name::new(self_id, "UdpIed01/data/Sensor3").join(),
+                        id: 2,
+                        name: Name::new(dbg, "UdpIed01/Sensor3").join(),
                         type_: PointConfType::Real,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -193,8 +193,8 @@ fn new() {
                         comment: None,
                     },
                     PointConf {
-                        id: 0,
-                        name: Name::new(self_id, "UdpIed01/data/Sensor4").join(),
+                        id: 3,
+                        name: Name::new(dbg, "UdpIed01/Sensor4").join(),
                         type_: PointConfType::Double,
                         history: PointConfHistory::None,
                         alarm: None,
@@ -208,7 +208,7 @@ fn new() {
     ];
     for (step, conf, target) in test_data {
         let conf = serde_yaml::from_str(&conf).unwrap();
-        let result = UdpClientConf::from_yaml(self_id, &conf);
+        let result = UdpClientConf::from_yaml(dbg, &conf);
         log::debug!("{}  |  conf: {:#?}", step, result);
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     }
