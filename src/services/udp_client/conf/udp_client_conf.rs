@@ -81,15 +81,22 @@ impl UdpClientConf {
         let diagnosis = conf.get_diagnosis(&name);
         log::trace!("{}.new | diagnosis: {:#?}", dbg, diagnosis);
         let points = conf.keys(&[] as &[&str; 0]).iter().filter_map(|key| {
-            let keyword = FnConfKeywd::from_str(key).unwrap();
-            if keyword.kind() == FnConfKindName::Point {
-                let point: ConfTree = conf.get(key).expect(&format!("{dbg}.new | '{key}' - not found or wrong configuration"));
-                log::trace!("{dbg}.new | Point '{}'", keyword.data());
-                log::trace!("{dbg}.new | Point '{}'   |   conf: {:?}", keyword.data(), point);
-                Some(PointConf::new(&name, &point))
-            } else {
-                log::warn!("{dbg}.new | Device input conf (point Sensor...) expected, but found {:?}", keyword);
-                None
+            match FnConfKeywd::from_str(key) {
+                Ok(keyword) => {
+                    match keyword.kind() {
+                        FnConfKindName::Point => {
+                            let point: ConfTree = conf.get(key).expect(&format!("{dbg}.new | '{key}' - not found or wrong configuration"));
+                            log::trace!("{dbg}.new | Point '{}'", keyword.data());
+                            log::trace!("{dbg}.new | Point '{}'   |   conf: {:?}", keyword.data(), point);
+                            Some(PointConf::new(&name, &point))
+                        }
+                        _ => {
+                            log::warn!("{dbg}.new | Device input conf (point Sensor...) expected, but found {:?}", keyword);
+                            None
+                        }
+                    }
+                }
+                Err(_) => None,
             }
         }).collect();
         UdpClientConf {
