@@ -13,7 +13,7 @@ use sal_sync::{
     services::{entity::{Name, Object, Point},
     Service, ServiceCycle, Services}, sync::{channel::Sender, Handles}
 };
-use crate::services::udp_client::udp_client::UdpClient;
+use crate::services::udp_client::UdpClient;
 ///
 /// 
 #[derive(Clone)]

@@ -4,7 +4,7 @@ use std::{str::FromStr, sync::Once, time::Duration};
 use sal_sync::{collections::FxIndexMap, services::{conf::DiagKeywd, entity::{Name, {PointConf, PointConfHistory, PointConfType}}, LinkName, ConfSubscribe}};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-use crate::conf::udp_client_conf::{udp_client_conf::UdpClientConf, udp_client_db_conf::UdpClientDbConf};
+use crate::services::udp_client::UdpClientConf;
 ///
 ///
 static INIT: Once = Once::new();
@@ -53,14 +53,12 @@ fn new() {
                     point Connection:               # Ok(0) / Invalid(10)
                         type: 'Int'
                         # history: r
-                db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
-                    description: 'Data block of the device'
-                    point Sensor1: 
-                        type: 'Int'
-                        input: 0                    # the number of input 0..8 (0 - first input channel)
-                    point Sensor2: 
-                        type: 'Int'
-                        input: 0                    # the number of input 0..8 (0 - first input channel)
+                point Sensor1:                  # Device input sensor
+                    type: 'Int'
+                    id: 0                    # the number of input 0..8 (0 - first input channel)
+                point Sensor2:                  # Device input sensor
+                    type: 'Int'
+                    id: 1                    # the number of input 0..8 (0 - first input channel)
             "#),
             UdpClientConf {
                 name: Name::new(self_id, "UdpClient"),
@@ -97,33 +95,27 @@ fn new() {
                         comment: None,
                     }),
                 ]),
-                dbs: FxIndexMap::from_iter([
-                    ("data".to_owned(), UdpClientDbConf {
-                        name: Name::new(self_id, "UdpClient/data"),
-                        description: "Data block of the device".to_owned(),
-                        points: [
-                            PointConf {
-                                id: 0,
-                                name: Name::new(self_id, "UdpClient/data/Sensor1").join(),
-                                type_: PointConfType::Int,
-                                history: PointConfHistory::None,
-                                alarm: None,
-                                address: None,
-                                filters: None,
-                                comment: None,
-                            },
-                            PointConf {
-                                id: 0,
-                                name: Name::new(self_id, "UdpClient/data/Sensor2").join(),
-                                type_: PointConfType::Int,
-                                history: PointConfHistory::None,
-                                alarm: None,
-                                address: None,
-                                filters: None,
-                                comment: None,
-                            },
-                        ].to_vec(),
-                    }),
+                points: Vec::from([
+                    PointConf {
+                        id: 0,
+                        name: Name::new(self_id, "UdpClient/data/Sensor1").join(),
+                        type_: PointConfType::Int,
+                        history: PointConfHistory::None,
+                        alarm: None,
+                        address: None,
+                        filters: None,
+                        comment: None,
+                    },
+                    PointConf {
+                        id: 0,
+                        name: Name::new(self_id, "UdpClient/data/Sensor2").join(),
+                        type_: PointConfType::Int,
+                        history: PointConfHistory::None,
+                        alarm: None,
+                        address: None,
+                        filters: None,
+                        comment: None,
+                    },
                 ]),
             },
         ),
@@ -141,22 +133,18 @@ fn new() {
                 local-address: 192.168.100.100:15180
                 remote-address: 192.168.100.241:15180
                 mtu: 4096
-                db data:                            # multiple DB blocks are allowed, must have unique namewithing parent device
-                    description: 'Data block of the device'
-                    point Sensor1: 
-                        type: 'Int'
-                        input: 0                    # the number of input 0..8 (0 - first input channel)
-                    point Sensor2: 
-                        type: 'Int'
-                        input: 1                    # the number of input 0..8 (0 - first input channel)
-                    point Sensor3: 
-                        type: 'Real'
-                        input: 2                    # the number of input 0..8 (0 - first input channel)
-                        history: rw
-                    point Sensor4: 
-                        type: 'Double'
-                        input: 3                    # the number of input 0..8 (0 - first input channel)
-                        history: r
+                point Sensor1: 
+                    type: 'Int'
+                    id: 0                    # the number of input 0..8 (0 - first input channel)
+                point Sensor2: 
+                    type: 'Int'
+                    id: 1                    # the number of input 0..8 (0 - first input channel)
+                point Sensor3: 
+                    type: 'Real'
+                    id: 2                    # the number of input 0..8 (0 - first input channel)
+                point Sensor4: 
+                    type: 'Double'
+                    id: 3                    # the number of input 0..8 (0 - first input channel)
             "#),
             UdpClientConf {
                 name: Name::new(self_id, "UdpIed01"),
@@ -173,53 +161,47 @@ fn new() {
                 remote_addr: "192.168.100.241:15180".to_owned(),
                 mtu: 4096,
                 diagnosis: FxIndexMap::from_iter([]),
-                dbs: FxIndexMap::from_iter([
-                    ("data".to_owned(), UdpClientDbConf {
-                        name: Name::new(self_id, "UdpIed01/data"),
-                        description: "Data block of the device".to_owned(),
-                        points: [
-                            PointConf {
-                                id: 0,
-                                name: Name::new(self_id, "UdpIed01/data/Sensor1").join(),
-                                type_: PointConfType::Int,
-                                history: PointConfHistory::None,
-                                alarm: None,
-                                address: None,
-                                filters: None,
-                                comment: None,
-                            },
-                            PointConf {
-                                id: 0,
-                                name: Name::new(self_id, "UdpIed01/data/Sensor2").join(),
-                                type_: PointConfType::Int,
-                                history: PointConfHistory::None,
-                                alarm: None,
-                                address: None,
-                                filters: None,
-                                comment: None,
-                            },
-                            PointConf {
-                                id: 0,
-                                name: Name::new(self_id, "UdpIed01/data/Sensor3").join(),
-                                type_: PointConfType::Real,
-                                history: PointConfHistory::ReadWrite,
-                                alarm: None,
-                                address: None,
-                                filters: None,
-                                comment: None,
-                            },
-                            PointConf {
-                                id: 0,
-                                name: Name::new(self_id, "UdpIed01/data/Sensor4").join(),
-                                type_: PointConfType::Double,
-                                history: PointConfHistory::Read,
-                                alarm: None,
-                                address: None,
-                                filters: None,
-                                comment: None,
-                            },                                
-                        ].to_vec(),
-                    }),
+                points: Vec::from([
+                    PointConf {
+                        id: 0,
+                        name: Name::new(self_id, "UdpIed01/data/Sensor1").join(),
+                        type_: PointConfType::Int,
+                        history: PointConfHistory::None,
+                        alarm: None,
+                        address: None,
+                        filters: None,
+                        comment: None,
+                    },
+                    PointConf {
+                        id: 0,
+                        name: Name::new(self_id, "UdpIed01/data/Sensor2").join(),
+                        type_: PointConfType::Int,
+                        history: PointConfHistory::None,
+                        alarm: None,
+                        address: None,
+                        filters: None,
+                        comment: None,
+                    },
+                    PointConf {
+                        id: 0,
+                        name: Name::new(self_id, "UdpIed01/data/Sensor3").join(),
+                        type_: PointConfType::Real,
+                        history: PointConfHistory::None,
+                        alarm: None,
+                        address: None,
+                        filters: None,
+                        comment: None,
+                    },
+                    PointConf {
+                        id: 0,
+                        name: Name::new(self_id, "UdpIed01/data/Sensor4").join(),
+                        type_: PointConfType::Double,
+                        history: PointConfHistory::None,
+                        alarm: None,
+                        address: None,
+                        filters: None,
+                        comment: None,
+                    },
                 ]),
             },                
         )
