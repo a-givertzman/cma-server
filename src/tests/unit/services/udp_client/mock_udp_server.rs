@@ -149,8 +149,8 @@ impl Service for MockUdpServer {
                                             for message in message_windows {
                                                 cycle.start();
                                                 log::trace!("{}.run | words: \n\t{:?}", self_id, message);
-                                                let mut buf = vec![UdpClient::DAT, conf.channel, InputType::U16 as u8, 16];
-                                                buf.extend(((conf.count * 2) as u32).to_be_bytes());
+                                                let mut buf = vec![UdpClient::DAT, conf.channel, InputType::U16 as u8];
+                                                buf.extend(((conf.count) as u32).to_be_bytes());
                                                 // let data = unsafe { message.align_to::<u8>() };
                                                 // let data = message.into_iter().map(|v| {v.to_be_bytes()});
                                                 buf.extend(message.into_iter().flat_map(|v| {v.to_be_bytes()}));

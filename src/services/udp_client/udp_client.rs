@@ -9,13 +9,14 @@ use sal_sync::{
         Name, Object, Point, PointConf, PointConfType, PointTxId, Status
     }}, sync::{Handles, channel::Sender}, thread_pool::Scheduler
 };
-use crate::services::udp_client::UdpClientConnect;
+use crate::services::udp_client::{InputType, UdpClientConnect};
 
 use super::{ParsePoint, UdpcParseU16, UdpClientConf};
 ///
 /// 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum State {
+    None,
     Start,
     Exit,
     ReadError,
@@ -115,39 +116,45 @@ impl UdpClient {
     ///
     /// 
     fn parse(dbg: &Dbg, points: &mut IndexMap<u8, Box<dyn ParsePoint>>, buf: &[u8], timestamp: DateTime<Utc>, tx_send: &Sender<Point>) {
-        let count: usize;
         let status = Status::Ok;
         // log::debug!("{}.parse | message: {:?}", self.id, buf);
         match buf {
             // Data message received
             &[UdpClient::DAT, addr, typ, c1,c2,c3, c4, ..] => {
-                count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
-                log::debug!("{dbg}.parse | addr: {} type: {} count: {}  |  {:?}", addr, typ, count, &buf[UdpClient::HEAD_LEN..(if buf.len() < 10 {buf.len()} else {10})]);
-                match buf.get(UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count)) {
-                    Some(bytes) => {
-                        // let bytes: &Vec<u8> = bytes;
-                        log::trace!("{}.parse | bytes: {:?}", dbg, bytes);
-                        log::trace!("{}.parse | points: {:?}", dbg, points.iter().map(|(id, point)| format!("{}[{}]", point.name(), id)).collect::<Vec<String>>());
-                        match points.get_mut(&addr) {
-                            Some(parse_point) => {
-                                match parse_point.add(bytes, status, timestamp) {
-                                    Ok(points) => {
-                                        for point in points {
-                                            // log::debug!("{}.parse | point: {:?}", dbg, point);
-                                            if let Err(err) = tx_send.send(point) {
-                                                log::warn!("{}.parse | Send error: {}", dbg, err);
+                let count = u32::from_be_bytes([c1, c2, c3, c4]) as usize;
+                match InputType::try_from(typ) {
+                    Ok(typ) => {
+                        // log::debug!("{dbg}.parse | addr: {}, count: {} values of type {}", addr, count, typ);
+                        // log::debug!("{dbg}.parse | addr: {} type: {} count: {}  |  {:?}", addr, typ, count, &buf[UdpClient::HEAD_LEN..(if buf.len() < 10 {buf.len()} else {10})]);
+                        let len = count * typ.size();
+                        match buf.get(UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + len)) {
+                            Some(bytes) => {
+                                // let bytes: &Vec<u8> = bytes;
+                                // log::trace!("{}.parse | bytes: {:?}", dbg, bytes);
+                                // log::trace!("{}.parse | points: {:?}", dbg, points.iter().map(|(id, point)| format!("{}[{}]", point.name(), id)).collect::<Vec<String>>());
+                                match points.get_mut(&addr) {
+                                    Some(parse_point) => {
+                                        match parse_point.add(bytes, status, timestamp) {
+                                            Ok(points) => {
+                                                for point in points {
+                                                    // log::debug!("{}.parse | point: {:?}", dbg, point);
+                                                    if let Err(err) = tx_send.send(point) {
+                                                        log::warn!("{}.parse | Send error: {}", dbg, err);
+                                                    }
+                                                }
                                             }
+                                            Err(err) => log::warn!("{}.parse | Error: {}", dbg, err),
                                         }
                                     }
-                                    Err(err) => log::warn!("{}.parse | Error: {}", dbg, err),
+                                    None => log::warn!("{dbg}.parse | Can't find Input with addr '{}'", addr),
                                 }
                             }
-                            None => log::warn!("{dbg}.parse | Can't find Input with addr '{}'", addr),
+                            None => {
+                                log::error!("{dbg}.parse | Wrong message length: {}, expected {}", buf.len(), UdpClient::HEAD_LEN + len);
+                            }
                         }
                     }
-                    None => {
-                        log::error!("{dbg}.parse | Wrong message length: {}, expected {}", buf.len(), UdpClient::HEAD_LEN + count);
-                    }
+                    Err(err) => log::error!("{dbg}.parse | Wrong value type {}", typ),
                 }
             }
             &[UdpClient::ERR, err] | &[UdpClient::ERR, err, ..] => {
@@ -168,11 +175,12 @@ impl UdpClient {
     /// Returns updated points from the current DB
     /// - parses raw data into the configured points
     /// - returns only points with updated value or status
-    pub fn read(dbg: &Dbg, socket: &UdpSocket, points: &mut IndexMap<u8, Box<dyn ParsePoint>>, tx_send: &Sender<Point>, mtu: usize) -> Result<(), Error> {
+    fn read(dbg: &Dbg, socket: &UdpSocket, points: &mut IndexMap<u8, Box<dyn ParsePoint>>, tx_send: &Sender<Point>, mtu: usize) -> Result<(), Error> {
         let error = Error::new(dbg, "read");
         let mut buf = vec![0; mtu];
         match socket.recv_from(&mut buf) {
             Ok((_, _)) => {
+                // log::debug!("{dbg}.read | Received buffer {} bytes", buf.len());
                 Self::parse(dbg, points, buf.as_slice(), Utc::now(), tx_send);
                 Ok(())
             }
@@ -362,11 +370,12 @@ impl Service for UdpClient {
         let mut points: IndexMap<u8, Box<dyn ParsePoint>> = Self::configure_parse_points(&dbg, txid, &conf.points);
         let exit = self.exit.clone();
         let services = self.services.clone();
-        log::info!("{}.run | Preparing thread...", dbg);
+        // log::info!("{dbg}.run | Preparing thread...");
         // *SELF_ID.write() = dbg.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, State::Start, vec![
+            let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, State::None, vec![
+                (State::None,           Box::new(|_| {})),
                 (State::Start,          Box::new(|message| log::info!("{}", message))),
                 (State::Connected,      Box::new(|message| log::info!("{}", message))),
                 (State::Exit,           Box::new(|message| log::info!("{}", message))),
@@ -375,15 +384,15 @@ impl Service for UdpClient {
             ]);
             let send = services
                 .get_link(&conf.send_to)
-                .unwrap_or_else(|err| panic!("{}.run | Link {} - Not found, error: {}", dbg, conf.send_to.name(), err));
+                .unwrap_or_else(|err| panic!("{dbg}.run | Link {} - Not found, error: {}", conf.send_to.name(), err));
             let mut reconnect = ServiceCycle::new(dbg, conf.reconnect);
-            let udp_connect = UdpClientConnect::new(&name, conf.local_addr, conf.remote_addr, conf.mtu);
+            let udp_connect = UdpClientConnect::new(&name, conf.local_addr.clone(), conf.remote_addr.clone(), conf.mtu);
             'main: loop {
-                notify.add(State::Start, format!("{}.run | Reading from device...", dbg));
+                notify.add(State::Start, format!("{dbg}.run | Connecting to device {}...", conf.remote_addr));
                 reconnect.start();
                 match udp_connect.connect() {
                     Ok(socket) => {
-                        notify.add(State::Connected, format!("{}.run | Connected to device", dbg));
+                        notify.add(State::Connected, format!("{dbg}.run | Connected to device, reading..."));
                         let mut error_limit = ErrorLimit::new(3);
                         'read: loop {
                             match Self::read(dbg, &socket, &mut points, &send, conf.mtu) {
@@ -391,9 +400,9 @@ impl Service for UdpClient {
                                     error_limit.reset();
                                 }
                                 Err(err) => {
-                                    notify.add(State::Start, format!("{}.run | Can't read from device, error: {:?}", dbg, err));
+                                    notify.add(State::ReadError, format!("{dbg}.run | Can't read from device, error: {:?}", err));
                                     if error_limit.add().is_err() {
-                                        notify.add(State::ConnectError, format!("{}.run | Connection error: {:?}", dbg, err));
+                                        notify.add(State::ConnectError, format!("{dbg}.run | Connection error: {:?}", err));
                                         break 'read;
                                     }
                                 }
@@ -404,7 +413,7 @@ impl Service for UdpClient {
                         }
                     }
                     Err(err) => {
-                        notify.add(State::ConnectError, format!("{}.run | Connection error: {:?}", dbg, err));
+                        notify.add(State::ConnectError, format!("{dbg}.run | Connection error: {:?}", err));
                     }
                 }
                 if exit.load(Ordering::SeqCst) {

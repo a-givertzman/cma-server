@@ -27,7 +27,7 @@ fn init_each() -> () {}
 /// Testing UdpClient basic functionality
 #[test]
 fn random_i16() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::init(LogLevel::Debug, Backtrace::Short);
     init_once();
     init_each();
     log::debug!("");
@@ -41,7 +41,7 @@ fn random_i16() {
     //     Configure here                                 //
     ////////////////////////////////////////////////////////
     // Total test values                                  //
-    let count = 100_000;
+    let count = 512 * 1000;
     // Values<i16> in DATA field of UDP message
     let message_length = 1024;
     // Sampling frequency                                 //
@@ -101,7 +101,7 @@ fn random_i16() {
     udp_server.run().unwrap();
     
     let mut received = 0;
-    let timeout = Duration::from_secs(3);
+    let timeout = Duration::from_secs(10);
     let wait_time = Instant::now();
     while received < test_data.len() {
         thread::sleep(Duration::from_millis(500));
@@ -111,7 +111,6 @@ fn random_i16() {
             break;
         }
     }
-    receiver.exit();
     receiver.wait().unwrap();
     let elapsed = time.elapsed();
     log::debug!("{} | wait for receiver - finished", dbg);
@@ -142,6 +141,7 @@ fn random_i16() {
         let target = test_data_iter.next().unwrap();
         assert!(result == *target as i64, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     }
+    receiver.exit();
     udp_client.exit();
     udp_client.wait().unwrap();
     udp_server.exit();

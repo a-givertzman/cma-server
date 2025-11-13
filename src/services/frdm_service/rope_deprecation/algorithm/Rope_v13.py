@@ -243,17 +243,17 @@ def aproxEq(a, b, tolerance=1e-9):
 # ------------------------------------------------
 if __name__ == "__main__":
     plot = False
-    target_csv = "src/tests/unit/services/frdm_service/deprecation_test.csv"
+    # target_csv = "src/tests/unit/services/frdm_service/deprecation_test.csv"
     # f = open("C:/Users/Liaman/Desktop/rope/unit test/deprecation_test.csv")
-    forigin = open("src/tests/unit/services/frdm_service/deprecation_test_orig.csv", mode='r')
+    forigin = open("src/tests/unit/services/frdm_service/deprecation_test.csv", mode='r')
     rows = csv.reader(forigin, delimiter=',')
     # logging.debug(f"csv rows {rows}")
     row = next(rows)
-    if row:
-        f = open(target_csv, mode='w')
-        frow = ",".join(map(lambda x: f'{x}', row))
-        f.write(f'{frow}\n')
-        f.close()
+    # if row:
+    #     f = open(target_csv, mode='w')
+    #     frow = ",".join(map(lambda x: f'{x}', row))
+    #     f.write(f'{frow}\n')
+    #     f.close()
 
     tblock: list[Block] = [Block.empty() for _ in range(7)]
     trope: list[RopeParams] = [Block.empty() for _ in range(7)]
@@ -473,8 +473,8 @@ if __name__ == "__main__":
         for idx, block in enumerate(blocks):
             if idx > 0:         # Не проверяем координаты барабана, у Вани их нет
                 assert aproxEq(block.coord.x, tblock[idx].coord.x, 0.1), f"step {step}  block[{idx}].x = {block.coord.x}, target = {tblock[idx].coord.x}"
-                if idx < 6:     # Не проверяем Y крюка, так как у Вани написано вытравливание каната по условию минимальной длины, а у нас этого нет
-                    assert aproxEq(block.coord.y, tblock[idx].coord.y, 0.1), f"step {step}  block[{idx}].y = {block.coord.y}, target = {tblock[idx].coord.y}"
+                assert aproxEq(block.coord.y, tblock[idx].coord.y, 0.1), f"step {step}  block[{idx}].y = {block.coord.y}, target = {tblock[idx].coord.y}"
+                # if idx < 6:     # Не проверяем Y крюка, так как у Вани написано вытравливание каната по условию минимальной длины, а у нас этого нет
 
         # Тест прямых участков каната
         for i, r in enumerate(rope_data):
@@ -648,25 +648,25 @@ if __name__ == "__main__":
         # Cчитаем количество каната которое надо вытравить 
         need_payout, new_L_winch, x, rope_data[-1].l_rope = ensure_min_hook_length(booms, blocks, rope_calc_params)
         
-        # Запись опорных точек в CSV
-        for _ in range(71, 83):
-            row.append(0.0) 
-        row[71] = support_points[0] * 1000.0     # f01
-        row[72] = support_points[1] * 1000.0     # f02
-        row[73] = support_points[2] * 1000.0     # f03
-        row[74] = support_points[3] * 1000.0     # f04
-        row[75] = support_points[4] * 1000.0     # f05
-        row[76] = support_points[5] * 1000.0     # f06
-        row[77] = support_points[6] * 1000.0     # f07
-        row[78] = support_points[7] * 1000.0     # f08
-        row[79] = support_points[8] * 1000.0     # f09
-        row[80] = support_points[9] * 1000.0     # f10
-        row[81] = support_points[10] * 1000.0 if len(support_points) > 10 else 0.0     # f11
-        row[82] = support_points[11] * 1000.0 if len(support_points) > 11 else 0.0     # f12
+        # # Запись опорных точек в CSV
+        # for _ in range(71, 83):
+        #     row.append(0.0) 
+        # row[71] = support_points[0] * 1000.0     # f01
+        # row[72] = support_points[1] * 1000.0     # f02
+        # row[73] = support_points[2] * 1000.0     # f03
+        # row[74] = support_points[3] * 1000.0     # f04
+        # row[75] = support_points[4] * 1000.0     # f05
+        # row[76] = support_points[5] * 1000.0     # f06
+        # row[77] = support_points[6] * 1000.0     # f07
+        # row[78] = support_points[7] * 1000.0     # f08
+        # row[79] = support_points[8] * 1000.0     # f09
+        # row[80] = support_points[9] * 1000.0     # f10
+        # row[81] = support_points[10] * 1000.0 if len(support_points) > 10 else 0.0     # f11
+        # row[82] = support_points[11] * 1000.0 if len(support_points) > 11 else 0.0     # f12
 
-        f = open(target_csv, mode='a')
-        frow = ",".join(map(lambda x: f'{x}', row))
-        f.write(f'{frow}\n')
+        # f = open(target_csv, mode='a')
+        # frow = ",".join(map(lambda x: f'{x}', row))
+        # f.write(f'{frow}\n')
 
         # ---------------------------
         # Логи

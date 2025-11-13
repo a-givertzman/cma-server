@@ -109,7 +109,7 @@ fn new() {
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
             width: 35 mm            # Diameter of the rome
-            length: 82.243 m        # Total working length of the rope
+            length: 85.045 m        # Total working length of the rope
             aux-length: 1.200 m     # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
             segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.EncoderBR2'      # meters, current rope position
