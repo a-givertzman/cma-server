@@ -154,7 +154,7 @@ impl UdpClient {
                             }
                         }
                     }
-                    Err(err) => log::error!("{dbg}.parse | Wrong value type {}", typ),
+                    Err(_) => log::error!("{dbg}.parse | Wrong value type {}", typ),
                 }
             }
             &[UdpClient::ERR, err] | &[UdpClient::ERR, err, ..] => {
