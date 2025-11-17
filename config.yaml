@@ -44,7 +44,7 @@ service ProfinetClient ied12:
     db db902_panel_controls:
         number: 902
         offset: 0
-        size: 262
+        size: 278
         point Settings.CraneMode.MainMode:
             type: Int
             address:
@@ -61,7 +61,7 @@ service ProfinetClient ied12:
             type: Int
             address:
                 offset: 6
-        point Settings.CraneMode.Rsrv4: 
+        point Settings.CraneMode.AntislackActive: 
             type: Int
             address:
                 offset: 8
@@ -578,14 +578,46 @@ service ProfinetClient ied12:
             type: Int
             address:
                 offset: 256
-        point Control.Common.ResetAlarms:
+        point Settings.Tenzosensor.OneFall.HookWeight:
             type: Int
             address:
                 offset: 258
-        point Control.Common.ServiceMode:
+        point Settings.Tenzosensor.OneFall.HookReading:
             type: Int
             address:
                 offset: 260
+        point Settings.Tenzosensor.OneFall.TargetWeight:
+            type: Int
+            address:
+                offset: 262
+        point Settings.Tenzosensor.OneFall.TargetReading:
+            type: Int
+            address:
+                offset: 264
+        point Settings.Tenzosensor.TwoFalls.HookWeight:
+            type: Int
+            address:
+                offset: 266
+        point Settings.Tenzosensor.TwoFalls.HookReading:
+            type: Int
+            address:
+                offset: 268
+        point Settings.Tenzosensor.TwoFalls.TargetWeight:
+            type: Int
+            address:
+                offset: 270
+        point Settings.Tenzosensor.TwoFalls.TargetReading:
+            type: Int
+            address:
+                offset: 272
+        point Control.Common.ResetAlarms:
+            type: Int
+            address:
+                offset: 274
+        point Control.Common.ServiceMode:
+            type: Int
+            address:
+                offset: 276
 
 
 service ProfinetClient ied13:
@@ -1751,6 +1783,78 @@ service ProfinetClient ied15:
                 offset: 12
                 bit: 0
             alarm: 1
+        point EmerW2.BQ1_Error:
+            type: Bool
+            address:
+                offset: 12
+                bit: 1
+            alarm: 1
+        point EmerW2.BR1_Error:
+            type: Bool
+            address:
+                offset: 12
+                bit: 2
+            alarm: 1
+        point EmerW2.TT1.1_Error:
+            type: Bool
+            address:
+                offset: 12
+                bit: 3
+            alarm: 1
+        point EmerW2.TT1.2_Error:
+            type: Bool
+            address:
+                offset: 12
+                bit: 4
+            alarm: 1
+        point EmerW2.TT1.3_Error:
+            type: Bool
+            address:
+                offset: 12
+                bit: 5
+            alarm: 1
+        point EmerW2.PT1.1_Error:
+            type: Bool
+            address:
+                offset: 12
+                bit: 6
+            alarm: 1
+        point EmerW2.PTU10.2_Error:
+            type: Bool
+            address:
+                offset: 12
+                bit: 7
+            alarm: 1
+        point EmerW2.TTM10.1_Error:
+            type: Bool
+            address:
+                offset: 13
+                bit: 0
+            alarm: 1
+        point EmerW2.B3_Error:
+            type: Bool
+            address:
+                offset: 13
+                bit: 1
+            alarm: 1
+        point EmerW2.B1_Error:
+            type: Bool
+            address:
+                offset: 13
+                bit: 2
+            alarm: 1
+        point EmerW2.B2_Error:
+            type: Bool
+            address:
+                offset: 13
+                bit: 3
+            alarm: 1
+        point EmerW2.EncRot_Error:
+            type: Bool
+            address:
+                offset: 13
+                bit: 4
+            alarm: 1
         point WarnW1.PressureFilterCloggedWarn:
             type: Bool
             address:
@@ -1795,7 +1899,7 @@ service ProfinetClient ied16:
     db db908_diagnostics:
         number: 908
         offset: 0
-        size: 32
+        size: 54
         point AnalogInputs.Tenzo:
             type: Int
             address:
@@ -1832,34 +1936,78 @@ service ProfinetClient ied16:
             type: Int
             address:
                 offset: 16
-        point AnalogInputs.MainArrowAngleSensor:
+        point AnalogInputs.ArrowAngleSensor:
             type: Int
             address:
                 offset: 18
-        point AnalogInputs.BoomAngleSensor:
+        point AnalogInputs.JibAngleSensor:
             type: Int
             address:
                 offset: 20
-        point AnalogInputs.Reserve1:
+        point AnalogInputs.TenzoScaled:
             type: Int
             address:
                 offset: 22
-        point AnalogInputs.Reserve2:
+        point AnalogInputs.EncoderWinchScaled:
             type: Int
             address:
                 offset: 24
-        point AnalogInputs.Reserve3:
+        point AnalogInputs.TankTempScaled:
             type: Int
             address:
                 offset: 26
-        point AnalogInputs.Reserve4:
+        point AnalogInputs.TempBeforeHeatScaled:
             type: Int
             address:
                 offset: 28
-        point AnalogInputs.Reserve5:
+        point AnalogInputs.TempAfterHeatScaled:
             type: Int
             address:
                 offset: 30
+        point AnalogInputs.PressureSystemScaled:
+            type: Int
+            address:
+                offset: 32
+        point AnalogInputs.PressureOutMotorScaled:
+            type: Int
+            address:
+                offset: 34
+        point AnalogInputs.TempMotorWinchScaled:
+            type: Int
+            address:
+                offset: 36
+        point AnalogInputs.AnemometerScaled:
+            type: Int
+            address:
+                offset: 38
+        point AnalogInputs.ArrowAngleSensorScaled:
+            type: Int
+            address:
+                offset: 40
+        point AnalogInputs.JibAngleSensorScaled:
+            type: Int
+            address:
+                offset: 42
+        point AnalogInputs.Reserve1:
+            type: Int
+            address:
+                offset: 44
+        point AnalogInputs.Reserve2:
+            type: Int
+            address:
+                offset: 46
+        point AnalogInputs.Reserve3:
+            type: Int
+            address:
+                offset: 48
+        point AnalogInputs.Reserve4:
+            type: Int
+            address:
+                offset: 50
+        point AnalogInputs.Reserve5:
+            type: Int
+            address:
+                offset: 52
 
 service Task HistoryTask:
     cycle: 1 s
