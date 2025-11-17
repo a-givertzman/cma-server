@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{fn_::FnOut, fn_input::FnInput, ops::fn_bit_not::FnBitNot}
@@ -29,7 +29,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 /// Testing Task FnNot Bool's
 #[test]
 fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_bool";
     log::info!("{}", self_id);
@@ -58,7 +58,7 @@ fn test_bool() {
 /// Testing Task FnNot Int's
 #[test]
 fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_int";
     log::info!("{}", self_id);

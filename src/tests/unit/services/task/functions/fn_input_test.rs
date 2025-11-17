@@ -2,7 +2,7 @@
 
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
      domain::FnInOutRef,
     services::task::fn_input::FnInput,
@@ -30,7 +30,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 ///
 #[test]
 fn int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_int");
     let input = init_each("0", FnConfPointType::Int);
@@ -64,7 +64,7 @@ fn int() {
 ///
 #[test]
 fn bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_bool");
     let input = init_each("false", FnConfPointType::Bool);
@@ -100,7 +100,7 @@ fn bool() {
 ///
 #[test]
 fn real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_real");
     let input = init_each("0.0", FnConfPointType::Real);
@@ -136,7 +136,7 @@ fn real() {
 ///
 #[test]
 fn double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_real");
     let input = init_each("0.0", FnConfPointType::Double);
@@ -172,7 +172,7 @@ fn double() {
 ///
 #[test]
 fn test_string() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_string");
     let input = init_each("0", FnConfPointType::String);

@@ -5,7 +5,7 @@ use sal_sync::{services::{
 }, thread_pool::ThreadPool};
 use std::{env, sync::{Arc, Once}, time::{Duration, Instant}};
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::task::{Task, TaskConf, TaskTestProducer, TaskTestReceiver};
 ///
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn structure() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = "task_test";
@@ -114,7 +114,7 @@ fn structure() {
 #[test]
 #[ignore = "TODO - transfered values assertion not implemented yet"]
 fn transfer() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     log::info!("test");

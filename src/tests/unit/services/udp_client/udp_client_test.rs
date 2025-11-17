@@ -4,7 +4,7 @@ use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
 use rand::Rng;
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     services::{task::TaskTestReceiver, udp_client::{UdpClient, UdpClientConf}},
     tests::unit::services::udp_client::mock_udp_server::{MockUdpServer, MockUdpServerConfig},
@@ -27,7 +27,7 @@ fn init_each() -> () {}
 /// Testing UdpClient basic functionality
 #[test]
 fn random_i16() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     log::debug!("");

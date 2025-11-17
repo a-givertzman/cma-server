@@ -29,7 +29,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn test_mpsc_receiver() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         println!("test mpsc::Receiver");

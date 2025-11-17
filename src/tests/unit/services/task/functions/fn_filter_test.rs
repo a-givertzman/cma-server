@@ -4,7 +4,7 @@ mod cma_recorder {
     use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         services::task::{Task, TaskConf, TaskTestReceiver},
         tests::unit::services::task::task_test_producer::TaskTestProducer,
@@ -27,7 +27,7 @@ mod cma_recorder {
     /// Testing Task FnFilter for Real's
     #[test]
     fn filter() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "App";

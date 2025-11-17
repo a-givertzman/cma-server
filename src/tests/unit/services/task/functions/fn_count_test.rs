@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
      domain::FnInOutRef,
     services::task::{
@@ -31,7 +31,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 ///
 #[test]
 fn test_single() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_single");
     let initial = Some(init_each("0", FnConfPointType::Int));
@@ -71,7 +71,7 @@ fn test_single() {
 
 #[test]
 fn test_multiple() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_multiple");
     let initial = Some(init_each("0", FnConfPointType::Int));
@@ -110,7 +110,7 @@ fn test_multiple() {
 
 #[test]
 fn test_multiple_reset() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_multiple_reset");
     let initial = Some(init_each("0", FnConfPointType::Int));

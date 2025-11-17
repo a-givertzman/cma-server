@@ -7,7 +7,7 @@ mod fn_retain {
     }, thread_pool::ThreadPool};
     use std::{env, fs, io::Read, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         services::task::{Task, TaskConf, TaskTestReceiver},
         tests::unit::services::task::task_test_producer::TaskTestProducer
@@ -99,7 +99,7 @@ mod fn_retain {
     /// Testing Task function 'Retain' for int value
     #[test]
     fn retain_point_bool() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "AppTest";
@@ -243,7 +243,7 @@ mod fn_retain {
     /// Testing Task function 'Retain' for int value
     #[test]
     fn retain_point_int() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "AppTest";
@@ -402,7 +402,7 @@ mod fn_retain {
     /// Testing Task function 'Retain' for real value
     #[test]
     fn retain_point_real() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         // #[derive(Copy, Clone, Eq, PartialEq)]
@@ -568,7 +568,7 @@ mod fn_retain {
     ///  - using [every-cycle] = true
     #[test]
     fn retain_every_cycle_point_real() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "AppTest";

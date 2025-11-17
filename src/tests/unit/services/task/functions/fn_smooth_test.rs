@@ -51,7 +51,7 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
 /// Threshold Reals's
 #[test]
 fn fn_smooth_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "fn_smooth_real";
     log::info!("{}", self_id);
@@ -144,7 +144,7 @@ fn fn_smooth_real() {
 /// Threshold Double's
 #[test]
 fn fn_smooth_double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "fn_smooth_double";
     log::info!("{}", self_id);

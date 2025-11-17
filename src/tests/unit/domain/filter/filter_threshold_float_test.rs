@@ -3,7 +3,7 @@
 mod tests {
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::domain::filter::{filter::Filter, filter_threshold::FilterThreshold};
     ///
     ///
@@ -23,7 +23,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_threshold_abs_pos() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_pos 0.0 - 1.0 - 0.0";
@@ -85,7 +85,7 @@ mod tests {
     /// Testing FilterThreshold with absolute threshold and negative input
     #[test]
     fn test_filter_threshold_abs_neg_f64() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_neg (-1.0) - 1.0 - (-1.0)";
@@ -167,7 +167,7 @@ mod tests {
     /// Testing FilterThreshold with factor and pisitive input
     #[test]
     fn test_filter_threshold_factor_pos() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_factor_pos 0.0 - 1.0 - 0.0 | factor";
@@ -229,7 +229,7 @@ mod tests {
     /// Testing FilterThreshold with factor and negative input
     #[test]
     fn test_filter_threshold_factor_neg() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_factor_neg (-1.0) - 1.0 - (-1.0) | factor";

@@ -3,7 +3,7 @@
 use regex::RegexBuilder;
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point, ToPoint}, Services}, thread_pool::ThreadPool};
 use std::sync::{Once, Arc};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::task::{fn_result::FnResult, TaskConf, TaskNodes};
 ///
 ///
@@ -24,7 +24,7 @@ fn init_once() {
 ///
 #[test]
 fn int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let dbg = "test_int";
     let self_name = Name::new("", dbg);
@@ -104,7 +104,7 @@ fn int() {
 ///
 #[test]
 fn real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let dbg = "test_real";
     let self_name = Name::new("", dbg);
@@ -194,7 +194,7 @@ fn real() {
 ///
 #[test]
 fn double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_real";
     let self_name = Name::new("", self_id);

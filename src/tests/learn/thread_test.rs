@@ -2,7 +2,7 @@
 
 mod thread_test {
     use std::{sync::Once, thread, time::Duration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     ///
     ///
     static INIT: Once = Once::new();
@@ -22,7 +22,7 @@ mod thread_test {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn exiting() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "thread_test";

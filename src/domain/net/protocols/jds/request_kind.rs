@@ -93,7 +93,7 @@ impl From<&String> for RequestKind {
 mod tests {
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
 
     use crate::domain::net::protocols::jds::request_kind::RequestKind;
     ///
@@ -112,7 +112,7 @@ mod tests {
     ///
     #[test]
     fn test_task_cycle() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         let self_id = "test RequestKind";

@@ -3,7 +3,7 @@
 use indexmap::IndexMap;
 use sal_sync::services::{conf::ConfTree, entity::Name, ConfSubscribe, task::functions::{FnConfKind, FnConfig, FnConfPointType, FnConfOptions}};
 use std::{sync::Once, time::Duration};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::task::TaskConf;
 ///
 ///
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn valid() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let self_id = "task_config_new_test";

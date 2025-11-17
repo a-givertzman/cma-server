@@ -25,7 +25,7 @@ mod tests {
     ///
     #[test]
     fn test_simple_name() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::info!("test_bool");
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_name_sufix() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::info!("test_name_sufix");
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_prepare() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::info!("test_prepare");

@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::{Point, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{fn_::FnOut, fn_input::FnInput, ops::fn_sub::FnSub},
@@ -30,7 +30,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 #[ignore = "Task FnSub ignored for Bool's - not implemented, under discussion"]
 #[test]
 fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_bool");
     let mut value1_stored;
@@ -73,7 +73,7 @@ fn test_bool() {
 /// Testing Task Sub Int's
 #[test]
 fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_int");
     let mut value1_stored;
@@ -121,7 +121,7 @@ fn test_int() {
 /// Testing Task Sub Real's
 #[test]
 fn real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("fn_sub_real");
     let mut value1_stored;
@@ -179,7 +179,7 @@ fn real() {
 /// Testing Task Sub Double's
 #[test]
 fn double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("fn_sub_double");
     let mut value1_stored;

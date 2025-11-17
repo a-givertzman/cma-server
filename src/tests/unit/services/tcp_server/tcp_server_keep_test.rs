@@ -8,7 +8,7 @@ mod tcp_server {
         stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues},
         session::test_session::TestSession,
     };
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         services::{
             server::{TcpServerConf, TcpServer},
@@ -34,7 +34,7 @@ mod tcp_server {
     ///
     #[test]
     fn keep_send() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "tcp_server_keep_send";
@@ -131,7 +131,7 @@ mod tcp_server {
     ///
     #[test]
     fn keep_receive() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "tcp_server_keep_receive";

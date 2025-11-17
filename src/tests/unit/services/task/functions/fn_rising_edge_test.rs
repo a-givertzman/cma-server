@@ -51,7 +51,7 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
 ///
 #[test]
 fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_bool";
     log::info!("{}", self_id);
@@ -91,7 +91,7 @@ fn test_bool() {
 ///
 #[test]
 fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_int";
     log::info!("{}", self_id);
@@ -131,7 +131,7 @@ fn test_int() {
 ///
 #[test]
 fn test_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_real";
     log::info!("{}", self_id);
@@ -171,7 +171,7 @@ fn test_real() {
 ///
 #[test]
 fn test_double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_real";
     log::info!("{}", self_id);

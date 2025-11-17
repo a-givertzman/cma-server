@@ -4,7 +4,7 @@ use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::{ConfDistance, ConfDistanceUnit, ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::frdm_service::RopeConf;
 
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn new() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     log::debug!("");

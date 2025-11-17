@@ -3,7 +3,7 @@
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
 use std::{env, sync::{Arc, Once}, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::task::{Task, TaskConf};
 ///
 ///
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn points() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = "test Task.points";

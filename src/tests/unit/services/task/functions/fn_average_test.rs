@@ -51,7 +51,7 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
 ///
 #[test]
 fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_bool";
     log::info!("{}", self_id);
@@ -102,7 +102,7 @@ fn test_bool() {
 ///
 #[test]
 fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_int";
     log::info!("{}", self_id);
@@ -146,7 +146,7 @@ fn test_int() {
 ///
 #[test]
 fn test_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_real";
     log::info!("{}", self_id);
@@ -190,7 +190,7 @@ fn test_real() {
 /// Real points on input, enable - is variable during the test
 #[test]
 fn test_real_enable() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_real_enable";
     log::info!("{}", self_id);
@@ -256,7 +256,7 @@ fn test_real_enable() {
 /// Double points on input, enable - is variable during the test
 #[test]
 fn test_double_enable() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_double_enable";
     log::info!("{}", self_id);

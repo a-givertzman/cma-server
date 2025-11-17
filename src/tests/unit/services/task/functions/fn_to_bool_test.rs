@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{fn_::FnOut, fn_input::FnInput, fn_to_bool::FnToBool},
@@ -29,7 +29,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 /// Testing Task Add Bool's
 #[test]
 fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_bool");
     let input = init_each("false", FnConfPointType::Bool);
@@ -53,7 +53,7 @@ fn test_bool() {
 /// Testing Task Add Int's
 #[test]
 fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_int");
     let input = init_each("0", FnConfPointType::Int);
@@ -83,7 +83,7 @@ fn test_int() {
 /// Testing ToBool Real's
 #[test]
 fn real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("fn_to_bool_real");
     let input = init_each("0.0", FnConfPointType::Real);
@@ -113,7 +113,7 @@ fn real() {
 /// Testing ToBool Double's
 #[test]
 fn double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("fn_to_bool_double");
     let input = init_each("0.0", FnConfPointType::Double);

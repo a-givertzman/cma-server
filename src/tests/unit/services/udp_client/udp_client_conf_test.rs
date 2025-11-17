@@ -3,7 +3,7 @@
 use std::{str::FromStr, sync::Once, time::Duration};
 use sal_sync::{collections::FxIndexMap, services::{conf::DiagKeywd, entity::{Name, {PointConf, PointConfHistory, PointConfType}}, LinkName, ConfSubscribe}};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::udp_client::UdpClientConf;
 ///
 ///
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn new() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     log::debug!("");

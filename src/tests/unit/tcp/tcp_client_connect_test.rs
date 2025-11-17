@@ -30,7 +30,7 @@ mod tcp_client_connect {
     /// Testing success connection case
     #[test]
     fn success_connection() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test success connection");
@@ -110,7 +110,7 @@ mod tcp_client_connect {
     /// Testing connection fail case
     #[test]
     fn failure_connection() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test failure connection");

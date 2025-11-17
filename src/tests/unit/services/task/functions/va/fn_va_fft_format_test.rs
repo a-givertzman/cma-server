@@ -8,7 +8,7 @@ use sal_sync::{services::{
     conf::{ConfTree, ServicesConf}, entity::{Name, Object, PointConfFilter, PointTxId, ToPoint}, task::functions::{FnConfKind, FnConfOptions, FnConfPointType, FnConfig}, Service, Services
 }, thread_pool::ThreadPool};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, FnInOutRef},
     services::task::{
@@ -43,7 +43,7 @@ fn init_each(default: Option<&str>, type_: FnConfPointType) -> FnInOutRef {
 /// Testing FftBuf with empty filter
 #[test]
 fn format_sql() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     // init_each();
     log::debug!("");

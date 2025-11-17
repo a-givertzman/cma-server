@@ -5,7 +5,7 @@ mod tcp_stream {
     use sal_sync::sync::Handles;
     use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
     use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::domain::constants::constants::RECV_TIMEOUT;
     ///
     ///
@@ -26,7 +26,7 @@ mod tcp_stream {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn strean_bytes() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test TcpStream read on close";
@@ -65,7 +65,7 @@ mod tcp_stream {
     // #[ignore = "Learn - all must be ignored"]
     #[test]
     fn stream_read() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test TcpStream read on close";

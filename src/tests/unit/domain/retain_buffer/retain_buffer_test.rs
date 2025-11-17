@@ -21,7 +21,7 @@ mod retain_buffer {
     ///
     #[test]
     fn basic() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test RetainBuffer");
@@ -66,7 +66,7 @@ mod retain_buffer {
     ///
     #[test]
     fn capacity() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test RetainBuffer capacity");

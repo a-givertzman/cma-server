@@ -3,7 +3,7 @@
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::{dbg::Dbg, error::Error};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::infra::message::{Bytes, FixedField, MessageParse, SizedField};
 ///
 ///
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 /// Testing [SizedField].parse
 #[test]
 fn parse() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     log::debug!("");

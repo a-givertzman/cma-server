@@ -29,7 +29,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 /// Testing Task FnTimer measuring simple elapsed seconds
 #[test]
 fn elapsed_repeat_false() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_elapsed_repeat_false");
     let input = init_each("false", FnConfPointType::Bool);
@@ -94,7 +94,7 @@ fn elapsed_repeat_false() {
 /// Testing Task FnTimer with 'repeat' option
 #[test]
 fn total_elapsed_repeat() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_total_elapsed_repeat");
     let input = init_each("false", FnConfPointType::Bool);
@@ -155,7 +155,7 @@ fn total_elapsed_repeat() {
 /// Testing Task FnTimer with 'repeat' option, useing reset
 #[test]
 fn total_elapsed_repeat_reset() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_total_elapsed_repeat_reset");
     let input = init_each("false", FnConfPointType::Bool);
@@ -223,7 +223,7 @@ fn total_elapsed_repeat_reset() {
 /// Testing Task FnTimer with initial value and 'repeat' option
 #[test]
 fn initial_repeat() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_initial_repeat");
     let initial = 123.1234f64;

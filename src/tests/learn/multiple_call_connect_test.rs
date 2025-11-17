@@ -3,7 +3,7 @@ mod tests {
     use rand::Rng;
     use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}, thread};
     use std::{sync::Once, time::Duration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
 
     use crate::domain::Mutex;
 
@@ -31,7 +31,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn test_task_cycle() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test_task_cycle");

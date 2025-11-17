@@ -4,7 +4,7 @@ use std::{fs::OpenOptions, rc::Rc, sync::{Arc, Once, atomic::AtomicBool}, time::
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprecation, FrdmServiceConf, Inputs, RopeSections, RopeDeprecationConf}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 /// Testing [Deprecation]
 #[test]
 fn eval() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     log::debug!("");
