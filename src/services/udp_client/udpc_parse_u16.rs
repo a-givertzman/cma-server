@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::entity::{
-    Cot, Name, Point, PointConf, PointHlr, PointType, Status
+    Cot, Point, PointConf, PointHlr, PointType, Status,
 };
 use crate::services::udp_client::parse_point::ParsePoint;
 ///

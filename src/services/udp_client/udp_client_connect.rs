@@ -62,13 +62,6 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::entity::{Name, Object};
 use crate::services::udp_client::UdpClient;
 ///
-/// 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Units {
-    Data,
-    Unknown(String),
-}
-///
 /// Establish a connection with Vibro-analytics microcontroller (Sub MC) over udp simple protocol
 pub struct UdpClientConnect {
     name: Name,
