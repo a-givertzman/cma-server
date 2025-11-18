@@ -578,35 +578,35 @@ service ProfinetClient ied12:
             type: Int
             address:
                 offset: 256
-        point Settings.Tenzosensor.OneFall.HookWeight:
+        point Settings.Tenzo.OneFall.HookWeight:
             type: Int
             address:
                 offset: 258
-        point Settings.Tenzosensor.OneFall.HookReading:
+        point Settings.Tenzo.OneFall.HookReading:
             type: Int
             address:
                 offset: 260
-        point Settings.Tenzosensor.OneFall.TargetWeight:
+        point Settings.Tenzo.OneFall.TargetWeight:
             type: Int
             address:
                 offset: 262
-        point Settings.Tenzosensor.OneFall.TargetReading:
+        point Settings.Tenzo.OneFall.TargetReading:
             type: Int
             address:
                 offset: 264
-        point Settings.Tenzosensor.TwoFalls.HookWeight:
+        point Settings.Tenzo.TwoFalls.HookWeight:
             type: Int
             address:
                 offset: 266
-        point Settings.Tenzosensor.TwoFalls.HookReading:
+        point Settings.Tenzo.TwoFalls.HookReading:
             type: Int
             address:
                 offset: 268
-        point Settings.Tenzosensor.TwoFalls.TargetWeight:
+        point Settings.Tenzo.TwoFalls.TargetWeight:
             type: Int
             address:
                 offset: 270
-        point Settings.Tenzosensor.TwoFalls.TargetReading:
+        point Settings.Tenzo.TwoFalls.TargetReading:
             type: Int
             address:
                 offset: 272
