@@ -1899,7 +1899,7 @@ service ProfinetClient ied16:
     db db908_diagnostics:
         number: 908
         offset: 0
-        size: 54
+        size: 72
         point AnalogInputs.Tenzo:
             type: Int
             address:
@@ -2008,6 +2008,42 @@ service ProfinetClient ied16:
             type: Int
             address:
                 offset: 52
+        point AnalogOutputs.YVM:
+            type: Int
+            address:
+                offset: 54
+        point AnalogOutputs.YVU:
+            type: Int
+            address:
+                offset: 56
+        point AnalogOutputs.YVMScaled:
+            type: Int
+            address:
+                offset: 58
+        point AnalogOutputs.YVUScaled:
+            type: Int
+            address:
+                offset: 60
+        point AnalogInputs.Reserve1:
+            type: Int
+            address:
+                offset: 62
+        point AnalogInputs.Reserve2:
+            type: Int
+            address:
+                offset: 64
+        point AnalogInputs.Reserve3:
+            type: Int
+            address:
+                offset: 66
+        point AnalogInputs.Reserve4:
+            type: Int
+            address:
+                offset: 68
+        point AnalogInputs.Reserve5:
+            type: Int
+            address:
+                offset: 70
 
 service Task HistoryTask:
     cycle: 1 s
