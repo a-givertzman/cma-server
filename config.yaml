@@ -44,7 +44,7 @@ service ProfinetClient ied12:
     db db902_panel_controls:
         number: 902
         offset: 0
-        size: 278
+        size: 280
         point Settings.CraneMode.MainMode:
             type: Int
             address:
@@ -618,6 +618,10 @@ service ProfinetClient ied12:
             type: Int
             address:
                 offset: 276
+        point Control.Common.OGP_Disable:
+            type: Int
+            address:
+                offset: 278
 
 
 service ProfinetClient ied13:
@@ -2024,23 +2028,23 @@ service ProfinetClient ied16:
             type: Int
             address:
                 offset: 60
-        point AnalogInputs.Reserve1:
+        point AnalogOutputs.Reserve1:
             type: Int
             address:
                 offset: 62
-        point AnalogInputs.Reserve2:
+        point AnalogOutputs.Reserve2:
             type: Int
             address:
                 offset: 64
-        point AnalogInputs.Reserve3:
+        point AnalogOutputs.Reserve3:
             type: Int
             address:
                 offset: 66
-        point AnalogInputs.Reserve4:
+        point AnalogOutputs.Reserve4:
             type: Int
             address:
                 offset: 68
-        point AnalogInputs.Reserve5:
+        point AnalogOutputs.Reserve5:
             type: Int
             address:
                 offset: 70
