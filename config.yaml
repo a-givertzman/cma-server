@@ -61,7 +61,7 @@ service ProfinetClient ied12:
             type: Int
             address:
                 offset: 6
-        point Settings.CraneMode.AntislackActive: 
+        point Settings.CraneMode.EnableAntislack: 
             type: Int
             address:
                 offset: 8
