@@ -393,8 +393,9 @@ if __name__ == "__main__":
             Boom(alpha_rel= angles[1], len= 7984.0, l1=0.0, l2=0.0, l3=0.0, l4=    0.0),
         ]
 
-    # 1. Расчет особого положения (Парковочное)
+    # 0. Расчет особого положения (Парковочное)
     alpha_rope0 = calc_alpha_rope0_first_boom_zero(blocks_new(), booms_new([0.0, 155.299999999996]), rope_calc_params)
+    logging.debug(f"alpha_rope0: {alpha_rope0}")
     rope_calc_params.alpha_rope0 = alpha_rope0
 
     tblock: list[Block] = [Block.empty() for _ in range(7)]
