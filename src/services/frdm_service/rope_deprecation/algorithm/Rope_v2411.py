@@ -252,7 +252,7 @@ class RopeCalcParams:
     "номер блока крюковой подвески"
     alpha_rope0: float
     "Угол прямолинейного участка каната от лебедки (к горизонту), град"
-    def __init__(self, Lfact, L_winch, lhook_min, hook_block_num) -> None:
+    def __init__(self, Lfact, L_winch, lhook_min, hook_block_num, alpha_rope0 = 0) -> None:
         """
         Lfact - фактическая длина каната,
         L_winch - длина каната на лебедке в основном положении,
@@ -265,6 +265,11 @@ class RopeCalcParams:
         self.hook_block_num = float(hook_block_num)
         self.alpha_rope0 = float(alpha_rope0)
 
+def float_range(start, stop, step):
+    while start + step <= stop:
+        yield start
+        start += step
+    if start < stop: yield stop
 
 def aproxEq(a, b, tolerance=1e-9):
     return abs(a - b) < tolerance
@@ -395,7 +400,7 @@ if __name__ == "__main__":
 
     # 0. Расчет особого положения (Парковочное)
     alpha_rope0 = calc_alpha_rope0_first_boom_zero(blocks_new(), booms_new([0.0, 155.299999999996]), rope_calc_params)
-    logging.debug(f"alpha_rope0: {alpha_rope0}")
+    logging.debug(f"boob2 alpha: {155.299999999996}, alpha_rope0: {alpha_rope0}")
     rope_calc_params.alpha_rope0 = alpha_rope0
 
     tblock: list[Block] = [Block.empty() for _ in range(7)]
