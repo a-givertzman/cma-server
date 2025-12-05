@@ -250,7 +250,9 @@ class RopeCalcParams:
     "минимальная длина подвеса"
     hook_block_num: float
     "номер блока крюковой подвески"
-    def __init__(self, Lfact, L_winch, lhook_min, hook_block_num, alpha_rope0) -> None:
+    alpha_rope0: float
+    "Угол прямолинейного участка каната от лебедки (к горизонту), град"
+    def __init__(self, Lfact, L_winch, lhook_min, hook_block_num) -> None:
         """
         Lfact - фактическая длина каната,
         L_winch - длина каната на лебедке в основном положении,
@@ -374,7 +376,6 @@ if __name__ == "__main__":
         L_winch=58330,
         lhook_min=1200,
         hook_block_num=7,
-        alpha_rope0=0,
     )
     def blocks_new() -> list[Block]:
         return [
