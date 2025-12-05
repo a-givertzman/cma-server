@@ -525,17 +525,9 @@ if __name__ == "__main__":
                 if block.bind == BlockBindBoomPair:
                     pass
                 else:
-                    # # Формируем alpha_rope_list
-                    # if prev_alpha is not None:
-                    #     alpha_rope_list = [prev_alpha, alpha_rope]
-                    # else:
-                    #     alpha_rope_list = [alpha_rope]  # для первого блока
-                    # r.alpha_rope_list = alpha_rope_list
-            
                     # Расчёт угла обхвата
                     if prev_alpha is not None:
                         alpha_wrap = abs(alpha_rope - prev_alpha)
-                        # alpha_wrap = abs(alpha_rope_list[-1] - alpha_rope_list[0])
                     else:
                         alpha_wrap = 0
                     
