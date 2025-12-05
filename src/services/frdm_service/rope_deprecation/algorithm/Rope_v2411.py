@@ -399,6 +399,10 @@ if __name__ == "__main__":
         ]
 
     # 0. Расчет особого положения (Парковочное)
+    #
+    # Парковочное положение задаем углом первой стрелы (в данном случае 0.0 град к горизонту)
+    # Угол второй стрелы  - любое значение а рабочем диапазоне, может даже 0.0 подойдет
+    #
     alpha_rope0 = calc_alpha_rope0_first_boom_zero(blocks_new(), booms_new([0.0, 155.299999999996]), rope_calc_params)
     logging.debug(f"boob2 alpha: {155.299999999996}, alpha_rope0: {alpha_rope0}")
     rope_calc_params.alpha_rope0 = alpha_rope0
