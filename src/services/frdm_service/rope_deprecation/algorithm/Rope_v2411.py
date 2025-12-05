@@ -214,21 +214,23 @@ class RopeCalcParams:
 def aproxEq(a, b, tolerance=1e-9):
     return abs(a - b) < tolerance
 
-def calc_alpha_rope0_first_boom_zero(blocks: list[Block], booms: list[Boom], rope_calc_params: RopeCalcParams) -> float:
-    """
-    Считает alpha_rope0 для особого положения:
-    первая стрела горизонтальна (0° к горизонту).
-    Вторая стрела на alpha_rope первого участка не влияет.
-    """
-
-    # ---------- 1. Углы стрел ----------
+# ---------------------------
+# 1. Угол наклона к горизонту каждой стрелы (alpha_boom)
+# ---------------------------
+def booms_alpha(booms: list[Boom]) -> list[Boom]:
     alpha_sum = 0.0
     for i, boom in enumerate(booms):
         alpha_sum += boom.alpha_rel
+        # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
         boom.alpha = alpha_sum - i * 180
+    return booms
 
-    # ---------- 2. D и G ----------
+# ---------------------------
+# 2. Матрица T (D и G для каждой стрелы)
+# ---------------------------
+def booms_d_g(booms: list[Boom]) -> list[Boom]:
     for i, boom in enumerate(booms):
+        # Начало стрелы
         if i == 0:
             x0, y0 = 0, 0
             alpha_prime = 90
@@ -239,33 +241,63 @@ def calc_alpha_rope0_first_boom_zero(blocks: list[Block], booms: list[Boom], rop
         wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
         XY_start = Offset(x0 + wx, y0 + wy)
 
+        # Точка D
         Dx, Dy = XY_rotate(- boom.l2, boom.l1, boom.alpha)
         D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
 
+        # Точка G
         Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
         G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
 
         boom.D = D_point
         boom.G = G_point
+    return booms
 
+def calc_alpha_rope0_first_boom_zero(blocks: list[Block], booms: list[Boom], rope_calc_params: RopeCalcParams) -> float:
+    """
+    Считает alpha_rope0 для особого положения:
+    первая стрела горизонтальна (0° к горизонту).
+    Вторая стрела на alpha_rope первого участка не влияет.
+    """
+    # ---------- 1. Углы стрел ----------
+    booms = booms_alpha(booms)
+    # ---------- 2. D и G ----------
+    booms = booms_d_g(booms)
     # ---------- 3. Координаты блоков ----------
-    prev_block = None
+    blocks = block_pos(blocks, booms)
+    # ---------- 4. Расчёт параметров каната ----------
+    rope_data: list[RopeParams] = rope_data_eval(blocks)
+    # Нам нужен угол первого участка (1 -> 2)
+    alpha_rope0 = rope_data[0].alpha_rope
+    # logging.debug(f"[INIT] alpha_rope0 (при alpha_1 = 0°) = {alpha_rope0:.3f}°")
+    return alpha_rope0
+
+# ---------------------------
+# 3. Координаты блоков XY_block
+# ---------------------------
+def block_pos(blocks: list[Block], booms: list[Boom]) -> list[Block]:
+    prev_block: Block = None
     for idx, block in enumerate(blocks):
         match block.bind:
             case BlockBindFixed():
+                # Формула из алгоритма:
                 dx1, dy1 = XY_rotate(-block.lF.x, block.lF.y, 0)
-                dx2, dy2 = XY_rotate(booms[0].l4, booms[0].l3, 90)
-                block.coord.x = dx1 + dx2
-                block.coord.y = dy1 + dy2
+                dx2, dy2 = XY_rotate(booms[0].l4, booms[0].l3, 90)  # от первой стрелы
+                x = dx1 + dx2
+                y = dy1 + dy2
+                block.coord.x = x
+                block.coord.y = y
             case BlockBindBoom(boom_index):
+                # Определяем номер стрелы
                 boom = booms[boom_index]
-                base_point = boom.G
+                base_point = boom.G  # точка G
                 dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
                 block.coord.x = base_point.x + dx
                 block.coord.y = base_point.y + dy
             case BlockBindBoomPair(boom_index):
+                # Определяем номер стрелы
                 boom = booms[boom_index]
-                base_point = boom.G
+                base_point = boom.G  # точка G
                 dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
                 block.coord.x = base_point.x + dx
                 block.coord.y = base_point.y + dy
@@ -275,32 +307,35 @@ def calc_alpha_rope0_first_boom_zero(blocks: list[Block], booms: list[Boom], rop
             case _:
                 raise ValueError(f"Неизвестный тип блока [{idx}]: {block.bind}")
         prev_block = block
-
-    # ---------- 4. Расчёт параметров каната ----------
-    rope_data0: list[RopeParams] = []
+    return blocks
+# ---------------------------
+# 4. Расчёт параметров каната
+# ---------------------------
+def rope_data_eval(blocks: list[Block]) -> list[RopeParams]:
+    rope_data: list[RopeParams] = []
     for i, block in enumerate(blocks[:-1]):
         X1, Y1 = block.coord.x, block.coord.y
         X2, Y2 = blocks[i + 1].coord.x, blocks[i + 1].coord.y
         D1 = block.D
         D2 = blocks[i + 1].D
         scheme = block.scheme
-
-        if   scheme == 1: k, j = -1,  1
-        elif scheme == 2: k, j =  1,  1
-        elif scheme == 3: k, j =  1, -1
-        elif scheme == 4: k, j = -1, -1
+    
+        if scheme == 1:
+            k, j = -1, 1
+        elif scheme == 2:
+            k, j = 1, 1
+        elif scheme == 3:
+            k, j = 1, -1
+        elif scheme == 4:
+            k, j = -1, -1
         else:
             raise ValueError(f"Некорректная схема: {scheme}")
-
+    
         params = rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j)
-        params.block_pair = (i + 1, i + 2)
+        params.block_pair = (i + 1, i + 2)   # 1-базовая нумерация блоков
         params.scheme = scheme
-        rope_data0.append(params)
-
-    # Нам нужен угол первого участка (1 -> 2)
-    alpha_rope0 = rope_data0[0].alpha_rope
-    # logging.debug(f"[INIT] alpha_rope0 (при alpha_1 = 0°) = {alpha_rope0:.3f}°")
-    return alpha_rope0
+        rope_data.append(params)
+    return rope_data
 
 # ------------------------------------------------
 # Алгоритм расчета входа и исхода каната с блоков
@@ -397,112 +432,26 @@ if __name__ == "__main__":
         trope[5 -1].alpha_rope = float(row[39])
         trope[6 -1].alpha_rope = float(row[40])
 
-        booms = booms_new([a21, a22])
         blocks = blocks_new()
 
-        # rope_calc_params = RopeCalcParams(Lfact=85045, L_winch=58330, lhook_min=1200, hook_block_num=7, alpha_rope0=alpha_rope0)
-    
         # ---------------------------
         # 1. Угол наклона к горизонту каждой стрелы (alpha_boom)
-        # ---------------------------
-        alpha_sum = 0.0
-        for i, boom in enumerate(booms):
-            alpha_sum += boom.alpha_rel
-            # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
-            boom.alpha = alpha_sum - i * 180
+        booms = booms_alpha(
+            booms_new([a21, a22])
+        )
     
         # ---------------------------
         # 2. Матрица T (D и G для каждой стрелы)
-        # ---------------------------
-        for i, boom in enumerate(booms):
-            # Начало стрелы
-            if i == 0:
-                x0, y0 = 0, 0
-                alpha_prime = 90
-            else:
-                x0, y0 = booms[i - 1].G.x, booms[i - 1].G.y
-                alpha_prime = booms[i - 1].alpha
-    
-            wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
-            XY_start = Offset(x0 + wx, y0 + wy)
-    
-            # Точка D
-            Dx, Dy = XY_rotate(- boom.l2, boom.l1, boom.alpha)
-            D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
-    
-            # Точка G
-            Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
-            G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
-    
-            boom.D = D_point
-            boom.G = G_point
+        booms = booms_d_g(booms)
     
         # ---------------------------
         # 3. Координаты блоков XY_block
-        # ---------------------------
-        def block_pos(blocks: list[Block]) -> list[Block]:
-            prev_block: Block = None
-            for idx, block in enumerate(blocks):
-                match block.bind:
-                    case BlockBindFixed():
-                        # Формула из алгоритма:
-                        dx1, dy1 = XY_rotate(-block.lF.x, block.lF.y, 0)
-                        dx2, dy2 = XY_rotate(booms[0].l4, booms[0].l3, 90)  # от первой стрелы
-                        x = dx1 + dx2
-                        y = dy1 + dy2
-                        block.coord.x = x
-                        block.coord.y = y
-                    case BlockBindBoom(boom_index):
-                        # Определяем номер стрелы
-                        boom = booms[boom_index]
-                        base_point = boom.G  # точка G
-                        dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
-                        block.coord.x = base_point.x + dx
-                        block.coord.y = base_point.y + dy
-                    case BlockBindBoomPair(boom_index):
-                        # Определяем номер стрелы
-                        boom = booms[boom_index]
-                        base_point = boom.G  # точка G
-                        dx, dy = XY_rotate(block.lF.x, block.lF.y, boom.alpha)
-                        block.coord.x = base_point.x + dx
-                        block.coord.y = base_point.y + dy
-                    case BlockBindHook():
-                        block.coord.x = prev_block.coord.x + 0.5 * prev_block.D
-                        block.coord.y = prev_block.coord.y - rope_calc_params.lhook_min
-                    case _:
-                        raise ValueError(f"Неизвестный тип блока [{idx}]: {block.bind}")
-                prev_block = block
-            return blocks
-        # 3. Координаты блоков XY_block
-        blocks = block_pos(blocks)
+        blocks = block_pos(blocks, booms)
 
         # ---------------------------
         # 4. Расчёт параметров каната
-        # ---------------------------
-    
-        rope_data: list[RopeParams] = []
-        for i, block in enumerate(blocks[:-1]):
-            X1, Y1 = block.coord.x, block.coord.y
-            X2, Y2 = blocks[i + 1].coord.x, blocks[i + 1].coord.y
-            D1 = block.D
-            D2 = blocks[i + 1].D
-            scheme = block.scheme
-        
-            if scheme == 1:
-                k, j = -1, 1
-            elif scheme == 2:
-                k, j = 1, 1
-            elif scheme == 3:
-                k, j = 1, -1
-            elif scheme == 4:
-                k, j = -1, -1
-            else:
-                raise ValueError(f"Некорректная схема: {scheme}")
-        
-            params = rope_parameters(X1, Y1, X2, Y2, D1, D2, k, j)
-            params.block_pair = (i + 1, i + 2)   # 1-базовая нумерация блоков
-            params.scheme = scheme
-            rope_data.append(params)      
+        rope_data: list[RopeParams] = rope_data_eval(blocks)
+
         """
         Далее будет задаваться дополнительное условие, 
         которое учитывает переваливание каната при положении крана хоботом вниз
