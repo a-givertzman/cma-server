@@ -70,6 +70,59 @@ class Boom:
         self.l3 = l3
         self.l4 = l4
 
+class Booms:
+    """
+    Расчитывает стрелы
+    1. Угол наклона к горизонту каждой стрелы (alpha_boom)
+    2. Матрица T (D и G для каждой стрелы)
+    """
+    __booms: list[Boom]
+    def __init__(self, booms: list[Boom]) -> None:
+        self.__booms = booms
+    def eval(self) -> list[Boom]:
+        return self.__booms_d_g(
+            self.__alpha(self.__booms)
+        )
+    # ---------------------------
+    # 1. Угол наклона к горизонту каждой стрелы (alpha_boom)
+    # ---------------------------
+    def __alpha(self, booms: list[Boom]) -> list[Boom]:
+        alpha_sum = 0.0
+        for i, boom in enumerate(booms):
+            alpha_sum += boom.alpha_rel
+            # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
+            boom.alpha = alpha_sum - i * 180
+        return booms
+
+    # ---------------------------
+    # 2. Матрица T (D и G для каждой стрелы)
+    # ---------------------------
+    def __booms_d_g(self, booms: list[Boom]) -> list[Boom]:
+        for i, boom in enumerate(booms):
+            # Начало стрелы
+            if i == 0:
+                x0, y0 = 0, 0
+                alpha_prime = 90
+            else:
+                x0, y0 = booms[i - 1].G.x, booms[i - 1].G.y
+                alpha_prime = booms[i - 1].alpha
+
+            wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
+            XY_start = Offset(x0 + wx, y0 + wy)
+
+            # Точка D
+            Dx, Dy = XY_rotate(- boom.l2, boom.l1, boom.alpha)
+            D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
+
+            # Точка G
+            Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
+            G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
+
+            boom.D = D_point
+            boom.G = G_point
+        return booms
+
+
 class Block:
     lF: Offset
     D: float
@@ -214,45 +267,6 @@ class RopeCalcParams:
 def aproxEq(a, b, tolerance=1e-9):
     return abs(a - b) < tolerance
 
-# ---------------------------
-# 1. Угол наклона к горизонту каждой стрелы (alpha_boom)
-# ---------------------------
-def booms_alpha(booms: list[Boom]) -> list[Boom]:
-    alpha_sum = 0.0
-    for i, boom in enumerate(booms):
-        alpha_sum += boom.alpha_rel
-        # log.debug(f"i: {i},  alpha sum_ {alpha_sum}")
-        boom.alpha = alpha_sum - i * 180
-    return booms
-
-# ---------------------------
-# 2. Матрица T (D и G для каждой стрелы)
-# ---------------------------
-def booms_d_g(booms: list[Boom]) -> list[Boom]:
-    for i, boom in enumerate(booms):
-        # Начало стрелы
-        if i == 0:
-            x0, y0 = 0, 0
-            alpha_prime = 90
-        else:
-            x0, y0 = booms[i - 1].G.x, booms[i - 1].G.y
-            alpha_prime = booms[i - 1].alpha
-
-        wx, wy = XY_rotate(boom.l4, boom.l3, alpha_prime)
-        XY_start = Offset(x0 + wx, y0 + wy)
-
-        # Точка D
-        Dx, Dy = XY_rotate(- boom.l2, boom.l1, boom.alpha)
-        D_point = Offset(XY_start.x + Dx, XY_start.y + Dy)
-
-        # Точка G
-        Gx, Gy = XY_rotate(boom.len - boom.l2, boom.l1, boom.alpha)
-        G_point = Offset(XY_start.x + Gx, XY_start.y + Gy)
-
-        boom.D = D_point
-        boom.G = G_point
-    return booms
-
 def calc_alpha_rope0_first_boom_zero(blocks: list[Block], booms: list[Boom], rope_calc_params: RopeCalcParams) -> float:
     """
     Считает alpha_rope0 для особого положения:
@@ -260,9 +274,8 @@ def calc_alpha_rope0_first_boom_zero(blocks: list[Block], booms: list[Boom], rop
     Вторая стрела на alpha_rope первого участка не влияет.
     """
     # ---------- 1. Углы стрел ----------
-    booms = booms_alpha(booms)
     # ---------- 2. D и G ----------
-    booms = booms_d_g(booms)
+    booms = Booms(booms).eval()
     # ---------- 3. Координаты блоков ----------
     blocks = block_pos(blocks, booms)
     # ---------- 4. Расчёт параметров каната ----------
@@ -432,21 +445,15 @@ if __name__ == "__main__":
         trope[5 -1].alpha_rope = float(row[39])
         trope[6 -1].alpha_rope = float(row[40])
 
-        blocks = blocks_new()
-
         # ---------------------------
+        # Стрелы
         # 1. Угол наклона к горизонту каждой стрелы (alpha_boom)
-        booms = booms_alpha(
-            booms_new([a21, a22])
-        )
-    
-        # ---------------------------
         # 2. Матрица T (D и G для каждой стрелы)
-        booms = booms_d_g(booms)
-    
+        booms = Booms(booms_new([a21, a22])).eval()
         # ---------------------------
+        # Блоки
         # 3. Координаты блоков XY_block
-        blocks = block_pos(blocks, booms)
+        blocks = block_pos(blocks_new(), booms)
 
         # ---------------------------
         # 4. Расчёт параметров каната
