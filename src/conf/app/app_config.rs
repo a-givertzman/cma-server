@@ -71,12 +71,12 @@ impl AppConfig {
         log::trace!("AppConfig.new | conf: {:?}", conf);
         let name: String = conf.get("name").unwrap();
         let self_name = Name::new("", name);
-        let self_id = format!("AppConfig({})", self_name);
-        log::debug!("{}.new | name: {:?}", self_id, self_name);
+        let dbg = format!("AppConfig({})", self_name);
+        log::debug!("{}.new | name: {:?}", dbg, self_name);
         let description = conf.get("description").unwrap();
-        log::debug!("{}.new | description: {:?}", self_id, description);
+        log::debug!("{}.new | description: {:?}", dbg, description);
         let tread_pool = conf.get("tread_pool").map(|v: u64| v as usize);
-        log::debug!("{}.new | tread_pool: {:?}", self_id, tread_pool);
+        log::debug!("{}.new | tread_pool: {:?}", dbg, tread_pool);
         let mut nodes = IndexMap::new();
         for key in conf.keys(&["name", "description", "services", "retain"]) {
             let keyword = ConfKeywd::from_str(&key).unwrap();
@@ -89,9 +89,9 @@ impl AppConfig {
                             true => "".to_owned(),
                             false => format!(": '{}'", keyword.title()),
                         };
-                        log::debug!("{}.new | service '{}'{}", self_id, node_name, sufix);
+                        log::debug!("{}.new | service '{}'{}", dbg, node_name, sufix);
                     } else if log::max_level() == log::LevelFilter::Trace {
-                        log::trace!("{}.new | DB '{}'   |   conf: {:?}", self_id, node_name, node_conf);
+                        log::trace!("{}.new | DB '{}'   |   conf: {:?}", dbg, node_name, node_conf);
                     }
                     nodes.insert(
                         keyword,
@@ -99,13 +99,13 @@ impl AppConfig {
                     );
                 }
                 _ => {
-                    panic!("{}.new | Node '{:?}' - is not allowed in the root of the application config", self_id, keyword);
+                    panic!("{}.new | Node '{:?}' - is not allowed in the root of the application config", dbg, keyword);
                 }
             }
         }
-        let services = conf.get("services").unwrap();
-        let services = ServicesConf::new(&self_id, services);
-        log::debug!("{}.new | services: {:#?}", self_id, services);
+        let services = conf.get("services").expect(&format!("{dbg}.new | 'services' - not found or wrong config"));
+        let services = ServicesConf::new(&dbg, services);
+        log::trace!("{}.new | services: {:#?}", dbg, services);
         // let services = RetainConf::default();
         Self {
             name: self_name,

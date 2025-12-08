@@ -9,6 +9,10 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Boom, BoomConf,
 pub struct Booms {
     items: Vec<Boom>,
     inputs: Arc<Inputs>,
+    /// Угол к горизонту первой (главноу) стрелы в парковочном состоянии.
+    /// Используется для расчета парковочного положения только при первом вызове,
+    /// потом устанавливается в `None`.
+    parking: Option<f64>,
     dbg: Dbg,
 }
 impl Booms {
@@ -16,6 +20,20 @@ impl Booms {
     /// Returns [Booms] new instance
     /// - `subscribe` - List of `Event` names, wich required for calculation, and will acessed from the `inpurs`
     pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, inputs: Arc<Inputs>) -> Self {
+        let dbg = Dbg::new(parent, "Booms");
+        let parking = match conf.first() {
+            Some((key, bc)) => match bc.parking {
+                Some(parking) => Some(parking),
+                None => {
+                    log::error!("{dbg}.new | Boom '{key}' - Is configured as first (main), but hasn't 'parking' angle which is required for the first boom");
+                    None
+                }
+            },
+            None => {
+                log::error!("{dbg}.new | Booms - Is empty, at least first (main) is required");
+                None
+            }
+        };
         Self {
             items: conf.iter().map(|(name, conf)| {
                 let alpha = match &conf.angle {
@@ -43,7 +61,8 @@ impl Booms {
                 )
             }).collect(),
             inputs,
-            dbg: Dbg::new(parent, "Booms"),
+            parking,
+            dbg,
         }
     }
     ///
@@ -63,24 +82,43 @@ impl Booms {
     /// 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
     fn angles(&mut self) -> Option<Vec<Boom>> {
         let mut alpha_sum = 0.0;
-        let mut result = vec![];
-        for (i, boom) in self.items.iter_mut().enumerate() {
-            let alpha_rel = match &boom.alpha_input {
-                Some(input) => match self.inputs.get(input) {
-                    Some(alpha) => alpha,
+        match self.parking {
+            Some(parking) => {
+                self.parking = None;
+                match self.items.first() {
+                    Some(boom) => {
+                        let mut boom = boom.clone();
+                        alpha_sum += parking;
+                        boom.alpha = alpha_sum - (0 as f64) * 180.0;
+                        Some(vec![boom])
+                    }
                     None => {
-                        log::warn!("{}.angles | Boom[{i}] '{}':  Input '{}' - Not found", self.dbg, boom.name, input);
-                        return None
+                        log::error!("{}.angles | Booms - Is empty, at least first (main) is required", self.dbg);
+                        None
                     }
                 }
-                None => boom.alpha_rel,
-            };
-            alpha_sum += alpha_rel;
-            boom.alpha = alpha_sum - (i as f64) * 180.0;
-            result.push(boom.clone());
-            // log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
+            }
+            None => {
+                let mut result = vec![];
+                for (i, mut boom) in self.items.iter().cloned().enumerate() {
+                    let alpha_rel = match &boom.alpha_input {
+                        Some(input) => match self.inputs.get(input) {
+                            Some(alpha) => alpha,
+                            None => {
+                                log::warn!("{}.angles | Boom[{i}] '{}':  Input '{}' - Not found", self.dbg, boom.name, input);
+                                return None
+                            }
+                        }
+                        None => boom.alpha_rel,
+                    };
+                    alpha_sum += alpha_rel;
+                    boom.alpha = alpha_sum - (i as f64) * 180.0;
+                    result.push(boom);
+                    // log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
+                }
+                Some(result)
+            }
         }
-        Some(result)
     }
     ///
     /// 3. D и G для каждой стрелы
