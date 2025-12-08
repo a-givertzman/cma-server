@@ -55,6 +55,7 @@ fn new() {
                         l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                         len: 11200.0 mm                                         # length of the boom
                         angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+                        parking: 0.0                # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
                     - Rotary-Boom:
                         l1: 0.1 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                         l2: 0.2 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -108,6 +109,7 @@ fn new() {
                         l4: ConfDistance::new(10330.0, ConfDistanceUnit::Millimeter),
                         len: InputKind::Const(ConfDistance::new(11200.0, ConfDistanceUnit::Millimeter)),
                         angle: InputKind::Point("Load.MainBoomAngle".to_owned()),
+                        parking: Some(0.0),
                     }),
                     ("Rotary-Boom".to_owned(), BoomConf {
                         l1: ConfDistance::new(0.1, ConfDistanceUnit::Millimeter),
@@ -116,6 +118,7 @@ fn new() {
                         l4: ConfDistance::new(0.4, ConfDistanceUnit::Millimeter),
                         len: InputKind::Const(ConfDistance::new(7984.0, ConfDistanceUnit::Millimeter)),
                         angle: InputKind::Point("Load.RotaryBoomAngle".to_owned()),
+                        parking: None,
                     }),
                 ],
                 blocks: vec![

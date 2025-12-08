@@ -4,8 +4,10 @@ use sal_core::dbg::Dbg;
 use crate::services::frdm_service::{Block, BlockBind, Blocks, Offset};
 
 ///
-/// Rope Sections
-/// 6. Расчёт участков каната между блоками
+/// [RopeSections] |
+/// 6. Расчёт прямолинейных участков каната между блоками
+/// - Длина прямолинейных участков
+/// - Расчет углов наклона - перенесен в `Blocks`
 pub struct RopeSections {
     blocks: Blocks,
     #[allow(unused)]

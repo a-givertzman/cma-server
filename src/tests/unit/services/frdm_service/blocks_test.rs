@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -122,6 +122,7 @@ fn new() {
                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 11200.0 mm                                         # length of the boom
                 angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
+                parking: 0.0                # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
             - Rotary-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -129,6 +130,7 @@ fn new() {
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.0 mm                                          # length of the rotary boom
                 angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
+                # parking: 0.0                # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
         blocks:
             - '1':
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -178,7 +180,7 @@ fn new() {
         conf.rope.aux_length,        // TODO: replace with config or calculated value
         &conf.blocks,
         Booms::new(&dbg, &conf.booms, inputs.clone()),
-    );
+    );    
     let mut log = vec![];
     for (step, events, target) in test_data {
         let t = Instant::now();

@@ -3,7 +3,11 @@ use sal_core::dbg::Dbg;
 use crate::services::frdm_service::{Block, BlockBind, RopeSections};
 
 ///
+/// [BlockArcs] |
 /// 7. Углы обхвата и длины дуг каждого блока
+/// - Углы наклона к горизонту прямолинейных участков каната
+/// - Углы обхвата канатом всех  блоков
+/// - Дуги обхвата канатом всех блоков
 pub struct BlockArcs {
     rope_sections: RopeSections,
     #[allow(unused)]

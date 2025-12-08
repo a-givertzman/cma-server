@@ -6,12 +6,16 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBin
 
 ///
 /// Evaluation for the crane `Block`'s collection
-/// 4. Координаты блоков X, Y
+/// 4. Координаты блоков X, Y и угол наклона каната
+/// - Коордтнаты блоков в ГСК
+/// - Углы наклона к горизонту прямолинейных участков каната
 /// - First one is always a `Winch drum`
 /// - Next - are regular block from `Winch` towards `Hook`
 pub struct Blocks {
     items: Vec<Block>,
     aux_length: f64,
+    /// Угол (к горизонту) схода каната с лебедки в парковочном положении
+    winch_rope_alpha: Option<f64>,
     booms: Booms,
     #[allow(unused)]
     dbg: Dbg,
@@ -25,6 +29,7 @@ impl Blocks {
     pub fn new(parent: impl Into<String>, aux_length: ConfDistance, conf: &Vec<(String, BlockConf)>, booms: Booms) -> Self {
         Self {
             aux_length: aux_length.as_mm(),
+            winch_rope_alpha: None,
             items: conf.iter().map(|(key, conf)| Block::new(
                 key,
                 Offset::new(conf.lf.x.as_mm(), conf.lf.y.as_mm()),
@@ -63,6 +68,9 @@ impl Blocks {
                             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
+                            if self.winch_rope_alpha.is_none() {
+                                self.winch_rope_alpha = Some(rope_alpha_fwd)
+                            }
                             // if rope_alpha_fwd.is_nan() {
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
