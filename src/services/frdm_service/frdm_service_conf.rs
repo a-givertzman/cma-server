@@ -14,7 +14,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         address: "0.0.0.0:8081",
 ///         auth-token: "123!@#",
 ///         database: "cma",
-///     table_settings: 'public.frdm_settings'
+///     table-settings: 'public.frdm_settings'
 ///     rope-defect:
 ///         tables:
 ///             defect: 'public.frdm_defect'

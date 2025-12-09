@@ -69,46 +69,46 @@ impl AppConfig {
     /// Returns [AppConfig] new instance:
     pub fn new(conf: ConfTree) -> Self {
         log::trace!("AppConfig.new | conf: {:?}", conf);
-        let name: String = conf.get("name").unwrap();
-        let self_name = Name::new("", name);
-        let dbg = format!("AppConfig({})", self_name);
-        log::debug!("{}.new | name: {:?}", dbg, self_name);
-        let description = conf.get("description").unwrap();
-        log::debug!("{}.new | description: {:?}", dbg, description);
-        let tread_pool = conf.get("tread_pool").map(|v: u64| v as usize);
-        log::debug!("{}.new | tread_pool: {:?}", dbg, tread_pool);
-        let mut nodes = IndexMap::new();
-        for key in conf.keys(&["name", "description", "services", "retain"]) {
-            let keyword = ConfKeywd::from_str(&key).unwrap();
-            match keyword.kind() {
-                k if k == ConfKind::Service.to_string() || k == ConfKind::Task.to_string() => {
-                    let node_name = keyword.name();
-                    let node_conf = conf.get(key).unwrap();
-                    if log::max_level() == log::LevelFilter::Debug {
-                        let sufix = match keyword.title().is_empty() {
-                            true => "".to_owned(),
-                            false => format!(": '{}'", keyword.title()),
-                        };
-                        log::debug!("{}.new | service '{}'{}", dbg, node_name, sufix);
-                    } else if log::max_level() == log::LevelFilter::Trace {
-                        log::trace!("{}.new | DB '{}'   |   conf: {:?}", dbg, node_name, node_conf);
-                    }
-                    nodes.insert(
-                        keyword,
-                        node_conf,
-                    );
-                }
-                _ => {
-                    panic!("{}.new | Node '{:?}' - is not allowed in the root of the application config", dbg, keyword);
-                }
-            }
-        }
+        let name: String = conf.get("name").expect(&format!("AppConfig.new | 'name' - not found or wrong format"));
+        let name = Name::new("", name);
+        let dbg = format!("AppConfig({})", name);
+        log::trace!("{}.new | name: {:?}", dbg, name);
+        let description = conf.get("description").unwrap_or("".into());
+        log::trace!("{}.new | description: {:?}", dbg, description);
+        let tread_pool = conf.get("tread-pool").map(|v: u64| v as usize);
+        log::trace!("{}.new | tread_pool: {:?}", dbg, tread_pool);
         let services = conf.get("services").expect(&format!("{dbg}.new | 'services' - not found or wrong config"));
         let services = ServicesConf::new(&dbg, services);
         log::trace!("{}.new | services: {:#?}", dbg, services);
         // let services = RetainConf::default();
+        let nodes: IndexMap<ConfKeywd, ConfTree> = conf.nodes()
+            .filter(|node| !["name", "description", "services", "retain", "tread-pool"].contains(&node.key.as_str()))
+            .map(|node| {
+                let keyword = ConfKeywd::from_str(&node.key).expect(&format!("{dbg}.new | Can't parse keyword '{:?}'", node.key));
+                match keyword.kind() {
+                    k if k == ConfKind::Service.to_string() || k == ConfKind::Task.to_string() => {
+                        let node_name = keyword.name();
+                        if log::max_level() == log::LevelFilter::Debug {
+                            let sufix = match keyword.title().is_empty() {
+                                true => "".to_owned(),
+                                false => format!(": '{}'", keyword.title()),
+                            };
+                            log::debug!("{}.new | service '{}'{}", dbg, node_name, sufix);
+                        } else if log::max_level() == log::LevelFilter::Trace {
+                            log::trace!("{}.new | DB '{}'   |   conf: {:?}", dbg, node_name, node);
+                        }
+                        (
+                            keyword,
+                            node,
+                        )
+                    }
+                    _ => {
+                        panic!("{}.new | Unknown node '{:?}' - is the root of the application config", dbg, keyword);
+                    }
+                }
+            }).collect();
         Self {
-            name: self_name,
+            name,
             description,
             tread_pool,
             nodes,
@@ -124,27 +124,27 @@ impl AppConfig {
     /// reads config from path
     #[allow(dead_code)]
     pub fn read<P>(path: Vec<P>) -> AppConfig where P: AsRef<Path> {
-        let self_id = "AppConfig";
-        log::info!("{}.read | Reading configuration files...", self_id);
-        let mut files = vec![];
-        for p in path {
+        let dbg = "AppConfig";
+        log::info!("{dbg}.read | Reading configuration files...");
+        let conf = path.iter().fold(String::new(), |conf, p| {
             match fs::read_to_string(&p) {
                 Ok(f) => {
-                    files.push(f)
+                    log::info!("{dbg}.read | \t '{}' - Ok", p.as_ref().display());
+                    format!("{conf}\n{f}")
                 }
                 Err(err) => {
-                    panic!("{}.read | File '{}' reading error: {:?}", self_id, p.as_ref().display(), err)
+                    log::error!("{dbg}.read | Can't read config file '{}', error: {:?}", p.as_ref().display(), err);
+                    conf
                 }
             }
-        }
-        let yaml_string = files.join("\n");
-        match serde_yaml::from_str(&yaml_string) {
-            Ok(config) => {
-                log::info!("{}.read | Reading configuration files - ok", self_id);
-                AppConfig::from_yaml_value(&config)
+        });
+        match serde_yaml::from_str(&conf) {
+            Ok(conf) => {
+                log::info!("{dbg}.read | Reading configuration files - Ok");
+                AppConfig::from_yaml_value(&conf)
             }
             Err(err) => {
-                panic!("{}.read | Error in config: {:?}\n\terror: {:?}", self_id, yaml_string, err)
+                panic!("{dbg}.read | Can't parse config yaml: {}\n\t parse error: {:?}", conf, err)
             }
         }
     }
