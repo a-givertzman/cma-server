@@ -90,15 +90,15 @@ impl Blocks {
                 }
             }
         };
-        let mut winch_dl = 0.0;
         match self.booms.eval() {
             Some(booms) => {
                 let mut blocks = VecDeque::from(self.items.clone());
                 match blocks.pop_front() {
                     Some(mut block) => {
-                        block.pos = self.blocks_pos(&block, &booms, &Block::default(), winch_dl, false);
+                        block.pos = self.blocks_pos(&block, &booms, &Block::default(), 0.0, false);
                         let mut result = vec![];
                         let mut skipped = None;
+                        let mut winch_dl = 0.0;
                         while let Some(mut next) = blocks.pop_front() {
                             next.pos = self.blocks_pos(&next, &booms, &block, winch_dl, skipped.is_some());
                             // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
