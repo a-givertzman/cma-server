@@ -115,7 +115,7 @@ impl Blocks {
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
                             // }
-                            if next.bind.is(BlockBind::BoomPair(0)) && rope_alpha_fwd > 90.0{
+                            if next.bind.is(BlockBind::BoomPair(0)) && rope_alpha_fwd > 90.0 {
                                 // log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
                                 next.skipped = true;
                                 skipped = Some(next);
