@@ -591,7 +591,7 @@ if __name__ == "__main__":
         # ---------------------------
         # 9. Пересчет длины подвеса 
         # ---------------------------
-        def ensure_min_hook_length(booms, blocks, rope_calc_params):
+        def ensure_min_hook_length(step, blocks, rope_calc_params):
             """
             Пересчёт длины подвеса с учётом изменения дуги на барабане.
             Ничего принудительно с барабана не сматываем/наматываем.
@@ -613,6 +613,8 @@ if __name__ == "__main__":
         
             # 2. Изменение дуги на барабане
             dL_drum = calc_drum_arc_delta(blocks, rope_data, rope_calc_params)
+            # logging.debug(f"step {step} dL_drum: {dL_drum}")
+
             L_winch_eff = L_winch_nom + dL_drum
 
             # 3. Новая длина подвеса из уравнения длины
@@ -713,7 +715,7 @@ if __name__ == "__main__":
         # Запомним исходную длину последнего прямого участка (подвеса)
         last_len_before = rope_calc_params.lhook_min
         # Cчитаем количество каната которое надо вытравить 
-        new_L_winch, x, rope_data[-1].l_rope = ensure_min_hook_length(booms, blocks, rope_calc_params)
+        new_L_winch, x, rope_data[-1].l_rope = ensure_min_hook_length(step, blocks, rope_calc_params)
         # Расчет дуг и канатов
         block_results = calc_block_angles_and_arcs(blocks, rope_data)
         
