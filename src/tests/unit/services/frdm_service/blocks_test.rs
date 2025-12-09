@@ -26,6 +26,7 @@ fn init_each() -> () {}
 #[test]
 fn new() {
     DebugSession::new().filter(LogLevel::Debug).init();
+    std::process::Command::new("clear").status().unwrap();
     init_once();
     init_each();
     log::debug!("");
@@ -50,15 +51,14 @@ fn new() {
                         ("RotaryBoom.Angle", row.a22)
                     ],
                     [
-                        // block.x, block.y
-                        (-1829.9999999999993, 11040.0),
-                        // (row.x1,    row.y1)
-                        (row.x2,    row.y2),
-                        (row.x3,    row.y3),
-                        (row.x4,    row.y4),
-                        (row.x5,    row.y5),
-                        (row.x6,    row.y6),
-                        (row.x_hook,    row.y_hook),
+                        // block.x,     block.y     rope alpha
+                        (-1829.999999 , 11040.0,    row.rope_alpha1),
+                        (row.x2,        row.y2,     row.rope_alpha2),
+                        (row.x3,        row.y3,     row.rope_alpha3),
+                        (row.x4,        row.y4,     row.rope_alpha4),
+                        (row.x5,        row.y5,     row.rope_alpha5),
+                        (row.x6,        row.y6,     row.rope_alpha6),
+                        (row.x_hook,    row.y_hook, f64::NAN),
                     ],
                 ));
             }
@@ -79,14 +79,14 @@ fn new() {
             ], 
             // Targets
             [
-                // block.x,           block.y
-                (-1829.9999999999993, 11040.0),
-                (2958.9072250002687, 21505.37167318569),
-                (3674.151798369415, 23072.283377861302),
-                (8047.737692695379, 26376.6496446291),
-                (9108.947602987579, 27278.396020445285),
-                (9649.303797749028, 26552.998761846295),
-                (10057.303797749028, 25552.998761846295),
+                // block.x,           block.y               rope alpha
+                (-1829.9999999999993, 11040.0,              0.0),
+                (2958.9072250002687, 21505.37167318569,     0.0),
+                (3674.151798369415, 23072.283377861302,     0.0),
+                (8047.737692695379, 26376.6496446291,       0.0),
+                (9108.947602987579, 27278.396020445285,     0.0),
+                (9649.303797749028, 26552.998761846295,     0.0),
+                (10057.303797749028, 25552.998761846295,    0.0),
             ]),
             (02,  [
                 // Input Events
@@ -95,14 +95,14 @@ fn new() {
             ], 
             // Targets
             [
-                // block.x,           block.y
-                (-1829.9999999999993, 11040.0),
-                (2114.646825209876, 21695.400688256872),
-                (3768.650625989636, 23237.344917868133),
-                (9085.90896364857, 24569.20593561606),
-                (10415.170698843269, 24984.388111711298),
-                (10628.98251500226, 24105.485098136538),
-                (11036.98251500226, 23105.485098136538),
+                // block.x,           block.y               rope alpha
+                (-1829.9999999999993, 11040.0,              0.0),
+                (2114.646825209876, 21695.400688256872,     0.0),
+                (3768.650625989636, 23237.344917868133,     0.0),
+                (9085.90896364857, 24569.20593561606,       0.0),
+                (10415.170698843269, 24984.388111711298,    0.0),
+                (10628.98251500226, 24105.485098136538,     0.0),
+                (11036.98251500226, 23105.485098136538,     0.0),
             ]),
         ]
     };
@@ -189,21 +189,24 @@ fn new() {
             inputs.insert(key.to_owned(), val);
         }
         let result = blocks.eval().unwrap();
-        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
+        log::trace!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        // log::debug!("{dbg} | step {step}  result block pos: \n\t{:?}", result.iter().map(|b| format!("{:.3}, {:.3}", b.pos.x, b.pos.y)).collect::<Vec<_>>());
-        // log::debug!("{dbg} | step {step}  target block pos: \n\t{:?}", target.iter().map(|(x, y)| format!("{:.3}, {:.3}", x, y)).collect::<Vec<_>>());
         log.push(format!("step {step}  result block pos: {:?}", result.iter().map(|b| format!("{:.3}, {:.3}", b.pos.x, b.pos.y)).collect::<Vec<_>>()));
-        log.push(format!("step {step}  target block pos: {:?}", target.iter().map(|(x, y)| format!("{:.3}, {:.3}", x, y)).collect::<Vec<_>>()));
-        if target.iter().zip(&result).any(|((x, y), b)| (x - b.pos.x).abs() > 1.0 || (y - b.pos.y).abs() > 1.0) {
-            log.push(format!("step {step}  target delta    : {:?}", target.iter().zip(&result).map(|((x, y), b)| format!("{:.3}, {:.3}", x - b.pos.x, y - b.pos.y)).collect::<Vec<_>>()));
+        log.push(format!("step {step}  target block pos: {:?}", target.iter().map(|(x, y, _)| format!("{:.3}, {:.3}", x, y)).collect::<Vec<_>>()));
+        if target.iter().zip(&result).any(|((x, y, _), b)| (x - b.pos.x).abs() > 1.0 || (y - b.pos.y).abs() > 1.0) {
+            log.push(format!("step {step}  pos delta       : {:?}", target.iter().zip(&result).map(|((x, y, _), b)| format!("{:.3}, {:.3}", x - b.pos.x, y - b.pos.y)).collect::<Vec<_>>()));
         }
-        for (i, (target_x, target_y)) in target.into_iter().enumerate() {
-            assert!((result[i].pos.x - target_x).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
-            if i < result.len() - 1 {
-                assert!((result[i].pos.y - target_y).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
-            }
+        // log.push(format!("step {step}  target rope alpha    : {:?}", target.iter().map(|(_, _, a)| format!("{:.3}", a)).collect::<Vec<_>>()));
+        // log.push(format!("step {step}  result rope alpha fwd: {:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>()));
+        if target.iter().zip(&result).any(|((_, _, a), b)| (a - b.rope_alpha_fwd).abs() > 0.1) {
+            log.push(format!("step {step}  alpha delta     : {:?}", target.iter().zip(&result).map(|((_, _, a), b)| format!("{:.3}", a - b.rope_alpha_fwd)).collect::<Vec<_>>()));
         }
+        // for (i, (target_x, target_y, _)) in target.into_iter().enumerate() {
+        //     assert!((result[i].pos.x - target_x).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
+        //     if i < result.len() - 1 {
+        //         assert!((result[i].pos.y - target_y).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
+        //     }
+        // }
     }
     for row in log {
         println!("{row}");

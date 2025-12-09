@@ -57,14 +57,14 @@ impl TaskConf {
         let dbg = format!("TaskConf({})", me);
         log::trace!("{}.new | conf: {:?}", dbg, conf);
         let self_name = Name::new(parent, me);
-        log::debug!("{}.new | name: {:?}", dbg, self_name);
+        log::trace!("{}.new | name: {:?}", dbg, self_name);
         let cycle = conf.get_duration("cycle").ok();
-        log::debug!("{}.new | cycle: {:?}", dbg, cycle);
+        log::trace!("{}.new | cycle: {:?}", dbg, cycle);
         let (rx, rx_max_length) = conf.get_in_queue().unwrap();
-        log::debug!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_length);
+        log::trace!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_length);
         let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
         let subscribe = ConfSubscribe::new(subscribe);
-        log::debug!("{}.new | subscribe: {:#?}", dbg, subscribe);
+        log::trace!("{}.new | subscribe: {:#?}", dbg, subscribe);
         let mut node_index = 0;
         let mut nodes = IndexMap::new();
         for key in conf.keys(&["cycle", "subscribe", format!("in queue {}", rx).as_str()]) {

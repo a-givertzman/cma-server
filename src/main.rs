@@ -10,12 +10,20 @@ mod tests;
 use std::path::PathBuf;
 use clap::Parser;
 use debugging::session::debug_session::{DebugSession, LogLevel};
+use sal_core::dbg::Dbg;
 use services::app::app::App;
 use crate::domain::cli::cli::Cli;
 
 fn main() {
-    DebugSession::new().filter(LogLevel::Debug).init();
-    std::process::Command::new("clear").status().unwrap();
+    DebugSession::new()
+        .filter(LogLevel::Debug)
+        .module("sal_sync::thread_pool", LogLevel::Info)
+        .init();
+    let dbg = Dbg::own("main");
+    if let Err(err) = std::process::Command::new("clear").status() {
+        log::debug!("{dbg} | Can't clear terminal, error: {:?}", err);
+
+    }
     let cli = Cli::parse();
     let path = cli.config.map_or_else(
         || vec![PathBuf::from("config.yaml")],
@@ -25,6 +33,6 @@ fn main() {
     );
     let app = App::new(path);
     if let Err(err) = app.run() {
-        log::error!("main | Error: {:#?}", err);
+        log::error!("{dbg} | Can't execute App, error: {:#?}", err);
     };
 }

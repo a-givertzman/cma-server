@@ -69,52 +69,52 @@ impl ServicesFactory {
         match kind.as_ref() {
             Self::API_CLIENT => {
                 let conf = ApiClientConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(ApiClient::new(conf, services, scheduler.clone()))
             }
             Self::MULTI_QUEUE => {
                 let conf = MultiQueueConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(MultiQueue::new(conf, services, Some(scheduler.clone())))
             }
             Self::PROFINET_CLIENT => {
                 let conf = ProfinetClientConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(ProfinetClient::new(conf, services, scheduler.clone()))
             }
             Self::TASK => {
                 let conf = TaskConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(Task::new(conf, services.clone(), scheduler.clone()))
             }
             Self::TCP_CLIENT => {
                 let conf = TcpClientConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(TcpClient::new(conf, services.clone(), scheduler.clone()))
             }
             Self::TCP_SERVER => {
                 let conf = TcpServerConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(TcpServer::new(conf, services.clone(), scheduler.clone()))
             }
             Self::PRODUCER_SERVICE => {
                 let conf = ProducerServiceConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(ProducerService::new(conf, services.clone(), scheduler.clone()))
             }
             Self::CACHE_SERVICE => {
                 let conf = CacheServiceConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(CacheService::new(conf, services.clone(), scheduler.clone()))
             }
             Self::SLMP_CLIENT => {
                 let conf = SlmpClientConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(SlmpClient::new(conf, services, scheduler.clone()))
             }
             Self::FRDM_SERVICE => {
                 let conf = FrdmServiceConf::new(&self.parent, conf);
-                log::debug!("{}.run | Conf: {:#?}", self.dbg, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(FrdmService::new(conf, services, scheduler.clone()))
             }
             _ => {

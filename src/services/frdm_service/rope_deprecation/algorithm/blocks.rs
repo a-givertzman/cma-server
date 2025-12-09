@@ -59,16 +59,13 @@ impl Blocks {
                         let mut blocks = self.items.iter().take(2);
                         match blocks.next().cloned() {
                             Some(mut block) => {
-                                block.pos = self.blocks_pos(&block, &booms, &Block::default(), false);
+                                block.pos = self.blocks_pos(&block, &booms, &Block::default(), 0.0, false);
                                 match blocks.next().cloned() {
                                     Some(mut next) => {
-                                        next.pos = self.blocks_pos(&next, &booms, &block, false);
-                                        // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
+                                        next.pos = self.blocks_pos(&next, &booms, &block, 0.0, false);
                                         let (k, j) = block.scheme.kj();
                                         let l_block = block.pos.distance(next.pos);
-                                        // log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
                                         let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
-                                        // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                                         let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
                                         self.winch_rope_alpha = Some(rope_alpha_fwd);
                                         rope_alpha_fwd
@@ -93,16 +90,17 @@ impl Blocks {
                 }
             }
         };
+        let mut winch_dl = 0.0;
         match self.booms.eval() {
             Some(booms) => {
                 let mut blocks = VecDeque::from(self.items.clone());
                 match blocks.pop_front() {
                     Some(mut block) => {
-                        block.pos = self.blocks_pos(&block, &booms, &Block::default(), false);
+                        block.pos = self.blocks_pos(&block, &booms, &Block::default(), winch_dl, false);
                         let mut result = vec![];
                         let mut skipped = None;
                         while let Some(mut next) = blocks.pop_front() {
-                            next.pos = self.blocks_pos(&next, &booms, &block, skipped.is_some());
+                            next.pos = self.blocks_pos(&next, &booms, &block, winch_dl, skipped.is_some());
                             // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
                             let (k, j) = block.scheme.kj();
                             let l_block = block.pos.distance(next.pos);
@@ -110,8 +108,9 @@ impl Blocks {
                             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
-                            if self.winch_rope_alpha.is_none() {
-                                self.winch_rope_alpha = Some(rope_alpha_fwd)
+                            if block.bind.is(BlockBind::Fixed) {
+                                block.rope_alpha_fwd = rope_alpha_fwd - winch_rope_alpha;
+                                winch_dl = block.rope_alpha_fwd.to_radians() * block.diameter * 0.5;
                             }
                             // if rope_alpha_fwd.is_nan() {
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
@@ -145,7 +144,8 @@ impl Blocks {
     }
     ///
     /// 4. Координаты блоков X, Y
-    fn blocks_pos(&self, block: &Block, booms: &Vec<Boom>, prev: &Block, skipped: bool) -> Offset<f64> {
+    /// 'winch_dl' - Изменение длины каната на лебедке за счет изменения угла первой стрелы, мм
+    fn blocks_pos(&self, block: &Block, booms: &Vec<Boom>, prev: &Block, winch_dl: f64, skipped: bool) -> Offset<f64> {
         match block.bind {
             BlockBind::Fixed => {
                 // Формула из алгоритма:
@@ -166,12 +166,13 @@ impl Blocks {
             BlockBind::Hook => {
                 // log::debug!("{}.blocks_pos | Prev  {} bind: {:?}  pos: {:.3}, {:.3}, D: {:.3}, new X: {:.3}", self.dbg, prev.name, prev.bind, prev.pos.x, prev.pos.y, prev.diameter * 0.5, prev.pos.x - 0.5 * prev.diameter);
                 // log::debug!("{}.blocks_pos | Block {} bind: {:?}", self.dbg, block.name, block.bind);
+                log::debug!("{}.blocks_pos | Block {} bind: {:?}  winch_dl: {:.3}", self.dbg, block.name, block.bind, winch_dl);
                 Offset::new(
                     match skipped {
                         true => prev.pos.x - 0.5 * prev.diameter,
                         false => prev.pos.x + 0.5 * prev.diameter,
                     },
-                    prev.pos.y - self.aux_length,
+                    prev.pos.y - self.aux_length - winch_dl,
                 )
             }
         }

@@ -410,12 +410,11 @@ if __name__ == "__main__":
     tblock: list[Block] = [Block.empty() for _ in range(7)]
     trope: list[RopeParams] = [Block.empty() for _ in range(7)]
     for row in rows:
-        logging.debug(f"csv row: {row}")
+        # logging.debug(f"step {step} csv | row: {row}")
         step = int(row[0])
         a21 = float(row[1])
         a22 = float(row[2])
-        logging.debug(f"csv a21: {a21}")
-        logging.debug(f"csv a22: {a22}")
+        logging.debug(f"step {step} csv | a21: {a21}, a22: {a22}")
         tblock[2 -1].coord.x = float(row[13])
         tblock[2 -1].coord.y = float(row[14])
         tblock[3 -1].coord.x = float(row[15])
