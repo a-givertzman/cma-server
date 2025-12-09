@@ -108,10 +108,9 @@ impl Blocks {
                             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
-                            if block.bind.is(BlockBind::Fixed) {
-                                block.rope_alpha_fwd = rope_alpha_fwd - winch_rope_alpha;
-                                winch_dl = block.rope_alpha_fwd.to_radians() * block.diameter * 0.5;
-                            }
+                            if let BlockBind::Fixed = block.bind {
+                                winch_dl = (rope_alpha_fwd - winch_rope_alpha).to_radians() * block.diameter * 0.5;
+                            };
                             // if rope_alpha_fwd.is_nan() {
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
@@ -172,7 +171,7 @@ impl Blocks {
                         true => prev.pos.x - 0.5 * prev.diameter,
                         false => prev.pos.x + 0.5 * prev.diameter,
                     },
-                    prev.pos.y - self.aux_length - winch_dl,
+                    prev.pos.y - self.aux_length + winch_dl,
                 )
             }
         }
