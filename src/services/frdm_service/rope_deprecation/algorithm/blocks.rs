@@ -110,7 +110,7 @@ impl Blocks {
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
                             if let BlockBind::Fixed = block.bind {
                                 winch_dl = (rope_alpha_fwd - winch_rope_alpha).to_radians() * block.diameter * 0.5;
-                            };
+                            }
                             // if rope_alpha_fwd.is_nan() {
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
