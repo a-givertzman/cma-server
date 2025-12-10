@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, Parking, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -22,14 +22,14 @@ fn init_once() {
 ///  - ...
 fn init_each() -> () {}
 ///
-/// Testing [RopeSection]
+/// Testing [Parking]
 #[test]
 fn new() {
     DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     log::debug!("");
-    let dbg = Dbg::own("RopeSection-test");
+    let dbg = Dbg::own("Parking-test");
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
@@ -184,13 +184,16 @@ fn new() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
-    let mut rope_sections = RopeSections::new(
+    let mut rope_sections = Parking::new(
         &dbg,
-        Blocks::new(
+        RopeSections::new(
             &dbg,
-            conf.rope.aux_length,
-            &conf.blocks,
-            Booms::new(&dbg, &conf.booms, inputs.clone()),
+            Blocks::new(
+                &dbg,
+                conf.rope.aux_length,
+                &conf.blocks,
+                Booms::new(&dbg, &conf.booms, inputs.clone()),
+            ),
         ),
     );
     for (step, events, target) in test_data {

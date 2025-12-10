@@ -7,6 +7,7 @@ mod booms;
 mod input_kind;
 mod deprecation;
 mod offset;
+mod parking;
 mod rope_sections;
 
 pub(crate) use bendings::*;
@@ -18,6 +19,7 @@ pub(crate) use booms::*;
 pub(crate) use input_kind::*;
 pub(crate) use deprecation::*;
 pub(crate) use offset::*;
+pub(crate) use parking::*;
 pub(crate) use rope_sections::*;
 
 ///

@@ -7,6 +7,7 @@ use crate::services::frdm_service::{Block, BlockArcs, BlockBind, Inputs, RopeCon
 pub struct Bendings {
     /// Total working length of the rope, mm
     rope_len: f64,
+    winch_len: Option<f64>,
     block_arcs: BlockArcs,
     dbg: Dbg,
 }
@@ -18,6 +19,14 @@ impl Bendings {
     pub fn new(parent: impl Into<String>, conf: &RopeConf, block_arcs: BlockArcs) -> Self {
         Self {
             rope_len: conf.length.as_mm(),
+            winch_len: match block_arcs.eval() {
+                Some(blocks) => {
+                    let len = blocks.iter().fold(0.0, |acc, block| {
+
+                    });
+                },
+                None => None,
+            },
             block_arcs,
             dbg: Dbg::new(parent, "Bendings"),
         }
