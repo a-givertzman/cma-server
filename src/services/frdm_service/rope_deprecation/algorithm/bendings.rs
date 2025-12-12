@@ -71,33 +71,32 @@ impl Bendings {
                 match inputs.rope_pos() {
                     Some(rope_pos) => {
                         // log::debug!("{}.eval | rope pos: {:.3} mm", self.dbg, rope_pos);
-                        let mut start = self.rope_len - rope_pos;           // Точка входа каната на блок (по направлению от барабана к крюку)
-                        let mut end =  start;                               // Точка схода каната с блока (по направлению от барабана к крюку)
+                        let mut start = 0.0;           // Точка входа каната на блок (по направлению от барабана к крюку)
+                        let mut end = 0.0;                               // Точка схода каната с блока (по направлению от барабана к крюку)
                         let mut prev_bend = start .. end;                 // Первый вход..сход считаем на крюке
-                        let mut result: Vec<Block> = blocks.into_iter().rev().filter_map(|mut block| {
+                        let result: Vec<Block> = blocks.into_iter().filter_map(|mut block| {
                             // log::debug!("{}.eval | Block {} {:?}, rope_len_fwd: {:.3}, wrap_length: {:.3}", self.dbg, block.name, block.bind, block.rope_len_fwd, block.wrap_length);
                             match block.skipped {
                                 true => None,
                                 false => {
-                                    end = match block.bind {
-                                        BlockBind::Hook => {
-                                            prev_bend.start - block.rope_alpha_bck - block.rope_len_fwd
-                                        }
-                                        _ => prev_bend.start - block.rope_len_fwd,
-                                    };
                                     start = match block.bind {
                                         BlockBind::Fixed => 0.0, // На барабане считаем весь канат от начала до точки схода,
-                                        BlockBind::Boom(_) => end - block.wrap_length,
-                                        BlockBind::BoomPair(_) => end - block.wrap_length,
-                                        
+                                        BlockBind::Boom(_) => prev_bend.end,
+                                        BlockBind::BoomPair(_) => prev_bend.end,
                                         // L_winch_eff = L_winch_nom + dL_drum
                                         // l_hook_new = Lfact - L_winch_eff - l_sections_wo_hook - L_sys_arc
                                         BlockBind::Hook => {
-
-                                            end - block.wrap_length
+                                            prev_bend.end
                                         }
                                     };
-                                    prev_bend = start .. end;
+                                    end = match block.bind {
+                                        BlockBind::Fixed => start + self.winch_len + block.rope_len_bck + block.wrap_length - rope_pos, // На барабане считаем весь канат от начала до точки схода,
+                                        BlockBind::Hook => {
+                                            start + block.wrap_length
+                                        }
+                                        _ => start + block.wrap_length,
+                                    };
+                                    prev_bend = start .. end + block.rope_len_fwd;
                                     match (end - start).abs() > 0.0 {
                                         true => {
                                             block.bending = start .. end;
@@ -108,7 +107,6 @@ impl Bendings {
                                 }
                             }
                         }).collect();
-                        result.reverse();
                         // log::debug!("{}.eval | Elapsed: {:?}", self.dbg, t.elapsed());
                         // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                         Some(result)
