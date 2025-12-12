@@ -223,8 +223,8 @@ fn new() {
         let mut ok = true;
         for (i, bending) in target.iter().enumerate() {
             if (bending.end - bending.start).abs() > 0.00001 {
-                // assert!((result[i].bending.start - bending.start).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
-                // assert!((result[i].bending.end - bending.end).abs() < 2.0, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
+                assert!((result[i].bending.start - bending.start).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
+                assert!((result[i].bending.end - bending.end).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
                 ok = ok && (((result[i].bending.start - bending.start).abs() < tolerance) && ((result[i].bending.end - bending.end).abs() < tolerance));
             }
         }
