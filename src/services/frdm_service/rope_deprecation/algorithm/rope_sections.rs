@@ -27,8 +27,6 @@ impl RopeSections {
     pub fn eval(&mut self) -> Option<Vec<Block>> {
         match self.blocks.eval() {
             Some(blocks) => {
-                // let mut rope_alpha_bck = 0.0;
-                // let mut rope_len_bck = 0.0;
                 let mut blocks = VecDeque::from(blocks);
                 match blocks.pop_front() {
                     Some(mut block) => {
@@ -46,13 +44,10 @@ impl RopeSections {
                                 // log::debug!("{}.eval | Block: {}: {:.3}, {:.3} | Block: {}: {:.3}, {:.3}", self.dbg, block1.name, block1_x, block1_y, block2.name, block2_x, block2_y);
                                 let rope_len_fwd = Offset::new(next_x, next_y).distance(Offset::new(block_x, block_y));
                                 block.rope_len_fwd = rope_len_fwd;
-                                // block.rope_len_bck = rope_len_bck;
                                 result.push(block);
                                 next.rope_len_bck = rope_len_fwd;
                                 block = next;
                             }
-                            // block.rope_len_fwd = rope_len_fwd;
-                            // block.rope_len_bck = rope_len_bck;
                             result.push(block);
                             // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                             Some(result)

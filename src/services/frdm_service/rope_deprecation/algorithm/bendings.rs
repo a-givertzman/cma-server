@@ -7,7 +7,8 @@ use crate::services::frdm_service::{Block, BlockArcs, BlockBind, Inputs, RopeCon
 pub struct Bendings {
     /// Total working length of the rope, mm
     rope_len: f64,
-    winch_len: Option<f64>,
+    /// Длина каната на лебедке в парковочном положении
+    winch_len: f64,
     block_arcs: BlockArcs,
     dbg: Dbg,
 }
@@ -16,19 +17,37 @@ pub struct Bendings {
 impl Bendings {
     ///
     /// Returns [Bendings] new instance
-    pub fn new(parent: impl Into<String>, conf: &RopeConf, block_arcs: BlockArcs) -> Self {
+    pub fn new(parent: impl Into<String>, conf: &RopeConf, mut block_arcs: BlockArcs) -> Self {
+        let dbg = Dbg::new(parent, "Bendings");
+        let rope_len = conf.length.as_mm();
+        log::debug!("{dbg}.new | Evaluating parking position...");
         Self {
-            rope_len: conf.length.as_mm(),
+            rope_len,
             winch_len: match block_arcs.eval() {
                 Some(blocks) => {
-                    let len = blocks.iter().fold(0.0, |acc, block| {
-
+                    // для парковочного положения
+                    // winch_len = общая длина  - арки - прямые - 1200
+                    let len = blocks.iter().fold(rope_len, |len, block| {
+                        log::debug!("{dbg}.new | Block[{}] len {:.3} mm - wrap {:.3} mm - rope {:.3}", block.name, len, block.wrap_length, block.rope_len_fwd);
+                        match block.bind {
+                            BlockBind::Fixed => {
+                                log::debug!("{dbg}.new | Block[{}] rope bck {:.3}", block.name, block.rope_len_bck);
+                                len - block.rope_len_bck - block.wrap_length - block.rope_len_fwd
+                            }
+                            _ => len - block.wrap_length - block.rope_len_fwd,
+                        }
+                        // log::debug!("{dbg}.new | Block[{i}] rope len: {:.3} mm", len);
                     });
+                    log::debug!("{dbg}.new | Evaluating parking position - Ok, winch_len: {:.3} mm", len);
+                    len
                 },
-                None => None,
+                None => {
+                    log::error!("{dbg}.new | Can't evaluate parking position calculations, winch_len set to default 0.0 mm");
+                    0.0
+                }
             },
             block_arcs,
-            dbg: Dbg::new(parent, "Bendings"),
+            dbg,
         }
     }
     ///
@@ -60,12 +79,23 @@ impl Bendings {
                             match block.skipped {
                                 true => None,
                                 false => {
-                                    end = prev_bend.start - block.rope_len_fwd;
+                                    end = match block.bind {
+                                        BlockBind::Hook => {
+                                            prev_bend.start - block.rope_alpha_bck - block.rope_len_fwd
+                                        }
+                                        _ => prev_bend.start - block.rope_len_fwd,
+                                    };
                                     start = match block.bind {
                                         BlockBind::Fixed => 0.0, // На барабане считаем весь канат от начала до точки схода,
                                         BlockBind::Boom(_) => end - block.wrap_length,
                                         BlockBind::BoomPair(_) => end - block.wrap_length,
-                                        BlockBind::Hook => end - block.wrap_length,
+                                        
+                                        // L_winch_eff = L_winch_nom + dL_drum
+                                        // l_hook_new = Lfact - L_winch_eff - l_sections_wo_hook - L_sys_arc
+                                        BlockBind::Hook => {
+
+                                            end - block.wrap_length
+                                        }
                                     };
                                     prev_bend = start .. end;
                                     match (end - start).abs() > 0.0 {

@@ -15,7 +15,10 @@ pub struct Blocks {
     items: Vec<Block>,
     aux_length: f64,
     /// Угол (к горизонту) схода каната с лебедки в парковочном положении
-    winch_rope_alpha: Option<f64>,
+    winch_rope_alpha: f64,
+    /// Если `true` то при первом вызове расчитывается парковочное положение,
+    /// затем устанавливается в `false`.
+    parking: bool,
     booms: Booms,
     #[allow(unused)]
     dbg: Dbg,
@@ -24,12 +27,14 @@ pub struct Blocks {
 //
 impl Blocks {
     ///
-    /// Returns [Boom] new instance
-    /// - `hook_l` - Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
-    pub fn new(parent: impl Into<String>, aux_length: ConfDistance, conf: &Vec<(String, BlockConf)>, booms: Booms) -> Self {
+    /// Returns [Blocks] new instance
+    /// - `aux_length` - Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
+    /// - `parking` - Calculates parking position in the first step, meaning calculations will use specific angles of booms for that position
+    pub fn new(parent: impl Into<String>, aux_length: ConfDistance, conf: &Vec<(String, BlockConf)>, parking: bool, booms: Booms) -> Self {
         Self {
             aux_length: aux_length.as_mm(),
-            winch_rope_alpha: None,
+            winch_rope_alpha: 0.0,
+            parking,
             items: conf.iter().map(|(key, conf)| Block::new(
                 key,
                 Offset::new(conf.lf.x.as_mm(), conf.lf.y.as_mm()),
@@ -51,45 +56,45 @@ impl Blocks {
     ///
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self) -> Option<Vec<Block>> {
-        let winch_rope_alpha =  match self.winch_rope_alpha {
-            Some(winch_rope_alpha) => winch_rope_alpha,
-            None => {
-                match self.booms.eval() {
-                    Some(booms) => {
-                        let mut blocks = self.items.iter().take(2);
-                        match blocks.next().cloned() {
-                            Some(mut block) => {
-                                block.pos = self.blocks_pos(&block, &booms, &Block::default(), 0.0, false);
-                                match blocks.next().cloned() {
-                                    Some(mut next) => {
-                                        next.pos = self.blocks_pos(&next, &booms, &block, 0.0, false);
-                                        let (k, j) = block.scheme.kj();
-                                        let l_block = block.pos.distance(next.pos);
-                                        let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
-                                        let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
-                                        self.winch_rope_alpha = Some(rope_alpha_fwd);
-                                        rope_alpha_fwd
-                                    }
-                                    None => {
-                                        log::error!("{}.eval | Can't evaluate 'Parking' position. At least two blocks required, but only one present.", self.dbg);
-                                        0.0
-                                    }
-                                }
-                                // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
-                            }
-                            None => {
-                                log::error!("{}.eval | Can't evaluate 'Parking' position. At least two blocks required, but nothing present.", self.dbg);
-                                0.0
-                            },
-                        }
-                    }
-                    None => {
-                        log::error!("{}.eval | Can't evaluate 'Parking' position. Check Booms and Blocks configuration! Probably first (main) Boom 'parking' angle is missed.", self.dbg);
-                        0.0
-                    }
-                }
-            }
-        };
+        // let winch_rope_alpha =  match self.winch_rope_alpha {
+        //     Some(winch_rope_alpha) => winch_rope_alpha,
+        //     None => {
+        //         match self.booms.eval() {
+        //             Some(booms) => {
+        //                 let mut blocks = self.items.iter().take(2);
+        //                 match blocks.next().cloned() {
+        //                     Some(mut block) => {
+        //                         block.pos = self.blocks_pos(&block, &booms, &Block::default(), 0.0, false);
+        //                         match blocks.next().cloned() {
+        //                             Some(mut next) => {
+        //                                 next.pos = self.blocks_pos(&next, &booms, &block, 0.0, false);
+        //                                 let (k, j) = block.scheme.kj();
+        //                                 let l_block = block.pos.distance(next.pos);
+        //                                 let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
+        //                                 let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
+        //                                 self.winch_rope_alpha = Some(rope_alpha_fwd);
+        //                                 rope_alpha_fwd
+        //                             }
+        //                             None => {
+        //                                 log::error!("{}.eval | Can't evaluate 'Parking' position. At least two blocks required, but only one present.", self.dbg);
+        //                                 0.0
+        //                             }
+        //                         }
+        //                         // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
+        //                     }
+        //                     None => {
+        //                         log::error!("{}.eval | Can't evaluate 'Parking' position. At least two blocks required, but nothing present.", self.dbg);
+        //                         0.0
+        //                     },
+        //                 }
+        //             }
+        //             None => {
+        //                 log::error!("{}.eval | Can't evaluate 'Parking' position. Check Booms and Blocks configuration! Probably first (main) Boom 'parking' angle is missed.", self.dbg);
+        //                 0.0
+        //             }
+        //         }
+        //     }
+        // };
         match self.booms.eval() {
             Some(booms) => {
                 let mut blocks = VecDeque::from(self.items.clone());
@@ -109,7 +114,13 @@ impl Blocks {
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
                             if let BlockBind::Fixed = block.bind {
-                                winch_dl = (rope_alpha_fwd - winch_rope_alpha).to_radians() * block.diameter * 0.5;
+                                if self.parking {
+                                    self.winch_rope_alpha = rope_alpha_fwd;
+                                    log::debug!("{}.eval | Block: {}: winch_rope_alpha: {:.3}", self.dbg, block.name, rope_alpha_fwd);
+                                    self.parking = false;
+                                }
+                                winch_dl = (rope_alpha_fwd - self.winch_rope_alpha).to_radians() * block.diameter * 0.5;
+                                block.rope_len_bck = winch_dl;
                             }
                             // if rope_alpha_fwd.is_nan() {
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
@@ -171,7 +182,7 @@ impl Blocks {
                         true => prev.pos.x - 0.5 * prev.diameter,
                         false => prev.pos.x + 0.5 * prev.diameter,
                     },
-                    prev.pos.y - self.aux_length + winch_dl,
+                    prev.pos.y - self.aux_length,
                 )
             }
         }

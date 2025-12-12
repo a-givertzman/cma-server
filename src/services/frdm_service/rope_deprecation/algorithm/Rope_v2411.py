@@ -287,6 +287,8 @@ def calc_alpha_rope0_first_boom_zero(blocks: list[Block], booms: list[Boom], rop
     blocks = block_pos(blocks, booms)
     # ---------- 4. Расчёт параметров каната ----------
     rope_data: list[RopeParams] = rope_data_eval(blocks)
+    for i, r in enumerate(rope_data):
+        logging.debug(f"parking rope_data [i] alpha_rope: {r.alpha_rope},  l_rope: {r.l_rope}")
     # Нам нужен угол первого участка (1 -> 2)
     alpha_rope0 = rope_data[0].alpha_rope
     # logging.debug(f"[INIT] alpha_rope0 (при alpha_1 = 0°) = {alpha_rope0:.3f}°")
@@ -403,8 +405,8 @@ if __name__ == "__main__":
     # Парковочное положение задаем углом первой стрелы (в данном случае 0.0 град к горизонту)
     # Угол второй стрелы  - любое значение а рабочем диапазоне, может даже 0.0 подойдет
     #
-    alpha_rope0 = calc_alpha_rope0_first_boom_zero(blocks_new(), booms_new([0.0, 155.299999999996]), rope_calc_params)
-    logging.debug(f"boob2 alpha: {155.299999999996}, alpha_rope0: {alpha_rope0}")
+    alpha_rope0 = calc_alpha_rope0_first_boom_zero(blocks_new(), booms_new([0.0, 23.78]), rope_calc_params)
+    logging.debug(f"boob2 alpha: {23.78}, alpha_rope0: {alpha_rope0}")
     rope_calc_params.alpha_rope0 = alpha_rope0
 
     tblock: list[Block] = [Block.empty() for _ in range(7)]
@@ -603,6 +605,7 @@ if __name__ == "__main__":
             """
             Lfact = float(rope_calc_params.Lfact)
             L_winch_nom = float(rope_calc_params.L_winch)
+            logging.debug(f"L_winch_nom: {L_winch_nom}")
         
             # 1. Суммы по текущей геометрии
             block_results = calc_block_angles_and_arcs(blocks,rope_data)
@@ -616,6 +619,7 @@ if __name__ == "__main__":
             # logging.debug(f"step {step} dL_drum: {dL_drum}")
 
             L_winch_eff = L_winch_nom + dL_drum
+            logging.debug(f"L_winch_eff: {L_winch_eff}")
 
             # 3. Новая длина подвеса из уравнения длины
             l_hook_new = Lfact - L_winch_eff - l_sections_wo_hook - L_sys_arc

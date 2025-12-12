@@ -170,6 +170,7 @@ fn new() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
+    let parking = true;
     let mut block_arcs = BlockArcs::new(
         &dbg,
         RopeSections::new(
@@ -178,7 +179,8 @@ fn new() {
                 &dbg,
                 conf.rope.aux_length,
                 &conf.blocks,
-                Booms::new(&dbg, &conf.booms, inputs.clone()),
+                parking,
+                Booms::new(&dbg, &conf.booms, inputs.clone(), parking),
             ),
         ),
     );

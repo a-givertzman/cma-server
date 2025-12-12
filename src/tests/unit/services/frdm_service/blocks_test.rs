@@ -122,7 +122,7 @@ fn new() {
                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 11200.0 mm                                         # length of the boom
                 angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
-                parking: 0.0                # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
+                parking: 0.0                # Угол в парковочном положении, град
             - Rotary-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -130,7 +130,7 @@ fn new() {
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.0 mm                                          # length of the rotary boom
                 angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
-                # parking: 0.0                # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
+                parking: 155.299999999996   # Угол в парковочном положении, град
         blocks:
             - '1':
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -175,13 +175,16 @@ fn new() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
+    let parking = true;
     let mut blocks = Blocks::new(
         &dbg,
-        conf.rope.aux_length,        // TODO: replace with config or calculated value
+        conf.rope.aux_length,
         &conf.blocks,
-        Booms::new(&dbg, &conf.booms, inputs.clone()),
+        parking,
+        Booms::new(&dbg, &conf.booms, inputs.clone(), parking),
     );    
     let mut log = vec![];
+    let _parck = blocks.eval().unwrap();
     for (step, events, target) in test_data {
         let t = Instant::now();
         for (key, val) in events {
@@ -201,12 +204,16 @@ fn new() {
         if target.iter().zip(&result).any(|((_, _, a), b)| (a - b.rope_alpha_fwd).abs() > 0.1) {
             log.push(format!("step {step}  alpha delta     : {:?}", target.iter().zip(&result).map(|((_, _, a), b)| format!("{:.3}", a - b.rope_alpha_fwd)).collect::<Vec<_>>()));
         }
-        // for (i, (target_x, target_y, _)) in target.into_iter().enumerate() {
-        //     assert!((result[i].pos.x - target_x).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
-        //     if i < result.len() - 1 {
-        //         assert!((result[i].pos.y - target_y).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
-        //     }
-        // }
+        for (i, (target_x, target_y, _)) in target.into_iter().enumerate() {
+            assert!((result[i].pos.x - target_x).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.x, target_x);
+            //
+            // Skipping the last block, which is hook,
+            // Because it pos.y is wrong at this point,
+            // It will be fixed in the later steps, when parking position will calculated
+            if i < result.len() - 1 {
+                assert!((result[i].pos.y - target_y).abs() < 1.0, "{dbg} | step {step}  block[{}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].name, result[i].pos.y, target_y);
+            }
+        }
     }
     for row in log {
         println!("{row}");

@@ -30,8 +30,8 @@ pub struct BoomConf {
     pub len: InputKind<ConfDistance>,
     /// Current angle of the boom (relative axis), degrees
     pub angle: InputKind<f64>,
-    /// Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
-    pub parking: Option<f64>,
+    /// Угол в парковочном положении, град
+    pub parking: f64,
 }
 //
 // 
@@ -61,7 +61,8 @@ impl BoomConf {
                 .expect(&format!("{dbg}.new | 'angle' - can be Const: 11200.0 mm or point real 'App/MultiQueue/Load.MainBoomAngle', but found '{:?}'", ConfTreeGet::<String>::get(&conf, "len")))
                 .name()),
         };
-        let parking = conf.get("parking");
+        let parking = conf.get("parking")
+            .expect(&format!("{dbg}.new | 'parking' - missed or wrong config", ));
         Self {
             l1,
             l2,

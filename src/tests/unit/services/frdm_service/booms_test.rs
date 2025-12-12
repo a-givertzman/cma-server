@@ -50,9 +50,9 @@ fn new() {
                         ("RotaryBoom.Angle", row.a22)
                     ],
                     [
-                        // boom[i].D        boom[i].G
-                        ((0.00, 0.00),      (0.00,   0.00)),
-                        ((0.00, 0.00),      (row.xg, row.yg)),
+                        // boom[i].G
+                        (0.00,   0.00),
+                        (row.xg, row.yg),
                     ],
                 ));
             }
@@ -72,12 +72,10 @@ fn new() {
                 ("RotaryBoom.Angle", 155.30)
             ], 
             // Targets
-            // boom[i].alpha
-            // [69.71, 45.01],
             [
-                // boom[i].D                              boom[i].G
-                ((6.32530071759608e-13, 10330.0),    (3883.8458824556724, 20835.034086633517)), 
-                ((3883.8458824556724, 20835.034086633517),    (9528.40100476262, 26481.55987434036)),
+                // boom[i].G
+                (3883.8458824556724, 20835.034086633517), 
+                (9528.40100476262, 26481.55987434036),
             ]),
             (02,  [
                 // Input Events
@@ -85,23 +83,13 @@ fn new() {
                 ("RotaryBoom.Angle", 128.00)
             ], 
             // Targets
-            // boom[i].alpha
-            // [74.0, 22.0],
             [
-                // boom.D                              boom.G
-                ((6.32530071759608e-13, 10330.0), (3087.138385150391, 21096.13099450917)), 
-                ((3087.138385150391, 21096.13099450917), (10489.774280011621, 24086.990036341813)),
+                // boom.G
+                (3087.138385150391, 21096.13099450917), 
+                (10489.774280011621, 24086.990036341813),
             ]),
         ],
     };
-    //  Число стрел: 2
-    //  alpha_boom: [69.71, 45.01]
-    //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3883.8458824556724, 20835.034086633517)
-    //  Стрела 2: D=(3883.8458824556724, 20835.034086633517), G=(9528.40100476262, 26481.55987434036)
-    //  Число стрел: 2
-    //  alpha_boom: [74.0, 22.0]
-    //  Стрела 1: D=(6.32530071759608e-13, 10330.0), G=(3087.138385150391, 21096.13099450917)
-    //  Стрела 2: D=(3087.138385150391, 21096.13099450917), G=(10489.774280011621, 24086.990036341813)
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
             width: 35 mm            # Diameter of the rome
@@ -126,6 +114,7 @@ fn new() {
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.0 mm                                          # length of the rotary boom
                 angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
+                parking: 155.299999999996   # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
         blocks:
             - '1':
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -170,7 +159,7 @@ fn new() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
-    let mut booms = Booms::new(&dbg, &conf.booms, inputs.clone());
+    let mut booms = Booms::new(&dbg, &conf.booms, inputs.clone(), true);
     let _parking = booms.eval().unwrap();
     for (step, events, target_pos) in test_data {
         let t = Instant::now();
@@ -179,16 +168,14 @@ fn new() {
             inputs.insert(key.to_owned(), val);
         }
         let result = booms.eval().unwrap();
-        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
+        log::trace!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
         // for (i, target) in target_alpha.into_iter().enumerate() {
         //     assert!(result[i].alpha.aprox_eq(target, 3), "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", result[i].alpha, target);
         // }
-        for (i, ((target_dx, target_dy), (target_gx, target_gy))) in target_pos.into_iter().enumerate() {
+        for (i, (target_gx, target_gy)) in target_pos.into_iter().enumerate() {
             if i == target_pos.len() - 1 {
                 let (Offset{x: dx, y: dy}, Offset{x: gx, y: gy}) = (result[i].dpt, result[i].gpt);
-                // assert!(dx == target_dx, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dx, target_dx);
-                // assert!(dy == target_dy, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", dy, target_dy);
                 assert!((gx - target_gx).abs() < 0.1, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gx, target_gx);
                 assert!((gy - target_gy).abs() < 0.1, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gy, target_gy);
             }

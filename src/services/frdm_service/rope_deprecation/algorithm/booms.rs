@@ -9,31 +9,18 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Boom, BoomConf,
 pub struct Booms {
     items: Vec<Boom>,
     inputs: Arc<Inputs>,
-    /// Угол к горизонту первой (главноу) стрелы в парковочном состоянии.
-    /// Используется для расчета парковочного положения только при первом вызове,
-    /// потом устанавливается в `None`.
-    parking: Option<f64>,
+    /// Если `true` то при первом вызове расчитывается парковочное положение,
+    /// затем устанавливается в `false`.
+    parking: bool,
     dbg: Dbg,
 }
 impl Booms {
     ///
     /// Returns [Booms] new instance
-    /// - `subscribe` - List of `Event` names, wich required for calculation, and will acessed from the `inpurs`
-    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, inputs: Arc<Inputs>) -> Self {
+    /// - `inputs` - Input values required for calculation
+    /// - `parking` - Calculates parking position in the first step, meaning calculations will use specific angles of booms for that position
+    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, inputs: Arc<Inputs>, parking: bool) -> Self {
         let dbg = Dbg::new(parent, "Booms");
-        let parking = match conf.first() {
-            Some((key, bc)) => match bc.parking {
-                Some(parking) => Some(parking),
-                None => {
-                    log::error!("{dbg}.new | Boom '{key}' - Is configured as first (main), but hasn't 'parking' angle which is required for the first boom");
-                    None
-                }
-            },
-            None => {
-                log::error!("{dbg}.new | Booms - Is empty, at least first (main) is required");
-                None
-            }
-        };
         Self {
             items: conf.iter().map(|(name, conf)| {
                 let alpha = match &conf.angle {
@@ -58,6 +45,7 @@ impl Booms {
                     conf.l2.as_mm(),
                     conf.l3.as_mm(),
                     conf.l4.as_mm(),
+                    conf.parking,
                 )
             }).collect(),
             inputs,
@@ -82,43 +70,31 @@ impl Booms {
     /// 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
     fn angles(&mut self) -> Option<Vec<Boom>> {
         let mut alpha_sum = 0.0;
-        match self.parking {
-            Some(parking) => {
-                self.parking = None;
-                match self.items.first() {
-                    Some(boom) => {
-                        let mut boom = boom.clone();
-                        alpha_sum += parking;
-                        boom.alpha = alpha_sum - (0 as f64) * 180.0;
-                        Some(vec![boom])
-                    }
-                    None => {
-                        log::error!("{}.angles | Booms - Is empty, at least first (main) is required", self.dbg);
-                        None
-                    }
-                }
-            }
-            None => {
-                let mut result = vec![];
-                for (i, mut boom) in self.items.iter().cloned().enumerate() {
-                    let alpha_rel = match &boom.alpha_input {
-                        Some(input) => match self.inputs.get(input) {
-                            Some(alpha) => alpha,
-                            None => {
-                                log::warn!("{}.angles | Boom[{i}] '{}':  Input '{}' - Not found", self.dbg, boom.name, input);
-                                return None
-                            }
+        let mut result = vec![];
+        for (i, mut boom) in self.items.iter().cloned().enumerate() {
+            // log::trace!("{}.angles | Boom[{i}] '{}':  parking '{}'", self.dbg, boom.name, self.parking);
+            let alpha_rel = match self.parking {
+                true => boom.parking,
+                false => match &boom.alpha_input {
+                    Some(input) => match self.inputs.get(input) {
+                        Some(alpha) => alpha,
+                        None => {
+                            log::warn!("{}.angles | Boom[{i}] '{}':  Input '{}' - Not found", self.dbg, boom.name, input);
+                            return None
                         }
-                        None => boom.alpha_rel,
-                    };
-                    alpha_sum += alpha_rel;
-                    boom.alpha = alpha_sum - (i as f64) * 180.0;
-                    result.push(boom);
-                    // log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
-                }
-                Some(result)
-            }
+                    }
+                    None => boom.alpha_rel,
+                },
+            };
+            alpha_sum += alpha_rel;
+            boom.alpha = alpha_sum - (i as f64) * 180.0;
+            result.push(boom);
+            // log::debug!("{}.angles | Boom[{i}] '{}':  absolute alpha: {}", self.dbg, boom.name, boom.alpha);
         }
+        if self.parking {
+            self.parking = false;
+        }
+        Some(result)
     }
     ///
     /// 3. D и G для каждой стрелы

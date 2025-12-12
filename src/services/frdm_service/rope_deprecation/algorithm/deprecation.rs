@@ -35,7 +35,8 @@ pub struct Deprecation<'a> {
 //
 impl<'a> Deprecation<'a> {
     ///
-    /// Returns [Boom] new instance
+    /// Returns [Deprecation] new instance
+    /// - `inputs` - [Inputs] provides `Events` required for the calculations
     /// - `results` - Callback provides Deprecation results as index of slice and it new Deprecation value
     pub fn new(parent: impl Into<String>, conf: &CraneConf, inputs: Arc<Inputs>, bendings: Bendings, results: impl Fn(&usize, f64) + 'a) -> Self {
         let dbg = Dbg::new(parent, "Deprecation");
@@ -195,6 +196,7 @@ fn slices() {
     ));
     let exit = Arc::new(AtomicBool::new(false));
     let inputs = Arc::new(Inputs::new(&dbg, &conf, services, tp.scheduler(), exit));
+    let parking = false;
     let deprecation = Deprecation::new(
         &dbg,
         &conf.rope_deprecation.crane,
@@ -210,7 +212,8 @@ fn slices() {
                         &dbg,
                         conf.rope_deprecation.crane.rope.aux_length,
                         &conf.rope_deprecation.crane.blocks,
-                        Booms::new(&dbg, &conf.rope_deprecation.crane.booms, inputs),
+                        parking,
+                        Booms::new(&dbg, &conf.rope_deprecation.crane.booms, inputs, parking),
                     ),
                 ),
             ),

@@ -102,21 +102,6 @@ fn new() {
             ]),
         ]
     };
-
-    // Блоки 0 | Схема 1 | L_block=11509.02 | Alpha_rope=-65.34° | L_rope=11509.01
-    // Блоки 1 | Схема 1 | L_block=1722.44 | Alpha_rope=-65.46° | L_rope=1722.44
-    // Блоки 2 | Схема 1 | L_block=5481.52 | Alpha_rope=-37.07° | L_rope=5481.52
-    // Блоки 3 | Схема 2 | L_block=1392.59 | Alpha_rope=-4.48° | L_rope=1128.33
-    // Блоки 4 | Схема 3 | L_block=904.54 | Alpha_rope=-11.15° | L_rope=389.89
-    // Блоки 5 | Схема 1 | L_block=1080.07 | Alpha_rope=90.00° | L_rope=1000.00
-
-    // Блоки 0 | Схема 1 | L_block=11362.12 | Alpha_rope=-69.61° | L_rope=11362.11
-    // Блоки 1 | Схема 1 | L_block=2261.27 | Alpha_rope=-42.99° | L_rope=2261.27
-    // Блоки 2 | Схема 1 | L_block=5481.52 | Alpha_rope=-14.06° | L_rope=5481.52
-    // Блоки 3 | Схема 2 | L_block=1392.59 | Alpha_rope=18.53° | L_rope=1128.33
-    // Блоки 4 | Схема 3 | L_block=904.54 | Alpha_rope=11.86° | L_rope=389.89
-    // Блоки 5 | Схема 1 | L_block=1080.07 | Alpha_rope=90.00° | L_rope=1000.00
-
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
             width: 35 mm            # Diameter of the rome
@@ -133,6 +118,7 @@ fn new() {
                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 11200.0 mm                                         # length of the boom
                 angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
+                parking: 0.0                # Угол в парковочном положении, град
             - Rotary-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -140,6 +126,7 @@ fn new() {
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.0 mm                                          # length of the rotary boom
                 angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
+                parking: 155.299999999996   # Угол в парковочном положении, град
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -184,13 +171,20 @@ fn new() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
+    let parking = true;
     let mut rope_sections = RopeSections::new(
         &dbg,
         Blocks::new(
             &dbg,
             conf.rope.aux_length,
             &conf.blocks,
-            Booms::new(&dbg, &conf.booms, inputs.clone()),
+            parking,
+            Booms::new(
+                &dbg,
+                &conf.booms,
+                inputs.clone(),
+                parking,
+            ),
         ),
     );
     for (step, events, target) in test_data {
@@ -208,7 +202,9 @@ fn new() {
         log::debug!("{dbg} | step {step}  target rope len: \n\t{:?}", target.iter().map(|(_, l, _, _)| format!("{:.3}", l)).collect::<Vec<_>>());
         for (i, (rope_len_bck, rope_len_fwd, rope_alpha_bck, rope_alpha_fwd)) in target.into_iter().enumerate() {
             if i < result.len() - 2 {
-                assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+                if i > 0 { // Лебедку пропускаем, в ней лежит winch_dl - разница обусловленная изменением угла схода с лебедки относительно парковочного
+                    assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+                }
                 assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
             }
             assert!((result[i].rope_alpha_bck - rope_alpha_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_bck, rope_alpha_bck);

@@ -112,7 +112,7 @@ fn new() {
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
             width: 35 mm               # Diameter of the rome
-            length: 82.243 m           # Total working length of the rope
+            length: 85.045 m           # Total working length of the rope
             aux-length: 1.200 m        # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
             segment: 100 mm            # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
@@ -125,6 +125,7 @@ fn new() {
                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 11200.0 mm                                         # length of the boom
                 angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
+                parking: 0.0                # Угол в парковочном положении, град
             - Rotary-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -132,6 +133,7 @@ fn new() {
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.0 mm                                          # length of the rotary boom
                 angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
+                parking: 23.78              # Угол в парковочном положении, град
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -182,6 +184,7 @@ fn new() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
+    let parking = true;
     let mut bendings = Bendings::new(
         &dbg,
         &conf.rope,
@@ -193,7 +196,13 @@ fn new() {
                     &dbg,
                     conf.rope.aux_length,
                     &conf.blocks,
-                    Booms::new(&dbg, &conf.booms, inputs.clone()),
+                    parking,
+                    Booms::new(
+                        &dbg,
+                        &conf.booms,
+                        inputs.clone(),
+                        parking,
+                    ),
                 ),
             ),
         ),

@@ -192,6 +192,7 @@ fn eval() {
         [("", 0.0)],
         Arc::new(AtomicBool::new(false)),
     ));
+    let parking = true;
     let mut deprecation = Deprecation::new(
         &dbg,
         &conf,
@@ -207,7 +208,8 @@ fn eval() {
                         &dbg,
                         conf.rope.aux_length,
                         &conf.blocks,
-                        Booms::new(&dbg, &conf.booms, inputs.clone()),
+                        parking,
+                        Booms::new(&dbg, &conf.booms, inputs.clone(), parking),
                     ),
                 ),
             ),
