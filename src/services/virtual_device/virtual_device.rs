@@ -141,7 +141,7 @@ impl Service for VirtualDevice {
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), self.scheduler.clone()));
         self.api_client.replace(api_client.clone());
         // self.tasks.insert(api_client.name().join(), api_client.clone());
-        api_client.run()?;
+        // api_client.run()?;
         log::info!("{}.run | ApiClient ready", self.dbg);
         // let subscription: Vec<SubscriptionCriteria> = [
         //         conf.rope_deprecation.crane.rope.pos.clone(),
@@ -169,9 +169,11 @@ impl Service for VirtualDevice {
             match table {
                 Some(mut table) => {
                     let sheet = table.sheet_mut();
-                    for row in sheet.iter_rows(..) {
-                        let sql: String = todo!("Get the sql from the current result");
-                        let result = Self::select(&dbg, api_client.clone(), sql);
+                    let (y_start, y_end) = (6, 12);
+                    for row in sheet.iter_rows((y_start,0)..(y_end,10)) {
+                        log::debug!("{dbg}.run | row: {:?}", row);
+                        // let sql: String = todo!("Get the sql from the current result");
+                        // let result = Self::select(&dbg, api_client.clone(), sql);
                         if exit.load(Ordering::Acquire) {
                             break;
                         }
