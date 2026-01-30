@@ -83,11 +83,14 @@ impl Service for ApiClient {
                 false,
             );
             while let Err(err) = request.fetch(true) {
-                log::warn!("{dbg}.run | ApiClient error: {:?}", err);
+                log::warn!("{dbg}.run | Can't connect to the database '{}', \n\terror: {:?}", conf.address, err);
                 std::thread::sleep(Duration::from_millis(1000));
+                if exit.load(Ordering::Acquire) {
+                    break;
+                }
             }
             service_release.add(Ok(()));
-            loop {
+            while !exit.load(Ordering::Acquire) {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((sql, sink)) => {
                         match request.fetch_with(
@@ -113,9 +116,6 @@ impl Service for ApiClient {
                             break;
                         }
                     }
-                }
-                if exit.load(Ordering::Acquire) {
-                    break;
                 }
             }
             log::info!("{dbg}.run | Exit");

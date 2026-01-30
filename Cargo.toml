@@ -1,6 +1,6 @@
 [package]
 name = "cma-server"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 
 build = "build.rs"
@@ -41,6 +41,7 @@ regex = "~1.12"
 #
 # IO
 csv = "~1.4"
+spreadsheet-ods = "~1.0"
 
 #
 # Math
