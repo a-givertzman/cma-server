@@ -75,14 +75,14 @@ impl AppConfig {
         log::trace!("{}.new | name: {:?}", dbg, name);
         let description = conf.get("description").unwrap_or("".into());
         log::trace!("{}.new | description: {:?}", dbg, description);
-        let tread_pool = conf.get("tread-pool").map(|v: u64| v as usize);
-        log::trace!("{}.new | tread_pool: {:?}", dbg, tread_pool);
+        let thread_pool = conf.get("thread-pool").map(|v: u64| v as usize);
+        log::trace!("{}.new | thread-pool: {:?}", dbg, thread_pool);
         let services = conf.get("services").expect(&format!("{dbg}.new | 'services' - not found or wrong config"));
         let services = ServicesConf::new(&dbg, services);
         log::trace!("{}.new | services: {:#?}", dbg, services);
         // let services = RetainConf::default();
         let nodes: IndexMap<ConfKeywd, ConfTree> = conf.nodes()
-            .filter(|node| !["name", "description", "services", "retain", "tread-pool"].contains(&node.key.as_str()))
+            .filter(|node| !["name", "description", "services", "retain", "thread-pool"].contains(&node.key.as_str()))
             .map(|node| {
                 let keyword = ConfKeywd::from_str(&node.key).expect(&format!("{dbg}.new | Can't parse keyword '{:?}'", node.key));
                 match keyword.kind() {
@@ -110,7 +110,7 @@ impl AppConfig {
         Self {
             name,
             description,
-            tread_pool,
+            tread_pool: thread_pool,
             nodes,
             services,
         }

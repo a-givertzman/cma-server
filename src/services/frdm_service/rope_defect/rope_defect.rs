@@ -274,7 +274,7 @@ impl Service for RopeDefect {
                                         }
                                         Err(err) => {
                                             match err {
-                                                kanal::ReceiveErrorTimeout::Timeout => {}
+                                                sal_sync::sync::channel::RecvTimeoutError::Timeout => {}
                                                 _ => {
                                                     break 'camera;
                                                 }
