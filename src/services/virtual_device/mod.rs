@@ -9,12 +9,14 @@
 //! - Storing results nier by the corresponding input event
 //! - Comparison of target and result values to highlight test failures
 //!
+mod input_signal;
 mod result_kind;
 mod sql_result;
 mod table;
 mod virtual_device_conf;
 mod virtual_device;
 
+pub use input_signal::*;
 pub use result_kind::*;
 pub use sql_result::*;
 pub(super) use table::*;

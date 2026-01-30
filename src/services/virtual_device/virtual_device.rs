@@ -38,7 +38,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     services::{Service, ServiceWaiting, Services, entity::{Name, Object}}, sync::{Handles, Owner}, thread_pool::Scheduler
 };
-use crate::{infra::ApiClient, services::{Table, VirtualDeviceConf}};
+use crate::{infra::ApiClient, services::{InputEvent, Table, VirtualDeviceConf}};
 ///
 /// ## `VirtualDevice` Service | Emulation of the real device behavior
 /// - Read events from the table file
@@ -172,9 +172,12 @@ impl Service for VirtualDevice {
                     let rows = 10;
                     let columns = 10;
                     let (row_start, row_end) = (6, 6 + rows);
+                    let input = InputEvent::new(1, 2, 3);
                     for  row in row_start..row_end {
                         let row_cells = table.row(row, 10);
                         log::debug!("{dbg}.run | row {} | {:?}", row, row_cells);
+                        let event = input.from_row(&row_cells);
+                        log::debug!("{dbg}.run | row {} | {:?}", row, event);
                     }
                     // for ((row, col), cell) in sheet.iter_rows((row_start, 0)..(row_end, columns)) {
                     //     log::debug!("{dbg}.run | row {} col {} | {:?}", row, col, cell.value);
