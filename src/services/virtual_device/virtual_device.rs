@@ -175,7 +175,7 @@ impl Service for VirtualDevice {
                     let input = InputEvent::new(1, 2, 3);
                     for  row in row_start..row_end {
                         let row_cells = table.row(row, 10);
-                        log::debug!("{dbg}.run | row {} | {:?}", row, row_cells);
+                        log::trace!("{dbg}.run | row {} | {:?}", row, row_cells);
                         let event = input.from_row(&row_cells);
                         log::debug!("{dbg}.run | row {} | {:?}", row, event);
                     }
