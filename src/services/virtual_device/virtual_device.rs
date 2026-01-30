@@ -169,9 +169,11 @@ impl Service for VirtualDevice {
             match table {
                 Some(mut table) => {
                     let sheet = table.sheet_mut();
-                    let (y_start, y_end) = (6, 12);
-                    for row in sheet.iter_rows((y_start,0)..(y_end,10)) {
-                        log::debug!("{dbg}.run | row: {:?}", row);
+                    let rows = 10;
+                    let columns = 10;
+                    let (row_start, row_end) = (6, 6 + rows);
+                    for ((row, col), cell) in sheet.iter_rows((row_start, 0)..(row_end, columns)) {
+                        log::debug!("{dbg}.run | row {} col {} | {:?}", row, col, cell.value);
                         // let sql: String = todo!("Get the sql from the current result");
                         // let result = Self::select(&dbg, api_client.clone(), sql);
                         if exit.load(Ordering::Acquire) {
