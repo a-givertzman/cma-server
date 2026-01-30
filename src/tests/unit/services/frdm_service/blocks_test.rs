@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::frdm_service::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::frdm_service::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
