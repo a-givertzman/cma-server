@@ -9,18 +9,14 @@
 //! - Storing results nier by the corresponding input event
 //! - Comparison of target and result values to highlight test failures
 //!
+mod result_kind;
+mod sql_result;
 mod table;
 mod virtual_device_conf;
 mod virtual_device;
 
+pub use result_kind::*;
+pub use sql_result::*;
 pub(super) use table::*;
 pub use virtual_device_conf::*;
 pub use virtual_device::*;
-
-///
-/// Results can be fetched by SQL or received from configured Events
-#[derive(Debug, Clone, PartialEq)]
-pub enum ResultKind {
-    Event(sal_sync::services::entity::PointConf),
-    Sql(String)
-}

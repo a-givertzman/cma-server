@@ -45,7 +45,7 @@ service VirtualDevice VirtualIed15:
             type: Int
         sql Result.Value4:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             sql: 'select Name2 from table_name'
-            delay:  10ms                # Optional delay, to be awaited before select apears
+            delay:  10ms                 # Optional delay, to be awaited before select apears
 
 
 service Task TestTask:
@@ -53,13 +53,14 @@ service Task TestTask:
     in queue recv-queue:
         max-length: 10000
     subscribe: 
-        /App/MultiQueue:                     # - multicast subscription to the MultiQueue
-            {cot: Inf}: []               #   - on all points having Cot::Inf and history::ReadWrite
+        /App/MultiQueue:                 # - multicast subscription to the MultiQueue
+            # {cot: Inf, ...}: []               #   - on all points having Cot::Inf and history::ReadWrite
+            Inf: []               #   - on all points having Cot::Inf and history::ReadWrite
     # fn Debug:
     #     input: point any every
-    fn Sum:
-        input1: point Int Value1
-        input2: point Int Value2
+    fn Add:
+        input1: point int Value1
+        input2: point int Value2
 
 
 service Task HistoryTask:

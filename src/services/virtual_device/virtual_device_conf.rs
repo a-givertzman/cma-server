@@ -111,7 +111,7 @@ impl VirtualDeviceConf {
                     Ok(keyword) => match keyword.name().as_str() {
                         "sql" => {
                             let point_name = format!("{name}/{}", keyword.title());
-                            let sql = node.get("sql").unwrap();
+                            let sql = serde_yaml::from_value(node.conf).unwrap();
                             Some((point_name, ResultKind::Sql(sql)))
                         }
                         _ => {
@@ -126,7 +126,7 @@ impl VirtualDeviceConf {
                 }
             }
         }).collect();
-        log::debug!("{dbg}.new | results: {:#?}", results.iter().map(|(n, p)| format!("{n}: {:#?}", p)).collect::<Vec<String>>());
+        log::debug!("{dbg}.new | results: {:#?}", results.iter().map(|(n, p)| format!("{n}: {:?}", p)).collect::<Vec<String>>());
         Self {
             name,
             wait_started,
