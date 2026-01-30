@@ -168,18 +168,22 @@ impl Service for VirtualDevice {
             log::info!("{}.run | Starting - Ok", dbg);
             match table {
                 Some(mut table) => {
-                    let sheet = table.sheet_mut();
+                    // let sheet = table.sheet_mut();
                     let rows = 10;
                     let columns = 10;
                     let (row_start, row_end) = (6, 6 + rows);
-                    for ((row, col), cell) in sheet.iter_rows((row_start, 0)..(row_end, columns)) {
-                        log::debug!("{dbg}.run | row {} col {} | {:?}", row, col, cell.value);
-                        // let sql: String = todo!("Get the sql from the current result");
-                        // let result = Self::select(&dbg, api_client.clone(), sql);
-                        if exit.load(Ordering::Acquire) {
-                            break;
-                        }
+                    for  row in row_start..row_end {
+                        let row_cells = table.row(row, 10);
+                        log::debug!("{dbg}.run | row {} | {:?}", row, row_cells);
                     }
+                    // for ((row, col), cell) in sheet.iter_rows((row_start, 0)..(row_end, columns)) {
+                    //     log::debug!("{dbg}.run | row {} col {} | {:?}", row, col, cell.value);
+                    //     // let sql: String = todo!("Get the sql from the current result");
+                    //     // let result = Self::select(&dbg, api_client.clone(), sql);
+                    //     if exit.load(Ordering::Acquire) {
+                    //         break;
+                    //     }
+                    // }
                 }
                 None => {
                     log::warn!("{}.run | Table or sheet wasn't specified", dbg);

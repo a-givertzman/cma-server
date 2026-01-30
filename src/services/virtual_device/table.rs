@@ -1,5 +1,5 @@
 use sal_core::{dbg::Dbg, error::Error};
-use spreadsheet_ods::{Sheet, WorkBook};
+use spreadsheet_ods::{CellContentRef, Sheet, Value, WorkBook};
 
 ///
 /// Contains `WorkBoock`
@@ -49,5 +49,13 @@ impl Table {
     /// Returns active `Sheet` mutable
     pub fn sheet_mut(&mut self) -> &mut Sheet {
         self.book.sheet_mut(self.sheet)
+    }
+    ///
+    /// Returns row by index from active `Sheet` mutable
+    pub fn row(&self, i: u32, cols: u32) -> Vec<(u32, Value)> {
+        self.book.sheet(self.sheet)
+            .iter_rows((i, 0)..(i + 1, cols))
+            .map(|((_row, col), cell)| (col, cell.value.to_owned()))
+            .collect()
     }
 }
