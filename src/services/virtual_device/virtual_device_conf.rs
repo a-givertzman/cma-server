@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::{FnConfKeywd, FnConfKindName}};
+use sal_sync::{collections::FxIndexMap, services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::{FnConfKeywd, FnConfKindName}}};
 use std::{fs, str::FromStr, time::Duration};
 
 use crate::{infra::ApiClientConf, services::ResultKind};
@@ -43,8 +43,8 @@ pub struct VirtualDeviceConf {
     /// API configuration parametes
     pub api: ApiClientConf,
     /// Names of the database table used for storing common settings for the clients
-    pub inputs: Vec<(String, PointConf)>,
-    pub results: Vec<(String, ResultKind)>,
+    pub inputs: FxIndexMap<String, PointConf>,
+    pub results: FxIndexMap<String, ResultKind>,
 }
 //
 // 
@@ -69,7 +69,7 @@ impl VirtualDeviceConf {
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
         let inputs: ConfTree = conf.get("inputs").expect(&format!("{dbg}.new | 'inputs' - not found or wrong config"));
-        let inputs: Vec<(String, PointConf)> = inputs.nodes().filter_map(|node| {
+        let inputs: FxIndexMap<String, PointConf> = inputs.nodes().filter_map(|node| {
             match FnConfKeywd::from_str(&node.key) {
                 Ok(keyword) => match keyword.kind() {
                     FnConfKindName::Point => {
@@ -92,7 +92,7 @@ impl VirtualDeviceConf {
         }).collect();
         log::debug!("{dbg}.new | inputs: {:#?}", inputs.iter().map(|(n, p)| format!("{n}")).collect::<Vec<String>>());
         let results: ConfTree = conf.get("results").expect(&format!("{dbg}.new | 'results' - not found or wrong config"));
-        let results: Vec<(String, ResultKind)> = results.nodes().filter_map(|node| {
+        let results: FxIndexMap<String, ResultKind> = results.nodes().filter_map(|node| {
             match FnConfKeywd::from_str(&node.key) {
                 Ok(keyword) => match keyword.kind() {
                     FnConfKindName::Point => {

@@ -38,7 +38,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     services::{Service, ServiceWaiting, Services, entity::{Name, Object}}, sync::{Handles, Owner}, thread_pool::Scheduler
 };
-use crate::{infra::ApiClient, services::{InputEvent, Table, VirtualDeviceConf}};
+use crate::{infra::ApiClient, services::{Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
 ///
 /// ## `VirtualDevice` Service | Emulation of the real device behavior
 /// - Read events from the table file
@@ -168,16 +168,37 @@ impl Service for VirtualDevice {
             log::info!("{}.run | Starting - Ok", dbg);
             match table {
                 Some(mut table) => {
-                    // let sheet = table.sheet_mut();
-                    let rows = 10;
-                    let columns = 10;
-                    let (row_start, row_end) = (6, 6 + rows);
-                    let input = InputEvent::new(1, 2, 3);
-                    for  row in row_start..row_end {
-                        let row_cells = table.row(row, 10);
-                        log::trace!("{dbg}.run | row {} | {:?}", row, row_cells);
-                        let event = input.from_row(&row_cells);
-                        log::debug!("{dbg}.run | row {} | {:?}", row, event);
+                    let header = Header::from(table.sheet());
+                    let input = InputBlock::new(1, 2, 3);
+                    let rows = table.sheet().row_header_max();
+                    let columns = table.sheet().col_header_max();
+                    let start = header.end() + 1;
+                    for  row_ix in start..(rows - start) {
+                        let row = table.row(row_ix, columns);
+                        if let Some(index) = row.get(0) {
+                            if let spreadsheet_ods::Value::Number(ix) = index {
+                                if ix >= &0.0 {
+                                    log::trace!("{dbg}.run | row {row_ix} | Index {ix} | {:?}", row);
+                                    match input.from_row(&row) {
+                                        Some(event) => {
+                                            log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
+                                            std::thread::sleep(event.time);
+                                            match conf.inputs.get(&event.name) {
+                                                Some(event_conf) => {
+                                                    //
+                                                    // Send Input Event here
+                                                    //
+                                                }
+                                                None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find Event '{}' in the config, skipped", event.name),
+                                            }
+                                            // Write Results here
+                                            // let result = ResultBlock::new(&self, &header, row)
+                                        }
+                                        None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't parse Input Event, skipped"),
+                                    }
+                                }
+                            }
+                        }
                     }
                     // for ((row, col), cell) in sheet.iter_rows((row_start, 0)..(row_end, columns)) {
                     //     log::debug!("{dbg}.run | row {} col {} | {:?}", row, col, cell.value);

@@ -3,19 +3,27 @@ use std::{fmt::Debug, time::Duration};
 use sal_sync::services::entity::Point;
 
 ///
-/// 
+/// Parses input values from the block of the tabe
+/// ```
+/// |   Input values      |
+/// | ------------------- |
+/// | time | name | value |
+/// | ------------------- |
+/// | ms   |  -   |  -    |
+/// | ------------------- |
+/// ```
 // #[derive(Debug)]
-pub struct InputEvent {
+pub struct InputBlock {
     time_col: usize,
     name_col: usize,
     value_col: usize,
-    time: Duration,
-    name: String,
+    pub time: Duration,
+    pub name: String,
     value: spreadsheet_ods::Value,
 }
 //
 //
-impl InputEvent {
+impl InputBlock {
     pub fn new(time_col: usize, name_col: usize, value_col: usize) -> Self {
         Self {
             time_col,
@@ -26,10 +34,10 @@ impl InputEvent {
             value: spreadsheet_ods::Value::Empty,
         }
     }
-    pub fn from_row(&self, row: &Vec<(u32, spreadsheet_ods::Value)>) -> Option<Self> {
-        let time = row.get(self.time_col).unwrap().1.as_u64_opt()?;
-        let name = row.get(self.name_col).unwrap().1.as_string_opt()?;
-        let value = row.get(self.value_col).unwrap().1.clone();
+    pub fn from_row(&self, row: &Vec<spreadsheet_ods::Value>) -> Option<Self> {
+        let time = row.get(self.time_col)?.as_u64_opt()?;
+        let name = row.get(self.name_col)?.as_string_opt()?;
+        let value = row.get(self.value_col)?.clone();
         Some(Self {
             time_col: self.time_col,
             name_col: self.name_col,
@@ -57,9 +65,9 @@ impl InputEvent {
 }
 //
 //
-impl Debug for InputEvent {
+impl Debug for InputBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("InputEvent")
+        f.debug_struct("InputBlock")
             // .field("time_col", &self.time_col)
             // .field("name_col", &self.name_col)
             // .field("value_col", &self.value_col)
