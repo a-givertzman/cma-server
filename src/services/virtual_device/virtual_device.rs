@@ -184,11 +184,11 @@ impl Service for VirtualDevice {
                                             let mut results = FxIndexMap::default();
                                             let time = Instant::now();
                                             let delay = RECV_TIMEOUT * 5;
+                                            log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events in {:?}...", delay);
                                             while time.elapsed() <= delay {
-                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events...");
                                                 match recv.recv_timeout(RECV_TIMEOUT) {
                                                     Ok(point) => {
-                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", point);
+                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
                                                         results.insert(point.name().split("/").last().unwrap().to_owned(), point);
                                                     }
                                                     Err(err) => match err {
@@ -196,7 +196,7 @@ impl Service for VirtualDevice {
                                                             break;
                                                         }
                                                         _ => {
-                                                            log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv events, error {:?}", err);
+                                                            log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
                                                             exit.store(true, Ordering::Release);
                                                             break;
                                                         }

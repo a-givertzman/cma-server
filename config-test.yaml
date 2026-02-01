@@ -80,7 +80,7 @@ service Task TestTask:
             type: Real
         input fn Add:
             input1: point real /App/VirtualIed15/Winch.Valve1
-            input2: point real /App/VirtualIed15/Winch.Valve2
+            input2: point real /App/VirtualIed15/Winch.Valve2 default 0.0
     fn Export ExportResultVal2:
         enable: const bool true
         send-to: /App/MultiQueue.in-queue
