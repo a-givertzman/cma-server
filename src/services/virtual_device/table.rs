@@ -24,8 +24,10 @@ impl Table {
         let sheet = sheet.into();
         let book = spreadsheet_ods::read_ods(&path)
             .map_err(|err| error.pass_with(format!("Can't read table from '{path}'"), err.to_string()))?;
+        log::debug!("{dbg}.run | Table loaded: '{path}'");
         let sheet = book.sheet_idx(&sheet)
             .ok_or(error.err(format!("Worksheet '{sheet}' - not found")))?;
+        log::debug!("{dbg}.run | Active sheet: '{sheet}'");
         Ok(Self {
             path,
             book,
@@ -35,7 +37,7 @@ impl Table {
     }
     ///
     /// Stores table into file in ODS format
-    fn store(&mut self) -> Result<(), Error> {
+    pub fn store(&mut self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "store");
         spreadsheet_ods::write_ods(&mut self.book, &self.path)
             .map_err(|err| error.pass_with(format!("Can't read table from '{}'", self.path), err.to_string()))

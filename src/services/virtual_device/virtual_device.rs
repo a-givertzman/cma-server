@@ -157,8 +157,8 @@ impl Service for VirtualDevice {
             log::info!("{dbg}.run | Starting - Ok");
             match table {
                 Some(mut table) => {
-                    let header = Header::from(table.sheet());
-                    let input_block = InputBlock::new("Input values", "time", "name", "value", &header);
+                    let header = Header::from(&name, table.sheet());
+                    let input_block = InputBlock::new("time", "name", "value", &header);
                     let rows = table.sheet().row_header_max();
                     let columns = table.sheet().col_header_max();
                     let start = header.end() + 1;
@@ -211,6 +211,9 @@ impl Service for VirtualDevice {
                                                                 log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", point_conf.name, point.value());
                                                                 let result = point.to_double().as_double().value;
                                                                 result_block.write(row_ix, result, &mut table);
+                                                                if let Err(err) = table.store() {
+                                                                    log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
+                                                                }
                                                             }
                                                             None => {
                                                                 log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", point_conf.name);

@@ -31,15 +31,14 @@ impl InputBlock {
     /// - `time_col` - name of the column event 'time'
     /// - `name_col` - name of the column event 'name'
     /// - `value_col` - name of the column event 'value'
-    pub fn new(name:  impl Into<String>, time_col: impl Into<String>, name_col: impl Into<String>, value_col: impl Into<String>, header: &Header) -> Self {
-        let name = name.into();
-        let block = header.block(&name).expect(&format!("Can't find '{name}' block in the table"));
+    pub fn new(time_col: impl Into<String>, name_col: impl Into<String>, value_col: impl Into<String>, header: &Header) -> Self {
+        let block = header.input_block().expect(&format!("Can't find Input block in the table"));
         let time_col = time_col.into();
         let name_col = name_col.into();
         let value_col = value_col.into();
-        let time_col = block.get(&time_col).expect(&format!("Can't find '{}' column in the '{name}' block of the table", time_col));
-        let name_col = block.get(&name_col).expect(&format!("Can't find '{}' column in the '{name}' block of the table", name_col));
-        let value_col = block.get(&value_col).expect(&format!("Can't find '{}' column in the '{name}' block of the table", value_col));
+        let time_col = block.get(&time_col).expect(&format!("Can't find '{}' column in the Input block of the table", time_col));
+        let name_col = block.get(&name_col).expect(&format!("Can't find '{}' column in the Input block of the table", name_col));
+        let value_col = block.get(&value_col).expect(&format!("Can't find '{}' column in the Input block of the table", value_col));
         Self {
             time_col,
             name_col,
