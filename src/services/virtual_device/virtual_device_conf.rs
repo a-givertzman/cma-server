@@ -1,4 +1,4 @@
-use sal_sync::{collections::FxIndexMap, services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::{FnConfKeywd, FnConfKindName}}};
+use sal_sync::{collections::FxIndexMap, services::{ConfSubscribe, LinkName, conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::{FnConfKeywd, FnConfKindName}}};
 use std::{fs, str::FromStr, time::Duration};
 
 use crate::{infra::ApiClientConf, services::ResultKind};
@@ -34,12 +34,14 @@ pub struct VirtualDeviceConf {
     pub name: Name,
     /// Next service will wait until current completely started plus specified time, optional
     pub wait_started: Option<Duration>,
+    /// Service name, to subscribe for rope positin and crane angles event's
+    pub subscribe: ConfSubscribe,
+    /// The service name to send all events
+    pub send_to: LinkName,
     /// Optional, if signal have to be charged from the table
     pub path: Option<String>,
     /// Optional, if `path` specified, then work sheet name required
     pub sheet: Option<String>,
-    /// Service name, to subscribe for rope positin and crane angles event's
-    // pub subscribe: String,
     /// API configuration parametes
     pub api: ApiClientConf,
     /// Names of the database table used for storing common settings for the clients
@@ -59,12 +61,16 @@ impl VirtualDeviceConf {
         log::trace!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
         log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
+        let subscribe: ConfTree = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
+        let subscribe = ConfSubscribe::new(subscribe.conf);
+        log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
+        let send_to: String = conf.get("send-to").expect(&format!("{dbg}.new | 'send-to' - not found or wrong config"));
+        let send_to = LinkName::from_str(&send_to).expect(&format!("{dbg}.new | 'send-to' - wrong config"));
+        log::trace!("{dbg}.new | send-to: {:?}", send_to);
         let path: Option<String> = conf.get("path");
         log::trace!("{}.new | path: {:?}", dbg, path);
         let sheet: Option<String> = conf.get("sheet");
         log::trace!("{}.new | wait-started: {:?}", dbg, sheet);
-        // let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
-        // log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
         let api: ConfTree = conf.get("api").expect(&format!("{dbg}.new | 'api' - not found or wrong config"));
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
@@ -130,9 +136,10 @@ impl VirtualDeviceConf {
         Self {
             name,
             wait_started,
+            subscribe,
+            send_to,
             path,
             sheet,
-            // subscribe,
             api,
             inputs,
             results,
@@ -178,9 +185,10 @@ impl Default for VirtualDeviceConf {
         Self {
             name: Name::new("", "VirtualDeviceConf"),
             wait_started: Default::default(),
+            subscribe: ConfSubscribe::default(),
+            send_to: Default::default(),
             path: Default::default(),
             sheet: Default::default(),
-            // subscribe: Default::default(),
             api: Default::default(),
             inputs: Default::default(),
             results: Default::default(),

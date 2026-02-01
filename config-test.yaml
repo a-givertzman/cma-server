@@ -13,6 +13,7 @@ services:
 
 
 service MultiQueue:
+    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
     in queue in-queue:
         max-length: 10000
     send-to:
@@ -28,6 +29,13 @@ service CacheService MainCache:
 
 
 service VirtualDevice VirtualIed15:
+    # wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    subscribe: 
+        /App/MultiQueue:
+            Inf: 
+                - Result.Value3
+                # - Result.Value4
+    send-to: /App/MultiQueue.in-queue
     path: './test-ied15.ods'            # Optional, if signal have to be charged from the table
     sheet: 'data'
     api:                                # Optional, if databese access for example required

@@ -33,12 +33,12 @@
 //!             delay:  10ms                # Optional delay, to be awaited before select apears
 //! ```
 //! 
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    services::{Service, ServiceWaiting, Services, entity::{Name, Object}}, sync::{Handles, Owner}, thread_pool::Scheduler
+    collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, PointTxId}}, sync::{Handles, Owner}, thread_pool::Scheduler
 };
-use crate::{infra::ApiClient, services::{Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
+use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::{Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
 ///
 /// ## `VirtualDevice` Service | Emulation of the real device behavior
 /// - Read events from the table file
@@ -126,50 +126,39 @@ impl Service for VirtualDevice {
     //
     // 
     fn run(&self) -> Result<(), Error> {
-        log::info!("{}.run | Starting...", self.dbg);
+        let dbg = self.dbg.clone();
+        log::info!("{dbg}.run | Starting...");
         let name = self.name.clone();
+        let txid = PointTxId::from_str(&name.join());
         let conf = self.conf.clone();
         let services = self.services.clone();
         let exit = self.exit.clone();
+        let error = Error::new(&dbg, "run");
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
         let table = match (&conf.path, &conf.sheet) {
             (Some(path), Some(sheet)) => Some(Table::load(&name, path, sheet)
-                .map_err(|err| format!("{}.run | Can't open table '{}', error: {:?}", self.dbg, path, err))?),
+                .map_err(|err| format!("{dbg}.run | Can't open table '{}', error: {:?}", path, err))?),
             _ => None,
         };
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), self.scheduler.clone()));
         self.api_client.replace(api_client.clone());
-        // self.tasks.insert(api_client.name().join(), api_client.clone());
         // api_client.run()?;
-        log::info!("{}.run | ApiClient ready", self.dbg);
-        // let subscription: Vec<SubscriptionCriteria> = [
-        //         conf.rope_deprecation.crane.rope.pos.clone(),
-        //         conf.rope_deprecation.crane.rope.load.clone(),
-        //     ]
-        //     .iter().chain(
-        //         conf.rope_deprecation.crane.booms.iter().filter_map(|(_, b)| {
-        //             match &b.angle {
-        //                 crate::services::frdm_service::InputKind::Const(_) => None,
-        //                 crate::services::frdm_service::InputKind::Point(v) => Some(v),
-        //             }
-        //         }),
-        //     )
-        //     .map(|point| {
-        //         let subscription = SubscriptionCriteria::new(point, Cot::Inf);
-        //         log::trace!("{dbg}.run | Subscription: {:?}", subscription);
-        //         subscription
-        //     })
-        //     .collect();
-        // let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &subscription);
-        let dbg = self.dbg.clone();
+        log::info!("{dbg}.run | ApiClient ready");
+        let send_to = services.get_link(&conf.send_to).map_err(|err| error.pass_with("Can't get 'send-to' link", err))?;
+        let (_, recv) = {
+            let points = services.points(&name).wait().map_err(|err| error.pass_with("Can't get points", err))?;
+            let subscriptions = conf.subscribe.with(&points);
+            let (service, points) = subscriptions.iter().next().ok_or(error.err("Can't find subscription in the config"))?;
+            services.subscribe(service, &name.join(), points.as_ref().unwrap_or(&vec![]))
+        };
         let handle = self.scheduler.spawn(move || {
             service_release.add(Ok(()));
-            log::info!("{}.run | Starting - Ok", dbg);
+            log::info!("{dbg}.run | Starting - Ok");
             match table {
                 Some(mut table) => {
                     let header = Header::from(table.sheet());
-                    let input = InputBlock::new(1, 2, 3);
+                    let input_block = InputBlock::new("Input values", "time", "name", "value", &header);
                     let rows = table.sheet().row_header_max();
                     let columns = table.sheet().col_header_max();
                     let start = header.end() + 1;
@@ -179,18 +168,70 @@ impl Service for VirtualDevice {
                             if let spreadsheet_ods::Value::Number(ix) = index {
                                 if ix >= &0.0 {
                                     log::trace!("{dbg}.run | row {row_ix} | Index {ix} | {:?}", row);
-                                    match input.from_row(&row) {
+                                    match input_block.from_row(&row) {
                                         Some(event) => {
                                             log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
                                             std::thread::sleep(event.time);
                                             match conf.inputs.get(&event.name) {
                                                 Some(event_conf) => {
-                                                    //
-                                                    // Send Input Event here
-                                                    //
+                                                    let point = event.to_point(txid);
+                                                    if let Err(err) = send_to.send(point) {
+                                                        log::warn!("{dbg}.run | Can't send Event {:?}", event);
+                                                    }
                                                 }
                                                 None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find Event '{}' in the config, skipped", event.name),
                                             }
+                                            let mut results = FxIndexMap::default();
+                                            let time = Instant::now();
+                                            let delay = RECV_TIMEOUT * 3;
+                                            while time.elapsed() <= delay {
+                                                match recv.recv_timeout(RECV_TIMEOUT) {
+                                                    Ok(point) => {
+                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
+                                                        results.insert(point.name(), point);
+                                                    }
+                                                    Err(err) => match err {
+                                                        kanal::ReceiveErrorTimeout::Timeout => {
+                                                            break;
+                                                        }
+                                                        _ => {
+                                                            log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv events, error {:?}", err);
+                                                            exit.store(true, Ordering::Release);
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            for (result_name, result_kind) in &conf.results {
+                                                let result_block = ResultBlock::new(result_name, "target", "result", "status", &header);
+                                                match result_kind {
+                                                    crate::services::ResultKind::Event(point_conf) => {
+                                                        match results.get(&point_conf.name) {
+                                                            Some(point) => {
+                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", point_conf.name, point.value());
+                                                                let result = point.to_double().as_double().value;
+                                                                result_block.write(row_ix, result, &mut table);
+                                                            }
+                                                            None => {
+                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", point_conf.name);
+                                                            }
+                                                        }
+                                                    }
+                                                    crate::services::ResultKind::Sql(sql_result) => {
+                                                        match api_client.fetch(&sql_result.sql).wait().flatten() {
+                                                            Ok(result) => {
+                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", sql_result.name, result);
+                                                                // result_block.write(row_ix, result, &mut table);
+                                                            }
+                                                            Err(err) => {
+                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't fetch '{}' result from API", sql_result.name);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                            }
+
                                             // Write Results here
                                             // let result = ResultBlock::new(&self, &header, row)
                                         }

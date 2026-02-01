@@ -27,11 +27,11 @@ impl Header {
     /// | ---------------------------- |
     /// | target     | result | status |
     /// | ---------------------------- |
-    fn parse_block(dbg: &Dbg, name: &str, column: usize, index: &Vec<spreadsheet_ods::Value>) -> Option<HeaderBlock> {
+    fn parse_block(dbg: &Dbg, name: &str, column: u32, index: &Vec<spreadsheet_ods::Value>) -> Option<HeaderBlock> {
         if !name.is_empty() {
             let mut cols = FxIndexMap::default();
             for col in column..(column + 3) {
-                match index.get(col) {
+                match index.get(col as usize) {
                     Some(index_val) => match index_val.as_str_opt() {
                         Some("name") | Some("time") | Some("value") => _ = cols.insert(index_val.as_string_opt().unwrap(), col),
                         Some("target") | Some("result") | Some("status") => _ = cols.insert(index_val.as_string_opt().unwrap(), col),
@@ -91,7 +91,7 @@ impl Header {
                     for (column, block_name) in block.iter().enumerate() {
                         log::debug!("{dbg}.from | Column: {}, Block: {:?}", column, block_name);
                         if let Some(block_name) = block_name.as_str_opt() {
-                            if let Some(block) = Self::parse_block(&dbg, block_name, column, index) {
+                            if let Some(block) = Self::parse_block(&dbg, block_name, column as u32, index) {
                                 log::debug!("{dbg}.from | Block: {:#?}", block);
                                 blocks.insert(block_name.to_owned(), block);
                             }
@@ -159,12 +159,12 @@ impl Header {
 #[derive(Debug)]
 pub struct HeaderBlock {
     name: String,
-    cols: FxIndexMap<String, usize>,
+    cols: FxIndexMap<String, u32>,
 }
 //
 //
 impl HeaderBlock {
-    pub fn get(&self, key: &str) -> Option<usize> {
+    pub fn get(&self, key: &str) -> Option<u32> {
         self.cols.get(key).map(|v| *v)
     }
 }
