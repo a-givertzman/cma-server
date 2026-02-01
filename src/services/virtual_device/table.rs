@@ -27,7 +27,7 @@ impl Table {
         log::debug!("{dbg}.run | Table loaded: '{path}'");
         let sheet = book.sheet_idx(&sheet)
             .ok_or(error.err(format!("Worksheet '{sheet}' - not found")))?;
-        log::debug!("{dbg}.run | Active sheet: '{sheet}'");
+        log::debug!("{dbg}.run | Active sheet: '{}' [{sheet}]", book.sheet(sheet).name());
         Ok(Self {
             path,
             book,

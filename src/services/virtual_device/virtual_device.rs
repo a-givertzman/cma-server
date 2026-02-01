@@ -154,7 +154,7 @@ impl Service for VirtualDevice {
         };
         let handle = self.scheduler.spawn(move || {
             service_release.add(Ok(()));
-            log::info!("{dbg}.run | Starting - Ok");
+            log::info!("{dbg}.run | Starting...");
             match table {
                 Some(mut table) => {
                     let header = Header::from(&name, table.sheet());
@@ -173,22 +173,23 @@ impl Service for VirtualDevice {
                                             log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
                                             std::thread::sleep(event.time);
                                             match conf.inputs.get(&event.name) {
-                                                Some(event_conf) => {
+                                                Some(_) => {
                                                     let point = event.to_point(txid);
                                                     if let Err(err) = send_to.send(point) {
-                                                        log::warn!("{dbg}.run | Can't send Event {:?}", event);
+                                                        log::warn!("{dbg}.run | Can't send Event {:?}, error: {:?}", event, err);
                                                     }
                                                 }
                                                 None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find Event '{}' in the config, skipped", event.name),
                                             }
                                             let mut results = FxIndexMap::default();
                                             let time = Instant::now();
-                                            let delay = RECV_TIMEOUT * 3;
+                                            let delay = RECV_TIMEOUT * 5;
                                             while time.elapsed() <= delay {
+                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events...");
                                                 match recv.recv_timeout(RECV_TIMEOUT) {
                                                     Ok(point) => {
-                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
-                                                        results.insert(point.name(), point);
+                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", point);
+                                                        results.insert(point.name().split("/").last().unwrap().to_owned(), point);
                                                     }
                                                     Err(err) => match err {
                                                         kanal::ReceiveErrorTimeout::Timeout => {
@@ -202,13 +203,20 @@ impl Service for VirtualDevice {
                                                     }
                                                 }
                                             }
+                                            match results.is_empty() {
+                                                true => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | No result events received"),
+                                                false => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | {} result events received", results.len()),
+                                            }
                                             for (result_name, result_kind) in &conf.results {
+                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
+                                                let result_name = result_name.split('/').last().unwrap();
+                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
                                                 let result_block = ResultBlock::new(result_name, "target", "result", "status", &header);
                                                 match result_kind {
-                                                    crate::services::ResultKind::Event(point_conf) => {
-                                                        match results.get(&point_conf.name) {
+                                                    crate::services::ResultKind::Event(_) => {
+                                                        match results.get(result_name) {
                                                             Some(point) => {
-                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", point_conf.name, point.value());
+                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_name, point.value());
                                                                 let result = point.to_double().as_double().value;
                                                                 result_block.write(row_ix, result, &mut table);
                                                                 if let Err(err) = table.store() {
@@ -216,7 +224,7 @@ impl Service for VirtualDevice {
                                                                 }
                                                             }
                                                             None => {
-                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", point_conf.name);
+                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", result_name);
                                                             }
                                                         }
                                                     }
@@ -279,6 +287,11 @@ impl Service for VirtualDevice {
                 Err(err)
             }
         }
+    }
+    //
+    //
+    fn points(&self) -> Vec<sal_sync::services::entity::PointConf> {
+        self.conf.inputs.values().cloned().collect()
     }
     //
     //

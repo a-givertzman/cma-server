@@ -13,7 +13,7 @@ services:
 
 
 service MultiQueue:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 50 ms         # optional, next service will wait until current completely started plus specified time
     in queue in-queue:
         max-length: 10000
     send-to:
@@ -30,10 +30,12 @@ service CacheService MainCache:
 
 service VirtualDevice VirtualIed15:
     # wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
-    subscribe: 
-        /App/MultiQueue:
-            Inf: 
-                - Result.Value3
+    subscribe: /App/MultiQueue
+        # /App/MultiQueue:
+        #     Inf: []
+                # - /App/TestTask/Result.Val1
+                # - /App/TestTask/Result.Val2
+                # - /App/TestTask/Result.Val3
                 # - Result.Value4
     send-to: /App/MultiQueue.in-queue
     path: './test-ied15.ods'            # Optional, if signal have to be charged from the table
@@ -44,21 +46,25 @@ service VirtualDevice VirtualIed15:
         database: crane_data_server
     inputs:                             # Input signal to be charged from the specified table file, or calculated in `Task`
         point Winch.Valve1: 
-            type: Int
+            type: Real
             history: rw
         point Winch.Valve2: 
-            type: Int
+            type: Real
             history: rw
     results:
-        point Result.Value3:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
-            type: Int
-        sql Result.Value4:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            sql: 'select Name2 from table_name'
-            delay:  10ms                 # Optional delay, to be awaited before select apears
+        point Result.Val1:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
+            type: Real
+        point Result.Val2:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
+            type: Real
+        point Result.Val3:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
+            type: Real
+        # sql Result.Val4:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        #     sql: 'select Name2 from table_name'
+        #     delay:  10ms                 # Optional delay, to be awaited before select apears
 
 
 service Task TestTask:
-    cycle: 1 s
+    cycle: 1 ms
     in queue recv-queue:
         max-length: 10000
     subscribe: 
@@ -67,30 +73,44 @@ service Task TestTask:
             Inf: []               #   - on all points having Cot::Inf and history::ReadWrite
     # fn Debug:
     #     input: point any every
-    fn Add:
-        input1: point int Value1
-        input2: point int Value2
+    fn Export ExportResultVal1:
+        enable: const bool true
+        send-to: /App/MultiQueue.in-queue
+        conf point Result.Val1:
+            type: Real
+        input fn Add:
+            input1: point real /App/VirtualIed15/Winch.Valve1
+            input2: point real /App/VirtualIed15/Winch.Valve2
+    fn Export ExportResultVal2:
+        enable: const bool true
+        send-to: /App/MultiQueue.in-queue
+        conf point Result.Val2:
+            type: Real
+        input fn Mul:
+            input1: point real /App/VirtualIed15/Winch.Valve1
+            input2: point real /App/VirtualIed15/Winch.Valve2
 
 
-service Task HistoryTask:
-    cycle: 1 s
-    in queue recv-queue:
-        max-length: 10000
-    subscribe: 
-        /App/MultiQueue:                     # - multicast subscription to the MultiQueue
-            {cot: Inf, history: rw}: []               #   - on all points having Cot::Inf and history::ReadWrite
-    # fn Debug:
-    #     input: point any every
-    fn ToApiQueue:
-        queue: /App/ApiClient.in-queue
-        input fn SqlMetric:
-            initial: 0.123      # начальное значение
-            table: public.event
-            sql: "insert into {table} (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
-            input1 fn ToInt:
-                input: point any every      # point: every point of any type
-            input2 fn PointId:
-                input: point any every
+
+# service Task HistoryTask:
+#     cycle: 1 s
+#     in queue recv-queue:
+#         max-length: 10000
+#     subscribe: 
+#         /App/MultiQueue:                     # - multicast subscription to the MultiQueue
+#             {cot: Inf, history: rw}: []               #   - on all points having Cot::Inf and history::ReadWrite
+#     # fn Debug:
+#     #     input: point any every
+#     fn ToApiQueue:
+#         queue: /App/ApiClient.in-queue
+#         input fn SqlMetric:
+#             initial: 0.123      # начальное значение
+#             table: public.event
+#             sql: "insert into {table} (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
+#             input1 fn ToInt:
+#                 input: point any every      # point: every point of any type
+#             input2 fn PointId:
+#                 input: point any every
 
 
 service ApiClient:

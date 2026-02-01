@@ -63,7 +63,7 @@ impl ResultBlock {
     /// Returns values of the result block from the specified row
     pub fn write(&self, row_ix: u32, result: f64, table: &mut Table) {
         let value = spreadsheet_ods::Value::Number(result);
-        table.sheet_mut().set_value(row_ix, self.target_col, value);
+        table.sheet_mut().set_value(row_ix, self.result_col, value);
     }
 }
 //
