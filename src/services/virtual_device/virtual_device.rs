@@ -74,12 +74,13 @@ impl VirtualDevice {
     ///
     /// Make a select query to the API
     /// - Returns value or error in the string
-    fn select(dbg: &Dbg, api_client: Arc<ApiClient>, sql: impl Into<String>) -> String {
+    fn fetch(dbg: &Dbg, api_client: &Arc<ApiClient>, sql: impl Into<String>) -> String {
         let sql = sql.into();
-        log::debug!("{dbg}.select | fetching sql: '{sql}'");
+        log::debug!("{dbg}.select | Fetching sql: '{sql}'");
         match api_client.fetch(&sql).wait() {
             Ok(reply) => match reply {
                 Ok(reply) => {
+                    log::debug!("{dbg}.select | Reply: '{:?}'", reply);
                     let r = reply.first()
                         .map(|r| r.first())
                         .flatten()
@@ -143,7 +144,7 @@ impl Service for VirtualDevice {
         };
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), self.scheduler.clone()));
         self.api_client.replace(api_client.clone());
-        // api_client.run()?;
+        api_client.run()?;
         log::info!("{dbg}.run | ApiClient ready");
         let send_to = services.get_link(&conf.send_to).map_err(|err| error.pass_with("Can't get 'send-to' link", err))?;
         let (_, recv) = {
@@ -162,7 +163,7 @@ impl Service for VirtualDevice {
                     let rows = table.sheet().row_header_max();
                     let columns = table.sheet().col_header_max();
                     let start = header.end() + 1;
-                    for  row_ix in start..(rows - start) {
+                    'main: for  row_ix in start..(rows - start) {
                         let row = table.row(row_ix, columns);
                         if let Some(index) = row.get(0) {
                             if let spreadsheet_ods::Value::Number(ix) = index {
@@ -175,76 +176,82 @@ impl Service for VirtualDevice {
                                             match conf.inputs.get(&event.name) {
                                                 Some(_) => {
                                                     let point = event.to_point(txid);
-                                                    if let Err(err) = send_to.send(point) {
-                                                        log::warn!("{dbg}.run | Can't send Event {:?}, error: {:?}", event, err);
+                                                    match send_to.send(point) {
+                                                        Ok(_) => {
+                                                            let mut results = FxIndexMap::default();
+                                                            let time = Instant::now();
+                                                            let delay = event.time;
+                                                            log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events in {:?}...", delay);
+                                                            while time.elapsed() <= delay && exit.load(Ordering::Acquire) {
+                                                                match recv.recv_timeout(RECV_TIMEOUT) {
+                                                                    Ok(point) => {
+                                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
+                                                                        results.insert(point.name().split("/").last().unwrap().to_owned(), point);
+                                                                    }
+                                                                    Err(err) => match err {
+                                                                        kanal::ReceiveErrorTimeout::Timeout => {}
+                                                                        _ => {
+                                                                            log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
+                                                                            exit.store(true, Ordering::Release);
+                                                                            break 'main;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if exit.load(Ordering::Acquire) {
+                                                                    break 'main;
+                                                                }
+                                                            }
+                                                            match results.is_empty() {
+                                                                true => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | No result events received"),
+                                                                false => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | {} result events received", results.len()),
+                                                            }
+                                                            if exit.load(Ordering::Acquire) {
+                                                                break 'main;
+                                                            }
+                                                            for (result_name, result_kind) in &conf.results {
+                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
+                                                                let result_name = result_name.split('/').last().unwrap();
+                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
+                                                                let result_block = ResultBlock::new(result_name, "target", "result", "status", &header);
+                                                                match result_kind {
+                                                                    crate::services::ResultKind::Event(_) => {
+                                                                        match results.get(result_name) {
+                                                                            Some(point) => {
+                                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_name, point.value());
+                                                                                let result = point.to_double().as_double().value;
+                                                                                result_block.write_result(row_ix, result, &mut table);
+                                                                            }
+                                                                            None => {
+                                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", result_name);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    crate::services::ResultKind::Sql(sql_result) => {
+                                                                        let time = Instant::now();
+                                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}'", sql_result.name);
+                                                                        let result = Self::fetch(&dbg, &api_client, &sql_result.sql);
+                                                                        if time.elapsed() > sql_result.delay.to_duration() {
+                                                                            log::warn!("{dbg}.run | row {row_ix} | Index {ix} | SQL '{}' exceeded {:?} with limit of {:?} ", sql_result.name, time.elapsed(), sql_result.delay);
+                                                                        }
+                                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", sql_result.name, result);
+                                                                        result_block.write_result(row_ix, result, &mut table);
+                                                                    }
+                                                                }
+                                                                if let Err(err) = table.store() {
+                                                                    log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
+                                                                }
+                                                                if exit.load(Ordering::Acquire) {
+                                                                    break 'main;
+                                                                }
+                                                            }
+                                                        }
+                                                        Err(err) => {
+                                                            log::warn!("{dbg}.run | Can't send Event {:?}, error: {:?}", event, err);
+                                                        }
                                                     }
                                                 }
                                                 None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find Event '{}' in the config, skipped", event.name),
                                             }
-                                            let mut results = FxIndexMap::default();
-                                            let time = Instant::now();
-                                            let delay = RECV_TIMEOUT * 5;
-                                            log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events in {:?}...", delay);
-                                            while time.elapsed() <= delay {
-                                                match recv.recv_timeout(RECV_TIMEOUT) {
-                                                    Ok(point) => {
-                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
-                                                        results.insert(point.name().split("/").last().unwrap().to_owned(), point);
-                                                    }
-                                                    Err(err) => match err {
-                                                        kanal::ReceiveErrorTimeout::Timeout => {
-                                                            break;
-                                                        }
-                                                        _ => {
-                                                            log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
-                                                            exit.store(true, Ordering::Release);
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            match results.is_empty() {
-                                                true => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | No result events received"),
-                                                false => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | {} result events received", results.len()),
-                                            }
-                                            for (result_name, result_kind) in &conf.results {
-                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
-                                                let result_name = result_name.split('/').last().unwrap();
-                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
-                                                let result_block = ResultBlock::new(result_name, "target", "result", "status", &header);
-                                                match result_kind {
-                                                    crate::services::ResultKind::Event(_) => {
-                                                        match results.get(result_name) {
-                                                            Some(point) => {
-                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_name, point.value());
-                                                                let result = point.to_double().as_double().value;
-                                                                result_block.write(row_ix, result, &mut table);
-                                                                if let Err(err) = table.store() {
-                                                                    log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
-                                                                }
-                                                            }
-                                                            None => {
-                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", result_name);
-                                                            }
-                                                        }
-                                                    }
-                                                    crate::services::ResultKind::Sql(sql_result) => {
-                                                        match api_client.fetch(&sql_result.sql).wait().flatten() {
-                                                            Ok(result) => {
-                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", sql_result.name, result);
-                                                                // result_block.write(row_ix, result, &mut table);
-                                                            }
-                                                            Err(err) => {
-                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't fetch '{}' result from API", sql_result.name);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-                                            }
-
-                                            // Write Results here
-                                            // let result = ResultBlock::new(&self, &header, row)
                                         }
                                         None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't parse Input Event, skipped"),
                                     }
