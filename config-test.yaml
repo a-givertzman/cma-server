@@ -58,7 +58,7 @@ service VirtualDevice VirtualIed15:
             type: Real
         sql Result.Val3:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
             sql: 'select value from public.frdm_settings;'
-            delay: 100ms
+            delay: 10 ms
             # sql: 'select id, value from public.frdm_settings;'
             # type: Real
         # sql Result.Val4:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'

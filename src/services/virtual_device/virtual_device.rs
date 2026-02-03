@@ -85,13 +85,13 @@ impl VirtualDevice {
                         .map(|r| r.first())
                         .flatten()
                         .map(|r| match r.1 {
-                            serde_json::Value::Null => spreadsheet_ods::Value::Text("Not sampled".to_owned()),
+                            serde_json::Value::Null => spreadsheet_ods::Value::Text("Empty".to_owned()),
                             serde_json::Value::Bool(v) => spreadsheet_ods::Value::Boolean(*v),
                             serde_json::Value::Number(v) => spreadsheet_ods::Value::Number(v.as_f64().unwrap()),
                             serde_json::Value::String(v) => spreadsheet_ods::Value::Text(v.to_owned()),
                             serde_json::Value::Array(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                             serde_json::Value::Object(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
-                        }).unwrap_or(spreadsheet_ods::Value::Text("Not found".to_string()))
+                        }).unwrap_or(spreadsheet_ods::Value::Text("Missed".to_string()))
                 }
                 Err(err) => {
                     let err = format!("{dbg}.select | Sql '{sql}' returns error: {:?}", err);
@@ -185,7 +185,7 @@ impl Service for VirtualDevice {
                                                             let time = Instant::now();
                                                             let delay = event.time;
                                                             log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events in {:?}...", delay);
-                                                            while time.elapsed() <= delay && exit.load(Ordering::Acquire) {
+                                                            while !exit.load(Ordering::Acquire) && (time.elapsed() <= delay) {
                                                                 match recv.recv_timeout(RECV_TIMEOUT) {
                                                                     Ok(point) => {
                                                                         log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
@@ -196,12 +196,8 @@ impl Service for VirtualDevice {
                                                                         _ => {
                                                                             log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
                                                                             exit.store(true, Ordering::Release);
-                                                                            break 'main;
                                                                         }
                                                                     }
-                                                                }
-                                                                if exit.load(Ordering::Acquire) {
-                                                                    break 'main;
                                                                 }
                                                             }
                                                             match results.is_empty() {
@@ -212,20 +208,20 @@ impl Service for VirtualDevice {
                                                                 break 'main;
                                                             }
                                                             for (result_name, result_kind) in &conf.results {
-                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
-                                                                let result_name = result_name.split('/').last().unwrap();
-                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}'...", result_name);
-                                                                let result_block = ResultBlock::new(result_name, "target", "result", "status", &header);
+                                                                let result_block_name = result_name.split('/').last().unwrap();
+                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}', block '{}'...", result_name, result_block_name);
+                                                                let result_block = ResultBlock::new(result_block_name, "target", "result", "status", &header);
                                                                 match result_kind {
                                                                     crate::services::ResultKind::Event(_) => {
-                                                                        match results.get(result_name) {
+                                                                        match results.get(result_block_name) {
                                                                             Some(point) => {
-                                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_name, point.value());
+                                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, point.value());
                                                                                 let result = point.to_double().as_double().value;
                                                                                 result_block.write_result(row_ix, result, &mut table);
                                                                             }
                                                                             None => {
-                                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", result_name);
+                                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't find '{}' in the results", result_block_name);
+                                                                                result_block.write_result(row_ix, "Missed", &mut table);
                                                                             }
                                                                         }
                                                                     }
@@ -244,7 +240,7 @@ impl Service for VirtualDevice {
                                                                     log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
                                                                 }
                                                                 if exit.load(Ordering::Acquire) {
-                                                                    break 'main;
+                                                                    break;
                                                                 }
                                                             }
                                                         }
@@ -262,19 +258,12 @@ impl Service for VirtualDevice {
                             }
                         }
                     }
-                    // for ((row, col), cell) in sheet.iter_rows((row_start, 0)..(row_end, columns)) {
-                    //     log::debug!("{dbg}.run | row {} col {} | {:?}", row, col, cell.value);
-                    //     // let sql: String = todo!("Get the sql from the current result");
-                    //     // let result = Self::select(&dbg, api_client.clone(), sql);
-                    //     if exit.load(Ordering::Acquire) {
-                    //         break;
-                    //     }
-                    // }
                 }
                 None => {
                     log::warn!("{}.run | Table or sheet wasn't specified", dbg);
                 }
             }
+            api_client.exit();
             log::info!("{dbg}.run | Exit");
             Ok(())
         });

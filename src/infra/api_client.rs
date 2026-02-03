@@ -53,7 +53,7 @@ impl ApiClient {
     pub fn fetch(&self, sql: impl Into<String>) -> Future<Result<Vec<IndexMap<String, serde_json::Value>>, Error>> {
         let sql = sql.into();
         let (result, sink) = Future::new();
-        match self.is_started.load(Ordering::Acquire) {
+        match self.is_started.load(Ordering::Acquire) && !self.is_finished() {
             true => {
                 if let Err(err) = self.send.send((sql.clone(), sink.clone())) {
                     sink.add(Err(Error::new(&self.dbg, "fetch").pass_with("Send query error", err.to_string())));
