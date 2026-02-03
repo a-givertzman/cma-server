@@ -33,7 +33,7 @@
 //!             delay:  10ms                # Optional delay, to be awaited before select apears
 //! ```
 //! 
-use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant};
+use std::{ops::Deref, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, PointTxId}}, sync::{Handles, Owner}, thread_pool::Scheduler
@@ -74,32 +74,35 @@ impl VirtualDevice {
     ///
     /// Make a select query to the API
     /// - Returns value or error in the string
-    fn fetch(dbg: &Dbg, api_client: &Arc<ApiClient>, sql: impl Into<String>) -> String {
+    fn fetch(dbg: &Dbg, api_client: &Arc<ApiClient>, sql: impl Into<String>) -> impl Into<spreadsheet_ods::Value> {
         let sql = sql.into();
         log::debug!("{dbg}.select | Fetching sql: '{sql}'");
         match api_client.fetch(&sql).wait() {
             Ok(reply) => match reply {
                 Ok(reply) => {
                     log::debug!("{dbg}.select | Reply: '{:?}'", reply);
-                    let r = reply.first()
+                    reply.first()
                         .map(|r| r.first())
                         .flatten()
-                        .map(|r| r.1);
-                    match r {
-                        Some(v) => v.to_string(),
-                        None => "No results".to_string()
-                    }
+                        .map(|r| match r.1 {
+                            serde_json::Value::Null => spreadsheet_ods::Value::Text("Not sampled".to_owned()),
+                            serde_json::Value::Bool(v) => spreadsheet_ods::Value::Boolean(*v),
+                            serde_json::Value::Number(v) => spreadsheet_ods::Value::Number(v.as_f64().unwrap()),
+                            serde_json::Value::String(v) => spreadsheet_ods::Value::Text(v.to_owned()),
+                            serde_json::Value::Array(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
+                            serde_json::Value::Object(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
+                        }).unwrap_or(spreadsheet_ods::Value::Text("Not found".to_string()))
                 }
                 Err(err) => {
                     let err = format!("{dbg}.select | Sql '{sql}' returns error: {:?}", err);
                     log::warn!("{err}");
-                    err
+                    spreadsheet_ods::Value::Text(err)
                 }
             },
             Err(err) => {
                 let err = format!("{dbg}.select | Fetch sql '{sql}' error: {:?}", err);
                 log::warn!("{err}");
-                err
+                spreadsheet_ods::Value::Text(err)
             }
         }
     }
@@ -229,7 +232,7 @@ impl Service for VirtualDevice {
                                                                     crate::services::ResultKind::Sql(sql_result) => {
                                                                         let time = Instant::now();
                                                                         log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}'", sql_result.name);
-                                                                        let result = Self::fetch(&dbg, &api_client, &sql_result.sql);
+                                                                        let result = Self::fetch(&dbg, &api_client, &sql_result.sql).into();
                                                                         if time.elapsed() > sql_result.delay.to_duration() {
                                                                             log::warn!("{dbg}.run | row {row_ix} | Index {ix} | SQL '{}' exceeded {:?} with limit of {:?} ", sql_result.name, time.elapsed(), sql_result.delay);
                                                                         }
