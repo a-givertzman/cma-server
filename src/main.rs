@@ -22,7 +22,6 @@ fn main() {
     let dbg = Dbg::own("main");
     if let Err(err) = std::process::Command::new("clear").status() {
         log::debug!("{dbg} | Can't clear terminal, error: {:?}", err);
-
     }
     let cli = Cli::parse();
     let path = cli.config.map_or_else(

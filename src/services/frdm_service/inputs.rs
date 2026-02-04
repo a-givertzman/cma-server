@@ -97,7 +97,7 @@ impl Inputs {
         let key = key.into();
         if key == self.conf.rope_deprecation.crane.rope.pos {
             let pos = val * 1000.0;
-            log::warn!("{}.insert | Rope position '{}' mm: {:?}", self.dbg, key, pos);
+            log::debug!("{}.insert | Rope position '{}' mm: {:?}", self.dbg, key, pos);
             self.inputs.insert(key.clone(), Some(pos));
             let pos = pos.round() as usize;
             self.rope_pos.store(Some(pos));

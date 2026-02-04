@@ -56,45 +56,6 @@ impl Blocks {
     ///
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self) -> Option<Vec<Block>> {
-        // let winch_rope_alpha =  match self.winch_rope_alpha {
-        //     Some(winch_rope_alpha) => winch_rope_alpha,
-        //     None => {
-        //         match self.booms.eval() {
-        //             Some(booms) => {
-        //                 let mut blocks = self.items.iter().take(2);
-        //                 match blocks.next().cloned() {
-        //                     Some(mut block) => {
-        //                         block.pos = self.blocks_pos(&block, &booms, &Block::default(), 0.0, false);
-        //                         match blocks.next().cloned() {
-        //                             Some(mut next) => {
-        //                                 next.pos = self.blocks_pos(&next, &booms, &block, 0.0, false);
-        //                                 let (k, j) = block.scheme.kj();
-        //                                 let l_block = block.pos.distance(next.pos);
-        //                                 let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
-        //                                 let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
-        //                                 self.winch_rope_alpha = Some(rope_alpha_fwd);
-        //                                 rope_alpha_fwd
-        //                             }
-        //                             None => {
-        //                                 log::error!("{}.eval | Can't evaluate 'Parking' position. At least two blocks required, but only one present.", self.dbg);
-        //                                 0.0
-        //                             }
-        //                         }
-        //                         // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
-        //                     }
-        //                     None => {
-        //                         log::error!("{}.eval | Can't evaluate 'Parking' position. At least two blocks required, but nothing present.", self.dbg);
-        //                         0.0
-        //                     },
-        //                 }
-        //             }
-        //             None => {
-        //                 log::error!("{}.eval | Can't evaluate 'Parking' position. Check Booms and Blocks configuration! Probably first (main) Boom 'parking' angle is missed.", self.dbg);
-        //                 0.0
-        //             }
-        //         }
-        //     }
-        // };
         match self.booms.eval() {
             Some(booms) => {
                 let mut blocks = VecDeque::from(self.items.clone());
@@ -176,7 +137,7 @@ impl Blocks {
             BlockBind::Hook => {
                 // log::debug!("{}.blocks_pos | Prev  {} bind: {:?}  pos: {:.3}, {:.3}, D: {:.3}, new X: {:.3}", self.dbg, prev.name, prev.bind, prev.pos.x, prev.pos.y, prev.diameter * 0.5, prev.pos.x - 0.5 * prev.diameter);
                 // log::debug!("{}.blocks_pos | Block {} bind: {:?}", self.dbg, block.name, block.bind);
-                log::debug!("{}.blocks_pos | Block {} bind: {:?}  winch_dl: {:.3}", self.dbg, block.name, block.bind, winch_dl);
+                // log::debug!("{}.blocks_pos | Block {} bind: {:?}  winch_dl: {:.3}", self.dbg, block.name, block.bind, winch_dl);
                 Offset::new(
                     match skipped {
                         true => prev.pos.x - 0.5 * prev.diameter,

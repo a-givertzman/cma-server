@@ -19,7 +19,7 @@ use sal_core::error::Error;
 ///     - `Points` - x, y will be displayed as dots only
 ///     - `Line` - x, y dots also will be connected by line
 ///     - `Both` - x, y dots + line
-pub fn plot<P: AsRef<Path>>(path: P, size: Option<(u32, u32)>, series: Vec<Vec<(f64, f64)>>, kind: SeriesKind) -> Result<(), Box<dyn std::error::Error>> {
+pub fn plot(path: impl AsRef<Path>, size: Option<(u32, u32)>, series: Vec<Vec<(f64, f64)>>, kind: SeriesKind) -> Result<(), Box<dyn std::error::Error>> {
     let colors = colors(7);
     let root = BitMapBackend::new(&path, size.unwrap_or((2048, 1200))).into_drawing_area();
     root.fill(&WHITE).unwrap();
@@ -147,7 +147,7 @@ fn hex_to_rgb(s: &str) -> RGBColor {
 ///     - `Line` - x, y dots also will be connected by line
 ///     - `Both` - x, y dots + line
 #[allow(unused)]
-pub(crate) enum SeriesKind {
+pub enum SeriesKind {
     Points,
     Line,
     Both,

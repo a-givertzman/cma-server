@@ -14,7 +14,7 @@ use crate::{
     services::task::{
         {fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
         TaskTestReceiver,
-    }, tests::unit::services::task::functions::va::plot::{plot, SeriesKind},
+    }, tests::tools::{plot, SeriesKind},
 };
 ///
 /// Colors
