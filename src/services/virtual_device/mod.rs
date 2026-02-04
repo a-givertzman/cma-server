@@ -1,5 +1,5 @@
 //!
-//! `VirtualDevice` `Service` is emulation of the real device behavior. 
+//! # `VirtualDevice` `Service` is emulation of the real device behavior. 
 //! 
 //! It's signals can be charged from file-based test data or calculated in the `Task`-based calculations
 //! 

@@ -1,42 +1,18 @@
 //!
-//! # FRDM (Fiber Rope Defects Monitoring)
+//! # `VirtualDevice` `Service` is emulation of the real device behavior. 
 //! 
-//! - Communication with Camera 
-//! - Receives current rope position
-//! - Scanning the rope for defects
-//! - Calculates Rope Depreciation Rate
+//! It's signals can be charged from file-based test data or calculated in the `Task`-based calculations
 //! 
-//! ## Basic configuration parameters:
+//! Can be used instead of a real device connections such as `UdpClient` or `ProfinetClient` etc.
+//! - Signals configuration can be directly copied from the real device
+//! - Loading test sequences from the table files (ODS)
+//! - Storing results nier by the corresponding input event
+//! - Comparison of target and result values to highlight test failures
 //! 
-//! ```yaml
-//! service VirtualDevice MocIed12:
-//!     path: './test_ied12.ods'            # Optional, if signal have to be charged from the table
-//!     api:                                # Optional, if databese access for example required
-//!         address: 0.0.0.0:8080
-//!         auth-token: 123!@#
-//!         database: crane_data_server
-//!     inputs:                             # Input signal to be charged from the specified table file, or calculated in `Task`
-//!         point Winch.ValveEV1: 
-//!             type: Bool
-//!             history: rw
-//!         point Winch.ValveEV2: 
-//!             type: Bool
-//!             history: rw
-//!         point Winch.EncoderBR1: 
-//!             type: Int
-//!             comment: 'Скорость об/мин'
-//!     results:
-//!         point Result.Name1:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
-//!             type: Int
-//!         sql Result.Name2:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-//!             sql: 'select Name2 from table_name'
-//!             delay:  10ms                # Optional delay, to be awaited before select apears
-//! ```
-//! 
-use std::{ops::Deref, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
+use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, PointConf, PointTxId, PointType}}, sync::{Handles, Owner}, thread_pool::Scheduler
+    collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, PointTxId, PointType}}, sync::{Handles, Owner}, thread_pool::Scheduler
 };
 use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::{Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
 ///

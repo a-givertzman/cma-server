@@ -133,7 +133,7 @@ impl VirtualDeviceConf {
                             None
                         }
                     }
-                    Err(err) => {
+                    Err(_) => {
                         log::warn!("{}.new | Can't parse Result Point/SQL conf: {:?}", dbg, node.key);
                         None
                     }
