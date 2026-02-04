@@ -114,10 +114,6 @@ fn eval() {
     let mut target: Vec<f64> = vec![];
     let mut target_count = 0;
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
-        bendings:           # Rope bloks with diameter, inter and exit
-            # Block Diameter   inter   exit
-            - D200mm           5.0  .. 5.15 m
-            - D300mm           7.23 .. 7.30 mm
         rope:
             width: 35 mm            # Diameter of the rome
             length: 3000 m          # Total working length of the rope
