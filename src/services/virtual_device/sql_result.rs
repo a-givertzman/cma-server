@@ -1,4 +1,4 @@
-use sal_sync::services::conf::ConfDuration;
+use sal_sync::services::{conf::ConfDuration, entity::PointType};
 use serde::Deserialize;
 
 ///
@@ -9,6 +9,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct SqlResult {
     pub name: String,
+    pub typ: PointType,
     pub sql: String,
     pub delay: ConfDuration,
 }

@@ -1,5 +1,6 @@
 use std::{fmt::Debug, time::Duration};
 
+use sal_core::error::Error;
 use sal_sync::services::entity::Point;
 
 use crate::services::Header;
@@ -21,7 +22,7 @@ pub struct InputBlock {
     value_col: u32,
     pub time: Duration,
     pub name: String,
-    value: spreadsheet_ods::Value,
+    pub value: spreadsheet_ods::Value,
 }
 //
 //
@@ -48,11 +49,20 @@ impl InputBlock {
             value: Default::default(),
         }
     }
-    pub fn from_row(&self, row: &Vec<spreadsheet_ods::Value>) -> Option<Self> {
-        let time = row.get(self.time_col as usize)?.as_u64_opt()?;
-        let name = row.get(self.name_col as usize)?.as_string_opt()?;
-        let value = row.get(self.value_col as usize)?.clone();
-        Some(Self {
+    pub fn from_row(&self, row: &Vec<spreadsheet_ods::Value>) -> Result<Self, Error> {
+        let error = Error::new("InputBlock", "from_row");
+        let time = row.get(self.time_col as usize)
+            .ok_or(error.err(format!("Time column {} - not found", self.time_col)))?;
+        let time = time.as_u64_opt()
+            .ok_or(error.err(format!("Time column {} value '{:?}' - is not a number", self.time_col, time)))?;
+        let name = row.get(self.name_col as usize)
+            .ok_or(error.err(format!("Name column {} - not found", self.name_col)))?;
+        let name = name.as_string_opt()
+            .ok_or(error.err(format!("Name column {} value '{:?}' - is not a string", self.name_col, name)))?;
+        let value = row.get(self.value_col as usize)
+            .ok_or(error.err(format!("Value column {} - not found", self.value_col)))?
+            .clone();
+        Ok(Self {
             time_col: self.time_col,
             name_col: self.name_col,
             value_col: self.value_col,

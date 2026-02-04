@@ -1,4 +1,4 @@
-use sal_sync::{collections::FxIndexMap, services::{ConfSubscribe, LinkName, conf::{ConfCustomKeywd, ConfDuration, ConfTree, ConfTreeGet}, entity::{Name, PointConf}, task::functions::{FnConfKeywd, FnConfKindName}}};
+use sal_sync::{collections::FxIndexMap, services::{ConfSubscribe, LinkName, conf::{ConfCustomKeywd, ConfDuration, ConfTree, ConfTreeGet}, entity::{Name, PointConf, PointType}, task::functions::{FnConfKeywd, FnConfKindName}}};
 use std::{fs, str::FromStr, time::Duration};
 
 use crate::{infra::ApiClientConf, services::{ResultKind, SqlResult}};
@@ -118,8 +118,11 @@ impl VirtualDeviceConf {
                         "sql" => {
                             let point_name = format!("{name}/{}", keyword.title());
                             let sql: FxIndexMap<String, serde_yaml::Value> = serde_yaml::from_value(node.conf).unwrap();
+                            let typ = sql.get("type").expect(&format!("Key 'type' missed in the '{point_name}'")).to_owned();
+                            let typ: PointType = serde_yaml::from_value(typ).expect(&format!("Key 'type' - wrong config in the '{point_name}'"));
                             let sql = SqlResult {
                                 name: point_name.clone(),
+                                typ,
                                 sql: sql.get("sql").expect(&format!("Key 'sql' missed in the '{point_name}'")).as_str().unwrap().to_owned(),
                                 delay: ConfDuration::from_str(sql.get("delay").expect(&format!("Key 'delay' missed in the '{point_name}'")).as_str().unwrap()).unwrap(),
                             };
