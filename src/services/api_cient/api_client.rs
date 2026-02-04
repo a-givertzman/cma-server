@@ -231,6 +231,9 @@ impl Service for ApiClient {
                         None => {break;}
                     };
                     count -=1;
+                    if exit.load(Ordering::SeqCst) {
+                        break 'send;
+                    }
                 }
                 if exit.load(Ordering::SeqCst) {
                     break 'send;

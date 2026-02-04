@@ -23,6 +23,7 @@ pub struct ApiClient {
     send: Sender<(String, Sink<Reply>)>,
     recv: Owner<Receiver<(String, Sink<Reply>)>>,
     scheduler: Scheduler,
+    is_started: Arc<AtomicBool>,
     handles: Arc<Handles<()>>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
@@ -41,6 +42,7 @@ impl ApiClient {
             send,
             recv: Owner::new(recv),
             scheduler,
+            is_started: Arc::new(AtomicBool::new(false)),
             handles: Arc::new(Handles::new(&dbg)),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
@@ -51,10 +53,13 @@ impl ApiClient {
     pub fn fetch(&self, sql: impl Into<String>) -> Future<Result<Vec<IndexMap<String, serde_json::Value>>, Error>> {
         let sql = sql.into();
         let (result, sink) = Future::new();
-        if let Err(err) = self.send.send((sql.clone(), sink.clone())) {
-            sink.add(
-                Err(Error::new(&self.dbg, "fetch").pass_with("Send query error", err.to_string()))
-            );
+        match self.is_started.load(Ordering::Acquire) && !self.is_finished() {
+            true => {
+                if let Err(err) = self.send.send((sql.clone(), sink.clone())) {
+                    sink.add(Err(Error::new(&self.dbg, "fetch").pass_with("Send query error", err.to_string())));
+                }
+            }
+            false => sink.add(Err(Error::new(&self.dbg, "fetch").err("Is not started or already exited"))),
         }
         result
     }    
@@ -70,10 +75,12 @@ impl Service for ApiClient {
         let recv = self.recv.take().unwrap();
         let service_waiting = ServiceWaiting::new(&name, conf.wait_started);
         let service_release = service_waiting.release();
+        let is_started = self.is_started.clone();
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
             let error = Error::new(dbg, "run");
+            is_started.store(true, Ordering::Release);
             let mut request = ApiRequest::new(
                 &name,
                 &conf.address,
@@ -83,11 +90,14 @@ impl Service for ApiClient {
                 false,
             );
             while let Err(err) = request.fetch(true) {
-                log::warn!("{dbg}.run | ApiClient error: {:?}", err);
+                log::warn!("{dbg}.run | Can't connect to the database '{}', \n\terror: {:?}", conf.address, err);
                 std::thread::sleep(Duration::from_millis(1000));
+                if exit.load(Ordering::Acquire) {
+                    break;
+                }
             }
             service_release.add(Ok(()));
-            loop {
+            while !exit.load(Ordering::Acquire) {
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok((sql, sink)) => {
                         match request.fetch_with(
@@ -114,10 +124,8 @@ impl Service for ApiClient {
                         }
                     }
                 }
-                if exit.load(Ordering::Acquire) {
-                    break;
-                }
             }
+            is_started.store(false, Ordering::Release);
             log::info!("{dbg}.run | Exit");
             Ok(())
         });

@@ -22,9 +22,11 @@ pub mod slmp_client;
 pub mod task;
 pub mod tcp_client;
 pub mod udp_client;
+mod virtual_device;
 mod services_factory;
 
 pub use api_cient::*;
 pub use cache::*;
 pub use modbus_tcp::*;
 pub use services_factory::*;
+pub use virtual_device::*;
