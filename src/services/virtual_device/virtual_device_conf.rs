@@ -142,10 +142,11 @@ impl VirtualDeviceConf {
             match FnConfKeywd::from_str(&node.key) {
                 Ok(keyword) => match keyword.kind() {
                     FnConfKindName::Point => {
-                        let point_name = format!("{name}/{}", keyword.data());
+                        // let point_name = format!("{name}/{}", keyword.data());
+                        let point_name = keyword.data();
                         log::trace!("{}.new | Point '{}'", dbg, point_name);
                         log::trace!("{}.new | Point '{}'   |   conf: {:?}", dbg, point_name, node);
-                        let node_conf = PointConf::new(&name, &node);
+                        let node_conf = PointConf::new("", &node);
                         Some((point_name, node_conf))
                     }
                     _ => {
