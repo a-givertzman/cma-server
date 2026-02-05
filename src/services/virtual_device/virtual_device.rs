@@ -14,7 +14,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, PointTxId, PointType}}, sync::{Handles, Owner}, thread_pool::Scheduler
 };
-use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::{Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
+use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::{CmdKind, Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
 ///
 /// ## `VirtualDevice` Service | Emulation of the real device behavior
 /// - Read events from the table file
@@ -191,6 +191,21 @@ impl Service for VirtualDevice {
                     let rows = table.sheet().row_header_max();
                     let columns = table.sheet().col_header_max();
                     let start = header.end() + 1;
+                    log::info!("{dbg}.run | Setup...");
+                    for cmd in conf.before {
+                        match cmd {
+                            CmdKind::Sql(sql) => {
+                                match api_client.fetch(&sql).wait() {
+                                    Ok(reply) => match reply {
+                                        Ok(reply) => log::trace!("{dbg}.run | Before sql '{sql}' \n\treply {:?}", reply),
+                                        Err(err) => log::warn!("{dbg}.run | Before sql '{sql}' \n\terror {:?}", err),
+                                    },
+                                    Err(err) => log::warn!("{dbg}.run | Before sql '{sql}' \n\terror {:?}", err),
+                                }
+                            }
+                        }
+                    }
+                    log::info!("{dbg}.run | Setup - Ok");
                     let mut time = Instant::now();
                     'main: for  row_ix in start..(rows - start) {
                         let row = table.row(row_ix, columns);
@@ -295,6 +310,21 @@ impl Service for VirtualDevice {
                     log::warn!("{}.run | Table or sheet wasn't specified", dbg);
                 }
             }
+            log::info!("{dbg}.run | Cleaning...");
+            for cmd in conf.after {
+                match cmd {
+                    CmdKind::Sql(sql) => {
+                        match api_client.fetch(&sql).wait() {
+                            Ok(reply) => match reply {
+                                Ok(reply) => log::trace!("{dbg}.run | After sql '{sql}' \n\treply {:?}", reply),
+                                Err(err) => log::warn!("{dbg}.run | After sql '{sql}' \n\terror {:?}", err),
+                            },
+                            Err(err) => log::warn!("{dbg}.run | After sql '{sql}' \n\terror {:?}", err),
+                        }
+                    }
+                }
+            }
+            log::info!("{dbg}.run | Cleaning - Ok");
             api_client.exit();
             log::info!("{dbg}.run | Exit");
             Ok(())
@@ -341,10 +371,6 @@ impl Service for VirtualDevice {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-        if let Some(s) = self.api_client.take() {
-            s.exit();
-            self.api_client.replace(s);
-        }
     }    
 }
 

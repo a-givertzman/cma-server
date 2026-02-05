@@ -1,7 +1,7 @@
 use sal_sync::{collections::FxIndexMap, services::{ConfSubscribe, LinkName, conf::{ConfCustomKeywd, ConfDuration, ConfTree, ConfTreeGet}, entity::{Name, PointConf, PointType}, task::functions::{FnConfKeywd, FnConfKindName}}};
 use std::{fs, str::FromStr, time::Duration};
 
-use crate::{infra::ApiClientConf, services::{ResultKind, SqlResult}};
+use crate::{infra::ApiClientConf, services::{CmdKind, ResultKind, SqlResult}};
 
 ///
 /// Config for `VirtualDevice` service:
@@ -12,6 +12,10 @@ use crate::{infra::ApiClientConf, services::{ResultKind, SqlResult}};
 ///         address: 0.0.0.0:8080
 ///         auth-token: 123!@#
 ///         database: crane_data_server
+///      before:                             # Setup commands will executed before the test started
+///         sql: TRUNCATE TABLE public.table_name RESTART IDENTITY;
+///      after:                              # Clean commands will executed after the test finished
+///         sql: TRUNCATE TABLE public.table_name RESTART IDENTITY;
 ///     inputs:                             # Input signal to be charged from the specified table file, or calculated in `Task`
 ///         point Winch.ValveEV1: 
 ///             type: Bool
@@ -44,8 +48,13 @@ pub struct VirtualDeviceConf {
     pub sheet: Option<String>,
     /// API configuration parametes
     pub api: ApiClientConf,
-    /// Names of the database table used for storing common settings for the clients
+    /// Setup commands will executed before the test started
+    pub before: Vec<CmdKind>,
+    /// Clean commands will executed after the test finished
+    pub after: Vec<CmdKind>,
+    /// Input signal to be charged from the specified table file, or calculated in `Task`
     pub inputs: FxIndexMap<String, PointConf>,
+    /// Results
     pub results: FxIndexMap<String, ResultKind>,
 }
 //
@@ -74,6 +83,60 @@ impl VirtualDeviceConf {
         let api: ConfTree = conf.get("api").expect(&format!("{dbg}.new | 'api' - not found or wrong config"));
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
+        let before: ConfTree = conf.get("before").expect(&format!("{dbg}.new | 'before' - not found or wrong config"));
+        let before: Vec<CmdKind> = before.nodes().filter_map(|node| {
+            match ConfCustomKeywd::from_str(&node.key) {
+                Ok(keyword) => match keyword.name().to_lowercase().as_str() {
+                    "sql" => {
+                        match node.conf.as_str() {
+                            Some(cmd) => {
+                                log::debug!("{}.new | SQL Command '{}'", dbg, cmd);
+                                Some(CmdKind::Sql(cmd.to_owned()))
+                            }
+                            None => {
+                                log::warn!("{}.new | Wrong SQL Command {:?}", dbg, node.conf);
+                                None
+                            }
+                        }
+                    }
+                    _ => {
+                        log::warn!("{}.new | Unknown Command kind {:?}", dbg, keyword);
+                        None
+                    }
+                }
+                Err(err) => {
+                    log::warn!("{}.new | Can't parse Command kind: {:?}, \n\terror: {:?}", dbg, node.key, err);
+                    None
+                }
+            }
+        }).collect();
+        let after: ConfTree = conf.get("after").expect(&format!("{dbg}.new | 'after' - not found or wrong config"));
+        let after: Vec<CmdKind> = after.nodes().filter_map(|node| {
+            match ConfCustomKeywd::from_str(&node.key) {
+                Ok(keyword) => match keyword.name().to_lowercase().as_str() {
+                    "sql" => {
+                        match node.conf.as_str() {
+                            Some(cmd) => {
+                                log::debug!("{}.new | SQL Command '{}'", dbg, cmd);
+                                Some(CmdKind::Sql(cmd.to_owned()))
+                            }
+                            None => {
+                                log::warn!("{}.new | Wrong SQL Command {:?}", dbg, node.conf);
+                                None
+                            }
+                        }
+                    }
+                    _ => {
+                        log::warn!("{}.new | Unknown Command kind {:?}", dbg, keyword);
+                        None
+                    }
+                }
+                Err(err) => {
+                    log::warn!("{}.new | Can't parse Command kind: {:?}, \n\terror: {:?}", dbg, node.key, err);
+                    None
+                }
+            }
+        }).collect();
         let inputs: ConfTree = conf.get("inputs").expect(&format!("{dbg}.new | 'inputs' - not found or wrong config"));
         let inputs: FxIndexMap<String, PointConf> = inputs.nodes().filter_map(|node| {
             match FnConfKeywd::from_str(&node.key) {
@@ -114,7 +177,7 @@ impl VirtualDeviceConf {
                     }
                 }
                 Err(_) => match ConfCustomKeywd::from_str(&node.key) {
-                    Ok(keyword) => match keyword.name().as_str() {
+                    Ok(keyword) => match keyword.name().to_lowercase().as_str() {
                         "sql" => {
                             let point_name = format!("{name}/{}", keyword.title());
                             let sql: FxIndexMap<String, serde_yaml::Value> = serde_yaml::from_value(node.conf).unwrap();
@@ -149,6 +212,8 @@ impl VirtualDeviceConf {
             path,
             sheet,
             api,
+            before,
+            after,
             inputs,
             results,
         }
@@ -198,6 +263,8 @@ impl Default for VirtualDeviceConf {
             path: Default::default(),
             sheet: Default::default(),
             api: Default::default(),
+            before: Default::default(),
+            after: Default::default(),
             inputs: Default::default(),
             results: Default::default(),
         }

@@ -76,7 +76,8 @@ impl<'a> Deprecation<'a> {
                         log::warn!("{}.eval | Input '{}' - Not found", self.dbg, self.conf.rope.load);
                         return None;
                     }
-                    (Some(_), Some(load)) => {
+                    (Some(pos), Some(load)) => {
+                        log::debug!("{}.eval | pos {pos} mm,  load {load} tonn", self.dbg);
                         for (block_ix, block) in blocks.iter().enumerate() {
                             let deprecation = load / (block.diameter * 0.001);
                             let current = self.slices(&block.bending);

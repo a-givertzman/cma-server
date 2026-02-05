@@ -76,7 +76,7 @@ impl FrdmService {
                 language plpgsql;
             ");
             log::trace!("{dbg}.update_db_settings | Fetching sql: {:?}", sql);
-            loop {
+            while !exit.load(Ordering::Acquire) {
                 match api_client.fetch(&sql).wait() {
                     Ok(reply) => {
                         if reply.is_ok() {
@@ -88,9 +88,6 @@ impl FrdmService {
                     Err(err) => {
                         log::error!("{dbg}.update_db_settings | Fetch error: {:?}", err);
                     }
-                }
-                if exit.load(Ordering::Acquire) {
-                    break;
                 }
             }
             Ok(())

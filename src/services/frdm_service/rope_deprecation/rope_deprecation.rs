@@ -89,7 +89,7 @@ impl Service for RopeDeprecation where {
         let service_release = service_waiting.release();
         let inputs = self.inputs.clone();
         let exit = self.exit.clone();
-        let api_client = self.api_client.clone();   // Arc::new(ApiClient::new(&name, conf.api.clone(), self.scheduler.clone()));
+        let api_client = self.api_client.clone();
         let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
@@ -118,35 +118,38 @@ impl Service for RopeDeprecation where {
                     ),
                 ),
                 |slice_ix, deprecation| {
-                    let dbg = &dbg.clone();
-                    log::trace!("{dbg}.run | Deprecation om slice {}: {:?}", slice_ix, deprecation);
+                    log::debug!("{dbg}.run | Deprecation at slice {slice_ix}: {:?}", deprecation);
                     let sql = format!(r"
                         insert into {conf_table} (id, deprecation) values ({slice_ix}, {deprecation})
                         on conflict (id) do update 
                             set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {slice_ix};
                     ");
-                    log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
-                    let reply = api_client.fetch(sql).wait();
-                    log::trace!("{dbg}.run | Sql reply: {:?}", reply);
+                    // log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
+                    api_client.fetch(sql).then(
+                        |_reply| {
+                            // log::trace!("{dbg}.run | Sql reply: {:?}", reply);
+                        },
+                        |err| {
+                            log::warn!("{dbg}.run | Sql error: {:?}", err);
+                        },
+                    );
                 },
             );
             service_release.add(Ok(()));
-            loop {
+            while !exit.load(Ordering::Acquire) {
                 log::trace!("{dbg}.run | Receiving events...");
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
-                        log::debug!("{dbg}.run | Received event: {:?}: {}", point.name(), point.to_string().as_string().value);
+                        log::debug!("{dbg}.run | Received event: {}: {}", point.name(), point.to_string().as_string().value);
                         deprecation.eval();
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {}
                         _ => {
+                            log::warn!("{dbg}.run | Recv error: {:?}", err);
                             break;
                         }
                     },
-                }
-                if exit.load(Ordering::Acquire) {
-                    break;
                 }
             }
             log::info!("{dbg}.run | Exit");

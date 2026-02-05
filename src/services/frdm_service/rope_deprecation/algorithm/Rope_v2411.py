@@ -406,8 +406,8 @@ if __name__ == "__main__":
     # Угол второй стрелы  - любое значение а рабочем диапазоне, может даже 0.0 подойдет
     #
     alpha_rope0 = calc_alpha_rope0_first_boom_zero(blocks_new(), booms_new([0.0, 23.78]), rope_calc_params)
-    logging.debug(f"boob2 alpha: {23.78}, alpha_rope0: {alpha_rope0}")
     rope_calc_params.alpha_rope0 = alpha_rope0
+    logging.debug(f"boob2 alpha: {23.78}, alpha_rope0: {alpha_rope0}")
 
     tblock: list[Block] = [Block.empty() for _ in range(7)]
     trope: list[RopeParams] = [Block.empty() for _ in range(7)]
@@ -665,47 +665,47 @@ if __name__ == "__main__":
             return new_L_winch, balance, rope_data[-1].l_rope
     
     
-        # # -----------------------------.
-        # # 10. Построение опорных точек от крюка к барабану
-        # # -----------------------------    
-        # def build_support_points(rope_results, rope_data: list[RopeParams], block_results, Lfact):
-        #     """
-        #     Формируем 14 опорных точек (в метрах) от крюка к барабану:
-        #       F14 = Lfact (крюк)
-        #       F13 = F14 - l_rope_7
-        #       F12 = F13 - arc_6
-        #       F11 = F12 - l_rope_6
-        #       ...
-        #       F1  = F2 - arc_1
-        #     """
-        #     L_total = Lfact  # мм, начинаем с полной длины (крюк)
-        #     # Получаем длины участков в порядке (от крюка к барабану)
-        #     l_sections = [r.l_rope for r in reversed(rope_data)]   # мм
-        #     arcs = list(reversed(block_results["arc_lengths"]))       # мм
-        #     F = [L_total]  # F12 (крюк)
+        # -----------------------------.
+        # 10. Построение опорных точек от крюка к барабану
+        # -----------------------------    
+        def build_support_points(rope_results, rope_data: list[RopeParams], block_results, Lfact):
+            """
+            Формируем 14 опорных точек (в метрах) от крюка к барабану:
+              F14 = Lfact (крюк)
+              F13 = F14 - l_rope_7
+              F12 = F13 - arc_6
+              F11 = F12 - l_rope_6
+              ...
+              F1  = F2 - arc_1
+            """
+            L_total = Lfact  # мм, начинаем с полной длины (крюк)
+            # Получаем длины участков в порядке (от крюка к барабану)
+            l_sections = [r.l_rope for r in reversed(rope_data)]   # мм
+            arcs = list(reversed(block_results["arc_lengths"]))       # мм
+            F = [L_total]  # F12 (крюк)
     
-        #     # Формируем остальные точки
-        #     for i in range(len(l_sections)):
+            # Формируем остальные точки
+            for i in range(len(l_sections)):
     
-        #         # Вычитаем прямой участок
-        #         if i < len(l_sections):
-        #             L_total -= l_sections[i]
-        #             F.append(L_total)
+                # Вычитаем прямой участок
+                if i < len(l_sections):
+                    L_total -= l_sections[i]
+                    F.append(L_total)
                     
-        #         # Вычитаем дугу
-        #         if i < len(arcs):
-        #             if arcs[i] > 0:
-        #                 L_total -= arcs[i]
-        #                 F.append(L_total)
-        #             else:
-        #                 continue
-        #         else:
-        #             logging.debug(f"Дуга для участка {i+1} не существует")
+                # Вычитаем дугу
+                if i < len(arcs):
+                    if arcs[i] > 0:
+                        L_total -= arcs[i]
+                        F.append(L_total)
+                    else:
+                        continue
+                else:
+                    logging.debug(f"Дуга для участка {i+1} не существует")
                 
-        #     # Переворачиваем, чтобы получить порядок от барабана к крюку
-        #     F = list(reversed(F))
-        #     F = np.array(F, dtype=float) / 1000.0  # метры
-        #     return F
+            # Переворачиваем, чтобы получить порядок от барабана к крюку
+            F = list(reversed(F))
+            F = np.array(F, dtype=float) / 1000.0  # метры
+            return F
         
 
         #############################################################
@@ -714,14 +714,14 @@ if __name__ == "__main__":
 
         # считаем количество каната на дуге барабана
         dL_drum = calc_drum_arc_delta(blocks, rope_data, rope_calc_params)
-        # Строим опорные точки
-        # support_points = build_support_points(rope_results, rope_data, block_results, rope_calc_params.Lfact)
         # Запомним исходную длину последнего прямого участка (подвеса)
         last_len_before = rope_calc_params.lhook_min
         # Cчитаем количество каната которое надо вытравить 
         new_L_winch, x, rope_data[-1].l_rope = ensure_min_hook_length(step, blocks, rope_calc_params)
         # Расчет дуг и канатов
         block_results = calc_block_angles_and_arcs(blocks, rope_data)
+        # Строим опорные точки
+        support_points = build_support_points(rope_results, rope_data, block_results, rope_calc_params.Lfact)
         
         # Тест координат блоков и КП
         for idx, block in enumerate(blocks):
@@ -811,10 +811,22 @@ if __name__ == "__main__":
         # logging.debug(f"i0 = {i0}")
         # logging.debug(f"i_cur = {i_cur}")
             
-        # logging.debug('-'*40)
-        # logging.debug("Опорные точки")
-        # # for i, v in enumerate(support_points, start=1):
-        # #     logging.debug(f"F{i:02d}: {v:8.3f}")
+        logging.debug('-'*40)
+        logging.debug("Опорные точки")
+        bending = [(0, 0.0)]
+        for i, v in enumerate(support_points, start=1):
+            bending.append((i, v))
+            if len(bending) > 1:
+                ix1 = bending[0][0]
+                ix2 = bending[1][0]
+                val1 = bending[0][1]
+                val2 = bending[1][1]
+                logging.debug(f"  F{ix1:02d}..{ix2:02d}: {val1:8.3f} .. {val2:8.3f}")
+                bending = []
+        if len(bending) > 0:
+            ix1 = bending[0][0]
+            val1 = bending[0][1]
+            logging.debug(f"  F{ix1:02d}:     {val1:8.3f}")
         # logging.debug('-'*40)
         # logging.debug("Итоги расчёта каната")
         

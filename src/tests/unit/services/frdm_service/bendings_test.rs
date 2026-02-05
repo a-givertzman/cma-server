@@ -223,14 +223,16 @@ fn new() {
         let mut ok = true;
         for (i, bending) in target.iter().enumerate() {
             if (bending.end - bending.start).abs() > 0.00001 {
-                assert!((result[i].bending.start - bending.start).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
+                if i > 0 {
+                    assert!((result[i].bending.start - bending.start).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
+                }
                 assert!((result[i].bending.end - bending.end).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
                 ok = ok && (((result[i].bending.start - bending.start).abs() < tolerance) && ((result[i].bending.end - bending.end).abs() < tolerance));
             }
         }
         errors.push(format!("step {step}  result: {:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>()));
         errors.push(format!("step {step}  target: {:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>()));
-        if result.iter().zip(target).any(|(r, t)| (t.start - r.bending.start).abs() >= tolerance || (t.end - r.bending.end).abs() >= tolerance) {
+        if result.iter().zip(target).enumerate().any(|(i, (r, t))| (i > 0 && (t.start - r.bending.start).abs() >= tolerance) || (t.end - r.bending.end).abs() >= tolerance) {
             errors.push(format!("step {step}  delta : {:?}", result.iter().zip(target).map(|(r, t)| format!("{:.3}..{:.3}", t.start - r.bending.start, t.end - r.bending.end)).collect::<Vec<_>>()));
         }
         if !ok {

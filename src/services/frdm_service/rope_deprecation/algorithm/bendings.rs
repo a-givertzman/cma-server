@@ -7,8 +7,10 @@ use crate::services::frdm_service::{Block, BlockArcs, BlockBind, Inputs, RopeCon
 pub struct Bendings {
     /// Total working length of the rope, mm
     rope_len: f64,
-    /// Длина каната на лебедке в парковочном положении
+    /// Длина каната на лебедке в парковочном положении, мм
     winch_len: f64,
+    /// Длина сегмента, мм
+    segment: f64,
     block_arcs: BlockArcs,
     dbg: Dbg,
 }
@@ -28,7 +30,7 @@ impl Bendings {
                     // для парковочного положения
                     // winch_len = общая длина  - арки - прямые - 1200
                     let len = blocks.iter().fold(rope_len, |len, block| {
-                        log::debug!("{dbg}.new | Block[{}] len {:.3} mm - wrap {:.3} mm - rope {:.3}", block.name, len, block.wrap_length, block.rope_len_fwd);
+                        log::debug!("{dbg}.new | Block[{}] {:?} len {:.3} mm - wrap {:.3} mm - rope {:.3}", block.name, block.bind, len, block.wrap_length, block.rope_len_fwd);
                         match block.bind {
                             BlockBind::Fixed => {
                                 log::debug!("{dbg}.new | Block[{}] rope bck {:.3}", block.name, block.rope_len_bck);
@@ -46,6 +48,7 @@ impl Bendings {
                     0.0
                 }
             },
+            segment: conf.segment.as_mm(),
             block_arcs,
             dbg,
         }
@@ -80,7 +83,7 @@ impl Bendings {
                                 true => None,
                                 false => {
                                     start = match block.bind {
-                                        BlockBind::Fixed => 0.0, // На барабане считаем весь канат от начала до точки схода,
+                                        BlockBind::Fixed => self.winch_len - self.segment,  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
                                         BlockBind::Boom(_) => prev_bend.end,
                                         BlockBind::BoomPair(_) => prev_bend.end,
                                         // L_winch_eff = L_winch_nom + dL_drum
@@ -90,7 +93,7 @@ impl Bendings {
                                         }
                                     };
                                     end = match block.bind {
-                                        BlockBind::Fixed => start + self.winch_len + block.rope_len_bck + block.wrap_length - rope_pos, // На барабане считаем весь канат от начала до точки схода,
+                                        BlockBind::Fixed => self.winch_len + block.rope_len_bck + block.wrap_length - rope_pos, // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
                                         BlockBind::Hook => {
                                             start + block.wrap_length
                                         }

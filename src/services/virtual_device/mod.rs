@@ -9,6 +9,7 @@
 //! - Storing results nier by the corresponding input event
 //! - Comparison of target and result values to highlight test failures
 //!
+mod cmd_kind;
 mod header;
 mod input_block;
 mod result_block;
@@ -18,6 +19,7 @@ mod table;
 mod virtual_device_conf;
 mod virtual_device;
 
+pub use cmd_kind::*;
 pub use header::*;
 pub use input_block::*;
 pub use result_block::*;

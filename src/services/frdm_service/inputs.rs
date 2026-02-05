@@ -107,7 +107,7 @@ impl Inputs {
         }
     }
     ///
-    /// Returns срфттуд with all internal events
+    /// Returns channel with all internal events
     pub fn listen(&self) -> Receiver<Point> {
         let key = format!("listener-{}", self.listeners.len());
         let (send, recv) = unbounded();
@@ -138,7 +138,7 @@ impl Inputs {
     /// Rope position increments as it's unwound from the winch
     pub fn rope_pos(&self) -> Option<f64> {
         match self.inputs.get(&self.conf.rope_deprecation.crane.rope.pos) {
-            Some(entry) => *entry.value(),
+            Some(entry) => entry.value().map(|v| v * 1000.0),
             None => None,
         }
     }
@@ -198,12 +198,11 @@ impl Service for Inputs where {
             log::trace!("{dbg}.run | Subscription: {:?}", subscription);
             subscription
         }).collect();
-        log::debug!("{}.run | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
             let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &points);
             service_release.add(Ok(()));
-            loop {
+            while !exit.load(Ordering::Acquire) {
                 log::trace!("{dbg}.run | Receiving points...");
                 match recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(event) => {
@@ -212,7 +211,7 @@ impl Service for Inputs where {
                             Some(mut input) => {
                                 log::debug!("{dbg}.run | Event '{}', value: {:?}", name, event.value());
                                 if name == conf.rope_deprecation.crane.rope.pos {
-                                    let pos = (event.to_int().as_int().value * 1000) as usize;
+                                    let pos = (event.to_double().as_double().value * 1000.0).round() as usize;
                                     rope_pos.store(Some(pos));
                                     cam_segment_ix.store(rope.segment_index(pos));
                                 }
@@ -241,9 +240,6 @@ impl Service for Inputs where {
                             break;
                         }
                     },
-                }
-                if exit.load(Ordering::Acquire) {
-                    break;
                 }
             }
             log::info!("{dbg}.run | Exit");

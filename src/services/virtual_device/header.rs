@@ -79,8 +79,8 @@ impl Header {
         let dbg = Dbg::new(parent, "Header");
         let rows = sheet.row_header_max().min(10);
         let columns = sheet.col_header_max();
-        log::debug!("{dbg}.from |    rows: {}", rows);
-        log::debug!("{dbg}.from | columns: {}", columns);
+        // log::debug!("{dbg}.from |    rows: {}", rows);
+        // log::debug!("{dbg}.from | columns: {}", columns);
         let mut input_block = String::new();
         let mut h_block_row = 0;
         let mut h_index_row = 0;
@@ -98,7 +98,7 @@ impl Header {
                         log::trace!("{dbg}.from | Column: {}, Block: {:?}", column, block_name);
                         if let Some(block_name) = block_name.as_str_opt() {
                             if let Some(block) = Self::parse_block(&dbg, block_name, column as u32, index) {
-                                log::debug!("{dbg}.from | Block: {:#?}", block);
+                                // log::debug!("{dbg}.from | Block: {:#?}", block);
                                 if block.is_input {
                                     input_block = block.name.clone();
                                 }
@@ -112,7 +112,7 @@ impl Header {
                     // log::debug!("{dbg}.from | row: {:?}", row);
                     if h_block.is_none() {
                         if let Some(ix) = row.get(0).map(|v| v.as_str_opt().map(|v| (v.to_lowercase() == "block").then(|| row_ix)).flatten() ).flatten() {
-                            log::debug!("{dbg}.from | Block row: {ix}");
+                            // log::debug!("{dbg}.from | Block row: {ix}");
                             h_block_row = ix;
                             h_block = Some(row);
                             continue;
@@ -120,7 +120,7 @@ impl Header {
                     }
                     if h_index.is_none() {
                         if let Some(ix) = row.get(0).map(|v| v.as_str_opt().map(|v| (v.to_lowercase() == "index").then(|| row_ix)).flatten() ).flatten() {
-                            log::debug!("{dbg}.from | Index row: {ix}");
+                            // log::debug!("{dbg}.from | Index row: {ix}");
                             h_index_row = ix;
                             h_index = Some(row);
                             continue;
@@ -128,7 +128,7 @@ impl Header {
                     }
                     if h_unit.is_none() {
                         if let Some(ix) = row.get(0).map(|v| v.as_str_opt().map(|v| (v.to_lowercase() == "unit").then(|| row_ix)).flatten() ).flatten() {
-                            log::debug!("{dbg}.from | Unit row: {ix}");
+                            // log::debug!("{dbg}.from | Unit row: {ix}");
                             h_unit_row = ix;
                             h_unit = Some(row);
                         }
