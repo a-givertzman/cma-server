@@ -50,6 +50,14 @@ service Task RecorderTask:
     let winch3LoadLimiterTrip:
         input: point bool '/App/ied14/db906_visual_data/Winch3.SWLProtection' status ok
     #
+    # Crane AOPS triggered
+    let craneAopsTriggered:
+        input: point int '/App/ied14/db906_visual_data/CraneMode.AOPS' status ok
+    #
+    # Crane MOPS triggered
+    let craneMopsTriggered:
+        input: point int '/App/ied14/db906_visual_data/CraneMode.MOPS' status ok
+    #
     # Crane load in relative units
     let craneLoadRelative:
         input fn Div:
@@ -2885,11 +2893,6 @@ service Task RecorderTask:
             input: winch3LoadFiltered_
     #
     # Export operating events into the database
-    #
-    #
-    # Crane MOPS triggered
-    let craneMopsTriggered:
-        input: point int '/App/ied14/db906_visual_data/CraneMode.MOPS' status ok
     fn Export ExportCraneMopsEvent:
         enable fn IsChangedValue:
             input: craneMopsTriggered
@@ -2901,10 +2904,7 @@ service Task RecorderTask:
             sql: insert into {table} (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneMOPSEvent', {input.value}, 0);
             opCycleId: opCycleId
             input: craneMopsTriggered
-    #
-    # Crane AOPS triggered
-    let craneAopsTriggered:
-        input: point int '/App/ied14/db906_visual_data/CraneMode.AOPS' status ok
+
     fn Export ExportCraneAopsEvent:
         enable fn IsChangedValue:
             input: craneAopsTriggered
