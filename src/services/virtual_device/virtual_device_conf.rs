@@ -83,8 +83,8 @@ impl VirtualDeviceConf {
         let api: ConfTree = conf.get("api").expect(&format!("{dbg}.new | 'api' - not found or wrong config"));
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
-        let before: ConfTree = conf.get("before").expect(&format!("{dbg}.new | 'before' - not found or wrong config"));
-        let before: Vec<CmdKind> = before.nodes().filter_map(|node| {
+        let before: Option<ConfTree> = conf.get("before");
+        let before: Vec<CmdKind> = before.map(|before| before.nodes().filter_map(|node| {
             match ConfCustomKeywd::from_str(&node.key) {
                 Ok(keyword) => match keyword.name().to_lowercase().as_str() {
                     "sql" => {
@@ -109,9 +109,9 @@ impl VirtualDeviceConf {
                     None
                 }
             }
-        }).collect();
-        let after: ConfTree = conf.get("after").expect(&format!("{dbg}.new | 'after' - not found or wrong config"));
-        let after: Vec<CmdKind> = after.nodes().filter_map(|node| {
+        }).collect()).unwrap_or(vec![]);
+        let after: Option<ConfTree> = conf.get("after");
+        let after: Vec<CmdKind> = after.map(|after| after.nodes().filter_map(|node| {
             match ConfCustomKeywd::from_str(&node.key) {
                 Ok(keyword) => match keyword.name().to_lowercase().as_str() {
                     "sql" => {
@@ -136,7 +136,7 @@ impl VirtualDeviceConf {
                     None
                 }
             }
-        }).collect();
+        }).collect()).unwrap_or(vec![]);
         let inputs: ConfTree = conf.get("inputs").expect(&format!("{dbg}.new | 'inputs' - not found or wrong config"));
         let inputs: FxIndexMap<String, PointConf> = inputs.nodes().filter_map(|node| {
             match FnConfKeywd::from_str(&node.key) {
