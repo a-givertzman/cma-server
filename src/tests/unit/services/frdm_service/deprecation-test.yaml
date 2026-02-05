@@ -45,9 +45,13 @@ service VirtualDevice VirtualIed:
         database: crane-data-server
         auth-token: 123!@#
     before:                             # Setup commands will executed before the test started
-        sql: TRUNCATE TABLE public.frdm_deprecation RESTART IDENTITY;
+        - sql: TRUNCATE TABLE public.frdm_deprecation RESTART IDENTITY;
+        - sql: select 1;
+        - sql: select 2;
     after:                              # Clean commands will executed after the test finished
-        # sql: TRUNCATE TABLE public.frdm_deprecation RESTART IDENTITY;
+        # - sql: TRUNCATE TABLE public.frdm_deprecation RESTART IDENTITY;
+        - sql: select 3;
+        - sql: select 4;
     inputs:                             # Input signal to be charged from the specified table file, or calculated in `Task`
         point MainBoom.Angle: 
             type: Real
