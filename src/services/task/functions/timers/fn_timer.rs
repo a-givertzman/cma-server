@@ -11,7 +11,7 @@ use crate::{
 //
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 // #[allow(dead_code)]
-enum FnTimerState {
+enum TimerState {
     Off,
     Start,
     Progress,
@@ -20,8 +20,7 @@ enum FnTimerState {
 }
 ///
 /// Function | Returns elapsed time in seconds (double) from raised input (>0) to dropped (<=0)
-/// - if repeat = true, then elapsed is total secods of 
-/// multiple periods
+/// - if repeat = true, then elapsed is total secods of multiple periods
 #[derive(Debug)]
 pub struct FnTimer {
     id: String,
@@ -29,7 +28,7 @@ pub struct FnTimer {
     enable: Option<FnInOutRef>,
     initial: Option<FnInOutRef>,
     input: FnInOutRef,
-    state: SwitchState<FnTimerState, bool>,
+    state: SwitchState<TimerState, bool>,
     session_elapsed: f64,
     total_elapsed: Option<f64>,
     start: Option<Instant>,
@@ -41,51 +40,51 @@ impl FnTimer {
     pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, initial: Option<FnInOutRef>, input: FnInOutRef, repeat: bool) -> Self {
         let switches = vec![
             Switch{
-                state: FnTimerState::Off,
+                state: TimerState::Off,
                 conditions: vec![
                     SwitchCondition {
                         condition: Box::new(|value| {value}),
-                        target: FnTimerState::Start,
+                        target: TimerState::Start,
                     },
                 ],
             },
             Switch{
-                state: FnTimerState::Start,
+                state: TimerState::Start,
                 conditions: vec![
                     SwitchCondition {
                         condition: Box::new(|value| {value}),
-                        target: FnTimerState::Progress,
+                        target: TimerState::Progress,
                     },
                     SwitchCondition {
                         condition: Box::new(|value| {!value}),
-                        target: FnTimerState::Stop,
+                        target: TimerState::Stop,
                     },
                 ],
             },
             Switch{
-                state: FnTimerState::Progress,
+                state: TimerState::Progress,
                 conditions: vec![
                     SwitchCondition {
                         condition: Box::new(|value| {!value}),
-                        target: FnTimerState::Stop,
+                        target: TimerState::Stop,
                     },
                 ],
             },
             Switch{
-                state: FnTimerState::Stop,
+                state: TimerState::Stop,
                 conditions: vec![
                     SwitchCondition {
                         condition: Box::new(|value| {value}),
-                        target: FnTimerState::Start,
+                        target: TimerState::Start,
                     },
                     SwitchCondition {
                         condition: Box::new(|value| {!value}),
-                        target: if repeat {FnTimerState::Off} else {FnTimerState::Done},
+                        target: if repeat {TimerState::Off} else {TimerState::Done},
                     },
                 ],
             },
             Switch{
-                state: FnTimerState::Done,
+                state: TimerState::Done,
                 conditions: vec![],
             },
         ];
@@ -95,7 +94,7 @@ impl FnTimer {
             enable,
             input,
             initial,
-            state: SwitchState::new(FnTimerState::Off, switches),
+            state: SwitchState::new(TimerState::Off, switches),
             session_elapsed: 0.0,
             total_elapsed: None,
             start: None,
@@ -167,19 +166,19 @@ impl FnOut for FnTimer {
                             let state = self.state.state();
                             log::trace!("{}.out | input: {:?}   |   state: {:?}", self.id, value, state);
                             match state {
-                                FnTimerState::Off => {}
-                                FnTimerState::Start => {
+                                TimerState::Off => {}
+                                TimerState::Start => {
                                     self.start = Some(Instant::now());
                                 }
-                                FnTimerState::Progress => {
+                                TimerState::Progress => {
                                     self.session_elapsed = self.start.unwrap().elapsed().as_secs_f64();
                                 }
-                                FnTimerState::Stop => {
+                                TimerState::Stop => {
                                     self.session_elapsed = 0.0;
                                     *total_elapsed += self.start.unwrap().elapsed().as_secs_f64();
                                     self.start = None;
                                 }
-                                FnTimerState::Done => {
+                                TimerState::Done => {
                                     self.session_elapsed = 0.0;
                                     if let Some(start) = self.start {
                                         *total_elapsed += start.elapsed().as_secs_f64();
