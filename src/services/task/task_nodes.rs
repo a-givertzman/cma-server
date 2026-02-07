@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
 use crate::{
     domain::FnInOutRef, 
-    services::task::{nested_function::{fn_kind::FnKind, nested_fn::NestedFn}, task_conf::TaskConf},
+    services::task::{functions::{FnKind, FnBuilder}, task_conf::TaskConf},
 };
 use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
 ///
@@ -173,10 +173,10 @@ impl TaskNodes {
             self.new_node_vars = Some(TaskNodeVars::new());
             let out = match node_conf {
                 FnConfKind::Fn(_) => {
-                    NestedFn::new(parent, tx_id, &mut node_conf, self, services.clone())
+                    FnBuilder::new(parent, tx_id, &mut node_conf, self, services.clone())
                 }
                 FnConfKind::Var(_) => {
-                    NestedFn::new(parent, tx_id, &mut node_conf, self, services.clone())
+                    FnBuilder::new(parent, tx_id, &mut node_conf, self, services.clone())
                 }
                 FnConfKind::Const(conf) => {
                     panic!("{}.build_nodes | Const is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);

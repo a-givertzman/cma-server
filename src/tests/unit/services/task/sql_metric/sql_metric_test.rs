@@ -4,7 +4,7 @@ use regex::RegexBuilder;
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point, ToPoint}, Services}, thread_pool::ThreadPool};
 use std::sync::{Once, Arc};
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::services::task::{fn_result::FnResult, TaskConf, TaskNodes};
+use crate::services::task::{FnResult, TaskConf, TaskNodes};
 ///
 ///
 static INIT: Once = Once::new();

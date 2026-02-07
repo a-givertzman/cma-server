@@ -6,7 +6,7 @@ use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{
-        fn_::FnOut, fn_average::FnAverage, fn_input::FnInput, fn_result::FnResult
+        FnOut, FnAverage, FnInput, FnResult
     }
 };
 ///

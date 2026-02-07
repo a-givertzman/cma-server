@@ -1,0 +1,95 @@
+use sal_sync::services::{entity::{Point, PointHlr}, types::Bool};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use crate::{
+    domain::FnInOutRef,
+    services::task::{
+        FnIn, FnInOut, FnOut,
+        FnKind, FnResult,
+    },
+};
+///
+/// Function | Returns true one tic (single computation cycle)
+/// if input value falling true -> false (any positive -> 0 (or any negative))
+#[derive(Debug)]
+pub struct FnFallingEdge {
+    id: String,
+    kind: FnKind,
+    input: FnInOutRef,
+    prev: bool,
+}
+//
+// 
+impl FnFallingEdge {
+    ///
+    /// Creates new instance of the FnFallingEdge
+    #[allow(dead_code)]
+    pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
+        Self { 
+            id: format!("{}/FnFallingEdge{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
+            kind: FnKind::Fn,
+            input,
+            prev: false,
+        }
+    }    
+}
+//
+// 
+impl FnIn for FnFallingEdge {}
+//
+// 
+impl FnOut for FnFallingEdge { 
+    //
+    fn id(&self) -> String {
+        self.id.clone()
+    }
+    //
+    fn kind(&self) -> &FnKind {
+        &self.kind
+    }
+    //
+    fn inputs(&self) -> Vec<String> {
+        self.input.borrow().inputs()
+    }
+    //
+    //
+    fn out(&mut self) -> FnResult<Point, String> {
+        let input = self.input.borrow_mut().out();
+        log::trace!("{}.out | input: {:#?}", self.id, input);
+        match input {
+            FnResult::Ok(input) => {
+                let input_value = input.to_bool().as_bool().value.0;
+                let value = Point::Bool(PointHlr::new(
+                    input.txid(),
+                    &input.name(),
+                    Bool((! input_value) && self.prev),
+                    input.status(),
+                    input.cot(),
+                    input.timestamp(),
+                ));
+                self.prev = input_value;
+                log::trace!("{}.out | value: {:#?}", self.id, value);
+                FnResult::Ok(value)
+            }
+            FnResult::None => {
+                self.prev = false;
+                FnResult::None
+            }
+            FnResult::Err(err) => {
+                self.prev = false;
+                FnResult::Err(err)
+            }
+        }
+    }
+    //
+    //
+    fn reset(&mut self) {
+        self.input.borrow_mut().reset();
+        self.prev = false;
+    }
+}
+//
+// 
+impl FnInOut for FnFallingEdge {}
+///
+/// Global static counter of FnFallingEdge instances
+static COUNT: AtomicUsize = AtomicUsize::new(1);
