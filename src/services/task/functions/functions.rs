@@ -6,7 +6,7 @@ use std::str::FromStr;
 /// supported by FnBuilder
 #[derive(Debug)]
 pub enum Functions {
-    /// embedded functions
+    /// core
     Input,
     Const,
     Var,
@@ -22,16 +22,20 @@ pub enum Functions {
     Le,
     Lt,
     Ne,
+    /// timers
     Timer,
-    ToApiQueue,
-    ToMultiQueue,
-    SqlMetric,
-    PointId,
+    TimerOnDelay,
+    /// Conversion
     ToBool,
     ToInt,
     ToReal,
     ToDouble,
     ToString,
+    ///
+    ToApiQueue,
+    ToMultiQueue,
+    SqlMetric,
+    PointId,
     Export,
     Filter,
     RisingEdge,
@@ -76,6 +80,7 @@ impl Functions {
     const LT                            : &'static str = "Lt";
     const NE                            : &'static str = "Ne";
     const TIMER                         : &'static str = "Timer";
+    const TIMER_ON_DELAY                : &'static str = "TimerOnDelay";
     const TO_API_QUEUE                  : &'static str = "ToApiQueue";
     const TO_MULTI_QUEUE                : &'static str = "ToMultiQueue";
     const SQL_METRIC                    : &'static str = "SqlMetric";
@@ -123,6 +128,7 @@ impl Functions {
             Self::Ne                    => Self::NE,
             Self::Input                 => Self::INPUT,
             Self::Timer                 => Self::TIMER,
+            Self::TimerOnDelay          => Self::TIMER_ON_DELAY,
             Self::Var                   => Self::VAR,
             Self::ToApiQueue            => Self::TO_API_QUEUE,
             Self::ToMultiQueue          => Self::TO_MULTI_QUEUE,
@@ -174,6 +180,7 @@ impl Functions {
             Self::NE                    => Ok( Self::Ne ),
             Self::INPUT                 => Ok( Self::Input ),
             Self::TIMER                 => Ok( Self::Timer ),
+            Self::TIMER_ON_DELAY        => Ok( Self::TimerOnDelay ),
             Self::VAR                   => Ok( Self::Var ),
             Self::TO_API_QUEUE          => Ok( Self::ToApiQueue ),
             Self::TO_MULTI_QUEUE        => Ok( Self::ToMultiQueue ),

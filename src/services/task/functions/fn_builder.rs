@@ -1,23 +1,13 @@
-use sal_sync::services::{entity::{Name, Point, ToPoint}, LinkName, Services, task::functions::{FnConfKind, FnConfPointType}};
+use sal_core::dbg::Dbg;
+use sal_sync::services::{LinkName, Services, conf::ConfDuration, entity::{Name, Point, ToPoint}, task::functions::{FnConfKind, FnConfPointType}};
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::Arc};
 use indexmap::IndexMap;
 use crate::{
     domain::FnInOutRef,
     services::task::{
-        functions::{
-            comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe},
-            edge_detection::{FnFallingEdge, FnRisingEdge},
-            export::{FnExport, FnPoint, FnToApiQueue},
-            filter::{FnFilter, FnSmooth, FnThreshold},
-            FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnInput,
-            FnIsChangedValue, FnKeepValid, FnMax, FnPiecewiseLineApprox,
-            FnPointId, FnRecOpCycleMetric, FnTimer, FnToBool, FnToDouble,
-            conversion::{FnToInt, FnToReal, FnToString},
-            FnVar, functions::Functions, io::FnRetain,
-            ops::{FnAdd, FnBitAnd, FnBitNot, FnBitOr, FnBitXor, FnDiv, FnMul, FnPow, FnSub},
-            plot::FnPlot, SqlMetric,
-        },
-        task_nodes::TaskNodes,
+        FnTimerOnDelay, functions::{
+            FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnInput, FnIsChangedValue, FnKeepValid, FnMax, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnToBool, FnToDouble, FnVar, SqlMetric, comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString}, edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue}, filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain, ops::{FnAdd, FnBitAnd, FnBitNot, FnBitOr, FnBitXor, FnDiv, FnMul, FnPow, FnSub}, plot::FnPlot
+        }, task_nodes::TaskNodes
     },
 };
 ///
@@ -35,17 +25,17 @@ impl FnBuilder {
     ///
     ///
     fn function(parent: &Name, tx_id: usize, input_name: &str, conf: &mut FnConfKind, task_nodes: &mut TaskNodes, services: Arc<Services>) -> FnInOutRef {
-        let self_id = format!("{}/FnBuilder", parent);
+        let dbg = Dbg::new(parent, "FnBuilder");
         match conf {
             FnConfKind::Fn(conf) => {
-                log::trace!("{}.function | Fn {:?}: {:?}...", self_id, input_name, conf.name.clone());
+                log::trace!("{}.function | Fn {:?}: {:?}...", dbg, input_name, conf.name.clone());
                 let c = conf.name.clone();
                 let fn_name= c.clone();
                 let fn_name = fn_name.as_str();
                 drop(c);
                 let fn_name = Functions::from_str(fn_name).unwrap();
-                log::trace!("{}.function | Fn '{}' detected", self_id, fn_name.name());
-                log::trace!("{}.function | fn_conf: {:?}: {:#?}", self_id, conf.name, conf);
+                log::trace!("{}.function | Fn '{}' detected", dbg, fn_name.name());
+                log::trace!("{}.function | fn_conf: {:?}: {:#?}", dbg, conf.name, conf);
                 match fn_name {
                     //
                     Functions::Count => {
@@ -95,17 +85,38 @@ impl FnBuilder {
                         )))
                     }
                     //
+                    Functions::TimerOnDelay => {
+                        let name = "enable";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let enable = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            None => None,
+                        };
+                        let name = "delay";
+                        let delay = conf.param(name).map(|param| {
+                            let delay = param.as_param().conf;
+                            let delay = delay.as_str().expect(&format!("{dbg}.function | Wrong conf in '{name}': '{:?}'", param));
+                            ConfDuration::from_str(delay).expect(&format!("{dbg}.function | Wrong conf in '{name}': '{:?}'", param))
+                        }).expect(&format!("{dbg}.function | '{name}' - is missed in {:#?}", conf));
+                        let name = "input";
+                        let conf = conf.inputs.get_mut(name).unwrap();
+                        let input = Self::function(parent, tx_id, name, conf, task_nodes, services);
+                        Rc::new(RefCell::new(Box::new(
+                            FnTimerOnDelay::new(parent, enable, delay, input)
+                        )))
+                    }
+                    //
                     Functions::ToApiQueue => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes ,services.clone());
                         let queue_name = conf.param("queue").unwrap_or_else(||
-                            panic!("{}.function | Parameter 'queue' - missed in '{}'", self_id, conf.name)
+                            panic!("{}.function | Parameter 'queue' - missed in '{}'", dbg, conf.name)
                         ).as_param();
                         let queue_name = queue_name.conf.as_str().unwrap();
                         let link_name = LinkName::from_str(queue_name).unwrap();
                         let send_queue = services.get_link(&link_name).unwrap_or_else(|err| {
-                            panic!("{}.function | services.get_link error: {:#?}", self_id, err);
+                            panic!("{}.function | services.get_link error: {:#?}", dbg, err);
                         });
                         Rc::new(RefCell::new(Box::new(
                             FnToApiQueue::new(parent, input, send_queue)
@@ -195,10 +206,10 @@ impl FnBuilder {
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
                         // debug!("{}.functions | Functions::PointId | input: {:?}", self_id, input);
-                        log::debug!("{}.functions | Functions::PointId | requesting points...", self_id);
+                        log::debug!("{}.functions | Functions::PointId | requesting points...", dbg);
                         let points = services.points(&parent.join())
                             .then(|points| points, |err| {
-                                log::error!("{}.functions | Functions::PointId | Requesting points error: {:?}", self_id, err);
+                                log::error!("{}.functions | Functions::PointId | Requesting points error: {:?}", dbg, err);
                                 vec![]
                             });
                         // debug!("{}.functions | Functions::PointId | points: {:?}", self_id, points);
@@ -295,19 +306,19 @@ impl FnBuilder {
                             if let FnConfKind::PointConf(conf) = conf {
                                 return conf.conf.clone()
                             }
-                            panic!("{}.function | Invalid Point config in: {:?}", self_id, conf.name())
+                            panic!("{}.function | Invalid Point config in: {:?}", dbg, conf.name())
                         }).ok();
                         let send_queue = match conf.param("send-to") {
                             Some(queue_name) => {
                                 let queue_name = match queue_name {
                                     FnConfKind::Param(queue_name) => queue_name.conf.as_str().unwrap(),
-                                    _ => panic!("{}.function | Parameter 'send-to' - invalid type (string expected) '{:#?}'", self_id, queue_name),
+                                    _ => panic!("{}.function | Parameter 'send-to' - invalid type (string expected) '{:#?}'", dbg, queue_name),
                                 };
                                 let link_name = LinkName::from_str(queue_name).unwrap();
                                 services.get_link(&link_name).map_or(None, |send| Some(send))
                             }
                             None => {
-                                log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
+                                log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", dbg, conf.name);
                                 None
                             },
                         };
@@ -376,16 +387,16 @@ impl FnBuilder {
                             match param.as_param().conf.as_bool() {
                                 Some(param) => param,
                                 None => {
-                                    log::warn!("{}.function | Illegal 'every_cycle' parameter value in '{:#?}'", self_id, conf);
+                                    log::warn!("{}.function | Illegal 'every_cycle' parameter value in '{:#?}'", dbg, conf);
                                     false
                                 },
                             }
                         });
                         let key = conf.param("key").unwrap_or_else(||
-                            panic!("{}.function | Parameter 'key' - missed in '{}'", self_id, conf.name)
+                            panic!("{}.function | Parameter 'key' - missed in '{}'", dbg, conf.name)
                         ).as_param();
                         let key = key.conf.as_str().unwrap();
-                        let retain_path = services.retain().path.unwrap_or_else(|| panic!("{}.function | Retain: path - missed in Application config", self_id));
+                        let retain_path = services.retain().path.unwrap_or_else(|| panic!("{}.function | Retain: path - missed in Application config", dbg));
                         Rc::new(RefCell::new(Box::new(
                             FnRetain::new(parent, retain_path, enable, every_cycle, key, default, input)
                         )))
@@ -558,13 +569,13 @@ impl FnBuilder {
                             Some(queue_name) => {
                                 let queue_name = match queue_name {
                                     FnConfKind::Param(queue_name) => queue_name.conf.as_str().unwrap(),
-                                    _ => panic!("{}.function | Parameter 'send-to' - invalid type (string expected) '{:#?}'", self_id, queue_name),
+                                    _ => panic!("{}.function | Parameter 'send-to' - invalid type (string expected) '{:#?}'", dbg, queue_name),
                                 };
                                 let link_name = LinkName::from_str(queue_name).unwrap();
                                 services.get_link(&link_name).map_or(None, |send| Some(send))
                             }
                             None => {
-                                log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", self_id, conf.name);
+                                log::warn!("{}.function | Parameter 'send-to' - missed in '{}'", dbg, conf.name);
                                 None
                             },
                         };
@@ -605,17 +616,17 @@ impl FnBuilder {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
-                        log::trace!("{}.function | PiecewiseLineApprox conf: {:#?}", self_id, conf);
+                        log::trace!("{}.function | PiecewiseLineApprox conf: {:#?}", dbg, conf);
                         let pieces: IndexMap<serde_yaml::Value, serde_yaml::Value> = match conf.param("piecewise") {
                             Some(piecewise) => {
                                 match piecewise {
                                     FnConfKind::Param(piecewise) => {
                                         serde_yaml::from_value(piecewise.conf.clone()).unwrap()
                                     }
-                                    _ => panic!("{}.function | Parameter 'piecewise' - has invalid type (map expected) in '{}'", self_id, conf.name)
+                                    _ => panic!("{}.function | Parameter 'piecewise' - has invalid type (map expected) in '{}'", dbg, conf.name)
                                 }
                             }
-                            None => panic!("{}.function | Parameter 'piecewise' - missed in '{}'", self_id, conf.name),
+                            None => panic!("{}.function | Parameter 'piecewise' - missed in '{}'", dbg, conf.name),
                         };
                         Rc::new(RefCell::new(Box::new(
                             FnPiecewiseLineApprox::new(parent, input, pieces)
@@ -652,12 +663,12 @@ impl FnBuilder {
                     }
                     //
                     // Add a new function here...
-                    _ => panic!("{}.function | Unknown function name: {:?}", self_id, conf.name)
+                    _ => panic!("{}.function | Unknown function name: {:?}", dbg, conf.name)
                 }
             }
             FnConfKind::Var(conf) => {
                 let var_name = conf.name.clone();
-                log::trace!("{}.function | Var: {:?}...", self_id, var_name);
+                log::trace!("{}.function | Var: {:?}...", dbg, var_name);
                 match conf.inputs.iter_mut().next() {
                     //
                     // New var declaration
@@ -666,7 +677,7 @@ impl FnBuilder {
                             var_name,
                             Self::function(parent, tx_id, input_conf_name, input_conf, task_nodes, services),
                         );
-                        log::trace!("{}.function | Var: {:?}: {:?}", self_id, &conf.name, var.clone());
+                        log::trace!("{}.function | Var: {:?}: {:?}", dbg, &conf.name, var.clone());
                         task_nodes.add_var(conf.name.clone(), var.clone());
                         // debug!("{}.function | Var: {:?}", input);
                         var
@@ -675,7 +686,7 @@ impl FnBuilder {
                     None => {
                         let var = match task_nodes.get_var(&var_name) {
                             Some(var) => var,
-                            None => panic!("{}.function | Var {:?} - not declared", self_id, &var_name),
+                            None => panic!("{}.function | Var {:?} - not declared", dbg, &var_name),
                         }.to_owned();
                         // let var = nodeVar.var();
                         task_nodes.add_var_out(conf.name.clone());
@@ -686,23 +697,23 @@ impl FnBuilder {
             FnConfKind::Const(conf) => {
                 let value = conf.name.trim().to_lowercase();
                 let name = format!("const {:?} '{}'", conf.type_, value);
-                log::trace!("{}.function | Const: {:?}...", self_id, &name);
+                log::trace!("{}.function | Const: {:?}...", dbg, &name);
                 let value = match conf.type_.clone() {
                     FnConfPointType::Bool => value.parse::<bool>().unwrap().to_point(tx_id, &name),
                     FnConfPointType::Int => value.parse::<i64>().unwrap().to_point(tx_id, &name),
                     FnConfPointType::Real => value.parse::<f32>().unwrap().to_point(tx_id, &name),
                     FnConfPointType::Double => value.parse::<f64>().unwrap().to_point(tx_id, &name),
                     FnConfPointType::String => value.to_point(tx_id, &name),
-                    FnConfPointType::Any => panic!("{}.function | Const of type 'any' - not supported", self_id),
-                    FnConfPointType::Unknown => panic!("{}.function | Point type required", self_id),
+                    FnConfPointType::Any => panic!("{}.function | Const of type 'any' - not supported", dbg),
+                    FnConfPointType::Unknown => panic!("{}.function | Point type required", dbg),
                 };
                 let fn_const = Self::fn_const(&name, value);
                 // taskNodes.addInput(inputName, input.clone());
-                log::trace!("{}.function | Const: {:?} - done", self_id, fn_const);
+                log::trace!("{}.function | Const: {:?} - done", dbg, fn_const);
                 fn_const
             }
             FnConfKind::Point(conf) => {
-                log::trace!("{}.function | Input (Point<{:?}>): {:?} ({:?})...", self_id, conf.type_, input_name, conf.name);
+                log::trace!("{}.function | Input (Point<{:?}>): {:?} ({:?})...", dbg, conf.type_, input_name, conf.name);
                 let point_name = conf.name.clone();
                 let input = task_nodes.add_input(
                     &point_name,
@@ -710,7 +721,7 @@ impl FnBuilder {
                         FnInput::new(&point_name, tx_id, conf)
                     ))),
                 );
-                log::trace!("{}.function | input (Point): {:?}", self_id, input);
+                log::trace!("{}.function | input (Point): {:?}", dbg, input);
                 input
             }
             FnConfKind::PointConf(conf) => {
@@ -718,7 +729,7 @@ impl FnBuilder {
                     Some(send_to) => {
                         let link_name = LinkName::from_str(send_to).unwrap();
                         Some(services.get_link(&link_name).unwrap_or_else(|err| {
-                            panic!("{}.function | services.get_link error: {:#?}", self_id, err);
+                            panic!("{}.function | services.get_link error: {:#?}", dbg, err);
                         }))
                     }
                     None => None,
@@ -740,7 +751,7 @@ impl FnBuilder {
                 )))
             }
             FnConfKind::Param(conf) => {
-                panic!("{}.function | Undefined variable or unknown custom parameters in the function conf: {:#?}", self_id, conf);
+                panic!("{}.function | Undefined variable or unknown custom parameters in the function conf: {:#?}", dbg, conf);
             }
         }
     }
