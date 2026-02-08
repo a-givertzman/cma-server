@@ -2,6 +2,7 @@
 
 use std::{sync::Once, thread, time::Duration};
 use debugging::session::debug_session::{DebugSession, LogLevel};
+use sal_core::dbg::Dbg;
 ///
 ///
 static INIT: Once = Once::new();
@@ -21,19 +22,28 @@ fn init_each() {}
 #[ignore = "Learn - all must be ignored"]
 #[test]
 fn exiting() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
-    let self_id = "thread_test";
-    println!("{}", self_id);
+    let dbg = Dbg::own("kanal_channel_test");
+    log::debug!("{}", dbg);
+    let (send, recv) = kanal::unbounded();
     let handler = thread::spawn(move|| {
         log::info!("thread | Started");
+        _ = send.send(0);
         for i in 0..10 {
             log::info!("thread | iteration: {}", i);
         }
+        std::thread::sleep(Duration::from_secs(3));
+        drop(send);
         log::info!("thread | Finished");
     });
-    thread::sleep(Duration::from_millis(3000));
+    loop {
+        if let Err(err) = recv.recv() {
+            log::warn!("{dbg} | Recv error: {:?}", err);
+        }
+    }
+    std::thread::sleep(Duration::from_millis(3000));
     handler.join().unwrap();
     // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
 }
