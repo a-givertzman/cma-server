@@ -138,32 +138,34 @@ impl FnOut for FnRecOpCycleMetric {
                     FnResult::Ok(input) => {
                         log::debug!("{}.out | Input '{}': {:?}", self.id, input_name, input.value());
                         let value = match input {
-                            Point::Bool(mut p) => {
-                                p.name = input_name.to_owned();
-                                Point::Bool(p)
-                            }
-                            Point::Int(mut p) => {
-                                p.name = input_name.to_owned();
-                                Point::Int(p)
-                            }
-                            Point::Real(mut p) => {
-                                p.name = input_name.to_owned();
-                                Point::Real(p)
-                            }
-                            Point::Double(mut p) => {
-                                p.name = input_name.to_owned();
-                                Point::Double(p)
-                            }
+                            // Point::Bool(mut p) => {
+                            //     p.name = input_name.to_owned();
+                            //     Point::Bool(p)
+                            // }
+                            // Point::Int(mut p) => {
+                            //     p.name = input_name.to_owned();
+                            //     Point::Int(p)
+                            // }
+                            // Point::Real(mut p) => {
+                            //     p.name = input_name.to_owned();
+                            //     Point::Real(p)
+                            // }
+                            // Point::Double(mut p) => {
+                            //     p.name = input_name.to_owned();
+                            //     Point::Double(p)
+                            // }
                             Point::String(mut p) => {
                                 p.name = input_name.to_owned();
-                                Point::String(p)
+                                self.values.push(Point::String(p))
                             }
-                            Point::Bytes(mut p) => {
-                                p.name = input_name.to_owned();
-                                Point::Bytes(p)
+                            // Point::Bytes(mut p) => {
+                            //     p.name = input_name.to_owned();
+                            //     Point::Bytes(p)
+                            // }
+                            _ => {
+                                log::warn!("{}.out | Input '{}': unexpected type {:?}, string sql requared", self.id, input_name, input.type_());
                             }
                         };
-                        self.values.push(value)
                     }
                     FnResult::None => {}
                     FnResult::Err(err) => return FnResult::Err(err),
