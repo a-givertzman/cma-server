@@ -136,7 +136,7 @@ impl FnOut for FnRecOpCycleMetric {
                 let input = input.borrow_mut().out();
                 match input {
                     FnResult::Ok(input) => {
-                        log::trace!("{}.out | Input '{}': {:?}", self.id, input_name, input.value());
+                        log::debug!("{}.out | Input '{}': {:?}", self.id, input_name, input.value());
                         let value = match input {
                             Point::Bool(mut p) => {
                                 p.name = input_name.to_owned();
