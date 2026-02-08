@@ -1,7 +1,7 @@
 //!
 //! # `Task` Service | Time based functions
 //! 
-//! ## `FnTimerOnDelay` (TON)
+//! ## `fn TimerOnDelay` (TON)
 //! 
 //! **Delayed activation of the output.**
 //! 
@@ -10,7 +10,7 @@
 //! - Useful for signals debouncing, defining persistent conditions or staggering
 //! 
 //! 
-//! ## `FnTimerOffDelay` (TOF)
+//! ## `fn TimerOffDelay` (TOF)
 //! 
 //! **Extends the duration of a signal after it ends.**
 //! 
@@ -19,7 +19,7 @@
 //! - If Input becomes TRUE again during the cooldown, the timer resets and Output stays TRUE.
 //! - Useful for cool-down device, interior lighting delays, or maintaining a state during brief signal dropouts.
 //! 
-//! ## FnTimerPulse (TP)
+//! ## fn TimerPulse (TP)
 //! 
 //! **Generates a single pulse of a fixed length.**
 //! 
@@ -28,7 +28,7 @@
 //! - The timer is non-retriggerable; it must finish the pulse before it can be started again.
 //! - Useful for consistent trigger pulses, valve pulsing, or triggering a "one-shot" physical action.
 //! 
-//! ## FnTimer
+//! ## fn Timer
 //! 
 //! **Measures the time while Input is TRUE**
 //! 
@@ -36,8 +36,10 @@
 //! - If option `repeat` = true, then returns total elapsed secods of multiple periods
 //! 
 
+mod fn_timer_off_delay;
 mod fn_timer_on_delay;
 mod fn_timer;
 
+pub use fn_timer_off_delay::*;
 pub use fn_timer_on_delay::*;
 pub use fn_timer::*;

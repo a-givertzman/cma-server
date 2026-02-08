@@ -97,41 +97,49 @@ service Task RecorderTask:
             input1: const real 0.05
             input2: winch3LoadNom
     let craneIsActive:
-        input fn TimerOnDelay:
+        input fn TimerOffDelay:
             delay: 5s
-            input fn Ge:
-                # input1: craneLoad
-                input2: opCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: opCycleThreshold
-                    input: craneLoad
+            input fn TimerOnDelay:
+                delay: 5s
+                input fn Ge:
+                    # input1: craneLoad
+                    input2: opCycleThreshold
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: opCycleThreshold
+                        input: craneLoad
     let winch1IsActive:
-        input fn TimerOnDelay:
+        input fn TimerOffDelay:
             delay: 5s
-            input fn Ge:
-                # input1: winch1Load
-                input2: winch1OpCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: winch1OpCycleThreshold
-                    input: winch1Load
+            input fn TimerOnDelay:
+                delay: 5s
+                input fn Ge:
+                    # input1: winch1Load
+                    input2: winch1OpCycleThreshold
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: winch1OpCycleThreshold
+                        input: winch1Load
     let winch2IsActive:
-        input fn TimerOnDelay:
+        input fn TimerOffDelay:
             delay: 5s
-            input fn Ge:
-                # input1: winch2Load
-                input2: winch2OpCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: winch2OpCycleThreshold
-                    input: winch2Load
+            input fn TimerOnDelay:
+                delay: 5s
+                input fn Ge:
+                    # input1: winch2Load
+                    input2: winch2OpCycleThreshold
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: winch2OpCycleThreshold
+                        input: winch2Load
     let winch3IsActive:
-        input fn TimerOnDelay:
+        input fn TimerOffDelay:
             delay: 5s
-            input fn Ge:
-                # input1: winch3Load
-                input2: winch3OpCycleThreshold
-                input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
-                    threshold: winch3OpCycleThreshold
-                    input: winch3Load
+            input fn TimerOnDelay:
+                delay: 5s
+                input fn Ge:
+                    # input1: winch3Load
+                    input2: winch3OpCycleThreshold
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: winch3OpCycleThreshold
+                        input: winch3Load
     #
     # Detect if operating cycle is active (true - isActive, false - isNotActive)
     let opCycleIsActive_:

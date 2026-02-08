@@ -25,6 +25,7 @@ pub enum Functions {
     /// timers
     Timer,
     TimerOnDelay,
+    TimerOffDelay,
     /// Conversion
     ToBool,
     ToInt,
@@ -81,6 +82,7 @@ impl Functions {
     const NE                            : &'static str = "Ne";
     const TIMER                         : &'static str = "Timer";
     const TIMER_ON_DELAY                : &'static str = "TimerOnDelay";
+    const TIMER_OFF_DELAY               : &'static str = "TimerOffDelay";
     const TO_API_QUEUE                  : &'static str = "ToApiQueue";
     const TO_MULTI_QUEUE                : &'static str = "ToMultiQueue";
     const SQL_METRIC                    : &'static str = "SqlMetric";
@@ -129,6 +131,7 @@ impl Functions {
             Self::Input                 => Self::INPUT,
             Self::Timer                 => Self::TIMER,
             Self::TimerOnDelay          => Self::TIMER_ON_DELAY,
+            Self::TimerOffDelay         => Self::TIMER_OFF_DELAY,
             Self::Var                   => Self::VAR,
             Self::ToApiQueue            => Self::TO_API_QUEUE,
             Self::ToMultiQueue          => Self::TO_MULTI_QUEUE,
@@ -181,6 +184,7 @@ impl Functions {
             Self::INPUT                 => Ok( Self::Input ),
             Self::TIMER                 => Ok( Self::Timer ),
             Self::TIMER_ON_DELAY        => Ok( Self::TimerOnDelay ),
+            Self::TIMER_OFF_DELAY       => Ok( Self::TimerOffDelay ),
             Self::VAR                   => Ok( Self::Var ),
             Self::TO_API_QUEUE          => Ok( Self::ToApiQueue ),
             Self::TO_MULTI_QUEUE        => Ok( Self::ToMultiQueue ),

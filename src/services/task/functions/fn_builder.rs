@@ -5,9 +5,16 @@ use indexmap::IndexMap;
 use crate::{
     domain::FnInOutRef,
     services::task::{
-        FnTimerOnDelay, functions::{
-            FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnInput, FnIsChangedValue, FnKeepValid, FnMax, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnToBool, FnToDouble, FnVar, SqlMetric, comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString}, edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue}, filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain, ops::{FnAdd, FnBitAnd, FnBitNot, FnBitOr, FnBitXor, FnDiv, FnMul, FnPow, FnSub}, plot::FnPlot
-        }, task_nodes::TaskNodes
+        FnTimerOnDelay, 
+        functions::{
+            comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
+            edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
+            filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
+            ops::{FnAdd, FnBitAnd, FnBitNot, FnBitOr, FnBitXor, FnDiv, FnMul, FnPow, FnSub}, plot::FnPlot,
+        },
+        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnInput, FnIsChangedValue, FnKeepValid, FnMax,
+        FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnToBool, FnToDouble, FnVar, SqlMetric,
+        task_nodes::TaskNodes
     },
 };
 ///
@@ -86,6 +93,27 @@ impl FnBuilder {
                     }
                     //
                     Functions::TimerOnDelay => {
+                        let name = "enable";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let enable = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            None => None,
+                        };
+                        let name = "delay";
+                        let delay = conf.param(name).map(|param| {
+                            let delay = param.as_param().conf;
+                            let delay = delay.as_str().expect(&format!("{dbg}.function | Wrong conf in '{name}': '{:?}'", param));
+                            ConfDuration::from_str(delay).expect(&format!("{dbg}.function | Wrong conf in '{name}': '{:?}'", param))
+                        }).expect(&format!("{dbg}.function | '{name}' - is missed in {:#?}", conf));
+                        let name = "input";
+                        let conf = conf.inputs.get_mut(name).unwrap();
+                        let input = Self::function(parent, tx_id, name, conf, task_nodes, services);
+                        Rc::new(RefCell::new(Box::new(
+                            FnTimerOnDelay::new(parent, enable, delay, input)
+                        )))
+                    }
+                    //
+                    Functions::TimerOffDelay => {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {

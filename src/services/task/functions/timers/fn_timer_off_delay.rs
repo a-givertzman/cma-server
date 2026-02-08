@@ -6,9 +6,18 @@ use crate::{
     services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
 };
 ///
-/// Function | Retirns TRUE only after the Input has remained TRUE for the specified duration.
+/// State
 #[derive(Debug)]
-pub struct FnTimerOnDelay {
+enum State {
+    Init,
+    False(Instant),
+    True,
+}
+///
+/// ## Function | Returns TRUE immediately when the Input has TRUE.
+/// - When Input becomes to FALSE, Output remains TRUE for the specified duration
+#[derive(Debug)]
+pub struct FnTimerOffDelay {
     id: String,
     kind: FnKind,
     /// Input, activates behavior, if `false`, always returns Input value immediately, default `true`
@@ -17,33 +26,33 @@ pub struct FnTimerOnDelay {
     delay: Duration,
     /// Input, value
     input: FnInOutRef,
-    time: Option<Instant>,
+    state: State,
 }
 //
 // 
-impl FnTimerOnDelay {
+impl FnTimerOffDelay {
     ///
-    /// `enable` - Activates behavior, if false, always returns Input value immediately, default `true`
-    /// `delay` = Time being waited for return `true` since input is `true`
+    /// `enable` - Activates behavior, if false, always returns `false`, default `true`
+    /// `delay` = Time being waited for return `false` since input becomes `false`
     /// `input` - Input value, number or bool
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, delay: ConfDuration, input: FnInOutRef) -> Self {
         Self { 
-            id: format!("{}/FnTimerOnDelay{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
+            id: format!("{}/FnTimerOffDelay{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
             enable,
             delay: delay.to_duration(),
             input,
-            time: None,
+            state: State::Init,
         }
     }
 }
 //
 //
-impl FnIn for FnTimerOnDelay {}
+impl FnIn for FnTimerOffDelay {}
 //
 //
-impl FnOut for FnTimerOnDelay {
+impl FnOut for FnTimerOffDelay {
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -74,7 +83,6 @@ impl FnOut for FnTimerOnDelay {
         let input = self.input.borrow_mut().out();
         match input {
             FnResult::Ok(input) => {
-                // trace!("{}.out | input: {:?}", self.id, self.input.print());
                 let val = match &input {
                     Point::Bool(p) => p.value.0,
                     Point::Int(p) => p.value > 0,
@@ -84,26 +92,27 @@ impl FnOut for FnTimerOnDelay {
                     Point::Bytes(_) => return FnResult::Err(Error::new(&self.id, "out").err("Input of type 'Bytes' - isn't supported").to_string()),
                 };
                 let out = if enable {
+                    // trace!("{}.out | input: {:?}", self.id, self.input.print());
                     match val {
-                        true => {
-                            let elapsed = match &self.time {
-                                Some(time) => time.elapsed(),
-                                None => {
+                        false => {
+                            match &self.state {
+                                State::Init => false,
+                                State::False(time) => !(time.elapsed() > self.delay),
+                                State::True => {
                                     let t = Instant::now();
                                     let elapsed = t.elapsed();
-                                    self.time = Some(t);
-                                    elapsed
+                                    self.state = State::False(t);
+                                    !(elapsed > self.delay)
                                 }
-                            };
-                            elapsed > self.delay
+                            }
                         }
-                        false => {
-                            self.time = None;
-                            false
+                        true => {
+                            self.state = State::True;
+                            true
                         }
                     }
                 } else {
-                    self.time = None;
+                    self.state = State::Init;
                     val
                 };
                 log::trace!("{}.out | out: {:?}", self.id, out);
@@ -123,7 +132,7 @@ impl FnOut for FnTimerOnDelay {
     //
     //
     fn reset(&mut self) {
-        self.time = None;
+        self.state = State::Init;
         if let Some(enable) = &self.enable {
             enable.borrow_mut().reset();
         }
@@ -132,7 +141,7 @@ impl FnOut for FnTimerOnDelay {
 }
 //
 // 
-impl FnInOut for FnTimerOnDelay {}
+impl FnInOut for FnTimerOffDelay {}
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
