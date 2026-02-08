@@ -193,6 +193,7 @@ impl Service for VirtualDevice {
                     let start = header.end() + 1;
                     log::info!("{dbg}.run | Setup...");
                     for cmd in conf.before {
+                        if exit.load(Ordering::Acquire) { break; }
                         match cmd {
                             CmdKind::Sql(sql) => {
                                 match api_client.fetch(&sql).wait() {
@@ -208,6 +209,7 @@ impl Service for VirtualDevice {
                     log::info!("{dbg}.run | Setup - Ok");
                     let mut time = Instant::now();
                     'main: for  row_ix in start..(rows - start) {
+                        if exit.load(Ordering::Acquire) { break 'main; }
                         let row = table.row(row_ix, columns);
                         if let Some(index) = row.get(0) {
                             if let spreadsheet_ods::Value::Number(ix) = index {
@@ -312,6 +314,7 @@ impl Service for VirtualDevice {
             }
             log::info!("{dbg}.run | Cleaning...");
             for cmd in conf.after {
+                if exit.load(Ordering::Acquire) { break; }
                 match cmd {
                     CmdKind::Sql(sql) => {
                         match api_client.fetch(&sql).wait() {
@@ -371,6 +374,9 @@ impl Service for VirtualDevice {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
+        if let Some(client) = self.api_client.take() {
+            client.exit();
+        }
     }    
 }
 

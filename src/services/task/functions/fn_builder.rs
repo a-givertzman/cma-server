@@ -5,16 +5,12 @@ use indexmap::IndexMap;
 use crate::{
     domain::FnInOutRef,
     services::task::{
-        FnTimerOnDelay, 
-        functions::{
+        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnInput, FnIsChangedValue, FnKeepValid, FnMax, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, SqlMetric, functions::{
             comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
             edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
             filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
             ops::{FnAdd, FnBitAnd, FnBitNot, FnBitOr, FnBitXor, FnDiv, FnMul, FnPow, FnSub}, plot::FnPlot,
-        },
-        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnInput, FnIsChangedValue, FnKeepValid, FnMax,
-        FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnToBool, FnToDouble, FnVar, SqlMetric,
-        task_nodes::TaskNodes
+        }, task_nodes::TaskNodes
     },
 };
 ///
@@ -130,7 +126,7 @@ impl FnBuilder {
                         let conf = conf.inputs.get_mut(name).unwrap();
                         let input = Self::function(parent, tx_id, name, conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
-                            FnTimerOnDelay::new(parent, enable, delay, input)
+                            FnTimerOffDelay::new(parent, enable, delay, input)
                         )))
                     }
                     //
