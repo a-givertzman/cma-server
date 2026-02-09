@@ -40,15 +40,15 @@ service Task RecorderTask:
     #
     #
     let winch1LoadLimiterTrip:
-        input: point bool '/App/ied14/db906_visual_data/Winch1.SWLProtection' status ok
+        input: point bool '/App/ied14/db906_visual_data/Winch1.SWLProtection' status ok default false
     #
     #
     let winch2LoadLimiterTrip:
-        input: point bool '/App/ied14/db906_visual_data/Winch2.SWLProtection' status ok
+        input: point bool '/App/ied14/db906_visual_data/Winch2.SWLProtection' status ok default false
     #
     #
     let winch3LoadLimiterTrip:
-        input: point bool '/App/ied14/db906_visual_data/Winch3.SWLProtection' status ok
+        input: point bool '/App/ied14/db906_visual_data/Winch3.SWLProtection' status ok default false
     #
     # Crane AOPS triggered
     let craneAopsTriggered:

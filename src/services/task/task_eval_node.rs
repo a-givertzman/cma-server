@@ -1,5 +1,5 @@
 use sal_sync::services::entity::Point;
-use crate::domain::FnInOutRef;
+use crate::{domain::FnInOutRef, services::task::FnResult};
 ///
 /// Holds Task input and all dipendent variables & outputs
 #[derive(Debug)]
@@ -37,7 +37,7 @@ impl TaskEvalNode {
             }
         }
         self.input.push(input.clone());
-        log::trace!("TaskEvalNode.add_input | evalNode '{}' - input '{}' added", self.id, input.borrow().hash());
+        log::trace!("TaskEvalNode.add_input | eval_node '{}' - input '{}' added", self.id, input.borrow().hash());
         input
     }
     ///
@@ -112,14 +112,23 @@ impl TaskEvalNode {
     ///  - eval all conaining outs
     pub fn eval(&mut self) {
         for eval_node_var in &self.vars {
-            log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", self.id, eval_node_var.borrow_mut().id());
+            log::trace!("TaskEvalNode.eval | eval_node '{}' - var '{}' evaluating...", self.id, eval_node_var.borrow_mut().id());
             eval_node_var.borrow_mut().eval();
-            log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", self.id, eval_node_var.borrow_mut().id());
+            log::trace!("TaskEvalNode.eval | eval_node '{}' - var '{}' evaluated", self.id, eval_node_var.borrow_mut().id());
         };
         for eval_node_out in &self.outs {
-            log::trace!("TaskEvalNode.eval | evalNode '{}' out...", self.id);
-            let out = eval_node_out.borrow_mut().out();
-            log::trace!("TaskEvalNode.eval | evalNode '{}' out: {:?}", self.id, out);
+            log::trace!("TaskEvalNode.eval | eval_node '{}' out...", self.id);
+            match eval_node_out.borrow_mut().out() {
+                FnResult::Ok(v) => {
+                    // log::debug!("TaskEvalNode.eval | eval_node '{}' out: {:?}", self.id, out);
+                }
+                FnResult::None => {
+                    log::warn!("TaskEvalNode.eval | eval_node '{}' out: 'None'", self.id);
+                }
+                FnResult::Err(err) => {
+                    log::warn!("TaskEvalNode.eval | eval_node '{}' out: {}", self.id, err);
+                }
+            }
         };
     }
 }
