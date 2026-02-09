@@ -100,7 +100,6 @@ fn operating_metric_cycles_distribution_by_load_test() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         total_count * 1000,
     ));
     services.insert(receiver.clone());

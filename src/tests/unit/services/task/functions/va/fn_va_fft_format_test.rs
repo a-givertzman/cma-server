@@ -76,7 +76,6 @@ fn format_sql() {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             usize::MAX,
         ));
         let receiver_name = receiver.name().join();

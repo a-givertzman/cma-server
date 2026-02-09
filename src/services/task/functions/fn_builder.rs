@@ -27,7 +27,7 @@ impl FnBuilder {
     }
     ///
     ///
-    fn function(parent: &Name, tx_id: usize, input_name: &str, conf: &mut FnConfKind, task_nodes: &mut TaskNodes, services: Arc<Services>) -> FnInOutRef {
+    fn function(parent: &Name, txid: usize, input_name: &str, conf: &mut FnConfKind, task_nodes: &mut TaskNodes, services: Arc<Services>) -> FnInOutRef {
         let dbg = Dbg::new(parent, "FnBuilder");
         match conf {
             FnConfKind::Fn(conf) => {
@@ -45,12 +45,12 @@ impl FnBuilder {
                         let name = "initial";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let initial = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnCount::new(parent, initial, input),
                         )))
@@ -59,7 +59,7 @@ impl FnBuilder {
                     Functions::Add => {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.push(input);
                         }
                         Rc::new(RefCell::new(Box::new(
@@ -71,18 +71,18 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "initial";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let initial = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let conf = conf.inputs.get_mut(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, conf, task_nodes, services);
+                        let input = Self::function(parent, txid, name, conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnTimer::new(parent, enable, initial, input, true)
                         )))
@@ -92,7 +92,7 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "delay";
@@ -103,7 +103,7 @@ impl FnBuilder {
                         }).expect(&format!("{dbg}.function | '{name}' - is missed in {:#?}", conf));
                         let name = "input";
                         let conf = conf.inputs.get_mut(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, conf, task_nodes, services);
+                        let input = Self::function(parent, txid, name, conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnTimerOnDelay::new(parent, enable, delay, input)
                         )))
@@ -113,7 +113,7 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "delay";
@@ -124,7 +124,7 @@ impl FnBuilder {
                         }).expect(&format!("{dbg}.function | '{name}' - is missed in {:#?}", conf));
                         let name = "input";
                         let conf = conf.inputs.get_mut(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, conf, task_nodes, services);
+                        let input = Self::function(parent, txid, name, conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnTimerOffDelay::new(parent, enable, delay, input)
                         )))
@@ -133,7 +133,7 @@ impl FnBuilder {
                     Functions::ToApiQueue => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes ,services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes ,services.clone());
                         let queue_name = conf.param("queue").unwrap_or_else(||
                             panic!("{}.function | Parameter 'queue' - missed in '{}'", dbg, conf.name)
                         ).as_param();
@@ -150,10 +150,10 @@ impl FnBuilder {
                     Functions::Gt => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnGt::new(parent, input1, input2)
                         )))
@@ -162,10 +162,10 @@ impl FnBuilder {
                     Functions::Ge => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnGe::new(parent, input1, input2)
                         )))
@@ -174,10 +174,10 @@ impl FnBuilder {
                     Functions::Eq => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnEq::new(parent, input1, input2)
                         )))
@@ -186,10 +186,10 @@ impl FnBuilder {
                     Functions::Le => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnLe::new(parent, input1, input2)
                         )))
@@ -198,10 +198,10 @@ impl FnBuilder {
                     Functions::Lt => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnLt::new(parent, input1, input2)
                         )))
@@ -210,10 +210,10 @@ impl FnBuilder {
                     Functions::Ne => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnNe::new(parent, input1, input2)
                         )))
@@ -228,7 +228,7 @@ impl FnBuilder {
                     Functions::PointId => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         // debug!("{}.functions | Functions::PointId | input: {:?}", self_id, input);
                         log::debug!("{}.functions | Functions::PointId | requesting points...", dbg);
                         let points = services.points(&parent.join())
@@ -245,7 +245,7 @@ impl FnBuilder {
                     Functions::Debug => {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.push(input);
                         }
                         Rc::new(RefCell::new(Box::new(
@@ -256,13 +256,13 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "x";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let x = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let mut inputs = IndexMap::new();
@@ -271,7 +271,7 @@ impl FnBuilder {
                             .filter(|(name, _)| ! ["enable", "x"].contains(&(name.as_str())))
                             .map(|(n, c)| (n.to_owned(), c.clone())).collect();
                         for (name, input_conf) in &mut conf_inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.insert(name.to_owned(), input);
                         }
                         Rc::new(RefCell::new(Box::new(
@@ -283,7 +283,7 @@ impl FnBuilder {
                     Functions::ToBool => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnToBool::new(parent, input)
                         )))
@@ -292,7 +292,7 @@ impl FnBuilder {
                     Functions::ToInt => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnToInt::new(parent, input)
                         )))
@@ -301,7 +301,7 @@ impl FnBuilder {
                     Functions::ToReal => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnToReal::new(parent, input)
                         )))
@@ -310,7 +310,7 @@ impl FnBuilder {
                     Functions::ToDouble => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnToDouble::new(parent, input)
                         )))
@@ -319,11 +319,11 @@ impl FnBuilder {
                     Functions::Export => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let point_conf = conf.input_conf("conf").map(|conf| {
@@ -355,15 +355,15 @@ impl FnBuilder {
                         let name = "default";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let default = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "pass";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let pass = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let pass = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnFilter::new(parent, default, input, pass)
                         )))
@@ -372,7 +372,7 @@ impl FnBuilder {
                     Functions::RisingEdge => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnRisingEdge::new(parent, input)
                         )))
@@ -381,7 +381,7 @@ impl FnBuilder {
                     Functions::FallingEdge => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnFallingEdge::new(parent, input)
                         )))
@@ -391,19 +391,19 @@ impl FnBuilder {
                         let name = "default";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let default = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let input = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "every-cycle";
@@ -430,12 +430,12 @@ impl FnBuilder {
                         let name = "initial";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let initial = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnAcc::new(parent, initial, input),
                         )))
@@ -444,10 +444,10 @@ impl FnBuilder {
                     Functions::Mul => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnMul::new(parent, input1, input2)
                         )))
@@ -456,10 +456,10 @@ impl FnBuilder {
                     Functions::Div => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnDiv::new(parent, input1, input2)
                         )))
@@ -468,10 +468,10 @@ impl FnBuilder {
                     Functions::Sub => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnSub::new(parent, input1, input2)
                         )))
@@ -480,7 +480,7 @@ impl FnBuilder {
                     Functions::BitAnd => {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.push(input);
                         }
                         Rc::new(RefCell::new(Box::new(
@@ -491,7 +491,7 @@ impl FnBuilder {
                     Functions::BitOr => {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.push(input);
                         }
                         Rc::new(RefCell::new(Box::new(
@@ -502,7 +502,7 @@ impl FnBuilder {
                     Functions::BitXor => {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.push(input);
                         }
                         Rc::new(RefCell::new(Box::new(
@@ -513,7 +513,7 @@ impl FnBuilder {
                     Functions::BitNot => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnBitNot::new(parent, input)
                         )))
@@ -523,21 +523,21 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "threshold";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let threshold = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let threshold = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "factor";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let factor = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnThreshold::new(parent, enable, threshold, factor, input)
                         )))
@@ -546,10 +546,10 @@ impl FnBuilder {
                     Functions::Smooth => {
                         let name = "factor";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let factor = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let factor = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnSmooth::new(parent, factor, input)
                         )))
@@ -559,12 +559,12 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnAverage::new(parent, enable, input)
                         )))
@@ -573,10 +573,10 @@ impl FnBuilder {
                     Functions::Pow => {
                         let name = "input1";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let name = "input2";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, tx_id, name, input_conf, task_nodes, services);
+                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services);
                         Rc::new(RefCell::new(Box::new(
                             FnPow::new(parent, input1, input2)
                         )))
@@ -586,10 +586,10 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
-                        let tx_send = match conf.param("send-to") {
+                        let send_to = match conf.param("send-to") {
                             Some(queue_name) => {
                                 let queue_name = match queue_name {
                                     FnConfKind::Param(queue_name) => queue_name.conf.as_str().unwrap(),
@@ -605,7 +605,7 @@ impl FnBuilder {
                         };
                         let name = "op-cycle";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let op_cycle = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let op_cycle = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         let mut inputs = IndexMap::new();
                         let conf_inputs = conf.inputs
                             .iter_mut()
@@ -613,11 +613,11 @@ impl FnBuilder {
                                 ! ["enable", "send-to", "conf", "op-cycle"].contains(&name.as_str())
                             });
                         for (name, input_conf) in conf_inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.insert(name.to_owned(), input);
                         }
                         Rc::new(RefCell::new(Box::new(
-                            FnRecOpCycleMetric::new(parent, enable, tx_send, op_cycle, inputs)
+                            FnRecOpCycleMetric::new(parent, enable, send_to, op_cycle, inputs)
                         )))
                     }
                     //
@@ -625,12 +625,12 @@ impl FnBuilder {
                         let name = "enable";
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone())),
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())),
                             None => None,
                         };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnMax::new(parent, enable, input)
                         )))
@@ -639,7 +639,7 @@ impl FnBuilder {
                     Functions::PiecewiseLineApprox => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         log::trace!("{}.function | PiecewiseLineApprox conf: {:#?}", dbg, conf);
                         let pieces: IndexMap<serde_yaml::Value, serde_yaml::Value> = match conf.param("piecewise") {
                             Some(piecewise) => {
@@ -660,7 +660,7 @@ impl FnBuilder {
                     Functions::IsChangedValue => {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
-                            let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                             inputs.push(input);
                         }
                         Rc::new(RefCell::new(Box::new(
@@ -671,7 +671,7 @@ impl FnBuilder {
                     Functions::KeepValid => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnKeepValid::new(parent, input)
                         )))
@@ -680,7 +680,7 @@ impl FnBuilder {
                     Functions::ToString => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, tx_id, name, input_conf, task_nodes, services.clone());
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone());
                         Rc::new(RefCell::new(Box::new(
                             FnToString::new(parent, input)
                         )))
@@ -699,7 +699,7 @@ impl FnBuilder {
                     Some((input_conf_name, input_conf)) => {
                         let var = Self::fn_var(
                             var_name,
-                            Self::function(parent, tx_id, input_conf_name, input_conf, task_nodes, services),
+                            Self::function(parent, txid, input_conf_name, input_conf, task_nodes, services),
                         );
                         log::trace!("{}.function | Var: {:?}: {:?}", dbg, &conf.name, var.clone());
                         task_nodes.add_var(conf.name.clone(), var.clone());
@@ -723,11 +723,11 @@ impl FnBuilder {
                 let name = format!("const {:?} '{}'", conf.type_, value);
                 log::trace!("{}.function | Const: {:?}...", dbg, &name);
                 let value = match conf.type_.clone() {
-                    FnConfPointType::Bool => value.parse::<bool>().unwrap().to_point(tx_id, &name),
-                    FnConfPointType::Int => value.parse::<i64>().unwrap().to_point(tx_id, &name),
-                    FnConfPointType::Real => value.parse::<f32>().unwrap().to_point(tx_id, &name),
-                    FnConfPointType::Double => value.parse::<f64>().unwrap().to_point(tx_id, &name),
-                    FnConfPointType::String => value.to_point(tx_id, &name),
+                    FnConfPointType::Bool => value.parse::<bool>().unwrap().to_point(txid, &name),
+                    FnConfPointType::Int => value.parse::<i64>().unwrap().to_point(txid, &name),
+                    FnConfPointType::Real => value.parse::<f32>().unwrap().to_point(txid, &name),
+                    FnConfPointType::Double => value.parse::<f64>().unwrap().to_point(txid, &name),
+                    FnConfPointType::String => value.to_point(txid, &name),
                     FnConfPointType::Any => panic!("{}.function | Const of type 'any' - not supported", dbg),
                     FnConfPointType::Unknown => panic!("{}.function | Point type required", dbg),
                 };
@@ -742,7 +742,7 @@ impl FnBuilder {
                 let input = task_nodes.add_input(
                     &point_name,
                     Rc::new(RefCell::new(Box::new(
-                        FnInput::new(&point_name, tx_id, conf)
+                        FnInput::new(&point_name, txid, conf)
                     ))),
                 );
                 log::trace!("{}.function | input (Point): {:?}", dbg, input);
@@ -759,15 +759,15 @@ impl FnBuilder {
                     None => None,
                 };
                 let enable = match conf.enable.as_mut() {
-                    Some(input_conf) => Some(Self::function(parent, tx_id, "enable", input_conf, task_nodes, services.clone())),
+                    Some(input_conf) => Some(Self::function(parent, txid, "enable", input_conf, task_nodes, services.clone())),
                     None => None,
                 };
                 let input = match conf.input.as_mut() {
-                    Some(input_conf) => Some(Self::function(parent, tx_id, "input", input_conf, task_nodes, services.clone())),
+                    Some(input_conf) => Some(Self::function(parent, txid, "input", input_conf, task_nodes, services.clone())),
                     None => None,
                 };
                 let changes_only = match conf.changes_only.as_mut() {
-                    Some(input_conf) => Some(Self::function(parent, tx_id, "changes-only", input_conf, task_nodes, services.clone())),
+                    Some(input_conf) => Some(Self::function(parent, txid, "changes-only", input_conf, task_nodes, services.clone())),
                     None => None,
                 };
                 Rc::new(RefCell::new(Box::new(

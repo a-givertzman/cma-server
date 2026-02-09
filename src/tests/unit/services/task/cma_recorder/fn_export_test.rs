@@ -129,7 +129,6 @@ mod fn_export {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             target_count,
         ));
         services.insert(receiver.clone());
@@ -258,7 +257,6 @@ mod fn_export {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             target_count,
         ));
         services.insert(receiver.clone());      // "TaskTestReceiver",
@@ -385,7 +383,6 @@ mod fn_export {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             target_count,
         ));
         services.insert(receiver.clone());      // "TaskTestReceiver",

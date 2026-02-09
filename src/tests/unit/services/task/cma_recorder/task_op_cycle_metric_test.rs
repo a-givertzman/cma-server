@@ -236,7 +236,6 @@ fn operating_cycle_metric() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         total_count_load,
     ));
     services.insert(receiver.clone());

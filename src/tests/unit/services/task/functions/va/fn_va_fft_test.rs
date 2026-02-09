@@ -69,7 +69,6 @@ fn empty_filter() {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             usize::MAX,
         ));
         let receiver_name = receiver.name().join();
@@ -257,7 +256,6 @@ fn absolute_filter() {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             usize::MAX,
         ));
         let receiver_name = receiver.name().join();

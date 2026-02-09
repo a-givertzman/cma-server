@@ -50,7 +50,6 @@ fn structure() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         iterations,
     ));
     services.insert(receiver.clone());      // "TaskTestReceiver",
@@ -138,7 +137,6 @@ fn transfer() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         iterations,
     ));
     services.insert(receiver.clone());      // "TaskTestReceiver",

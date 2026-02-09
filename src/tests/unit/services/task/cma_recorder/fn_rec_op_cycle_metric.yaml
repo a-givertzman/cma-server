@@ -243,7 +243,7 @@ service Task RecorderTask:
     #   table:      operating_cycle
     #   table:      operating_cycle_metric_value
     #
-    fn RecOpCycleMetric:
+    fn RecOpCycleMetric OpCycle:
         # send-to: /App/ApiClient.in-queue
         send-to: /AppTest/TaskTestReceiver.in-queue
         op-cycle: opCycleIsActive
@@ -282,6 +282,9 @@ service Task RecorderTask:
     #
     #   table:      operating_metric
     #
+    fn RecOpCycleMetric:
+        send-to: /AppTest/TaskTestReceiver.in-queue
+        op-cycle: opCycleIsActive
         #
         #                !!! IN SECONDS
         # 3.1   | real | crane-total-operating-secs  | общее количество часов работы крана

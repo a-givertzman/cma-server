@@ -75,7 +75,7 @@ fn random_i16() {
     // );
     // let multi_queue = Arc::new(MultiQueue::new(conf, services.clone())));
     // services.insert(multi_queue.clone());
-    let receiver = Arc::new(TaskTestReceiver::new(&dbg, "", "in-queue", test_data.len()));
+    let receiver = Arc::new(TaskTestReceiver::new(&dbg, "", test_data.len()));
     services.insert(receiver.clone());
     let udp_server = Arc::new(MockUdpServer::new(
         dbg,

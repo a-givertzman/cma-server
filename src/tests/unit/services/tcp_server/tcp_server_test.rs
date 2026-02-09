@@ -183,7 +183,6 @@ mod tcp_server {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "queue",
             iterations,
         ));
         services.insert(receiver.clone());

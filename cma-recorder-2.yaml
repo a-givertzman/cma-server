@@ -98,9 +98,9 @@ service Task RecorderTask:
             input2: winch3LoadNom
     let craneIsActive:
         input fn TimerOffDelay:
-            delay: 5s
+            delay: 100ms
             input fn TimerOnDelay:
-                delay: 5s
+                delay: 100ms
                 input fn Ge:
                     # input1: craneLoad
                     input2: opCycleThreshold
@@ -109,9 +109,9 @@ service Task RecorderTask:
                         input: craneLoad
     let winch1IsActive:
         input fn TimerOffDelay:
-            delay: 5s
+            delay: 100ms
             input fn TimerOnDelay:
-                delay: 5s
+                delay: 100ms
                 input fn Ge:
                     # input1: winch1Load
                     input2: winch1OpCycleThreshold
@@ -120,9 +120,9 @@ service Task RecorderTask:
                         input: winch1Load
     let winch2IsActive:
         input fn TimerOffDelay:
-            delay: 5s
+            delay: 100ms
             input fn TimerOnDelay:
-                delay: 5s
+                delay: 100ms
                 input fn Ge:
                     # input1: winch2Load
                     input2: winch2OpCycleThreshold
@@ -131,9 +131,9 @@ service Task RecorderTask:
                         input: winch2Load
     let winch3IsActive:
         input fn TimerOffDelay:
-            delay: 5s
+            delay: 100ms
             input fn TimerOnDelay:
-                delay: 5s
+                delay: 100ms
                 input fn Ge:
                     # input1: winch3Load
                     input2: winch3OpCycleThreshold
@@ -2044,10 +2044,10 @@ service Task RecorderTask:
         op-cycle: opCycleIsActive
         #
         # ========= DEBUGGING =========
-        debug-craneCycleAverageLoadRelative fn ToString:   
-            input: craneCycleAverageLoadRelative
-        debug-craneCycleMaxLoad fn ToString:
-            input: craneCycleMaxLoad
+        # debug-craneCycleAverageLoadRelative fn ToString:   
+        #     input: craneCycleAverageLoadRelative
+        # debug-craneCycleMaxLoad fn ToString:
+        #     input: craneCycleMaxLoad
         #
         #                !!! IN SECONDS
         # 3.1   | real | crane-total-operating-secs  | общее количество часов работы крана
@@ -2757,14 +2757,14 @@ service Task RecorderTask:
     #   table:      rec_operating_cycle
     #   table:      rec_operating_metric
     #
-    fn RecOpCycleMetric:
+    fn RecOpCycleMetric OpCycle:
         send-to: /App/ApiClient.in-queue
         op-cycle: opCycleIsActive
         # conf point OpCycleSql:
         #     type: 'String'
         #
         # Operating cycle
-        input1 fn SqlMetric:
+        input01 fn SqlMetric:
             table: public.rec_operating_cycle
             sql: insert into {table} (id, timestamp_start, timestamp_stop, alarm_class) values ({opCycleId.value}, '{start.timestamp}', '{stop.timestamp}', {alarmClass.value});
             opCycleId: opCycleId
@@ -2777,14 +2777,14 @@ service Task RecorderTask:
             alarmClass: alarmClass
         #
         # Operating cycle metric 'Average Load'
-        input2 fn SqlMetric:
+        input02 fn SqlMetric:
             table: public.rec_operating_metric
             sql: insert into {table} (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'average_load', {input.value});
             opCycleId: opCycleId
             input: craneCycleAverageLoad
         #
         # Operating cycle metric 'Max Load'
-        input3 fn SqlMetric:
+        input03 fn SqlMetric:
             table: public.rec_operating_metric
             sql: insert into {table} (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'max_load', {input.value});
             opCycleId: opCycleId
@@ -2967,20 +2967,20 @@ service Task RecorderTask:
 
 
 
-    #
-    # ========= PLOTTING =========
-    fn Plot Plot1:
-        # craneLoadNom: craneLoadNom
-        craneLoad: craneLoad
-        # craneLoadRelative: craneLoadRelative
-        craneLoadFiltered: craneLoadFiltered
-        # winch1LoadRelative: winch1LoadRelative
-        # winch1LoadFiltered: winch1LoadFiltered
-        # winch2LoadRelative: winch2LoadRelative
-        # winch2LoadFiltered: winch2LoadFiltered
-        # winch3LoadRelative: winch3LoadRelative
-        # winch3LoadFiltered: winch3LoadFiltered
-        craneMopsTriggered: craneMopsTriggered
-        craneAopsTriggered: craneAopsTriggered
-        opCycleIsActive: opCycleIsActive
-        opCycleIsDone: opCycleIsDone
+    # #
+    # # ========= PLOTTING =========
+    # fn Plot Plot1:
+    #     # craneLoadNom: craneLoadNom
+    #     craneLoad: craneLoad
+    #     # craneLoadRelative: craneLoadRelative
+    #     craneLoadFiltered: craneLoadFiltered
+    #     # winch1LoadRelative: winch1LoadRelative
+    #     # winch1LoadFiltered: winch1LoadFiltered
+    #     # winch2LoadRelative: winch2LoadRelative
+    #     # winch2LoadFiltered: winch2LoadFiltered
+    #     # winch3LoadRelative: winch3LoadRelative
+    #     # winch3LoadFiltered: winch3LoadFiltered
+    #     craneMopsTriggered: craneMopsTriggered
+    #     craneAopsTriggered: craneAopsTriggered
+    #     opCycleIsActive: opCycleIsActive
+    #     opCycleIsDone: opCycleIsDone

@@ -20,7 +20,7 @@ pub struct FnInput {
 impl FnInput {
     // pub fn new(parent: &str, name: impl Into<String>, initial: Option<PointType>, type_: FnConfPointType) -> Self {
     pub fn new(parent: impl Into<String>, tx_id: usize, conf: &mut FnConfig) -> Self {
-        let self_id = format!("{}/FnInput{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+        let self_id = format!("{}/FnInput{}", parent.into(), COUNT.fetch_add(1, Ordering::AcqRel));
         let initial = match conf.type_.clone() {
             FnConfPointType::Bool => conf.options.default.as_ref().map_or(None, |d| match d.parse::<bool>() {
                 Ok(d) => Some(d.to_point(tx_id, &conf.name)),
