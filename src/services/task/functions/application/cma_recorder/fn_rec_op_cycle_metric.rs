@@ -225,6 +225,7 @@ impl State {
     }
     ///
     /// Reset the state to the initial
+    #[allow(unused)]
     pub fn reset(&mut self) {
         self.state = Cycle::None;
     }
