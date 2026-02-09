@@ -119,7 +119,7 @@ impl TaskEvalNode {
         for eval_node_out in &self.outs {
             log::trace!("TaskEvalNode.eval | eval_node '{}' out...", self.id);
             match eval_node_out.borrow_mut().out() {
-                FnResult::Ok(v) => {
+                FnResult::Ok(_v) => {
                     // log::debug!("TaskEvalNode.eval | eval_node '{}' out: {:?}", self.id, out);
                 }
                 FnResult::None => {
