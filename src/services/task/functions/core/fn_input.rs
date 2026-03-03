@@ -11,6 +11,7 @@ pub struct FnInput {
     name: String,
     type_: FnConfPointType,
     point: Option<Point>,
+    #[allow(unused)]
     initial: Option<Point>,
     status: Option<Status>,
     options_hash: String,

@@ -40,7 +40,7 @@ impl StreamRead<serde_json::Value, RecvError> for JdsSerialize {
     fn read(&mut self) -> Result<serde_json::Value, RecvError> {
         match self.stream.recv_timeout(RECV_TIMEOUT) {
             Ok(point) => {
-                log::trace!("{}.read | point: {:?}", self.id, point);
+                log::debug!("{}.read | point: {:?}", self.id, point);
                 match serde_json::to_value(&point) {
                     Ok(point) => Ok(point),
                     Err(err) => Err(RecvError::Error(format!("{}.read | Serialize error: {:?}", self.id, err))),

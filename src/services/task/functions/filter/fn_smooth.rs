@@ -7,8 +7,9 @@ use crate::{
     }
 };
 ///
-/// Function | Returns smoothed input:
-/// out = out + (input - prev) * factor
+/// Function | EMA (Exponential Moving Average)
+/// - Returns smoothed input:
+/// - out = out + (input - prev) * factor
 #[derive(Debug)]
 pub struct FnSmooth {
     id: String,
