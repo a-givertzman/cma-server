@@ -26,7 +26,7 @@ debugging = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-debugin
 api-tools = { tag = "0.2.2", git = "https://github.com/a-givertzman/rust-api-tools.git" }
 # sal-sync = { path = "../sal-sync" }
 sal-sync = { tag = "0.3.0", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
-frdm-tools = { tag = "0.2.0", git = "https://github.com/a-givertzman/frdm-server.git" }
+# frdm-tools = { tag = "0.2.0", git = "https://github.com/a-givertzman/frdm-server.git" }
 
 #
 # Serde
