@@ -39,7 +39,7 @@ impl TcpStreamWrite {
         match self.stream.read() {
             Ok(bytes) => {
                 while let Some(bytes) = self.buffer.first() {
-                    log::debug!("{}.write | bytes[{}] to be sent: {:?}", self.id, bytes.len(), serde_json::from_slice::<Point>(&bytes[1..]));
+                    // log::debug!("{}.write | bytes[{}] to be sent: {:?}", self.id, bytes.len(), serde_json::from_slice::<Point>(&bytes[1..]));
                     log::trace!("{}.write | bytes: {:?}", self.id, bytes);
                     match tcp_stream.write_all(bytes) {
                         Ok(_) => {
@@ -59,7 +59,7 @@ impl TcpStreamWrite {
                     Ok(_) => {
                         match tcp_stream.flush() {
                             Ok(_) => {
-                                log::debug!("{}.write | bytes[{}] sent", self.id, bytes.len());
+                                // log::debug!("{}.write | bytes[{}] sent", self.id, bytes.len());
                                 ConnectionStatus::Active(OpResult::Ok(()))
                             }
                             Err(err) => {

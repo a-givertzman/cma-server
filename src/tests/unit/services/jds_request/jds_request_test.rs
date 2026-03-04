@@ -77,7 +77,7 @@ fn point_configs(parent_name: &Name) -> Vec<PointConf> {
 ///
 #[test]
 fn reject() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = "jds_request_test";
@@ -242,7 +242,7 @@ fn reject() {
 ///
 #[test]
 fn request_auth_secret() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = "jds_request_test";
@@ -297,7 +297,7 @@ fn request_auth_secret() {
             reconnect: 1 s  # default 3 s
             address: {}
             auth-secret:
-                pass: {}      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
+                pass: '{}'      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
             in queue link:
                 max-length: 10000
             send-to: {}/MultiQueue.in-queue
@@ -362,7 +362,7 @@ fn request_auth_secret() {
 ///
 #[test]
 fn request_points() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = "jds_request_test";
@@ -559,7 +559,7 @@ fn request_points() {
 #[test]
 #[ignore = "To be implementes..."]
 fn auth_ssh() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = "jds_request_test";
