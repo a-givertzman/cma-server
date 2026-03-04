@@ -67,7 +67,7 @@ impl TaskConf {
         log::trace!("{}.new | subscribe: {:#?}", dbg, subscribe);
         let mut node_index = 0;
         let mut nodes = IndexMap::new();
-        for key in conf.keys(&["cycle", "subscribe", format!("in queue {}", rx).as_str()]) {
+        for key in conf.keys(&["wait-started", "cycle", "subscribe", format!("in queue {}", rx).as_str()]) {
             let node_conf = conf.get(key).unwrap();
             log::trace!("{}.new | nodeConf: {:?}", dbg, node_conf);
             node_index += 1;
