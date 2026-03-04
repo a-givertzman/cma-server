@@ -213,6 +213,7 @@ impl JdsRequest {
     ///
     ///
     fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<Services>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared, scheduler: Scheduler,) {
+        log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}'...");
         match services.get(cache_service) {
             Some(cache) => {
                 match cache.gi(receiver_name, points).wait() {
@@ -242,6 +243,7 @@ impl JdsRequest {
             }
             None => log::warn!("{}.yield_gi | Cache service '{}' - not found", dbg, cache_service),
         }
+        log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - done");
         // match cache.slock() {}
     }
     ///
