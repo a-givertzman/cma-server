@@ -59,7 +59,6 @@ fn point_any_structure() {
     let receiver = Arc::new(TaskTestReceiver::new(
         &self_name.join(),
         "",
-        "in-queue",
         iterations,
     ));
     services.insert(receiver.clone());

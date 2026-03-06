@@ -181,7 +181,7 @@ impl Service for JdsConnection {
                         let parent_id: Dbg = parent_id;
                         let parent: Name = parent_name;
                         let point: Point = point;
-                        log::debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
+                        // log::debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
                         log::trace!("{}.run | point from socket: \n\t{:?}", parent, point);
                         match point.cot() {
                             Cot::Req => JdsRequest::handle(&parent_id, &parent, 0, point, services, shared, scheduler),

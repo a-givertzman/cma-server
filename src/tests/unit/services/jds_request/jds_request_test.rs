@@ -9,7 +9,7 @@ use sal_sync::{services::{
 }, thread_pool::ThreadPool};
 use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once}, thread, time::Duration};
+use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once, atomic::{AtomicBool, Ordering}}, thread, time::Duration};
 use crate::{
     domain::{net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}, testing::{RecvService, RecvServiceConf}},
     services::server::{TcpServer, TcpServerConf},
@@ -30,7 +30,7 @@ fn init_once() {
 fn init_each() -> () {}
 ///
 /// JDS request to the TcpServer
-fn request(self_id: &str, tcp_stream: &mut TcpStream, request: Point) -> Point {
+fn request(self_id: &str, tcp_stream: &mut TcpStream, request: &Point) -> Point {
     let cot = request.cot();
     let mut request = serde_json::to_vec(&request).unwrap();
     request.push(JDS_END_OF_TRANSMISSION);
@@ -77,7 +77,7 @@ fn point_configs(parent_name: &Name) -> Vec<PointConf> {
 ///
 #[test]
 fn reject() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = "jds_request_test";
@@ -242,7 +242,7 @@ fn reject() {
 ///
 #[test]
 fn request_auth_secret() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = "jds_request_test";
@@ -297,7 +297,7 @@ fn request_auth_secret() {
             reconnect: 1 s  # default 3 s
             address: {}
             auth-secret:
-                pass: {}      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
+                pass: '{}'      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
             in queue link:
                 max-length: 10000
             send-to: {}/MultiQueue.in-queue
@@ -335,7 +335,7 @@ fn request_auth_secret() {
         Cot::Req,
         chrono::offset::Utc::now(),
     ));
-    let result = request(dbg, &mut tcp_stream, auth_req);
+    let result = request(dbg, &mut tcp_stream, &auth_req);
     let target = Point::String(PointHlr::new(0, &Name::new(&self_name, "Auth.Secret").join(), "Authentication successful".to_owned(), Status::Ok, Cot::ReqCon, chrono::offset::Utc::now()));
     assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result.name(), target.name());
     assert!(result.value() == target.value(), "\nresult: {:?}\ntarget: {:?}", result.value(), target.value());
@@ -362,10 +362,10 @@ fn request_auth_secret() {
 ///
 #[test]
 fn request_points() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
-    let dbg = "jds_request_test";
+    let dbg = "jds_request_test::points";
     println!("\n{}", dbg);
     let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
@@ -373,13 +373,12 @@ fn request_points() {
     // Preparing test data
     let tx_id = PointTxId::from_str(dbg);
     let self_name = Name::new(dbg, "Jds");
+    let secret = "123!@#qwe";
     let test_data = [
         Point::String(PointHlr::new(
             tx_id,
             &Name::new(&self_name, "Auth.Secret").join(),
-            r#"{
-                \"secret\": \"Auth.Secret\"
-            }"#.to_string(),
+            secret.to_string(),
             Status::Ok,
             Cot::Req,
             chrono::offset::Utc::now(),
@@ -456,7 +455,6 @@ fn request_points() {
     services.insert(mq_service.clone());
     //
     // Configuring TcpServer service
-    let secret = "123!@#qwe";
     let tcp_port = TestSession::free_tcp_port_str();
     let tcp_server_addr = format!("127.0.0.1:{}", tcp_port);
     let conf = format!(r#"
@@ -500,11 +498,11 @@ fn request_points() {
         Cot::Req,
         chrono::offset::Utc::now(),
     ));
-    let result = request(dbg, &mut tcp_stream, auth_req);
+    let result = request(dbg, &mut tcp_stream, &auth_req);
     assert!(result.cot() == Cot::ReqCon, "\nresult: {:?}\ntarget: {:?}", result.cot(), Cot::ReqCon);
     //
     // Sending Points request
-    let subscribe_req = Point::String(PointHlr::new(
+    let points_req = Point::String(PointHlr::new(
         0,
         &Name::new(&self_name, "Points").join(),
         "".to_string(),
@@ -512,7 +510,7 @@ fn request_points() {
         Cot::Req,
         chrono::offset::Utc::now(),
     ));
-    let result = request(dbg, &mut tcp_stream, subscribe_req);
+    let result = request(dbg, &mut tcp_stream, &points_req);
     let target = Point::String(PointHlr::new(0, &Name::new(&self_name, "Points").join(), "".to_owned(), Status::Ok, Cot::ReqCon, chrono::offset::Utc::now()));
     // assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result.name(), target.name());
     // assert!(result.value() == target.value(), "\nresult: {:?}\ntarget: {:?}", result.value(), target.value());
@@ -557,9 +555,205 @@ fn request_points() {
 ///
 ///
 #[test]
+fn request_subscribe() {
+    DebugSession::new().filter(LogLevel::Debug).init();
+    init_once();
+    init_each();
+    let dbg = "jds_request_test::subscribe";
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
+    test_duration.run().unwrap();
+    //
+    // Preparing test data
+    let tx_id = PointTxId::from_str(dbg);
+    let self_name = Name::new("", dbg);
+    let secret = "123!@#qwe";
+    let test_data = &[
+        (
+            // Auth Request
+            Point::String(PointHlr::new(
+                tx_id,
+                &Name::new(&self_name, "Auth.Secret").join(),
+                secret.to_string(),
+                Status::Ok,
+                Cot::Req,
+                chrono::offset::Utc::now(),
+            )),
+            // Target reply
+            Point::String(PointHlr::new(
+                tx_id,
+                &Name::new(&self_name, "Jds/Auth.Secret").join(),
+                r#"Authentication successful"#.to_string(),
+                Status::Ok,
+                Cot::ReqCon,
+                chrono::offset::Utc::now(),
+            )),
+        ),
+        (
+            // Points Request
+            Point::String(PointHlr::new(
+                tx_id,
+                &Name::new(&self_name, "Points").join(),
+                r#"{ \"points\": [] }"#.to_string(),
+                Status::Ok,
+                Cot::Req,
+                chrono::offset::Utc::now(),
+            )),
+            // Target reply
+            Point::String(PointHlr::new(
+                tx_id,
+                &Name::new(&self_name, "Jds/Points").join(),
+                r#""#.to_string(),
+                Status::Ok,
+                Cot::ReqCon,
+                chrono::offset::Utc::now(),
+            )),
+        ),
+        (
+            // Subscribe Request
+            Point::String(PointHlr::new(
+                tx_id,
+                &Name::new(&self_name, "Subscribe").join(),
+                r#"{ \"points\": [] }"#.to_string(),
+                Status::Ok,
+                Cot::Req,
+                chrono::offset::Utc::now(),
+            )),
+            // Target reply
+            Point::String(PointHlr::new(
+                tx_id,
+                &Name::new(&self_name, "Jds/Subscribe").join(),
+                r#""#.to_string(),
+                Status::Ok,
+                Cot::ReqCon,
+                chrono::offset::Utc::now(),
+            )),
+        ),
+    ];
+    let test_items_count = test_data.len();
+    //
+    // Configuring MultiQueue service
+    let tp = ThreadPool::new(dbg, Some(8));
+    let services = Arc::new(Services::new(dbg, ServicesConf::new(
+        dbg, 
+        ConfTree::new_root(serde_yaml::from_str(r#"
+            retain:
+                path: assets/testing/retain/
+                point:
+                    path: point/id.json
+        "#).unwrap()),
+    ),Some(tp.scheduler())));
+    //
+    // Configuring Receiver
+    let recv_limit = test_items_count * 2;
+    let conf = serde_yaml::from_str(&format!(r#"
+        service RecvService RecvService:
+            recv-limit: {recv_limit}
+            in queue in-queue:
+                max-length: 10000
+    "#)).unwrap();
+    let receiver = Arc::new(RecvService::new(
+        dbg,
+        RecvServiceConf::from_yaml(dbg, &conf),
+        tp.scheduler(),
+    ));
+    services.insert(receiver.clone());
+    log::debug!("{} | RecvService - ready", dbg);
+    let conf = serde_yaml::from_str(&format!(r#"
+        service MultiQueue:
+            in queue in-queue:
+                max-length: 10000
+            send-to:
+                - {}.in-queue
+    "#, receiver.name().join())).unwrap();
+    let mq_conf = MultiQueueConf::from_yaml(&self_name, &conf);
+    let mq_service = Arc::new(MultiQueue::new(mq_conf, services.clone(), Some(tp.scheduler())));
+    services.insert(mq_service.clone());
+    //
+    // Configuring TcpServer service
+    let tcp_port = TestSession::free_tcp_port_str();
+    let tcp_server_addr = format!("127.0.0.1:{}", tcp_port);
+    let conf = format!(r#"
+        service TcpServer:
+            cycle: 1 ms
+            reconnect: 1 s  # default 3 s
+            address: {}
+            auth-secret:
+                pass: {}      # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
+            in queue link:
+                max-length: 10000
+            send-to: {}/MultiQueue.in-queue
+    "#, tcp_server_addr, secret, self_name);
+    let conf = serde_yaml::from_str(&conf).unwrap();
+    let conf = TcpServerConf::from_yaml(&self_name, &conf);
+    let tcp_server = Arc::new(TcpServer::new(conf, services.clone(), tp.scheduler()));
+    services.insert(tcp_server.clone());
+    log::debug!("{} | TcpServer - ready", dbg);
+    //
+    // preparing MockServicePoints with the Vec<PontConfig>
+    let service_points = Arc::new(MockServicePoints::new(dbg, point_configs(&self_name)));
+    services.insert(service_points);
+    log::debug!("\n{} | All configurations - ok\n", dbg);
+    //
+    // Starting all services
+    let exit = Arc::new(AtomicBool::new(false));
+    services.run().unwrap();
+    // stress access to the services to get "locked"
+    let exit_ = exit.clone();
+    let services_ = services.clone();
+    std::thread::spawn(move || {
+        let all = services_.all();
+        while !exit_.load(Ordering::Acquire) {
+            for (key, _) in &all {
+                _ = services_.get(key);
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+    });
+    receiver.run().unwrap();
+    mq_service.run().unwrap();
+    tcp_server.run().unwrap();
+    log::debug!("{} | All services - are executed", dbg);
+    thread::sleep(Duration::from_millis(1000));
+    //
+    // Sending requests
+    let mut results = vec![];
+    for (req, target) in test_data {
+        log::debug!("{dbg} | Sending request {:?}", req.name());
+        let mut tcp_stream = TcpStream::connect(&tcp_server_addr).unwrap();
+        let result = request(dbg, &mut tcp_stream, req);
+        assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result.name(), target.name());
+        assert!(result.status() == target.status(), "\nresult: {:?}\ntarget: {:?}", result.status(), target.status());
+        assert!(result.cot() == target.cot(), "\nresult: {:?}\ntarget: {:?}", result.cot(), target.cot());
+        log::debug!("{dbg} | Request {} successful!\n", req.name());
+        results.push((req, result));
+    }
+    exit.store(true, Ordering::Release);
+    for (req, reply) in results {
+        log::debug!("{dbg} | Request {} => Reply {} - Ok", req.name(), reply.name());
+    }
+    //
+    // Stopping all services
+    receiver.exit();
+    tcp_server.exit();
+    mq_service.exit();
+    services.exit();
+    //
+    // Waiting while all services being finished
+    receiver.wait().unwrap();
+    mq_service.wait().unwrap();
+    tcp_server.wait().unwrap();
+    services.wait().unwrap();
+    //
+    // Reseting dureation timer
+    test_duration.exit();
+}
+///
+///
+#[test]
 #[ignore = "To be implementes..."]
 fn auth_ssh() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = "jds_request_test";

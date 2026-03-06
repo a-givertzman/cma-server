@@ -111,7 +111,6 @@ mod fn_point {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             total_count,
         ));
         services.insert(receiver.clone());      // "TaskTestReceiver",

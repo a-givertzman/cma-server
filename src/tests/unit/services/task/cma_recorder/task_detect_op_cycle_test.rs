@@ -205,7 +205,6 @@ mod cma_recorder {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             total_count * 2,
         ));
         services.insert(receiver.clone());

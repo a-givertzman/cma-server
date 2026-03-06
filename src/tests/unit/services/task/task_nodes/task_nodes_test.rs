@@ -4,7 +4,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}, Service, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}};
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Once}, thread::{self}};
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::services::task::{fn_kind::FnKind, fn_result::FnResult, TaskConf, TaskNodes};
+use crate::services::task::{FnKind, FnResult, TaskConf, TaskNodes};
 ///
 ///
 static INIT: Once = Once::new();

@@ -5,7 +5,7 @@ use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_core::error::ErrorLimit;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::services::task::va::fft_buff::FftBuf;
+use crate::services::task::FftBuf;
 ///
 ///
 static INIT: Once = Once::new();

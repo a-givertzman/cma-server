@@ -12,7 +12,7 @@ use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, FnInOutRef},
     services::task::{
-        {fn_::FnOut, fn_input::FnInput, va::{fft_buff::FftBuf, fn_va_fft::FnVaFft}},
+        {FnOut, FnInput, FftBuf, FnVaFft},
         TaskTestReceiver,
     },
 };
@@ -76,7 +76,6 @@ fn format_sql() {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             usize::MAX,
         ));
         let receiver_name = receiver.name().join();

@@ -83,69 +83,82 @@ impl VirtualDeviceConf {
         let api: ConfTree = conf.get("api").expect(&format!("{dbg}.new | 'api' - not found or wrong config"));
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
-        let before: ConfTree = conf.get("before").expect(&format!("{dbg}.new | 'before' - not found or wrong config"));
-        let before: Vec<CmdKind> = before.nodes().filter_map(|node| {
-            match ConfCustomKeywd::from_str(&node.key) {
-                Ok(keyword) => match keyword.name().to_lowercase().as_str() {
-                    "sql" => {
-                        match node.conf.as_str() {
-                            Some(cmd) => {
-                                log::debug!("{}.new | SQL Command '{}'", dbg, cmd);
-                                Some(CmdKind::Sql(cmd.to_owned()))
+        let before: Option<ConfTree> = conf.get("before");
+        let before: Vec<CmdKind> = before.map(|before| before.conf.as_sequence().map(|before | before.iter().filter_map(|node| {
+            match node.as_mapping() {
+                Some(node) => match node.iter().next() {
+                    Some((key, node)) => match ConfCustomKeywd::from_str(key.as_str().unwrap()) {
+                        Ok(keyword) => match keyword.name().to_lowercase().as_str() {
+                            "sql" => {
+                                match node.as_str() {
+                                    Some(cmd) => {
+                                        log::debug!("{dbg}.new | Before | SQL Command '{}'", cmd);
+                                        Some(CmdKind::Sql(cmd.to_owned()))
+                                    }
+                                    None => {
+                                        log::warn!("{dbg}.new | Wrong SQL Command {:?}", node);
+                                        None
+                                    }
+                                }
                             }
-                            None => {
-                                log::warn!("{}.new | Wrong SQL Command {:?}", dbg, node.conf);
+                            _ => {
+                                log::warn!("{dbg}.new | Unknown Command kind {:?}", keyword);
                                 None
                             }
                         }
+                        Err(err) => {
+                            log::warn!("{dbg}.new | Can't parse Command kind: {:?}, \n\terror: {:?}", key, err);
+                            None
+                        }
                     }
-                    _ => {
-                        log::warn!("{}.new | Unknown Command kind {:?}", dbg, keyword);
-                        None
-                    }
+                    None => todo!(),
                 }
-                Err(err) => {
-                    log::warn!("{}.new | Can't parse Command kind: {:?}, \n\terror: {:?}", dbg, node.key, err);
-                    None
-                }
+                None => todo!(),
             }
-        }).collect();
-        let after: ConfTree = conf.get("after").expect(&format!("{dbg}.new | 'after' - not found or wrong config"));
-        let after: Vec<CmdKind> = after.nodes().filter_map(|node| {
-            match ConfCustomKeywd::from_str(&node.key) {
-                Ok(keyword) => match keyword.name().to_lowercase().as_str() {
-                    "sql" => {
-                        match node.conf.as_str() {
-                            Some(cmd) => {
-                                log::debug!("{}.new | SQL Command '{}'", dbg, cmd);
-                                Some(CmdKind::Sql(cmd.to_owned()))
+        }).collect())).flatten().unwrap_or(vec![]);
+        let after: Option<ConfTree> = conf.get("after");
+        let after: Vec<CmdKind> = after.map(|after| after.conf.as_sequence().map(|after | after.iter().filter_map(|node| {
+            match node.as_mapping() {
+                Some(node) => match node.iter().next() {
+                    Some((key, node)) => match ConfCustomKeywd::from_str(key.as_str().unwrap()) {
+                        Ok(keyword) => match keyword.name().to_lowercase().as_str() {
+                            "sql" => {
+                                match node.as_str() {
+                                    Some(cmd) => {
+                                        log::debug!("{dbg}.new | After | SQL Command '{}'", cmd);
+                                        Some(CmdKind::Sql(cmd.to_owned()))
+                                    }
+                                    None => {
+                                        log::warn!("{dbg}.new | Wrong SQL Command {:?}", node);
+                                        None
+                                    }
+                                }
                             }
-                            None => {
-                                log::warn!("{}.new | Wrong SQL Command {:?}", dbg, node.conf);
+                            _ => {
+                                log::warn!("{dbg}.new | Unknown Command kind {:?}", keyword);
                                 None
                             }
                         }
+                        Err(err) => {
+                            log::warn!("{dbg}.new | Can't parse Command kind: {:?}, \n\terror: {:?}", key, err);
+                            None
+                        }
                     }
-                    _ => {
-                        log::warn!("{}.new | Unknown Command kind {:?}", dbg, keyword);
-                        None
-                    }
+                    None => todo!(),
                 }
-                Err(err) => {
-                    log::warn!("{}.new | Can't parse Command kind: {:?}, \n\terror: {:?}", dbg, node.key, err);
-                    None
-                }
+                None => todo!(),
             }
-        }).collect();
+        }).collect())).flatten().unwrap_or(vec![]);
         let inputs: ConfTree = conf.get("inputs").expect(&format!("{dbg}.new | 'inputs' - not found or wrong config"));
         let inputs: FxIndexMap<String, PointConf> = inputs.nodes().filter_map(|node| {
             match FnConfKeywd::from_str(&node.key) {
                 Ok(keyword) => match keyword.kind() {
                     FnConfKindName::Point => {
-                        let point_name = format!("{name}/{}", keyword.data());
+                        // let point_name = format!("{name}/{}", keyword.data());
+                        let point_name = keyword.data();
                         log::trace!("{}.new | Point '{}'", dbg, point_name);
                         log::trace!("{}.new | Point '{}'   |   conf: {:?}", dbg, point_name, node);
-                        let node_conf = PointConf::new(&name, &node);
+                        let node_conf = PointConf::new("", &node);
                         Some((point_name, node_conf))
                     }
                     _ => {

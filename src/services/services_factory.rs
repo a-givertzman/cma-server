@@ -7,7 +7,7 @@ use sal_sync::{services::{conf::ConfTree, entity::Name, MultiQueue, MultiQueueCo
 use crate::{
     conf::{profinet_client_conf::profinet_client_conf::ProfinetClientConf, slmp_client_conf::slmp_client_conf::SlmpClientConf, tcp_client_conf::TcpClientConf},
     services::{
-        ApiClient, ApiClientConf, CacheService, CacheServiceConf, VirtualDevice, VirtualDeviceConf, frdm_service::{FrdmService, FrdmServiceConf}, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient
+        ApiClient, ApiClientConf, CacheService, CacheServiceConf, VirtualDevice, VirtualDeviceConf, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient
     },
 };
 
@@ -31,7 +31,6 @@ impl ServicesFactory {
     const PRODUCER_SERVICE: &'static str = "ProducerService";
     const CACHE_SERVICE: &'static str = "CacheService";
     const SLMP_CLIENT: &'static str = "SlmpClient";
-    const FRDM_SERVICE: &'static str = "FrdmService";
     const VIRTUAL_DEVICE: &'static str = "VirtualDevice";
     ///
     /// Crteates [ServicesFactory] new instance
@@ -104,11 +103,6 @@ impl ServicesFactory {
                 let conf = SlmpClientConf::new(&self.parent, conf);
                 log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Arc::new(SlmpClient::new(conf, services, scheduler.clone()))
-            }
-            Self::FRDM_SERVICE => {
-                let conf = FrdmServiceConf::new(&self.parent, conf);
-                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
-                Arc::new(FrdmService::new(conf, services, scheduler.clone()))
             }
             Self::VIRTUAL_DEVICE => {
                 let conf = VirtualDeviceConf::new(&self.parent, conf);

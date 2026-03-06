@@ -91,7 +91,7 @@ impl ProfinetClientConf {
         let diagnosis = conf.get_diagnosis(&self_name);
         log::trace!("{}.new | diagnosis: {:#?}", dbg, diagnosis.iter().map(|(k, v)| format!("{}: {}", k, v.name)).collect::<Vec<_>>());
         let mut dbs = IndexMap::new();
-        for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "protocol", "description", "ip", "rack", "slot", "diagnosis"]) {
+        for key in conf.keys(&["cycle", "reconnect", "subscribe", "send-to", "protocol", "description", "ip", "rack", "slot", "diagnosis", "wait-started"]) {
             let keyword = Keywd::from_str(&key).unwrap();
             if keyword.kind() == Kind::Db {
                 let db_name = keyword.name();

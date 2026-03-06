@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 use sal_core::dbg::Dbg;
-use sal_sync::{services::{entity::{Cot, Name, Point, PointConf, PointHlr, Status}, Services, SubscriptionCriteria}, thread_pool::Scheduler};
+use sal_sync::{services::{Services, SubscriptionCriteria, entity::{Cot, Name, Point, PointConf, PointHlr, Status}}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     domain::{
@@ -165,21 +165,24 @@ impl JdsRequest {
                 };
                 // let receiver_name = Name::new(parent, &shared.connection_id).join();
                 let receiver_name = shared.subscribe_receiver.clone();
-                log::debug!("{}.handle.Subscribe | extending subscription for receiver: '{}'", dbg, receiver_name);
+                log::debug!("{}.handle.Subscribe | Subscription extension requested ({}) from: '{}' ", dbg, points.len(), receiver_name);
                 log::trace!("{}.handle.Subscribe |                              points: {:#?}", dbg, points);
                 let (cot, message) = if points.is_empty() {
-                    let message = format!("{}.handle.Subscribe | SUbscribe failed - points not found in the application", dbg);
+                    let message = format!("{}.handle.Subscribe | Subscribe failed - points not found in the application", dbg);
                     log::warn!("{}", message);
                     (Cot::ReqErr, message)
                 } else {
-                    match services.extend_subscription(&shared.subscribe, &receiver_name, &points) {
+                    log::debug!("{}.handle.Subscribe | extending subscription for receiver: '{}' ...", dbg, receiver_name);
+                    let reply = match services.extend_subscription(&shared.subscribe, &receiver_name, &points) {
                         Ok(_) => (Cot::ReqCon, "".to_owned()),
                         Err(err) => {
                             let message = format!("{}.handle.Subscribe | Extend subscription failed with error: {:?}", dbg, err);
                             log::warn!("{}", message);
                             (Cot::ReqErr, message)
                         }
-                    }
+                    };
+                    log::debug!("{}.handle.Subscribe | extending subscription for receiver: '{}' - ok", dbg, receiver_name);
+                    reply
                 };
                 match shared.cache.clone() {
                     // TODO add named subscription
@@ -210,6 +213,7 @@ impl JdsRequest {
     ///
     ///
     fn yield_gi(dbg: &Dbg, receiver_name: &str, services: Arc<Services>, cache_service: &str, points: &[SubscriptionCriteria], shared: &mut Shared, scheduler: Scheduler,) {
+        log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}'...");
         match services.get(cache_service) {
             Some(cache) => {
                 match cache.gi(receiver_name, points).wait() {
@@ -239,6 +243,7 @@ impl JdsRequest {
             }
             None => log::warn!("{}.yield_gi | Cache service '{}' - not found", dbg, cache_service),
         }
+        log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - done");
         // match cache.slock() {}
     }
     ///

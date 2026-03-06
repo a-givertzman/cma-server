@@ -13,7 +13,6 @@ pub mod app;
 mod api_cient;
 mod cache;
 pub mod diagnosis;
-pub mod frdm_service;
 pub mod history;
 mod modbus_tcp;
 pub mod profinet_client;

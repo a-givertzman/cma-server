@@ -94,13 +94,11 @@ impl TcpServer {
                                 log::warn!("{}.setup_connection | Send tcpStream error {:?}", con_info.dbg, err);
                             }
                         }
-                        log::info!("{}.setup_connection | connections.lock...", con_info.dbg);
                         connections.insert(
                             con_info.connection_id,
                             Arc::new(Box::new(connection)),
                             send,
                         );
-                        log::info!("{}.setup_connection | connections.lock - ok", con_info.dbg);
                     }
                     Err(err) => {
                         log::warn!("{}.setup_connection | error: {:?}", con_info.dbg, err);

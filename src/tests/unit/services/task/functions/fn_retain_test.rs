@@ -182,7 +182,6 @@ fn retain_point_bool() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         target_count,
     ));
     services.insert(receiver.clone());      // "TaskTestReceiver",
@@ -341,7 +340,6 @@ fn retain_point_int() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         target_count,
     ));
     services.insert(receiver.clone());      // "TaskTestReceiver",
@@ -506,7 +504,6 @@ fn retain_point_real() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         target_count,
     ));
     services.insert(receiver.clone());      // "TaskTestReceiver",
@@ -667,7 +664,6 @@ fn retain_every_cycle_point_real() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         target_count,
     ));
     services.insert(receiver.clone());

@@ -1,18 +1,18 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}};
-use std::{collections::HashMap, fmt::Debug, ops::RangeBounds, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
+use std::{fmt::Debug, ops::RangeBounds, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
 use crate::domain::RwLock;
 ///
 /// 
 pub struct TaskTestReceiver {
-    dbg: Dbg,
     name: Name,
     iterations: usize, 
-    in_send: HashMap<String, Sender<Point>>,
+    in_send: Sender<Point>,
     in_recv: Owner<Receiver<Point>>,
     received: Arc<RwLock<Vec<Point>>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
+    dbg: Dbg,
 }
 //
 // 
@@ -23,19 +23,19 @@ impl TaskTestReceiver {
     /// - `recv_queue` - name of the link used for receiving Point's
     /// - `iterations` - count down with each received Point, when zero TaskTestReceiver exits
     #[allow(unused)]
-    pub fn new(parent: &str, index: impl Into<String>, recv_queue: &str, iterations: usize) -> Self {
+    pub fn new(parent: &str, index: impl Into<String>, iterations: usize) -> Self {
         let (send, recv): (Sender<Point>, Receiver<Point>) = channel::unbounded();
         let name = Name::new(parent, format!("TaskTestReceiver{}", index.into()));
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
             iterations,
-            in_send: HashMap::from([(recv_queue.to_string(), send)]),
+            in_send: send,
             in_recv: Owner::new(recv),
             received: Arc::new(RwLock::new(vec![])),
             handles: Handles::new(&dbg),
-            dbg,
             exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
     ///
@@ -85,11 +85,8 @@ impl Debug for TaskTestReceiver {
 impl Service for TaskTestReceiver {
     //
     //
-    fn get_link(&self, name: &str) -> Sender<Point> {
-        match self.in_send.get(name) {
-            Some(send) => send.clone(),
-            None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
-        }        
+    fn get_link(&self, n_ame: &str) -> Sender<Point> {
+        self.in_send.clone()
     }
     //
     //

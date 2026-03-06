@@ -2,11 +2,11 @@
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use testing::entities::test_value::Value;
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{
-        edge_detection::fn_falling_edge::FnFallingEdge, fn_::FnOut, fn_input::FnInput
+        FnFallingEdge, FnOut, FnInput
     }
 };
 ///

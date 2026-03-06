@@ -62,7 +62,7 @@ impl ApiClient {
             false => sink.add(Err(Error::new(&self.dbg, "fetch").err("Is not started or already exited"))),
         }
         result
-    }    
+    }
 }
 //
 //

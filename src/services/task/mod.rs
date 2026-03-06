@@ -76,7 +76,7 @@
 //! input <type> <'/path/PointName'>
 //! ```
 //! 
-mod nested_function;
+mod functions;
 mod task_conf;
 mod task;
 mod task_nodes;
@@ -85,7 +85,7 @@ mod task_eval_node;
 mod task_test_receiver;
 mod task_test_producer;
 
-pub use nested_function::*;
+pub use functions::*;
 pub use task_conf::*;
 pub use task::*;
 pub use task_nodes::*;

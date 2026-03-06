@@ -1,7 +1,7 @@
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Cot, Name, Object, Point, PointHlr, PointTxId, Status}, Service, ServiceCycle, Services}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
-use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, ApiQueryKind, ApiQuerySql}, api_request::ApiRequest}};
 use crate::{domain::retain_buffer::retain_buffer::RetainBuffer, services::ApiClientConf};
 ///
@@ -16,7 +16,7 @@ pub struct ApiClient {
     name: Name,
     txid: usize,
     recv: Owner<Receiver<Point>>,
-    send: HashMap<String, Sender<Point>>,
+    send: Sender<Point>,
     conf: ApiClientConf,
     services: Arc<Services>,
     scheduler: Scheduler,
@@ -37,7 +37,7 @@ impl ApiClient {
             name: conf.name.clone(),
             txid: PointTxId::from_str(&conf.name.join()),
             recv: Owner::new(recv),
-            send: HashMap::from([(conf.rx.clone(), send)]),
+            send,
             conf: conf.clone(),
             services,
             scheduler,
@@ -118,11 +118,8 @@ impl Debug for ApiClient {
 impl Service for ApiClient {
     //
     //
-    fn get_link(&self, name: &str) -> Sender<Point> {
-        match self.send.get(name) {
-            Some(send) => send.clone(),
-            None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
-        }
+    fn get_link(&self, _: &str) -> Sender<Point> {
+        self.send.clone()
     }
     //
     // 

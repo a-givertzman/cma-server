@@ -153,25 +153,24 @@ impl Service for Task {
             let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
             let mut task_nodes = TaskNodes::new(&dbg);
             task_nodes.build_nodes(&self_name, conf, services.clone());
-            log::trace!("{}.run | taskNodes: {:#?}", dbg, task_nodes);
-            'main: loop {
-                log::trace!("{}.run | calculation step...", dbg);
+            log::trace!("{}.run | task_nodes: {:#?}", dbg, task_nodes);
+            'main: while !exit.load(Ordering::SeqCst) {
+                log::trace!("{}.run | Calculation step...", dbg);
                 if cyclic {
                     cycle.start();
                     match rx_recv.recv_timeout(recv_timeout) {
                         Ok(point) => {
-                            log::debug!("{}.run | point: {:?}", dbg, &point);
+                            // log::debug!("{}.run | point: {:?}", dbg, &point);
+                            log::debug!("{}.run | Event '{}': {:?}  {:?}  {:?}", dbg, point.name(), point.value(), point.status(), point.cot());
                             task_nodes.eval(point);
-                            log::debug!("{}.run | calculation step - done ({:?})", dbg, cycle.elapsed());
+                            log::debug!("{}.run | Calculation step - done ({:?})", dbg, cycle.elapsed());
                             cycle.wait();
                         }
-                        Err(err) => {
-                            match err {
-                                RecvTimeoutError::Timeout => log::trace!("{}.run | Receive error: {:?}", dbg, err),
-                                _ => {
-                                    log::trace!("{}.run | Error receiving from queue: {:?}", dbg, err);
-                                    break 'main;
-                                }
+                        Err(err) => match err {
+                            RecvTimeoutError::Timeout => {},
+                            _ => {
+                                log::trace!("{}.run | Error receiving from queue: {:?}", dbg, err);
+                                break 'main;
                             }
                         }
                     };
@@ -187,9 +186,6 @@ impl Service for Task {
                             break 'main;
                         }
                     };
-                }
-                if exit.load(Ordering::SeqCst) {
-                    break 'main;
                 }
             };
             if let Some((service_name, points)) = subscriptions {
