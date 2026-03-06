@@ -711,6 +711,9 @@ service ProfinetClient ied13:
             type: Real
             address:
                 offset: 6
+            filters:                    # Filter conf, using such filter, point can be filtered immediately after input's parser
+                threshold: 2.5          #   Absolute threshold delta 1..5 %
+                factor: 0.1             #   Multiplier for absolute threshold delta - in this case the delta will be accumulated
             comment: 'Датчик угла наклона шайбы гидромотора 1, ॰'
         point Winch1.LVDT2: 
             type: Real
