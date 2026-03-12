@@ -39,7 +39,7 @@ impl SlmpParseInt {
             tx_id,
             name,
             value: filter,
-            status: Box::new(FilterEmpty::<2, Status>::new(Some(Status::Invalid))),
+            status: Box::new(FilterEmpty::<Status>::new(Some(Status::Invalid))),
             offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
             // history: config.history.clone(),
             // alarm: config.alarm,
@@ -73,28 +73,29 @@ impl SlmpParseInt {
     ///
     ///
     fn to_point(&mut self) -> Option<Point> {
-        let value_status = match (self.value.pop(), self.status.pop()) {
-            (None, None) => None,
-            (None, Some(status)) => match self.value.last() {
-                Some(value) => Some((value, Some(status))),
-                None => None,
-            }
-            (Some(value), None) => Some((value, self.status.last())),
-            (Some(value), Some(status)) => Some((value, Some(status))),
-        };
-        if let Some((value, status)) = value_status {
-            Some(Point::Int(PointHlr::new(
-                self.tx_id,
-                &self.name,
-                value,
-                status.unwrap_or(Status::Invalid),
-                Cot::Inf,
-                self.timestamp,
-            )))
-            // log::debug!("{} point Bool: {:?}", self.id, dsPoint.value);
-        } else {
-            None
-        }
+        todo!();
+        // let value_status = match (self.value.pop(), self.status.pop()) {
+        //     (None, None) => None,
+        //     (None, Some(status)) => match self.value.last() {
+        //         Some(value) => Some((value, Some(status))),
+        //         None => None,
+        //     }
+        //     (Some(value), None) => Some((value, self.status.last())),
+        //     (Some(value), Some(status)) => Some((value, Some(status))),
+        // };
+        // if let Some((value, status)) = value_status {
+        //     Some(Point::Int(PointHlr::new(
+        //         self.tx_id,
+        //         &self.name,
+        //         value,
+        //         status.unwrap_or(Status::Invalid),
+        //         Cot::Inf,
+        //         self.timestamp,
+        //     )))
+        //     // log::debug!("{} point Bool: {:?}", self.id, dsPoint.value);
+        // } else {
+        //     None
+        // }
     }
     //
     //
@@ -141,7 +142,7 @@ impl ParsePoint for SlmpParseInt {
     //
     //
     fn is_changed(&self) -> bool {
-        self.value.is_changed() || self.status.is_changed()
+        todo!();
     }
     //
     //

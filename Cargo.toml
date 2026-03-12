@@ -56,6 +56,7 @@ lazy_static = "~1.5"
 kanal = { version = "~0.1" }
 dashmap = "~6.1"
 coco = "~0.3"
+arc-swap = "~1.8"
 
 #
 # Collections

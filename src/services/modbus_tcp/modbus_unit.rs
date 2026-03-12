@@ -272,7 +272,7 @@ impl ModbusUnit {
     ///
     ///
     fn box_bool(txid: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
-        Box::new(ModbusParseBool::new(txid, name, config))
+        Box::new(ModbusParseBool::new(txid, name, config, Box::new(FilterEmpty::<bool>::new(None))))
     }
     ///
     ///
@@ -300,10 +300,10 @@ impl ModbusUnit {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<2, i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<2, i64>::new(None)),
+            None => Box::new(FilterEmpty::<i64>::new(None)),
         }
     }
     ///
@@ -312,10 +312,10 @@ impl ModbusUnit {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<2, f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<2, f32>::new(None)),
+            None => Box::new(FilterEmpty::<f32>::new(None)),
         }
     }
     // ///

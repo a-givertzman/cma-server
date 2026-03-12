@@ -1,10 +1,23 @@
-use circular_buffer::CircularBuffer;
 use super::filter::Filter;
+trait ToF64 {
+    fn to_f64(self) -> f64;
+}
+impl ToF64 for i8 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for i16 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for i32 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for i64 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for u8 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for u16 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for u32 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for u64 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for usize { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for isize { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for f32 { fn to_f64(self) -> f64 { self as f64 } }
+impl ToF64 for f64 { fn to_f64(self) -> f64 { self } }
 ///
-/// 
+/// Фильтром значимых изменений с накоплением ошибки
 #[derive(Debug, Clone)]
-pub struct FilterThreshold<const N: usize, T> {
-    buffer: CircularBuffer<N, T>,
+pub struct FilterThreshold<T> {
     last: Option<T>,
     threshold: f64,
     factor: f64,
@@ -12,20 +25,16 @@ pub struct FilterThreshold<const N: usize, T> {
 }
 //
 // 
-impl<T: Copy, const N: usize> FilterThreshold<N, T> {
-    // const N: usize = N;
+impl<T: Copy> FilterThreshold<T> {
     ///
-    /// Creates new FilterThreshold<const N: usize, T>
+    /// Creates new FilterThreshold<T>
     /// - `N` - size of the Filter bufer,
     /// - `T` - Type of the Filter Item
     pub fn new(initial: Option<T>, threshold: f64, factor: f64) -> Self {
-        let mut buffer = CircularBuffer::<N, T>::new();
         let last = initial.map(|initial| {
-            buffer.push_back(initial);
             initial
         });
         Self {
-            buffer,
             last,
             threshold, 
             factor,
@@ -35,19 +44,14 @@ impl<T: Copy, const N: usize> FilterThreshold<N, T> {
 }
 //
 //
-impl<const N: usize> Filter for FilterThreshold<N, i16> {
-    type Item = i16;
+impl<T: Copy + ToF64 + std::fmt::Debug> Filter for FilterThreshold<T> {
+    type Item = T;
     //
     //
-    fn pop(&mut self) -> Option<Self::Item> {
-        self.buffer.pop_front()
-    }
-    //
-    //
-    fn add(&mut self, value: Self::Item) {
+    fn add(&mut self, value: Self::Item) -> Option<Self::Item> {
         match self.last {
             Some(last) => {
-                let delta = (last as f64) - (value as f64);
+                let delta = last.to_f64() - value.to_f64();
                 let delta = if self.factor > 0.0 {
                     self.acc += delta * self.factor;
                     self.acc.abs()
@@ -55,58 +59,16 @@ impl<const N: usize> Filter for FilterThreshold<N, i16> {
                     delta.abs()
                 };
                 if delta > self.threshold {
-                    self.buffer.push_back(value);
                     self.last = Some(value);
                     self.acc = 0.0;
-                }
-            }
-            None => {
-                self.buffer.push_back(value);
-                self.last = Some(value);
-            }
-        }
-    }
-    //
-    //
-    fn last(&self) -> Option<Self::Item> {
-        self.last
-    }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        !self.buffer.is_empty()
-    }
-}
-//
-//
-impl<const N: usize> Filter for FilterThreshold<N, i32> {
-    type Item = i32;
-    //
-    //
-    fn pop(&mut self) -> Option<Self::Item> {
-        self.buffer.pop_front()
-    }
-    //
-    //
-    fn add(&mut self, value: Self::Item) {
-        match self.last {
-            Some(last) => {
-                let delta = (last as f64) - (value as f64);
-                let delta = if self.factor > 0.0 {
-                    self.acc += delta * self.factor;
-                    self.acc.abs()
+                    Some(value)
                 } else {
-                    delta.abs()
-                };
-                if delta > self.threshold {
-                    self.buffer.push_back(value);
-                    self.last = Some(value);
-                    self.acc = 0.0;
+                    None
                 }
             }
             None => {
-                self.buffer.push_back(value);
                 self.last = Some(value);
+                Some(value)
             }
         }
     }
@@ -115,141 +77,140 @@ impl<const N: usize> Filter for FilterThreshold<N, i32> {
     fn last(&self) -> Option<Self::Item> {
         self.last
     }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        !self.buffer.is_empty()
-    }
 }
-//
-//
-impl<const N: usize> Filter for FilterThreshold<N, i64> {
-    type Item = i64;
-    //
-    //
-    fn pop(&mut self) -> Option<Self::Item> {
-        self.buffer.pop_front()
-    }
-    //
-    //
-    fn add(&mut self, value: Self::Item) {
-        match self.last {
-            Some(last) => {
-                let delta = (last as f64) - (value as f64);
-                let delta = if self.factor > 0.0 {
-                    self.acc += delta * self.factor;
-                    self.acc.abs()
-                } else {
-                    delta.abs()
-                };
-                if delta > self.threshold {
-                    self.buffer.push_back(value);
-                    self.last = Some(value);
-                    self.acc = 0.0;
-                }
-            }
-            None => {
-                self.buffer.push_back(value);
-                self.last = Some(value);
-            }
-        }
-    }
-    //
-    //
-    fn last(&self) -> Option<Self::Item> {
-        self.last
-    }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        !self.buffer.is_empty()
-    }
-}
-//
-//
-impl<const N: usize> Filter for FilterThreshold<N, f32> {
-    type Item = f32;
-    //
-    //
-    fn pop(&mut self) -> Option<Self::Item> {
-        self.buffer.pop_front()
-    }
-    //
-    //
-    fn add(&mut self, value: Self::Item) {
-        match self.last {
-            Some(last) => {
-                let delta = last - value;
-                let delta = if self.factor > 0.0 {
-                    self.acc += (delta as f64) * (self.factor);
-                    self.acc.abs()
-                } else {
-                    delta.abs() as f64
-                };
-                if delta > self.threshold {
-                    self.buffer.push_back(value);
-                    self.last = Some(value);
-                    self.acc = 0.0;
-                }
-            }
-            None => {
-                self.buffer.push_back(value);
-                self.last = Some(value);
-            }
-        }
-    }
-    //
-    //
-    fn last(&self) -> Option<Self::Item> {
-        self.last
-    }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        !self.buffer.is_empty()
-    }
-}
-//
-//
-impl<const N: usize> Filter for FilterThreshold<N, f64> {
-    type Item = f64;
-    //
-    //
-    fn pop(&mut self) -> Option<Self::Item> {
-        self.buffer.pop_front()
-    }
-    //
-    //
-    fn add(&mut self, value: Self::Item) {
-        match self.last {
-            Some(last) => {
-                let delta = last - value;
-                let delta = if self.factor > 0.0 {
-                    self.acc += delta * self.factor;
-                    self.acc.abs()
-                } else {
-                    delta.abs()
-                };
-                if delta > self.threshold {
-                    self.buffer.push_back(value);
-                    self.last = Some(value);
-                    self.acc = 0.0;
-                }
-            }
-            None => {
-                self.buffer.push_back(value);
-                self.last = Some(value);
-            }
-        }
-    }
-    //
-    //
-    fn last(&self) -> Option<Self::Item> {
-        self.last
-    }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        !self.buffer.is_empty()
-    }
-}
+// //
+// //
+// impl Filter for FilterThreshold<i32> {
+//     type Item = i32;
+//     //
+//     //
+//     fn add(&mut self, value: Self::Item) -> Option<Self::Item> {
+//         match self.last {
+//             Some(last) => {
+//                 let delta = (last as f64) - (value as f64);
+//                 let delta = if self.factor > 0.0 {
+//                     self.acc += delta * self.factor;
+//                     self.acc.abs()
+//                 } else {
+//                     delta.abs()
+//                 };
+//                 if delta > self.threshold {
+//                     self.buffer.push_back(value);
+//                     self.last = Some(value);
+//                     self.acc = 0.0;
+//                 }
+//             }
+//             None => {
+//                 self.buffer.push_back(value);
+//                 self.last = Some(value);
+//             }
+//         }
+//     }
+//     //
+//     //
+//     fn last(&self) -> Option<Self::Item> {
+//         self.last
+//     }
+// }
+// //
+// //
+// impl Filter for FilterThreshold<i64> {
+//     type Item = i64;
+//     //
+//     //
+//     fn add(&mut self, value: Self::Item) -> Option<Self::Item> {
+//         match self.last {
+//             Some(last) => {
+//                 let delta = (last as f64) - (value as f64);
+//                 let delta = if self.factor > 0.0 {
+//                     self.acc += delta * self.factor;
+//                     self.acc.abs()
+//                 } else {
+//                     delta.abs()
+//                 };
+//                 if delta > self.threshold {
+//                     self.buffer.push_back(value);
+//                     self.last = Some(value);
+//                     self.acc = 0.0;
+//                 }
+//             }
+//             None => {
+//                 self.buffer.push_back(value);
+//                 self.last = Some(value);
+//             }
+//         }
+//     }
+//     //
+//     //
+//     fn last(&self) -> Option<Self::Item> {
+//         self.last
+//     }
+// }
+// //
+// //
+// impl Filter for FilterThreshold<f32> {
+//     type Item = f32;
+//     //
+//     //
+//     fn add(&mut self, value: Self::Item) -> Option<Self::Item> {
+//         match self.last {
+//             Some(last) => {
+//                 let delta = last - value;
+//                 let delta = if self.factor > 0.0 {
+//                     self.acc += (delta as f64) * (self.factor);
+//                     self.acc.abs()
+//                 } else {
+//                     delta.abs() as f64
+//                 };
+//                 if delta > self.threshold {
+//                     self.buffer.push_back(value);
+//                     self.last = Some(value);
+//                     self.acc = 0.0;
+//                 }
+//             }
+//             None => {
+//                 self.buffer.push_back(value);
+//                 self.last = Some(value);
+//             }
+//         }
+//     }
+//     //
+//     //
+//     fn last(&self) -> Option<Self::Item> {
+//         self.last
+//     }
+// }
+// //
+// //
+// impl Filter for FilterThreshold<f64> {
+//     type Item = f64;
+//     //
+//     //
+//     fn add(&mut self, value: Self::Item) -> Option<Self::Item> {
+//         match self.last {
+//             Some(last) => {
+//                 let delta = last - value;
+//                 let delta = if self.factor > 0.0 {
+//                     self.acc += delta * self.factor;
+//                     self.acc.abs()
+//                 } else {
+//                     delta.abs()
+//                 };
+//                 if delta > self.threshold {
+//                     self.buffer.push_back(value);
+//                     self.last = Some(value);
+//                     self.acc = 0.0;
+//                 }
+//             }
+//             None => {
+//                 self.buffer.push_back(value);
+//                 self.last = Some(value);
+//             }
+//         }
+//     }
+//     //
+//     //
+//     fn last(&self) -> Option<Self::Item> {
+//         self.last
+//     }
+// }

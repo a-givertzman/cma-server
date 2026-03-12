@@ -60,14 +60,19 @@ impl S7Client {
     }
     ///
     /// Returns the connection status
-    pub fn is_connected(&self) -> Result<bool, String> {
+    pub fn is_connected(&self) -> bool {
         let mut is_connected: c_int = 0;
         let code = unsafe {
             S7LIB.Cli_GetConnected(self.handle, &mut is_connected)
         };
         match code {
-            0 => Ok(is_connected != 0),
-            _ => Err(S7Error::text(code))
+            0 => is_connected != 0,
+            _ => {
+                if log::max_level() == log::LevelFilter::Debug {
+                    log::warn!("{}.is_connected | Error: {:?}", self.id, S7Error::text(code));
+                }
+                false
+            }
         }
     }
     ///

@@ -228,10 +228,10 @@ impl FnVaFft {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<1, f64>::new(initial, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<f64>::new(initial, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<1, f64>::new(None)),
+            None => Box::new(FilterEmpty::<f64>::new(None)),
         }
     }
     ///
@@ -358,8 +358,7 @@ impl FnVaFft {
                     for (index, amplitude) in buf.iter().take(self.fft_size / 2).skip(1).enumerate() {
                         match self.filters.get_mut(index) {
                             Some((freq_name, filter)) => {
-                                filter.add(amplitude.abs() * self.amp_factor);
-                                if let Some(value) = filter.pop() {
+                                if let Some(value) = filter.add(amplitude.abs() * self.amp_factor) {
                                     // let amplitude = amplitude.abs() * self.amp_factor;
                                     // log::trace!("{}.out | amplitude: {:#?}", self.id, amplitude);
                                     let point = Point::Double(PointHlr::new(

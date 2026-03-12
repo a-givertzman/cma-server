@@ -3,17 +3,17 @@ use sal_sync::services::{
     entity::{Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status},
     types::Bool,
 };
-use crate::services::modbus_tcp::modbus::ParsePoint;
+use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::modbus_tcp::modbus::ParsePoint};
 ///
 /// Used for parsing configured point from slice of bytes read from device
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ModbusParseBool {
     id: String,
     pub type_: PointConfType,
     pub txid: usize,
     pub name: String,
-    pub value: i64,
-    pub status: Status,
+    pub value: Box<dyn Filter<Item = bool> + Send>,
+    pub status: Box<dyn Filter<Item = Status> + Send>,
     pub offset: Option<u32>,
     pub bit: Option<u8>,
     // pub history: PointConfHistory,
@@ -32,15 +32,15 @@ impl ModbusParseBool {
         txid: usize,
         name: String,
         config: &PointConf,
-        // filter: Filter<T>,
+        filter: Box<dyn Filter<Item = bool> + Send>,
     ) -> ModbusParseBool {
         ModbusParseBool {
             id: format!("ModbusParseBool"),
             type_: config.type_.clone(),
             txid,
             name,
-            value: 0i64,
-            status: Status::Invalid,
+            value: filter,
+            status: Box::new(FilterEmpty::<Status>::new(Some(Status::Invalid))),
             is_changed: false,
             offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
             bit: config.clone().address.unwrap_or(PointConfAddress::empty()).bit,
@@ -75,45 +75,64 @@ impl ModbusParseBool {
     }
     ///
     ///
-    fn to_point(&self) -> Option<Point> {
-        if self.is_changed {
-            Some(Point::Bool(PointHlr::new(
-                self.txid,
-                &self.name,
-                Bool(self.get_bit(self.value, self.bit.unwrap() as usize)),
-                self.status,
-                Cot::Inf,
-                self.timestamp,
-            )))
-            // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
-        } else {
-            None
-        }
+    fn to_point(&self,value: Option<i64>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
+        todo!()
+        // let value = value.map_or(self.value.last(), |v| self.value.add(v)) ;
+        // let status = self.status.add(status);
+        // match (value, status) {
+        //     (None, None) => None,
+        //     (value, status) => {
+        //         let value = value.or_else(|| self.value.last())?;
+        //         Some(Point::Bool(PointHlr::new(
+        //             self.txid,
+        //             &self.name,
+        //             Bool(self.get_bit(value, self.bit.unwrap() as usize)),
+        //             status.or_else(|| self.status.last()).unwrap_or(Status::Ok),
+        //             Cot::Inf,
+        //             timestamp,
+        //         )))
+        //     }
+        // }
+
+        // if self.is_changed {
+        //     Some(Point::Bool(PointHlr::new(
+        //         self.txid,
+        //         &self.name,
+        //         Bool(self.get_bit(self.value, self.bit.unwrap() as usize)),
+        //         self.status,
+        //         Cot::Inf,
+        //         self.timestamp,
+        //     )))
+        //     // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
+        // } else {
+        //     None
+        // }
     }
     //
     //
-    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) {
-        let result = self.convert(
-            bytes,
-            self.offset.unwrap() as usize,
-            self.bit.unwrap() as usize,
-        );
-        match result {
-            Ok(new_val) => {
-                let status = Status::Ok;
-                let self_value = self.get_bit(self.value, self.bit.unwrap() as usize);
-                if new_val != self_value || self.status != status {
-                    self.value = self.change_bit(self.value, new_val, self.bit.unwrap() as usize);
-                    self.status = status;
-                    self.timestamp = timestamp;
-                    self.is_changed = true;
-                }
-            }
-            Err(e) => {
-                self.status = Status::Invalid;
-                log::warn!("{}.add_raw | convertion error: {:?}", self.id, e);
-            }
-        }
+    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
+        todo!()
+        // let result = self.convert(
+        //     bytes,
+        //     self.offset.unwrap() as usize,
+        //     self.bit.unwrap() as usize,
+        // );
+        // match result {
+        //     Ok(new_val) => {
+        //         let status = Status::Ok;
+        //         let self_value = self.get_bit(self.value, self.bit.unwrap() as usize);
+        //         if new_val != self_value || self.status != status {
+        //             self.value = self.change_bit(self.value, new_val, self.bit.unwrap() as usize);
+        //             self.status = status;
+        //             self.timestamp = timestamp;
+        //             self.is_changed = true;
+        //         }
+        //     }
+        //     Err(e) => {
+        //         self.status = Status::Invalid;
+        //         log::warn!("{}.add_raw | convertion error: {:?}", self.id, e);
+        //     }
+        // }
     }
     ///
     /// 
@@ -154,29 +173,12 @@ impl ParsePoint for ModbusParseBool {
     //
     //
     fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp);
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
+        self.add_raw(bytes, timestamp)
     }
     //
     //
     fn next_status(&mut self, status: Status) -> Option<Point> {
-        if self.status != status {
-            self.status = status;
-            self.timestamp = Utc::now();
-            self.is_changed = true;
-        }
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
-    }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        self.is_changed
+        self.to_point(None, status, Utc::now())
     }
     //
     //
@@ -191,26 +193,27 @@ impl ParsePoint for ModbusParseBool {
     //
     //
     fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
-        match point.try_as_bool() {
-            Ok(point) => {
-                let value = self.change_bit(self.value, point.value.0, self.bit.unwrap() as usize);
-                log::debug!("{}.write | converting '{}' into i16...", self.id, point.value);
-                match i16::try_from(value) {
-                    Ok(value) => {
-                        Ok(value.to_le_bytes().to_vec())
-                    }
-                    Err(err) => {
-                        let message = format!("{}.write | '{}' to i16 conversion error: {:#?} in the parse point: {:#?}", self.id, point.value, err, self.name);
-                        log::warn!("{}", message);
-                        Err(message)
-                    }
-                }
-            }
-            Err(_) => {
-                let message = format!("{}.write | Point of type 'Bool' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
-                log::warn!("{}", message);
-                Err(message)
-            }
-        }
+        todo!()
+        // match point.try_as_bool() {
+        //     Ok(point) => {
+        //         let value = self.change_bit(self.value, point.value.0, self.bit.unwrap() as usize);
+        //         log::debug!("{}.write | converting '{}' into i16...", self.id, point.value);
+        //         match i16::try_from(value) {
+        //             Ok(value) => {
+        //                 Ok(value.to_le_bytes().to_vec())
+        //             }
+        //             Err(err) => {
+        //                 let message = format!("{}.write | '{}' to i16 conversion error: {:#?} in the parse point: {:#?}", self.id, point.value, err, self.name);
+        //                 log::warn!("{}", message);
+        //                 Err(message)
+        //             }
+        //         }
+        //     }
+        //     Err(_) => {
+        //         let message = format!("{}.write | Point of type 'Bool' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
+        //         log::warn!("{}", message);
+        //         Err(message)
+        //     }
+        // }
     }
 }

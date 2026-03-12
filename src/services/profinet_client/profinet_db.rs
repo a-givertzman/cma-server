@@ -2,7 +2,7 @@ use std::{fs, io::Write};
 use chrono::Utc;
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use sal_core::error::Error;
+use sal_core::error::{Error, ErrorLimit};
 use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
 use crate::{
     conf::profinet_client_conf::profinet_db_conf::ProfinetDbConf,
@@ -20,13 +20,14 @@ use crate::{
 ///
 /// Represents PROFINET DB - a collection of the PROFINET addresses
 pub struct ProfinetDb {
-    dbg: String,
     // pub name: Name,
     // pub description: String,
     pub number: u32,
     pub offset: u32,
     pub size: u32,
     pub points: IndexMap<String, Box<dyn ParsePoint>>,
+    pub errors: ErrorLimit,
+    dbg: String,
 }
 //
 //
@@ -36,16 +37,17 @@ impl ProfinetDb {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [ProfinetDB]
-    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &ProfinetDbConf) -> Self {
-        let self_id = format!("{}/ProfinetDb({})", parent_id.into(), conf.name);
+    pub fn new(parent_id: impl Into<String>, txid: usize, conf: &ProfinetDbConf) -> Self {
+        let dbg = format!("{}/ProfinetDb({})", parent_id.into(), conf.name);
         Self {
-            dbg: self_id.clone(),
             // name: conf.name.clone(),
             // description: conf.description.clone(),
             number: conf.number as u32,
             offset: conf.offset as u32,
             size: conf.size as u32,
-            points: Self::configure_parse_points(&self_id, tx_id, conf),
+            points: Self::configure_parse_points(&dbg, txid, conf),
+            errors: ErrorLimit::new(3),
+            dbg,
         }
     }
     ///
@@ -116,48 +118,39 @@ impl ProfinetDb {
     ///     - returns only points with updated value or status
     pub fn read(&mut self, client: &S7Client, tx_send: &Sender<Point>) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "read");
-        match client.is_connected() {
-            Ok(is_connected) => {
-                if is_connected {
-                    log::trace!("{}.read | reading DB: {:?}, offset: {:?}, size: {:?}", self.dbg, self.number, self.offset, self.size);
-                    match client.read(self.number, self.offset, self.size) {
-                        Ok(bytes) => {
-                            log::trace!("{}.read | bytes: {:?}", self.dbg, bytes);
-                            let mut message = String::new();
-                            for (_, parse_point) in &mut self.points {
-                                if let Some(point) = parse_point.next(&bytes, Utc::now()) {
-                                    // debug!("{}.read | point: {:?}", self.id, point);
-                                    match tx_send.send(point) {
-                                        Ok(_) => {}
-                                        Err(err) => {
-                                            message = format!("{}.read | send error: {}", self.dbg, err);
-                                            log::warn!("{}", message);
-                                        }
-                                    }
+        if client.is_connected() {
+            log::trace!("{}.read | reading DB: {:?}, offset: {:?}, size: {:?}", self.dbg, self.number, self.offset, self.size);
+            match client.read(self.number, self.offset, self.size) {
+                Ok(bytes) => {
+                    log::trace!("{}.read | bytes: {:?}", self.dbg, bytes);
+                    let mut message = String::new();
+                    for (_, parse_point) in &mut self.points {
+                        if let Some(point) = parse_point.next(&bytes, Utc::now()) {
+                            // debug!("{}.read | point: {:?}", self.id, point);
+                            match tx_send.send(point) {
+                                Ok(_) => {}
+                                Err(err) => {
+                                    message = format!("{}.read | send error: {}", self.dbg, err);
+                                    log::warn!("{}", message);
                                 }
                             }
-                                match message.is_empty() {
-                                    true => Ok(()),
-                                    false => Err(error.err(message)),
-                                }
-                        }
-                        Err(err) => {
-                            let err = error.pass_with("read error", err);
-                            log::warn!("{}", err);
-                            Err(err)
                         }
                     }
-                } else {
-                    let err = error.err("read error: Is not connected");
+                    match message.is_empty() {
+                        true => Ok(()),
+                        false => Err(error.err(message)),
+                    }
+                }
+                Err(err) => {
+                    let err = error.pass_with("read error", err);
                     log::warn!("{}", err);
                     Err(err)
                 }
             }
-            Err(err) => {
-                let err = error.pass_with("read error", err);
-                log::warn!("{}", err);
-                Err(err)
-            }
+        } else {
+            let err = error.err("read error: Is not connected");
+            log::warn!("{}", err);
+            Err(err)
         }
     }
     ///
@@ -191,6 +184,12 @@ impl ProfinetDb {
                 match point {
                     Point::Bool(point) => {
                         // !!! Not implemented because before write byte of the bool bits, that byte must be read from device
+                        // !!! РЕШЕНИЕ: Протокол S7 (S7Comm) поддерживает прямую запись отдельных битов.
+                        // !!! Не нужно читать байт целиком. При формировании запроса в S7 payload для WriteVar,
+                        // !!! Нужно указать транспортный размер (Transport Size) = TS_ResBit (обычно 0x03), а не TS_ResByte.
+                        // !!! Тогда отправлять адрес (offset * 8 + bit) и всего 1 байт данных (где 1 бит значимый).
+                        // !!! Контроллер сам атомарно изменит нужный бит, не трогая соседние.
+                        // !!! Если S7Client поддерживает сырые запросы, посмотреть в сторону S7AreaDB + S7WLBit.
                         // let mut buf = [0; 16];
                         // let index = address.offset.unwrap() as usize;
                         // buf[index] = point.value.0 as u8;
@@ -224,29 +223,29 @@ impl ProfinetDb {
     }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &ProfinetDbConf) -> IndexMap<String, Box<dyn ParsePoint>> {
+    fn configure_parse_points(dbg: &str, txid: usize, conf: &ProfinetDbConf) -> IndexMap<String, Box<dyn ParsePoint>> {
         conf.points.iter().map(|point_conf| {
             match point_conf.type_ {
                 PointConfType::Bool => {
-                    (point_conf.name.clone(), Self::box_bool(tx_id, point_conf.name.clone(), point_conf))
+                    (point_conf.name.clone(), Self::box_bool(txid, point_conf.name.clone(), point_conf))
                 }
                 PointConfType::Int => {
-                    (point_conf.name.clone(), Self::box_int(tx_id, point_conf.name.clone(), point_conf))
+                    (point_conf.name.clone(), Self::box_int(txid, point_conf.name.clone(), point_conf))
                 }
                 PointConfType::Real => {
-                    (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
+                    (point_conf.name.clone(), Self::box_real(txid, point_conf.name.clone(), point_conf))
                 }
                 PointConfType::Double => {
-                    (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
+                    (point_conf.name.clone(), Self::box_real(txid, point_conf.name.clone(), point_conf))
                 }
-                _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for S7 Device", self_id, point_conf.type_)
+                _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for S7 Device", dbg, point_conf.type_)
             }
         }).collect()
     }
     ///
     ///
-    fn box_bool(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
-        Box::new(S7ParseBool::new(tx_id, name, config))
+    fn box_bool(txid: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
+        Box::new(S7ParseBool::new(txid, name, config))
     }
     ///
     ///
@@ -272,24 +271,20 @@ impl ProfinetDb {
     ///
     fn int_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = i64>> {
         match conf {
-            Some(conf) => {
-                Box::new(
-                    FilterThreshold::<2, i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
-                )
-            }
-            None => Box::new(FilterEmpty::<2, i64>::new(None)),
+            Some(conf) => Box::new(
+                FilterThreshold::<i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+            ),
+            None => Box::new(FilterEmpty::<i64>::new(None)),
         }
     }
     ///
     ///
     fn real_filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f32>> {
         match conf {
-            Some(conf) => {
-                Box::new(
-                    FilterThreshold::<2, f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
-                )
-            }
-            None => Box::new(FilterEmpty::<2, f32>::new(None)),
+            Some(conf) => Box::new(
+                FilterThreshold::<f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+            ),
+            None => Box::new(FilterEmpty::<f32>::new(None)),
         }
     }
     // ///

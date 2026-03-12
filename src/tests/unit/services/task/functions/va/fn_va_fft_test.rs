@@ -149,8 +149,7 @@ fn empty_filter() {
                     for (index, val) in buf.iter().take(fft_size / 2).skip(1).enumerate() {
                         match fft_filters.get_mut(index) {
                             Some((_freq_name, filter)) => {
-                                filter.add(val.abs() * fft_amp_factor);
-                                if let Some(filter_value) = filter.pop() {
+                                if let Some(filter_value) = filter.add(val.abs() * fft_amp_factor) {
                                     fft_scalar.push(filter_value);
                                 }
                             }
@@ -338,8 +337,7 @@ fn absolute_filter() {
                     for (index, val) in buf.iter().take(fft_size / 2).skip(1).enumerate() {
                         match fft_filters.get_mut(index) {
                             Some((_freq_name, filter)) => {
-                                filter.add(val.abs() * fft_amp_factor);
-                                if let Some(filter_value) = filter.pop() {
+                                if let Some(filter_value) = filter.add(val.abs() * fft_amp_factor) {
                                     fft_scalar.push(filter_value);
                                 }
                             }
@@ -426,10 +424,10 @@ fn filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f64>> {
     match conf {
         Some(conf) => {
             Box::new(
-                FilterThreshold::<2, f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                FilterThreshold::<f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
             )
         }
-        None => Box::new(FilterEmpty::<2, f64>::new(None)),
+        None => Box::new(FilterEmpty::<f64>::new(None)),
     }
 }
 ///

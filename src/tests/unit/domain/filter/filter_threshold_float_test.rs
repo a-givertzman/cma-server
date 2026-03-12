@@ -55,27 +55,25 @@ mod tests {
             (0.0, Some(0.0)),
         ];
         let threasold = 0.15;
-        let mut filter = FilterThreshold::<2, f32>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<f32>::new(None, threasold, 0.0);
         let mut prev = 0.0;
         for (value, target) in test_data {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        let mut filter = FilterThreshold::<2, f64>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 0.0);
         let mut prev = 0.0;
         for (value, target) in test_data.into_iter().map(|(value, target)| (value as f64, target.map(|t| t as f64))) {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
@@ -137,27 +135,25 @@ mod tests {
             (-1.0, Some(-1.0)),
         ];
         let threasold = 0.15;
-        let mut filter = FilterThreshold::<2, f32>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<f32>::new(None, threasold, 0.0);
         let mut prev = 0.0;
         for (value, target) in test_data {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        let mut filter = FilterThreshold::<2, f64>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 0.0);
         let mut prev = 0.0;
         for (value, target) in test_data.into_iter().map(|(value, target)| (value as f64, target.map(|t| t as f64))) {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
@@ -199,27 +195,25 @@ mod tests {
             (0.0, None),
         ];
         let threasold = 1.0;
-        let mut filter = FilterThreshold::<2, f32>::new(None, threasold, 1.5);
+        let mut filter = FilterThreshold::<f32>::new(None, threasold, 1.5);
         let mut prev = 0.0;
         for (value, target) in test_data {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        let mut filter = FilterThreshold::<2, f64>::new(None, threasold, 1.5);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 1.5);
         let mut prev = 0.0;
         for (value, target) in test_data.into_iter().map(|(value, target)| (value as f64, target.map(|t| t as f64))) {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
@@ -281,27 +275,25 @@ mod tests {
             (-1.0, Some(-1.0)),
         ];
         let threasold = 1.0;
-        let mut filter = FilterThreshold::<2, f32>::new(None, threasold, 1.5);
+        let mut filter = FilterThreshold::<f32>::new(None, threasold, 1.5);
         let mut prev = 0.0;
         for (value, target) in test_data {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }
-        let mut filter = FilterThreshold::<2, f64>::new(None, threasold, 1.5);
+        let mut filter = FilterThreshold::<f64>::new(None, threasold, 1.5);
         let mut prev = 0.0;
         for (value, target) in test_data.into_iter().map(|(value, target)| (value as f64, target.map(|t| t as f64))) {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    in: {}   |   out: {:?}   |   diff: {}", self_id, value, result, diff);
             assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
         }

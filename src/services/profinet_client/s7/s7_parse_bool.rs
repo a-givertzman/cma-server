@@ -19,7 +19,6 @@ pub struct S7ParseBool {
     // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,
-    pub timestamp: DateTime<Utc>,
     is_changed: bool,
 }
 impl S7ParseBool {
@@ -42,7 +41,6 @@ impl S7ParseBool {
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
-            timestamp: Utc::now(),
         }
     }
     //
@@ -67,7 +65,7 @@ impl S7ParseBool {
     }
     ///
     ///
-    fn to_point(&self) -> Option<Point> {
+    fn to_point(&self, timestamp: DateTime<Utc>) -> Option<Point> {
         if self.is_changed {
             Some(Point::Bool(PointHlr::new(
                 self.tx_id,
@@ -75,7 +73,7 @@ impl S7ParseBool {
                 Bool(self.value),
                 self.status,
                 Cot::Inf,
-                self.timestamp,
+                timestamp,
             )))
             // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
         } else {
@@ -96,7 +94,6 @@ impl S7ParseBool {
                 if new_val != self.value || self.status != status {
                     self.value = new_val;
                     self.status = status;
-                    self.timestamp = timestamp;
                     self.is_changed = true;
                 }
             }
@@ -113,7 +110,7 @@ impl ParsePoint for S7ParseBool {
     //
     fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
         self.add_raw(bytes, timestamp);
-        self.to_point().map(|point| {
+        self.to_point(timestamp).map(|point| {
             self.is_changed = false;
             point
         })
@@ -123,18 +120,12 @@ impl ParsePoint for S7ParseBool {
     fn next_status(&mut self, status: Status) -> Option<Point> {
         if self.status != status {
             self.status = status;
-            self.timestamp = Utc::now();
             self.is_changed = true;
         }
-        self.to_point().map(|point| {
+        self.to_point(Utc::now()).map(|point| {
             self.is_changed = false;
             point
         })
-    }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        self.is_changed
     }
     //
     //
