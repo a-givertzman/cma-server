@@ -9,11 +9,11 @@ use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::profinet_cl
 ///
 #[derive(Debug)]
 pub struct S7ParseReal {
-    pub txid: usize,
-    pub name: String,
-    pub value: Box<dyn Filter<Item = f32>>,
-    pub status: Box<dyn Filter<Item = Status>>,
-    pub offset: Option<u32>,
+    txid: usize,
+    name: String,
+    value: Box<dyn Filter<Item = f32>>,
+    status: Box<dyn Filter<Item = Status>>,
+    offset: Option<u32>,
     // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,

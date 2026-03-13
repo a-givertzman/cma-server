@@ -9,11 +9,11 @@ use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::profinet_cl
 ///
 #[derive(Debug)]
 pub struct S7ParseInt {
-    pub txid: usize,
-    pub name: String,
-    pub value: Box<dyn Filter<Item = i64>>,
-    pub status: Box<dyn Filter<Item = Status>>,
-    pub offset: Option<u32>,
+    txid: usize,
+    name: String,
+    value: Box<dyn Filter<Item = i64>>,
+    status: Box<dyn Filter<Item = Status>>,
+    offset: Option<u32>,
     // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,
@@ -179,8 +179,6 @@ mod s7_parse_int_test {
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
-        // f32 boundary values
-        let f320 = 0.0f32;
         // status helpers
         let ok = Status::Ok;
         let invalid = Status::Invalid;
@@ -377,7 +375,7 @@ mod s7_parse_int_test {
             &PointConf {
                 id: 0,
                 name: Name::new(&dbg, "S7ParseInt").join(),
-                type_: PointType::Real,
+                type_: PointType::Int,
                 history: Default::default(),
                 alarm: Default::default(),
                 address: Some(PointConfAddress {
@@ -404,22 +402,6 @@ mod s7_parse_int_test {
                         p.value,
                         target_value
                     );
-                    // if target_value.is_finite() {
-                    // } else if target_value.is_nan() {
-                    //     assert!(
-                    //         p.value.is_nan(),
-                    //         "{dbg} | step {step} | value result: {:?}, target: {:?}",
-                    //         p.value,
-                    //         target_value
-                    //     );
-                    // } else {
-                    //     assert!(
-                    //         p.value.is_infinite() == target_value.is_infinite(),
-                    //         "{dbg} | step {step} | value result: {:?}, target: {:?}",
-                    //         p.value,
-                    //         target_value
-                    //     );
-                    // }
                     assert!(
                         p.status == *target_status,
                         "{dbg} | step {step} | status result: {:?}, target: {:?}",
