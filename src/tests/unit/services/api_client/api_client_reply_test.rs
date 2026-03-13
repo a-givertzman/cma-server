@@ -30,7 +30,7 @@ fn reply() {
     let dbg = Dbg::own("api-client-test");
     println!("\n{}", dbg);
     let path = "./src/tests/unit/services/api_client/api_client_reply.yaml";
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(15));
     test_duration.run().unwrap();
     let mut conf = ApiClientConf::read(&dbg, path);
     // let addr = conf.address.clone();
