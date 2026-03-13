@@ -12,7 +12,7 @@
 //!         /App/MultiQueue: []
 //! ```
 use std::{
-    env, fmt::Debug, fs, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc},
+    env, fmt::Debug, fs, io::{BufReader, BufWriter, Write}, path::{Path, PathBuf}, sync::{Arc, atomic::{AtomicBool, Ordering}},
 };
 use chrono::Utc;
 use concat_string::concat_string;
@@ -104,28 +104,22 @@ impl CacheService {
         }
     }
     ///
-    /// Loads retained on the disk points to the self cache
-    fn load(dbg: &Dbg, name: &Name, cache: &FxDashMap<String, Point>) {
-        let path = Name::new("assets/cache/", name.join()).join().trim_start_matches('/').to_owned();
-        let path = Path::new(&path).join("cache.json");
-        match fs::OpenOptions::new().read(true).open(&path) {
-            Ok(f) => {
-                match serde_json::from_reader::<_, Vec<Point>>(f) {
-                    Ok(v) => {
-                        for point in v {
-                            cache.insert(point.dest(), point);
-                        }
-                        log::info!("{}.load | Retained cache loaded from: '{:?}'", dbg, path);
-                    }
-                    Err(err) => {
-                        log::error!("{}.load | Deserialize error: '{:?}'\n\tin file: {:?}", dbg, err, path);
-                    }
-                };
-            }
-            Err(err) => {
-                log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
-            }
+    /// Loads stored chache
+    fn load(dbg: &Dbg, name: &Name, cache: &FxDashMap<String, Point>) -> Result<(), Error> {
+        let error = Error::new(dbg, "write");
+        let dir = Name::new("assets/cache/", name.join()).join().trim_start_matches('/').to_owned();
+        let path = Path::new(&dir).join("cache.json");
+        let f = fs::OpenOptions::new().read(true).open(&path)
+            .map_err(|err| error.pass_with(format!("Can't open file '{:?}'", path), err.to_string()))?;
+        let rdr = BufReader::new(f);
+        let points: Vec<Point> = serde_json::from_reader(rdr)
+            .map_err(|err| error.pass_with(format!("Can't read file '{:?}'", path), err.to_string()))?;
+        let len = points.len();
+        for point in points {
+            cache.insert(point.dest(), point);
         }
+        log::info!("{}.load | Cache loaded ({} points) from: '{:?}'", dbg, len, path);
+        Ok(())
     }
     ///
     /// Writes array of the points to the json file:
@@ -139,23 +133,19 @@ impl CacheService {
     fn write<S: Serialize>(dbg: &Dbg, name: &Name, points: Vec<S>) -> Result<(), Error> {
         let error = Error::new(dbg, "write");
         match Self::create_dir(dbg, Name::new("assets/cache/", name.join()).join().trim_start_matches('/')) {
-            Ok(path) => {
-                let path = path.join("cache.json");
-                let path_tmp = path.join("cache.tmp");
-                let mut cache = String::new();
-                cache.push('[');
-                let content: String = points.into_iter().fold(String::new(), |mut points, point| {
-                    points.push_str(concat_string!("\n", json!(point).to_string(), ",").as_str());
-                    points
-                }).trim_end_matches(',').to_owned();
-                cache.push_str(content.as_str());
-                cache.push_str("\n]");
-                let mut f = fs::OpenOptions::new().truncate(true) .create(true).write(true).open(&path_tmp)
+            Ok(dir) => {
+                let path = dir.join("cache.json");
+                let path_tmp = dir.join(format!("cache.tmp-{}",  std::process::id()));
+                let f = fs::OpenOptions::new().truncate(true) .create(true).write(true).open(&path_tmp)
                     .map_err(|err| error.pass_with(format!("Can't open file '{:?}'", path_tmp), err.to_string()))?;
-                f.write_all(cache.as_bytes())
+                let mut writer = BufWriter::new(f);
+                serde_json::to_writer(&mut writer, &points)
                     .map_err(|err| error.pass_with(format!("Can't write file '{:?}'", path_tmp), err.to_string()))?;
-                f.sync_all()
+                writer.flush()
                     .map_err(|err| error.pass_with(format!("Can't flush file '{:?}'", path_tmp), err.to_string()))?;
+                writer.get_ref().sync_all()
+                    .map_err(|err| error.pass_with(format!("Can't sync_all file '{:?}'", path_tmp), err.to_string()))?;
+                drop(writer);   // Закрываем файл
                 fs::rename(&path_tmp, &path)
                     .map_err(|err| error.pass_with(format!("Can't rename temp cache '{:?}' into actual '{:?}'", path_tmp, path), err.to_string()))?;
                 log::debug!("{}.write | Cache stored in: {:?}", dbg, path);
@@ -336,7 +326,9 @@ impl Service for CacheService {
             let initial_status = Status::Invalid;
             let retain_status = Status::Invalid;
             Self::initial(&dbg, tx_id, &cache, &point_configs, initial_status);
-            Self::load(&dbg, &self_name, &cache);
+            if let Err(err) = Self::load(&dbg, &self_name, &cache) {
+                log::warn!("{}.run | Error: {:?}", dbg, err);
+            }
             'main: loop {
                 match rx_recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
@@ -347,7 +339,7 @@ impl Service for CacheService {
                     }
                     Err(err) => {
                         match err {
-                            RecvTimeoutError::Timeout => if dely_store.stored() {
+                            RecvTimeoutError::Timeout => if !dely_store.stored() {
                                 if dely_store.exceeded() && Self::store(&dbg, &self_name, Self::sorted(&cache), retain_status).is_ok() {
                                     dely_store.set_stored();
                                 }
