@@ -51,7 +51,8 @@ fn format_sql() {
     let self_name = Name::new("", dbg);
     let tx_id = PointTxId::from_str(&dbg);
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(30));
+    let duration_limit = Duration::from_secs(60);
+    let test_duration = TestDuration::new(dbg, duration_limit);
     test_duration.run().unwrap();
     let test_data = [
         // sampl_freq   fft_size    ffts    threshold   target_ffts   target freqs                                            target formated
@@ -170,7 +171,7 @@ fn format_sql() {
 
                     // Receiving FnVaFft results
                     let time = Instant::now();
-                    while receiver.received().len() < fft_scalar.len() {
+                    while receiver.received().len() < fft_scalar.len() && time.elapsed() < (duration_limit / 6) {
                         thread::sleep(Duration::from_millis(3));
                     }
                     let received = receiver.drain(0..fft_scalar.len());

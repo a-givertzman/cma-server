@@ -15,7 +15,9 @@ impl ToF64 for isize { fn to_f64(self) -> f64 { self as f64 } }
 impl ToF64 for f32 { fn to_f64(self) -> f64 { self as f64 } }
 impl ToF64 for f64 { fn to_f64(self) -> f64 { self } }
 ///
-/// Фильтром значимых изменений с накоплением ошибки
+/// Фильтром значимых изменений 
+/// - с абсолютной зоной нечувствительности, если `factor` не указан (`factor == 0.0`)
+/// - с накоплением ошибки, если `factor` указан (`factor > 0.0`)
 #[derive(Debug, Clone)]
 pub struct FilterThreshold<T> {
     last: Option<T>,
@@ -27,15 +29,14 @@ pub struct FilterThreshold<T> {
 // 
 impl<T: Copy> FilterThreshold<T> {
     ///
-    /// Creates new FilterThreshold<T>
-    /// - `N` - size of the Filter bufer,
+    /// Returns [FilterThreshold<T>] new instance
     /// - `T` - Type of the Filter Item
+    /// - `initial` - To be stored as start value
+    /// - `threshold` - Absolute threshold
+    /// - `factor` - Integrated threshold, dipends on the cycle frequence
     pub fn new(initial: Option<T>, threshold: f64, factor: f64) -> Self {
-        let last = initial.map(|initial| {
-            initial
-        });
         Self {
-            last,
+            last: initial,
             threshold, 
             factor,
             acc: 0.0,
@@ -49,27 +50,23 @@ impl<T: Copy + ToF64 + std::fmt::Debug> Filter for FilterThreshold<T> {
     //
     //
     fn add(&mut self, value: Self::Item) -> Option<Self::Item> {
-        match self.last {
-            Some(last) => {
-                let delta = last.to_f64() - value.to_f64();
-                let delta = if self.factor > 0.0 {
-                    self.acc += delta * self.factor;
-                    self.acc.abs()
-                } else {
-                    delta.abs()
-                };
-                if delta > self.threshold {
-                    self.last = Some(value);
-                    self.acc = 0.0;
-                    Some(value)
-                } else {
-                    None
-                }
-            }
-            None => {
-                self.last = Some(value);
-                Some(value)
-            }
+        let Some(last) = self.last else {
+            self.last = Some(value);
+            return Some(value);
+        };
+        let delta = last.to_f64() - value.to_f64();
+        let diff = if self.factor > 0.0 {
+            self.acc += delta * self.factor;
+            self.acc.abs()
+        } else {
+            delta.abs()
+        };
+        if diff > self.threshold {
+            self.last = Some(value);
+            self.acc = 0.0;
+            Some(value)
+        } else {
+            None
         }
     }
     //
