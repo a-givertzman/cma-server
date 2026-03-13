@@ -216,26 +216,25 @@ impl JdsRequest {
         log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}'...");
         match services.get(cache_service) {
             Some(cache) => {
+                log::debug!("{dbg}.yield_gi | Cache service: '{}'", cache.name());
                 match cache.gi(receiver_name, points).wait() {
                     Ok(gi) => {
-                        match shared.req_reply_send.pop() {
-                            Some(send) => {
-                                shared.req_reply_send.push(send.clone());
-                                let dbg_clone = dbg.to_owned();
-                                // TODO: Store Handles, join on wait
-                                let _ = scheduler.spawn(move || {
-                                    for point in gi {
-                                        if let Err(err) =  send.send(point) {
-                                            log::error!("{}.yield_gi | Send error: {:#?}", dbg_clone, err);
-                                        }
-                                    }
-                                    Ok(())
-                                });
+                        log::trace!("{dbg}.yield_gi | Cache service gi points: {:#?}", gi);
+                        let send = shared.req_reply_send.clone();
+                        // TODO: Store Handles, join on exit
+                        let dbg = dbg.to_owned().clone();
+                        let receiver_name = receiver_name.to_string();
+                        let _ = scheduler.spawn(move || {
+                            let gi_len = gi.len();
+                            for point in gi {
+                                if let Err(err) =  send.send(point.clone()) {
+                                    log::error!("{}.yield_gi | Send error: {:#?}", dbg, err);
+                                }
+                                // log::debug!("{}.yield_gi |      Sent '{}': {:?} {:?}", dbg, point.name(), point.status(), point.value());
                             }
-                            None => {
-                                log::error!("{}.yield_gi | Cant get req_reply_send", dbg)
-                            }
-                        }
+                            log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - done ({} points)", gi_len);
+                            Ok(())
+                        });
                     }
                     Err(err) => log::warn!("{}.yield_gi | Future closed: {:?}", dbg, err),
                 }
@@ -243,7 +242,7 @@ impl JdsRequest {
             }
             None => log::warn!("{}.yield_gi | Cache service '{}' - not found", dbg, cache_service),
         }
-        log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - done");
+        log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - sheduled");
         // match cache.slock() {}
     }
     ///

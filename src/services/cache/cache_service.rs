@@ -40,7 +40,7 @@ pub struct CacheService {
     name: Name,
     conf: CacheServiceConf,
     services: Arc<Services>,
-    cache: FxDashMap<String, Point>,
+    cache: Arc<FxDashMap<String, Point>>,
     scheduler: Scheduler,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
@@ -56,7 +56,7 @@ impl CacheService {
             name: conf.name.clone(),
             conf: conf.clone(),
             services,
-            cache: DashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
+            cache: Arc::new(FxDashMap::default()),
             scheduler,
             handles: Handles::new(&dbg),
             dbg,
@@ -395,9 +395,10 @@ impl Service for CacheService {
     //
     fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Future<Vec<Point>> {
         let dbg = self.dbg.clone();
-        log::info!("{}.gi | Gi requested from: {}", dbg, receiver_name);
+        log::info!("{}.gi | Gi from '{}' requested {} points", dbg, receiver_name, if points.is_empty() {"all".to_string()} else {points.len().to_string()});
+        log::trace!("{}.gi | Gi from '{}' points: {:#?}", dbg, receiver_name, points);
         let (result, sink) = Future::new();
-        let cache = Arc::new(self.cache.clone());
+        let cache = self.cache.clone();
         let points = points.to_owned();
         let handle = self.scheduler.spawn(move || {
             let mut gi = vec![];
@@ -420,10 +421,10 @@ impl Service for CacheService {
             sink.add(gi);
             Ok(())
         });
-        if let Err(err) = handle {
-            log::error!("{}.gi | Error schedule task: {:?}", self.dbg, err);
+        match handle {
+            Err(err) => log::error!("{}.gi | Can't schedule task: {:?}", self.dbg, err),
+            Ok(handle) => self.handles.push(handle),
         }
-        // self.handle.push(handle);
         result
     }
     //

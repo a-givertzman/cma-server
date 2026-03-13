@@ -3,7 +3,7 @@ use std::{
 };
 use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
+use sal_sync::{services::{Service, Services, SubscriptionCriteria, entity::{Cot, Name, Object, Point}}, sync::{Handles, Owner, channel::{self, Receiver, RecvTimeoutError, Sender}}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     domain::{
@@ -55,7 +55,7 @@ pub struct Shared {
     pub jds_state: JdsState,
     pub auth: TcpServerAuth,
     pub cache: Option<String>,
-    pub req_reply_send: Vec<Sender<Point>>,
+    pub req_reply_send: Sender<Point>,
 }
 
 ///
@@ -116,6 +116,7 @@ impl Service for JdsConnection {
         let self_conf_send_to = conf.send_to.clone();
         let receiver_name = Name::new(&self_name, &self.connection_id).join();
         let subscribe = self_conf_send_to.service();
+        let (req_reply_send, _) = channel::unbounded();
         let shared_options: Arc<RwLock<Shared>> = Arc::new(RwLock::new(Shared {
                 subscribe: subscribe.clone(), 
                 subscribe_receiver: receiver_name.clone(), 
@@ -126,7 +127,7 @@ impl Service for JdsConnection {
                 auth: conf.auth.clone(),
                 // connection_id: self.connection_id.clone(),
                 cache: conf.cache.clone(),
-                req_reply_send: vec![],
+                req_reply_send,
         }));
         let rx_max_length = conf.rx_max_len;
         let action_recv = self.action_recv.take().unwrap();
@@ -162,7 +163,7 @@ impl Service for JdsConnection {
             });
             log::debug!("{}.run | subscribe: {:?}", dbg, subscribe);
             let (req_reply_send, recv) = services.subscribe(&subscribe, &receiver_name, &points);
-            shared_options.write().req_reply_send = vec![req_reply_send.clone()];
+            shared_options.write().req_reply_send = req_reply_send.clone();
             let buffered = rx_max_length > 0;
             let tcp_read_alive = TcpReadAlive::new(
                 &dbg,
