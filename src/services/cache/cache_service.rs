@@ -12,12 +12,10 @@
 //!         /App/MultiQueue: []
 //! ```
 use std::{
-    env, fmt::Debug, fs, hash::BuildHasherDefault, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc},
+    env, fmt::Debug, fs, io::Write, path::{Path, PathBuf}, sync::{atomic::{AtomicBool, Ordering}, Arc},
 };
 use chrono::Utc;
 use concat_string::concat_string;
-use dashmap::DashMap;
-use hashers::fx_hash::FxHasher;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{
@@ -138,11 +136,12 @@ impl CacheService {
     ///     ...
     /// ]
     /// ```
-    fn write<S: Serialize>(dbg: &Dbg, name: &Name, points: Vec<S>) -> Result<(), String> {
+    fn write<S: Serialize>(dbg: &Dbg, name: &Name, points: Vec<S>) -> Result<(), Error> {
+        let error = Error::new(dbg, "write");
         match Self::create_dir(dbg, Name::new("assets/cache/", name.join()).join().trim_start_matches('/')) {
             Ok(path) => {
                 let path = path.join("cache.json");
-                let mut message = String::new();
+                let path_tmp = path.join("cache.tmp");
                 let mut cache = String::new();
                 cache.push('[');
                 let content: String = points.into_iter().fold(String::new(), |mut points, point| {
@@ -151,35 +150,26 @@ impl CacheService {
                 }).trim_end_matches(',').to_owned();
                 cache.push_str(content.as_str());
                 cache.push_str("\n]");
-                match fs::OpenOptions::new().truncate(true) .create(true).write(true).open(&path) {
-                    Ok(mut f) => {
-                        match f.write_all(cache.as_bytes()) {
-                            Ok(_) => {
-                                log::debug!("{}.write | Cache stored in: {:?}", dbg, path);
-                            }
-                            Err(err) => {
-                                message = format!("{}.write | Error writing to file: '{:?}'\n\terror: {:?}", dbg, path, err);
-                                log::error!("{}", message);
-                            }
-                        };
-                        if message.is_empty() {Ok(())} else {Err(message)}
-                    }
-                    Err(err) => {
-                        let message = format!("{}.write | Error open file: '{:?}'\n\terror: {:?}", dbg, path, err);
-                        log::error!("{}", message);
-                        Err(message)
-                    }
-                }
+                let mut f = fs::OpenOptions::new().truncate(true) .create(true).write(true).open(&path_tmp)
+                    .map_err(|err| error.pass_with(format!("Can't open file '{:?}'", path_tmp), err.to_string()))?;
+                f.write_all(cache.as_bytes())
+                    .map_err(|err| error.pass_with(format!("Can't write file '{:?}'", path_tmp), err.to_string()))?;
+                f.sync_all()
+                    .map_err(|err| error.pass_with(format!("Can't flush file '{:?}'", path_tmp), err.to_string()))?;
+                fs::rename(&path_tmp, &path)
+                    .map_err(|err| error.pass_with(format!("Can't rename temp cache '{:?}' into actual '{:?}'", path_tmp, path), err.to_string()))?;
+                log::debug!("{}.write | Cache stored in: {:?}", dbg, path);
+                Ok(())
             }
             Err(err) => {
                 log::error!("{:#?}", err);
-                Err(err)
+                Err(error.pass(err))
             }
         }
     }
     ///
     /// Stores self.cache on the disk
-    fn store(dbg: &Dbg, name: &Name, points: FxIndexMap<String, Point>, status: Status) -> Result<(), String> {
+    fn store(dbg: &Dbg, name: &Name, points: FxIndexMap<String, Point>, status: Status) -> Result<(), Error> {
         let points: Vec<Point> = points.into_iter().map(|(_dest, point)| {
             match point.clone() {
                 Point::Bool(mut point) => {
@@ -357,7 +347,11 @@ impl Service for CacheService {
                     }
                     Err(err) => {
                         match err {
-                            RecvTimeoutError::Timeout => {}
+                            RecvTimeoutError::Timeout => if dely_store.stored() {
+                                if dely_store.exceeded() && Self::store(&dbg, &self_name, Self::sorted(&cache), retain_status).is_ok() {
+                                    dely_store.set_stored();
+                                }
+                            }
                             _ => {
                                 log::error!("{}.run | Error receiving from queue: {:?}", dbg, err);
                                 break 'main;
@@ -443,3 +437,56 @@ impl Service for CacheService {
         self.exit.store(true, Ordering::SeqCst);
     }
 }
+//
+// TODO: Критические проблемы и уязвимости
+// 
+// ## Критические ошибки логики и потери данных
+// 
+// - Игнорирование таймера сохранения при отсутствии новых событий: 
+//     В методе `run` проверка `dely_store.exceeded()` находится строго внутри ветки `Ok(point)`.
+//     Если новые события (points) перестают поступать, цикл будет бесконечно уходить в `RecvTimeoutError::Timeout` и игнорировать таймер.
+//     Накопленные изменения **не будут сохранены** на диск до тех пор, пока не придет хотя бы одно новое событие или не поступит сигнал завершения.
+// 
+// - Потеря данных при сбое (Неатомарная запись):
+//     В функции `write` файл открывается с флагом `.truncate(true)`.
+//     Это мгновенно очищает существующий файл `cache.json`.
+//     Если в процессе записи произойдет сбой (кончится место на диске, отключится питание, процесс упадет с паникой),
+//     старый кэш будет уничтожен, а новый не дописан. Файл останется пустым или поврежденным.
+// 
+// - Исчерпание памяти (OOM) и чудовищные аллокации: 
+//     Ручная сборка JSON-массива через `points.into_iter().fold(String::new(), ...)` — это крайне опасный паттерн.
+//     Для каждой точки создается временная строка, которая затем склеивается в одну гигантскую строку `cache` в оперативной памяти.
+//     Если кэш разрастется до сотен тысяч точек, сервис упрется в лимиты памяти и упадет.
+// 
+// ## Проблемы производительности
+// 
+// - Блокирующий I/O в потоке планировщика:
+//     Методы `write` и `load` используют синхронные вызовы `std::fs`.
+//     Судя по наличию `scheduler.spawn` и каналов, вы работаете в асинхронном контексте или пуле потоков.
+//     Чтение и особенно запись больших объемов данных на диск заблокирует текущий поток ОС.
+//     Это может привести к "голоданию" пула потоков (thread pool starvation) и отказу всего приложения.
+// 
+// - Глобальные блокировки DashMap:
+//     В методе `gi` вызов `cache.iter().map(...).collect()` блокирует все шарды `DashMap` на время итерации и глубокого клонирования каждой точки.
+//     При активной записи из других потоков это создаст бутылочное горлышко и сильную деградацию производительности.
+// 
+// - Неэффективная ручная сериализация:
+//     Использование макроса `concat_string!` вместе с `json!(point).to_string()` внутри цикла создает огромный оверхед.
+//     Rust и `serde` умеют делать это "из коробки" гораздо быстрее, не создавая промежуточных аллокаций.
+// 
+// ## Уязвимости и стабильность
+// 
+// - Уязвимость Path Traversal: 
+//     Построение путей вида `Name::new("assets/cache/", name.join())` без строгой валидации содержимого `name`.
+//     Если `name.join()` придет извне и будет содержать символы вроде `../../../`,
+//     сервис может прочитать или перезаписать критичные файлы за пределами рабочей директории.
+// 
+// - Паники вместо мягкой деградации:
+//     В методе `subscriptions` обильно используется `panic!`.
+//     В микросервисной архитектуре неверная конфигурация одной подписки не должна "убивать" весь процесс без возможности
+//     обработать ошибку на уровне выше (если только это не строгая задумка при запуске, но в Rust предпочтительнее возвращать `Result`).
+// 
+// - Состояние гонки (Race Condition) при выходе:
+//     Переменная `exit` проверяется в конце цикла. Если очередь `rx_recv` забита сообщениями,
+//     цикл может долго не доходить до проверки `exit.load`, из-за чего сервис будет игнорировать команду на плавное завершение (graceful shutdown).
+// 
