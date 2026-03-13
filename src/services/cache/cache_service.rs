@@ -25,9 +25,7 @@ use sal_sync::{
 use serde::Serialize;
 use serde_json::json;
 use crate::{
-    services::CacheServiceConf,
-    domain::{constants::constants::RECV_TIMEOUT, FxDashMap},
-    services::cache::delay_store::DelyStore
+    domain::{FxDashMap, Sender, constants::constants::RECV_TIMEOUT}, services::{CacheServiceConf, cache::delay_store::DelyStore}
 };
 ///
 /// CacheService service
@@ -106,17 +104,45 @@ impl CacheService {
     ///
     /// Loads stored chache
     fn load(dbg: &Dbg, name: &Name, cache: &FxDashMap<String, Point>) -> Result<(), Error> {
-        let error = Error::new(dbg, "write");
+        let error = Error::new(dbg, "load");
         let dir = Name::new("assets/cache/", name.join()).join().trim_start_matches('/').to_owned();
         let path = Path::new(&dir).join("cache.json");
+        if !path.is_file() {
+            log::info!("{}.load | No cache file found at '{:?}'. Starting with empty cache.", dbg, path);
+            return Ok(());
+        }
         let f = fs::OpenOptions::new().read(true).open(&path)
             .map_err(|err| error.pass_with(format!("Can't open file '{:?}'", path), err.to_string()))?;
         let rdr = BufReader::new(f);
-        let points: Vec<Point> = serde_json::from_reader(rdr)
-            .map_err(|err| error.pass_with(format!("Can't read file '{:?}'", path), err.to_string()))?;
+        let points: Vec<Point> = match serde_json::from_reader(rdr) {
+            Ok(points) => points,
+            Err(err) => {
+                log::error!("{}", error.pass_with(format!("Cache file corrupted '{:?}'. Starting with empty cache", path), err.to_string()));
+                return Ok(())
+            }
+        };
         let len = points.len();
         for point in points {
             cache.insert(point.dest(), point);
+        }
+        let dir = fs::read_dir(&dir)
+            .map_err(|err| error.pass_with(format!("Can't read dir '{:?}'", dir), err.to_string()))?;
+        for entry in dir {
+            match entry {
+                Ok(entry) => {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(name) = path.file_name().and_then(|name| name.to_str()) {
+                            if name.starts_with("cache.tmp") {
+                                if let Err(_) = fs::remove_file(&path) {
+                                    log::info!("{}.load | Posible crashed file in the cache dir: '{:?}'", dbg, path);
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => log::info!("{}.load | Posible crashed file in the cache dir: '{:?}'", dbg, entry),
+            }
         }
         log::info!("{}.load | Cache loaded ({} points) from: '{:?}'", dbg, len, path);
         Ok(())
@@ -135,7 +161,7 @@ impl CacheService {
         match Self::create_dir(dbg, Name::new("assets/cache/", name.join()).join().trim_start_matches('/')) {
             Ok(dir) => {
                 let path = dir.join("cache.json");
-                let path_tmp = dir.join(format!("cache.tmp-{}",  std::process::id()));
+                let path_tmp = dir.join(format!("cache.tmp-{:?}", std::thread::current().id()));
                 let f = fs::OpenOptions::new().truncate(true) .create(true).write(true).open(&path_tmp)
                     .map_err(|err| error.pass_with(format!("Can't open file '{:?}'", path_tmp), err.to_string()))?;
                 let mut writer = BufWriter::new(f);
@@ -148,6 +174,10 @@ impl CacheService {
                 drop(writer);   // Закрываем файл
                 fs::rename(&path_tmp, &path)
                     .map_err(|err| error.pass_with(format!("Can't rename temp cache '{:?}' into actual '{:?}'", path_tmp, path), err.to_string()))?;
+                let dir_f = fs::File::open(&dir)
+                    .map_err(|err| error.pass_with(format!("Can't sync cache dir '{:?}'", dir), err.to_string()))?;
+                dir_f.sync_all()
+                    .map_err(|err| error.pass_with(format!("Can't sync cache dir '{:?}'", dir), err.to_string()))?;
                 log::debug!("{}.write | Cache stored in: {:?}", dbg, path);
                 Ok(())
             }
@@ -379,32 +409,40 @@ impl Service for CacheService {
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria]) -> Future<Vec<Point>> {
+    fn gi(&self, receiver_name: &str, points: &[SubscriptionCriteria], send: Sender<Point>) -> Future<Result<(), Error>> {
         let dbg = self.dbg.clone();
         log::info!("{}.gi | Gi from '{}' requested {} points", dbg, receiver_name, if points.is_empty() {"all".to_string()} else {points.len().to_string()});
         log::trace!("{}.gi | Gi from '{}' points: {:#?}", dbg, receiver_name, points);
         let (result, sink) = Future::new();
         let cache = self.cache.clone();
         let points = points.to_owned();
+        let receiver_name = receiver_name.to_string();
         let handle = self.scheduler.spawn(move || {
-            let mut gi = vec![];
             if points.is_empty() {
                 for point in cache.iter().map(|r| r.value().clone()) {
-                    gi.push(point.clone());
+                    if let Err(err) = send.send(point) {
+                        log::error!("{dbg}.gi | Cant send GI for '{receiver_name}', channel is closed");
+                        sink.add(Err(Error::new(&dbg, "gi").pass(err.to_string())));
+                        return Ok(());
+                    }
                 }
             } else {
                 for point in points {
                     match cache.get(&point.destination()) {
                         Some(point) => {
-                            gi.push(point.clone())
+                            if let Err(err) = send.send(point.clone()) {
+                                log::error!("{dbg}.gi | Cant send GI for '{receiver_name}', channel is closed");
+                                sink.add(Err(Error::new(&dbg, "gi").pass(err.to_string())));
+                                return Ok(());
+                            }
                         }
                         None => {
-                            log::error!("{}.gi | Error, requested point '{}' - not found", dbg, point.destination());
+                            log::warn!("{dbg}.gi | Requested point '{}' - not found", point.destination());
                         }
                     }
                 }
             }
-            sink.add(gi);
+            sink.add(Ok(()));
             Ok(())
         });
         match handle {

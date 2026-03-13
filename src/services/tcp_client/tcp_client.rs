@@ -225,7 +225,7 @@ impl Service for TcpClient {
     }
     //
     //
-    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria]) -> Future<Vec<Point>> {
+    fn gi(&self, receiver_name: &str, points: &[sal_sync::services::SubscriptionCriteria], send: Sender<Point>) -> Future<Result<(), Error>> {
         let _ = receiver_name;
         let _ = points;
         std::panic!("{}.gi | Does not supported", self.dbg)

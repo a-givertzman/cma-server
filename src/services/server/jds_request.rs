@@ -216,34 +216,33 @@ impl JdsRequest {
         log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}'...");
         match services.get(cache_service) {
             Some(cache) => {
-                log::debug!("{dbg}.yield_gi | Cache service: '{}'", cache.name());
-                match cache.gi(receiver_name, points).wait() {
-                    Ok(gi) => {
-                        log::trace!("{dbg}.yield_gi | Cache service gi points: {:#?}", gi);
-                        let send = shared.req_reply_send.clone();
-                        // TODO: Store Handles, join on exit
-                        let dbg = dbg.to_owned().clone();
-                        let receiver_name = receiver_name.to_string();
-                        let _ = scheduler.spawn(move || {
-                            let gi_len = gi.len();
-                            for point in gi {
-                                if let Err(err) =  send.send(point.clone()) {
-                                    log::error!("{}.yield_gi | Send error: {:#?}", dbg, err);
-                                }
-                                // log::debug!("{}.yield_gi |      Sent '{}': {:?} {:?}", dbg, point.name(), point.status(), point.value());
-                            }
-                            log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - done ({} points)", gi_len);
-                            Ok(())
-                        });
+                // log::debug!("{dbg}.yield_gi | Cache service: '{}'", cache.name());
+                let send = shared.req_reply_send.clone();
+                match cache.gi(receiver_name, points, send).wait().flatten() {
+                    Ok(_) => {
+                        log::debug!("{dbg}.yield_gi | Sending GI for '{receiver_name}' - sheduled");
+                        // log::trace!("{dbg}.yield_gi | Cache service gi points: {:#?}", gi);
+                        // // TODO: Store Handles, join on exit
+                        // let dbg = dbg.to_owned().clone();
+                        // let receiver_name = receiver_name.to_string();
+                        // let _ = scheduler.spawn(move || {
+                        //     let gi_len = gi.len();
+                        //     for point in gi {
+                        //         if let Err(err) =  send.send(point.clone()) {
+                        //             log::error!("{}.yield_gi | Send error: {:#?}", dbg, err);
+                        //         }
+                        //         // log::debug!("{}.yield_gi |      Sent '{}': {:?} {:?}", dbg, point.name(), point.status(), point.value());
+                        //     }
+                        //     log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - done ({} points)", gi_len);
+                        //     Ok(())
+                        // });
                     }
-                    Err(err) => log::warn!("{}.yield_gi | Future closed: {:?}", dbg, err),
+                    Err(err) => log::warn!("{}.yield_gi | Can't shedule GI for '{receiver_name}': {:?}", dbg, err),
                 }
 
             }
-            None => log::warn!("{}.yield_gi | Cache service '{}' - not found", dbg, cache_service),
+            None => log::warn!("{}.yield_gi | Can't shedule GI for '{receiver_name}', cache service '{}' - not found", dbg, cache_service),
         }
-        log::debug!("{dbg}.yield_gi | Sending GI to '{receiver_name}' - sheduled");
-        // match cache.slock() {}
     }
     ///
     /// Creates list of SubscriptionCriteria contains all variations of given [point_name] and Cot's
