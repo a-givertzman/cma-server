@@ -137,13 +137,13 @@ impl ProfinetClient {
                                         log::trace!("{dbg}.read | DB '{db_name}' - reading - ok");
                                     }
                                     Err(err) => {
+                                        _ = db.errors.add();
                                         if log::max_level() >= log::Level::Debug {
                                             log::warn!("{dbg}.read | DB '{db_name}' - reading - error: {:?}", err);
                                         }
                                         if !client.is_connected() {
                                             break 'read;
                                         }
-                                        _ = db.errors.add();
                                     }
                                 }
                                 if exit.load(Ordering::Acquire) {
