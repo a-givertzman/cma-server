@@ -168,9 +168,9 @@ impl ProfinetClient {
                         if log::max_level() >= log::Level::Trace {
                             log::warn!("{}.read | Connection error: {:?}", dbg, err);
                         }
-                        std::thread::sleep(conf.reconnect_cycle);
                     }
                 }
+                std::thread::sleep(conf.reconnect_cycle);
             }
             connection_notify.add(Status::Invalid, dbg.clone());
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
@@ -222,8 +222,7 @@ impl ProfinetClient {
             let (_, rx_recv) = services.subscribe(&conf.subscribe, &self_name.join(), &points);
             let mut client = S7Client::new(dbg.clone(), conf.ip.clone());
             'main: while !exit.load(Ordering::Acquire) {
-                let mut errors_limit = ErrorLimit::new(3);
-                thread::sleep(Duration::from_millis(100));    // Подождем по read подключит client
+                thread::sleep(Duration::from_millis(100));    // Подождем по read подключит client, одновременное подключение часто реджектится
                 match client.connect() {
                     Ok(_) => {
                         log_connected.add(true, format!("{}.write | Connection established", dbg));
@@ -296,9 +295,9 @@ impl ProfinetClient {
                         log::trace!("{}.write | Connection error: {:?}", dbg, err);
                         connection_notify.add(Status::Invalid, dbg.clone());
                         log_connected.add(false, format!("{dbg}.write | Connection lost. {:?}", err));
-                        std::thread::sleep(conf.reconnect_cycle);
                     }
                 }
+                std::thread::sleep(conf.reconnect_cycle);
             }
             connection_notify.add(Status::Invalid, dbg.clone());
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
@@ -405,9 +404,8 @@ impl Service for ProfinetClient {
     //
     //
     fn run(&self) -> Result<(), Error> {
-        let tx_send = self.services.get_link(&self.conf.send_to).unwrap_or_else(|err| {
-            panic!("{}.run | services.get_link error: {:#?}", self.dbg, err);
-        });
+        let tx_send = self.services.get_link(&self.conf.send_to)
+            .map_err(|err| Error::new(&self.dbg, "run").pass_with(format!("services.get_link({})", self.conf.send_to), err))?;
         let connection_notify: ConnectionNotify = {
             let tx_send1 = tx_send.clone();
             let tx_send2 = tx_send.clone();
