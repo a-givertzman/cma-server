@@ -141,10 +141,10 @@ impl ProfinetClient {
                                         if log::max_level() >= log::Level::Debug {
                                             log::warn!("{dbg}.read | DB '{db_name}' - reading - error: {:?}", err);
                                         }
-                                        if !client.is_connected() {
-                                            break 'read;
-                                        }
                                     }
+                                }
+                                if !client.is_connected() {
+                                    break 'read;
                                 }
                                 if exit.load(Ordering::Acquire) {
                                     break 'main;
@@ -168,7 +168,7 @@ impl ProfinetClient {
                         if log::max_level() >= log::Level::Trace {
                             log::warn!("{}.read | Connection error: {:?}", dbg, err);
                         }
-                        thread::sleep(conf.reconnect_cycle);
+                        std::thread::sleep(conf.reconnect_cycle);
                     }
                 }
             }
@@ -240,7 +240,6 @@ impl ProfinetClient {
                                                 Some(db) => {
                                                     match db.write(&client, point.clone()) {
                                                         Ok(_) => {
-                                                            errors_limit.reset();
                                                             log::debug!("{}.write | ProfinetDb '{}' - writing point '{}'\t({:?}) - ok", dbg, db_name, point_name, point_value);
                                                             let reply = Self::reply_point(txid, point);
                                                             match tx_send.send(reply.clone()) {
@@ -253,25 +252,21 @@ impl ProfinetClient {
                                                         }
                                                         Err(err) => {
                                                             log::warn!("{}.write | ProfinetDb '{}' - write - error: {:?}", dbg, db_name, err);
-                                                            if errors_limit.add().is_err() {
-                                                                log::error!("{}.write | ProfinetDb '{}' - exceeded writing errors limit, trying to reconnect...", dbg, db_name);
-                                                                if let Err(err) = tx_send.send(Point::String(PointHlr::new(
-                                                                    txid,
-                                                                    &point_name,
-                                                                    format!("Write error: {}", err),
-                                                                    Status::Ok,
-                                                                    Cot::ActErr,
-                                                                    chrono::offset::Utc::now(),
-                                                                ))) {
-                                                                    log::error!("{}.write | Error sending to queue: {:?}", dbg, err);
-                                                                    break 'main;
-                                                                };
-                                                                if let Err(err) = client.close() {
-                                                                    log::error!("{}.write | {:?}", dbg, err);
-                                                                };
-                                                                break 'write;
-                                                            }
+                                                            if let Err(err) = tx_send.send(Point::String(PointHlr::new(
+                                                                txid,
+                                                                &point_name,
+                                                                format!("Write error: {}", err),
+                                                                Status::Ok,
+                                                                Cot::ActErr,
+                                                                chrono::offset::Utc::now(),
+                                                            ))) {
+                                                                log::error!("{}.write | Error sending to queue: {:?}", dbg, err);
+                                                                break 'main;
+                                                            };
                                                         }
+                                                    }
+                                                    if !client.is_connected() {
+                                                        break 'write;
                                                     }
                                                 }
                                                 None => log::error!("{dbg}.write | ProfinetDb '{db_name}' - not found"),
@@ -295,12 +290,13 @@ impl ProfinetClient {
                             }
                         }
                         connection_notify.add(Status::Invalid, dbg.clone());
+                        log_connected.add(false, format!("{dbg}.write | Connection lost"));
                     }
                     Err(err) => {
-                        connection_notify.add(Status::Invalid, dbg.clone());
-                        log_connected.add(false, format!("{}.write | Disconnected: {:?}", dbg, err));
                         log::trace!("{}.write | Connection error: {:?}", dbg, err);
-                        thread::sleep(conf.reconnect_cycle);
+                        connection_notify.add(Status::Invalid, dbg.clone());
+                        log_connected.add(false, format!("{dbg}.write | Connection lost. {:?}", err));
+                        std::thread::sleep(conf.reconnect_cycle);
                     }
                 }
             }
