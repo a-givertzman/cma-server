@@ -100,7 +100,7 @@ impl ProfinetDbConf {
         let mut last_offset: u32 = 0;
         let mut last_end: u32 = 0;
         let mut last_bit: Option<u8> = None;
-        let mut last_name: String = String::new();
+        let mut last: Option<PointConf> = None;
         for p in points.iter() {
             let addr = p.address.as_ref().ok_or_else(|| {
                 log::error!("Point '{}' has no address", p.name);
@@ -132,20 +132,24 @@ impl ProfinetDbConf {
                         // Это корректная упаковка бит, не считаем ошибкой перекрытия
                     } else {
                         // Офсет сменился, но залез на хвост предыдущего
-                        log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last_name, last_end);
-                        return Err(AddressError::Overlap(p.name.clone(), last_name.clone()));
+                        if let Some(last) = last {
+                            log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last.name, last_end);
+                            return Err(AddressError::Overlap(p.clone(), last.clone()));
+                        }
                     }
                 } else {
                     // Это не Bool или офсеты пересекаются некорректно
-                    log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last_name, last_end);
-                    return Err(AddressError::Overlap(p.name.clone(), last_name.clone()));
+                    if let Some(last) = last {
+                        log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last.name, last_end);
+                        return Err(AddressError::Overlap(p.clone(), last.clone()));
+                    }
                 }
             }
             // Обновляем состояние
             last_offset = offset;
             last_end = offset + size;
             last_bit = bit;
-            last_name = p.name.clone();
+            last = Some(p.clone());
             if last_end > total_size {
                 total_size = last_end;
             }
@@ -157,14 +161,14 @@ impl ProfinetDbConf {
 ///
 /// 
 enum AddressError {
-    Overlap(String, String),
+    Overlap(PointConf, PointConf),
     InvalidBit(String, u8),
     MissingAddress(String),
 }
 impl std::fmt::Display for AddressError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AddressError::Overlap(p1, p2) => write!(f, "Overlap between '{}' and '{}'", p1, p2),
+            AddressError::Overlap(p1, p2) => write!(f, "Overlap between: \n\t'{}':{:?} and \n\t'{}':{:?}", p1.name, p1.address, p2.name, p2.address),
             AddressError::InvalidBit(p, b) => write!(f, "Invalid bit index {} for point '{}'", b, p),
             AddressError::MissingAddress(p) => write!(f, "Address missing for point '{}'", p),
         }
