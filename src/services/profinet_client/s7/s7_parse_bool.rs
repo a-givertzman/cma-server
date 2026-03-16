@@ -3,7 +3,6 @@ use sal_sync::services::{
     entity::{Cot, Point, PointConf, PointConfAddress, PointHlr, Status},
     types::Bool,
 };
-use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
 
@@ -49,10 +48,11 @@ impl S7ParseBool {
         start: usize,
         bit: usize,
     ) -> Result<bool, Error> {
-        let bytes = bytes.get(start..(start + 2)).ok_or(Error::new(&self.name, "convert").err("Wrong bytes length"))?;
-        let bytes = bytes.try_into().map_err(|err: TryFromSliceError| Error::new(&self.name, "convert").pass(err.to_string()))?;
-        let b = (i16::from_be_bytes(bytes) >> bit) & 1;
-        Ok(b > 0)
+        let value = bytes.get(start..(start + 2))
+            .and_then(|bytes| bytes.try_into().ok())
+            .map(|bytes| (i16::from_be_bytes(bytes) >> bit) & 1)
+            .ok_or_else(|| Error::new(&self.name, "convert").err("Wrong bytes length"))?;
+        Ok(value > 0)
     }
     ///
     /// Логика фильтра входных евентов
@@ -80,7 +80,7 @@ impl S7ParseBool {
     fn to_point(&mut self, value: Option<bool>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
-        // log::trace!("S7ParseInt.to_point | value_changed: {:?}  |  status_changed {:?}", value_changed, status_changed);
+        // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.name, value_changed, status_changed);
         let (value, status) = match status_changed {
             Some(status_changed) => (
                 value_changed.or_else(|| self.value.last())?,
@@ -111,7 +111,7 @@ impl S7ParseBool {
         match result {
             Ok(value) => self.to_point(Some(value), Status::Ok, timestamp),
             Err(e) => {
-                log::warn!("S7ParseInt.add_raw | convertion error: {:?}", e);
+                log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
                 self.to_point(None, Status::Invalid, timestamp)
             }
         }

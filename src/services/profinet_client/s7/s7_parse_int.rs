@@ -48,22 +48,11 @@ impl S7ParseInt {
         start: usize,
         _bit: usize,
     ) -> Result<i16, Error> {
-        let bytes = bytes.get(start..(start + 2)).ok_or(Error::new(&self.name, "convert").err("Wrong bytes length"))?;
-        let bytes = bytes.try_into().map_err(|err: TryFromSliceError| Error::new(&self.name, "convert").pass(err.to_string()))?;
-        let value = i16::from_be_bytes(bytes);
+        let value = bytes.get(start..(start + 2))
+            .and_then(|bytes| bytes.try_into().ok())
+            .map(i16::from_be_bytes)
+            .ok_or_else(|| Error::new(&self.name, "convert").err("Wrong bytes length"))?;
         Ok(value)
-
-
-        // debug!("S7ParseInt.convert | start: {},  end: {:?}", start, start + 2);
-        // let raw: [u8; 2] = (bytes[start..(start + 2)]).try_into().unwrap();
-        // debug!("S7ParseInt.convert | raw: {:?}", raw);
-        // match bytes[start..(start + 2)].try_into() {
-        //     Ok(v) => Ok(i16::from_be_bytes(v)),
-        //     Err(e) => {
-        //         log::warn!("S7ParseInt.convert | error: {}", e);
-        //         Err(e)
-        //     }
-        // }
     }
     ///
     /// Логика фильтра входных евентов
@@ -91,7 +80,7 @@ impl S7ParseInt {
     fn to_point(&mut self, value: Option<i64>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
-        // log::trace!("S7ParseInt.to_point | value_changed: {:?}  |  status_changed {:?}", value_changed, status_changed);
+        // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.name, value_changed, status_changed);
         let (value, status) = match status_changed {
             Some(status_changed) => (
                 value_changed.or_else(|| self.value.last())?,
@@ -118,7 +107,7 @@ impl S7ParseInt {
         match result {
             Ok(value) => self.to_point(Some(value as i64), Status::Ok, timestamp),
             Err(e) => {
-                log::warn!("S7ParseInt.add_raw | convertion error: {:?}", e);
+                log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
                 self.to_point(None, Status::Invalid, timestamp)
             }
         }

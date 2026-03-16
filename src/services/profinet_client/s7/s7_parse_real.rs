@@ -2,7 +2,6 @@ use sal_core::error::Error;
 use sal_sync::services::entity::{
     Cot, Point, PointConf, PointConfAddress, PointHlr, Status
 };
-use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
 ///
@@ -49,9 +48,10 @@ impl S7ParseReal {
         start: usize,
         _bit: usize,
     ) -> Result<f32, Error> {
-        let bytes = bytes.get(start..(start + 4)).ok_or(Error::new(&self.name, "convert").err("Wrong bytes length"))?;
-        let bytes = bytes.try_into().map_err(|err: TryFromSliceError| Error::new(&self.name, "convert").pass(err.to_string()))?;
-        let value = f32::from_be_bytes(bytes);
+        let value = bytes.get(start..(start + 4))
+            .and_then(|bytes| bytes.try_into().ok())
+            .map(f32::from_be_bytes)
+            .ok_or_else(|| Error::new(&self.name, "convert").err("Wrong bytes length"))?;
         if value.is_nan() {
             return Err(Error::new(&self.name, "convert").err("NAN parsed"));
         }
@@ -83,7 +83,7 @@ impl S7ParseReal {
     fn to_point(&mut self, value: Option<f32>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
-        // log::trace!("S7ParseReal.to_point | value_changed: {:?}  |  status_changed {:?}", value_changed, status_changed);
+        // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.dbg, value_changed, status_changed);
         let (value, status) = match status_changed {
             Some(status_changed) => (
                 value_changed.or_else(|| self.value.last())?,
@@ -110,7 +110,7 @@ impl S7ParseReal {
         match result {
             Ok(value) => self.to_point(Some(value), Status::Ok, timestamp),
             Err(e) => {
-                log::warn!("S7ParseReal.add_raw | convertion error: {:?}", e);
+                log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
                 self.to_point(None, Status::Invalid, timestamp)
             }
         }

@@ -76,13 +76,13 @@ impl ProfinetClient {
         match diagnosis.get(kewd).map(|p| p.next(value)) {
             Some(point) => {
                 if let Some(point) = point {
-                    log::debug!("{}.yield_diagnosis | Send diagnostic '{}' ", dbg, kewd);
+                    log::debug!("{}.yield_diagnosis | Send diagnostic '{}':{:?}", dbg, kewd, value);
                     if let Err(err) = tx.send(point) {
-                        log::warn!("{}.yield_status | Send diagnostic error: {}", dbg, err);
+                        log::warn!("{}.yield_status | Send diagnostic '{}':{:?} - Error: {}", dbg, kewd, value, err);
                     }
                 }
             }
-            None => log::debug!("{}.yield_diagnosis | Send diagnostic '{}' - not configured", dbg, kewd),
+            None => log::debug!("{}.yield_diagnosis | Send diagnostic '{}':{:?} - Not configured", dbg, kewd, value),
         }
     }
     ///
@@ -137,6 +137,7 @@ impl ProfinetClient {
                                         log::trace!("{dbg}.read | DB '{db_name}' - reading - ok");
                                     }
                                     Err(err) => {
+                                        log::warn!("{dbg}.read | DB '{db_name}' - reading - error: {:?}", err);
                                         _ = db.errors.add();
                                         if log::max_level() >= log::Level::Debug {
                                             log::warn!("{dbg}.read | DB '{db_name}' - reading - error: {:?}", err);
@@ -144,6 +145,7 @@ impl ProfinetClient {
                                     }
                                 }
                                 if !client.is_connected() {
+                                    log::warn!("{dbg}.read | Connection lost. Client - disconnected");
                                     break 'read;
                                 }
                                 if exit.load(Ordering::Acquire) {
@@ -151,6 +153,7 @@ impl ProfinetClient {
                                 }
                             }
                             if dbs.iter().all(|(_, db)| db.errors.errors() >= db.errors.limit()) {
+                                log::warn!("{dbg}.read | Connection lost. All DB's read error limit exceeded");
                                 break 'read;
                             }
                             cycle.wait();
