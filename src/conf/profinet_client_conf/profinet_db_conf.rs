@@ -44,7 +44,7 @@ impl ProfinetDbConf {
                 log::debug!("{}.new | Device expected, but found {:?}", dbg, keyword);
             }
         }
-        let size = Self::validate_and_calculate_size(&points)
+        let size = Self::validate_addresses(&points)
             .map_err(|err| Error::new(&dbg, "new").pass(err.to_string())).unwrap() as u64;
         Self {
             name,
@@ -75,7 +75,7 @@ impl ProfinetDbConf {
     }
     ///
     /// Validates the adressing consistance
-    fn validate_and_calculate_size(points: &Vec<PointConf>) -> Result<u32, AddressError> {
+    fn validate_addresses(points: &Vec<PointConf>) -> Result<u32, AddressError> {
         if points.is_empty() {
             return Ok(0);
         }
@@ -95,14 +95,12 @@ impl ProfinetDbConf {
                 bit_a.cmp(&bit_b)
             }
         });
-    
-        let mut total_db_size: u32 = 0;
+        let mut total_size: u32 = 0;
         // Храним данные о предыдущем обработанном сигнале для сравнения
         let mut last_offset: u32 = 0;
         let mut last_end: u32 = 0;
         let mut last_bit: Option<u8> = None;
         let mut last_name: String = String::new();
-    
         for p in points.iter() {
             let addr = p.address.as_ref().ok_or_else(|| {
                 log::error!("Point '{}' has no address", p.name);
@@ -111,12 +109,10 @@ impl ProfinetDbConf {
             let offset = addr.offset.ok_or_else(|| AddressError::MissingAddress(p.name.clone()))?;
             let bit = addr.bit;
             let size = Self::profinet_size(&p.type_).unwrap_or(0);
-    
             // --- ПРОВЕРКА ВЫРАВНИВАНИЯ (Siemens Best Practice) ---
             if size > 1 && offset % 2 != 0 {
                 log::warn!("Performance warning: Point '{}' ({:?}) offset {} is not even (unaligned)", p.name, p.type_, offset);
             }
-    
             // --- ПРОВЕРКА ПЕРЕКРЫТИЯ (Overlap) ---
             if offset < last_end {
                 // Исключение: если оба сигнала - Bool и имеют один и тот же offset
@@ -145,21 +141,17 @@ impl ProfinetDbConf {
                     return Err(AddressError::Overlap(p.name.clone(), last_name.clone()));
                 }
             }
-    
             // Обновляем состояние
             last_offset = offset;
             last_end = offset + size;
             last_bit = bit;
             last_name = p.name.clone();
-    
-            if last_end > total_db_size {
-                total_db_size = last_end;
+            if last_end > total_size {
+                total_size = last_end;
             }
-            
             log::trace!("Point validated: {} at {}.{}", p.name, offset, bit.unwrap_or(0));
         }
-    
-        Ok(total_db_size)
+        Ok(total_size)
     }
 }
 ///
