@@ -176,8 +176,7 @@ impl ProfinetDb {
     ///
     /// Writes point to the current DB
     ///     - Returns Ok() if succeed, Err(message) on fail
-    pub fn write(&mut self, client: &S7Client, point: Point) -> Result<(), String> {
-        let mut message = String::new();
+    pub fn write(&mut self, client: &S7Client, point: Point) -> Result<(), Error> {
         match self.points.get(&point.name()) {
             Some(parse_point) => {
                 let address = parse_point.address();
@@ -194,30 +193,30 @@ impl ProfinetDb {
                         // let index = address.offset.unwrap() as usize;
                         // buf[index] = point.value.0 as u8;
                         // client.write(self.number, address.offset.unwrap(), 2, &mut buf)
-                        message = format!("{}.write | Write 'Bool' to the S7 Device - not implemented, point: {:?}", self.dbg, point.name);
-                        Err(message)
+                        Err(Error::new(&self.dbg, "write").err(format!("Can't write 'Bool' '{:?}' to the S7 Device - not implemented", point.name)))
                     }
                     Point::Int(point) => {
                         client.write(self.number, address.offset.unwrap(), 2, &mut (point.value as i16).to_be_bytes())
+                           .map_err(|err| Error::new(&self.dbg, "write").pass(err))
                     }
                     Point::Real(point) => {
                         client.write(self.number, address.offset.unwrap(), 4, &mut (point.value).to_be_bytes())
+                           .map_err(|err| Error::new(&self.dbg, "write").pass(err))
                     }
                     Point::Double(point) => {
                         client.write(self.number, address.offset.unwrap(), 4, &mut (point.value as f32).to_be_bytes())
+                           .map_err(|err| Error::new(&self.dbg, "write").pass(err))
                     }
                     Point::String(point) => {
-                        message = format!("{}.write | Write 'String' to the S7 Device - not implemented, point: {:?}", self.dbg, point.name);
-                        Err(message)
+                        Err(Error::new(&self.dbg, "write").err(format!("Can't write 'String' '{:?}' to the S7 Device - not implemented", point.name)))
                     }
                     Point::Bytes(point) => {
-                        message = format!("{}.write | Write 'Bytes' to the S7 Device - not implemented, point: {:?}", self.dbg, point.name);
-                        Err(message)
+                        Err(Error::new(&self.dbg, "write").err(format!("Can't write 'Bytes' '{:?}' to the S7 Device - not implemented", point.name)))
                     }
                 }
             }
             None => {
-                Err(message)
+               Err(Error::new(&self.dbg, "write").err(format!("Can't write '{:?}' to the S7 Device - point not found", point.name())))
             }
         }
     }

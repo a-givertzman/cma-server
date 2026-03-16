@@ -1,3 +1,4 @@
+use sal_core::error::Error;
 use snap7_sys::S7Object;
 use std::ffi::CString;
 use std::ffi::{c_void, c_int};
@@ -15,7 +16,7 @@ pub struct S7Client {
     handle: S7Object,
     req_len: usize,
     neg_len: usize,
-    isConnected: AtomicBool,
+    is_connected: AtomicBool,
     // reconnectDelay: Duration,
 }
 //
@@ -30,39 +31,43 @@ impl S7Client {
             handle: unsafe { S7LIB.Cli_Create() },
             req_len: 0,
             neg_len: 0,
-            isConnected: AtomicBool::new(false),
+            is_connected: AtomicBool::new(false),
         }
     }
     ///
     /// Connects the client to the PLC
-    pub fn connect(&mut self) -> Result<(), S7Error> {
-        let mut req: c_int = 0;
-        let mut neg: c_int = 0;
+    pub fn connect(&mut self) -> Result<(), Error> {
+        let _ = self.close();
         let err_code = unsafe {
             // #[warn(temporary_cstring_as_ptr)]
             let err_code = S7LIB.Cli_ConnectTo(self.handle, self.ip.as_ptr(), 0, 1);
-            S7LIB.Cli_GetPduLength(self.handle, &mut req, &mut neg);
-            self.req_len = req as usize;
-            self.neg_len = neg as usize;
             err_code
         };
         if err_code == 0 {
-            self.isConnected.store(true, Ordering::Release);
-            log::debug!("{}.connect | successfully connected", self.id);
+            let mut req: c_int = 0;
+            let mut neg: c_int = 0;
+            unsafe { S7LIB.Cli_GetPduLength(self.handle, &mut req, &mut neg); }
+            self.req_len = req as usize;
+            self.neg_len = neg as usize;
+            self.is_connected.store(true, Ordering::Release);
+            if log::max_level() == log::LevelFilter::Trace {
+                log::debug!("{}.connect | Successfully connected", self.id);
+            }
             Ok(())
         } else {
-            self.isConnected.store(false, Ordering::Release);
-            let err = S7Error::from(err_code);
+            self.is_connected.store(false, Ordering::Release);
+            let code = S7Error::from(err_code);
+            let err = S7Error::text(err_code);
             if log::max_level() == log::LevelFilter::Trace {
-                log::warn!("{}.connect | connection error: {:?}", self.id, err);
+                log::warn!("{}.connect | Connection error: [{:?}] {:?}", self.id, code, err);
             }
-            Err(err)
+            Err(Error::new(&self.id, "read").pass(err))
         }
     }
     ///
     /// Returns the actual connection status immediately without I/O operations
     pub fn is_connected(&self) -> bool {
-        self.isConnected.load(Ordering::Acquire)
+        self.is_connected.load(Ordering::Acquire)
         // let mut is_connected: c_int = 0;
         // let code = unsafe {
         //     S7LIB.Cli_GetConnected(self.handle, &mut is_connected)
@@ -80,7 +85,7 @@ impl S7Client {
     ///
     /// This is the main function to read data from a PLC.
     /// With it you can read DB, Inputs, Outputs, Merkers, Timers and Counters
-    pub fn read(&self, db_num: u32, start: u32, size: u32) -> Result<Vec<u8>, String> {
+    pub fn read(&self, db_num: u32, start: u32, size: u32) -> Result<Vec<u8>, Error> {
         let mut buf = vec![0; size as usize];
         let code;
         unsafe {
@@ -92,12 +97,15 @@ impl S7Client {
                 buf.as_mut_ptr() as *mut c_void,
             );
         }
+        if size as usize > self.neg_len {
+            return Err(Error::new(&self.id, "read").err("Requested size is larger than PDU length"));
+        }
         match code {
             0 => Ok(buf),
             _ => {
                 let is_connected = S7Error::is_connected(code);
-                self.isConnected.store(is_connected, Ordering::Release);
-                Err(S7Error::text(code))
+                self.is_connected.store(is_connected, Ordering::Release);
+                Err(Error::new(&self.id, "read").pass(S7Error::text(code)))
             }
         }
     }
@@ -108,7 +116,7 @@ impl S7Client {
     /// Cli_ReadArea(), the parameters and their meanings are the same.
     /// The only difference is that the data is transferred from the buffer pointed by pUsrData
     /// into PLC.
-    pub fn write(&self, db_num: u32, start: u32, size: u32, buf: &mut [u8]) -> Result<(), String> {
+    pub fn write(&self, db_num: u32, start: u32, size: u32, buf: &mut [u8]) -> Result<(), Error> {
         let code = unsafe {
             S7LIB.Cli_DBWrite(
                 self.handle,
@@ -122,21 +130,21 @@ impl S7Client {
             0 => Ok(()),
             _ => {
                 let is_connected = S7Error::is_connected(code);
-                self.isConnected.store(is_connected, Ordering::Release);
-                Err(S7Error::text(code))
+                self.is_connected.store(is_connected, Ordering::Release);
+                Err(Error::new(&self.id, "read").pass(S7Error::text(code)))
             }
         }
     }
     ///
     /// Disconnects “gracefully” the Client from the PLC.
-    pub fn close(&mut self) -> Result<(), String> {
+    pub fn close(&mut self) -> Result<(), Error> {
         let code = unsafe {
             S7LIB.Cli_Disconnect(self.handle)
         };
-        self.isConnected.store(false, Ordering::Release);
+        self.is_connected.store(false, Ordering::Release);
         match code {
             0 => Ok(()),
-            _ => Err(S7Error::text(code)),
+            _ => Err(Error::new(&self.id, "read").pass(S7Error::text(code))),
         }
     }
 }
