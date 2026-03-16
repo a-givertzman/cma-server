@@ -139,9 +139,6 @@ impl ProfinetClient {
                                     Err(err) => {
                                         log::warn!("{dbg}.read | DB '{db_name}' - reading - error: {:?}", err);
                                         _ = db.errors.add();
-                                        if log::max_level() >= log::Level::Debug {
-                                            log::warn!("{dbg}.read | DB '{db_name}' - reading - error: {:?}", err);
-                                        }
                                     }
                                 }
                                 if !client.is_connected() {
@@ -149,10 +146,11 @@ impl ProfinetClient {
                                     break 'read;
                                 }
                                 if exit.load(Ordering::Acquire) {
-                                    break 'main;
+                                    break 'read;
                                 }
                             }
-                            if dbs.iter().all(|(_, db)| db.errors.errors() >= db.errors.limit()) {
+                            if !dbs.is_empty() && dbs.iter().all(|(_, db)| db.errors.is_fail()) {
+                                _ = dbs.values_mut().for_each(|db| db.errors.reset());
                                 log::warn!("{dbg}.read | Connection lost. All DB's read error limit exceeded");
                                 break 'read;
                             }
@@ -173,7 +171,9 @@ impl ProfinetClient {
                         }
                     }
                 }
-                std::thread::sleep(conf.reconnect_cycle);
+                if !exit.load(Ordering::Acquire) {
+                    std::thread::sleep(conf.reconnect_cycle);
+                }
             }
             connection_notify.add(Status::Invalid, dbg.clone());
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
