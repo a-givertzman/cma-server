@@ -155,6 +155,7 @@ impl ProfinetClient {
                             }
                             cycle.wait();
                         }
+                        log_connected.add(Status::Invalid, format!("{dbg}.read | Connection lost"));
                         connection_notify.add(Status::Invalid, dbg.clone());
                         Self::yield_status(&dbg, &mut dbs, &tx_send);
                         if let Err(err) = client.close() {

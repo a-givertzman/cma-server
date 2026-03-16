@@ -1,6 +1,7 @@
 use snap7_sys::S7Object;
 use std::ffi::CString;
 use std::ffi::{c_void, c_int};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::s7_error::S7Error;
 use super::s7_lib::S7LIB;
@@ -14,7 +15,7 @@ pub struct S7Client {
     handle: S7Object,
     req_len: usize,
     neg_len: usize,
-    // isConnected: bool,
+    isConnected: AtomicBool,
     // reconnectDelay: Duration,
 }
 //
@@ -29,7 +30,7 @@ impl S7Client {
             handle: unsafe { S7LIB.Cli_Create() },
             req_len: 0,
             neg_len: 0,
-            // isConnected: false,
+            isConnected: AtomicBool::new(false),
         }
     }
     ///
@@ -46,11 +47,11 @@ impl S7Client {
             err_code
         };
         if err_code == 0 {
-            // self.isConnected = true;
+            self.isConnected.store(true, Ordering::Release);
             log::debug!("{}.connect | successfully connected", self.id);
             Ok(())
         } else {
-            // self.isConnected = false;
+            self.isConnected.store(false, Ordering::Release);
             let err = S7Error::from(err_code);
             if log::max_level() == log::LevelFilter::Trace {
                 log::warn!("{}.connect | connection error: {:?}", self.id, err);
@@ -59,21 +60,22 @@ impl S7Client {
         }
     }
     ///
-    /// Returns the connection status
+    /// Returns the actual connection status immediately without I/O operations
     pub fn is_connected(&self) -> bool {
-        let mut is_connected: c_int = 0;
-        let code = unsafe {
-            S7LIB.Cli_GetConnected(self.handle, &mut is_connected)
-        };
-        match code {
-            0 => is_connected != 0,
-            _ => {
-                if log::max_level() == log::LevelFilter::Debug {
-                    log::warn!("{}.is_connected | Error: {:?}", self.id, S7Error::text(code));
-                }
-                false
-            }
-        }
+        self.isConnected.load(Ordering::Acquire)
+        // let mut is_connected: c_int = 0;
+        // let code = unsafe {
+        //     S7LIB.Cli_GetConnected(self.handle, &mut is_connected)
+        // };
+        // match code {
+        //     0 => is_connected != 0,
+        //     _ => {
+        //         if log::max_level() == log::LevelFilter::Debug {
+        //             log::warn!("{}.is_connected | Error: {:?}", self.id, S7Error::text(code));
+        //         }
+        //         false
+        //     }
+        // }
     }
     ///
     /// This is the main function to read data from a PLC.
@@ -92,11 +94,17 @@ impl S7Client {
         }
         match code {
             0 => Ok(buf),
-            _ => Err(S7Error::text(code)),
+            _ => {
+                let is_connected = S7Error::is_connected(code);
+                self.isConnected.store(is_connected, Ordering::Release);
+                Err(S7Error::text(code))
+            }
         }
     }
     ///
-    /// This is the main function to write data into a PLC. It’s the complementary function of
+    /// This is the main function to write data into a PLC.
+    /// 
+    /// It’s the complementary function of
     /// Cli_ReadArea(), the parameters and their meanings are the same.
     /// The only difference is that the data is transferred from the buffer pointed by pUsrData
     /// into PLC.
@@ -112,7 +120,11 @@ impl S7Client {
         };
         match code {
             0 => Ok(()),
-            _ => Err(S7Error::text(code)),
+            _ => {
+                let is_connected = S7Error::is_connected(code);
+                self.isConnected.store(is_connected, Ordering::Release);
+                Err(S7Error::text(code))
+            }
         }
     }
     ///
@@ -121,6 +133,7 @@ impl S7Client {
         let code = unsafe {
             S7LIB.Cli_Disconnect(self.handle)
         };
+        self.isConnected.store(false, Ordering::Release);
         match code {
             0 => Ok(()),
             _ => Err(S7Error::text(code)),
