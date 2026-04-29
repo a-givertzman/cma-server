@@ -114,37 +114,37 @@ impl ProfinetDbConf {
                 log::warn!("Performance warning: Point '{}' ({:?}) offset {} is not even (unaligned)", p.name, p.type_, offset);
             }
             // --- ПРОВЕРКА ПЕРЕКРЫТИЯ (Overlap) ---
-            if offset < last_end {
-                // Исключение: если оба сигнала - Bool и имеют один и тот же offset
-                if let (PointType::Bool, Some(b)) = (p.type_.clone(), bit) {
-                    if offset == last_offset {
-                        // Проверяем последовательность бит
-                        if let Some(lb) = last_bit {
-                            if b <= lb {
-                                log::error!("Point '{}' bit {} repeats or goes backwards (last bit was {})", p.name, b, lb);
-                                return Err(AddressError::InvalidBit(p.name.clone(), b));
-                            }
-                        }
-                        if b > 15 { // Т.к. profinet_size для Bool = 2 байта
-                            log::error!("Point '{}' bit {} out of range (0-15)", p.name, b);
-                            return Err(AddressError::InvalidBit(p.name.clone(), b));
-                        }
-                        // Это корректная упаковка бит, не считаем ошибкой перекрытия
-                    } else {
-                        // Офсет сменился, но залез на хвост предыдущего
-                        if let Some(last) = last {
-                            log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last.name, last_end);
-                            return Err(AddressError::Overlap(p.clone(), last.clone()));
-                        }
-                    }
-                } else {
-                    // Это не Bool или офсеты пересекаются некорректно
-                    if let Some(last) = last {
-                        log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last.name, last_end);
-                        return Err(AddressError::Overlap(p.clone(), last.clone()));
-                    }
-                }
-            }
+            // if offset < last_end {
+            //     // Исключение: если оба сигнала - Bool и имеют один и тот же offset
+            //     if let (PointType::Bool, Some(b)) = (p.type_.clone(), bit) {
+            //         if offset == last_offset {
+            //             // Проверяем последовательность бит
+            //             if let Some(lb) = last_bit {
+            //                 if b <= lb {
+            //                     log::error!("Point '{}' bit {} repeats or goes backwards (last bit was {})", p.name, b, lb);
+            //                     return Err(AddressError::InvalidBit(p.name.clone(), b));
+            //                 }
+            //             }
+            //             if b > 15 { // Т.к. profinet_size для Bool = 2 байта
+            //                 log::error!("Point '{}' bit {} out of range (0-15)", p.name, b);
+            //                 return Err(AddressError::InvalidBit(p.name.clone(), b));
+            //             }
+            //             // Это корректная упаковка бит, не считаем ошибкой перекрытия
+            //         } else {
+            //             // Офсет сменился, но залез на хвост предыдущего
+            //             if let Some(last) = last {
+            //                 log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last.name, last_end);
+            //                 return Err(AddressError::Overlap(p.clone(), last.clone()));
+            //             }
+            //         }
+            //     } else {
+            //         // Это не Bool или офсеты пересекаются некорректно
+            //         if let Some(last) = last {
+            //             log::error!("Point '{}' (offset {}) overlaps with '{}' (ends at {})", p.name, offset, last.name, last_end);
+            //             return Err(AddressError::Overlap(p.clone(), last.clone()));
+            //         }
+            //     }
+            // }
             // Обновляем состояние
             last_offset = offset;
             last_end = offset + size;

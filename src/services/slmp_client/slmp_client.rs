@@ -169,7 +169,7 @@ impl Service for SlmpClient {
             );
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
-                loop {
+            loop {
                 log::info!("{}.run | Connecting...", dbg);
                 exit.reset_pair();
                 match tcp_client_connect.connect() {
@@ -210,7 +210,7 @@ impl Service for SlmpClient {
                         Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
                     }
                 }
-                if exit.get_parent() {
+                if exit.get() {
                     break;
                 }
                 log::info!("{}.run | Sleeping {:?}...", dbg, conf.reconnect_cycle);
