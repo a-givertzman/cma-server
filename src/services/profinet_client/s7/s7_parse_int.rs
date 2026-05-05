@@ -2,7 +2,6 @@ use sal_core::error::Error;
 use sal_sync::services::entity::{
     Cot, Point, PointConf, PointConfAddress, PointHlr, Status
 };
-use std::array::TryFromSliceError;
 use chrono::{DateTime, Utc};
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
 ///

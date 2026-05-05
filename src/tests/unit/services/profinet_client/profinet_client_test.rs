@@ -25,17 +25,17 @@ fn init_each() -> () {}
 #[test]
 #[ignore = "Integration test"]
 fn basic() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
-    let self_id = "profinet_client_test";
-    let self_name = Name::new("", self_id);
-    println!("\n{}", self_id);
-    let test_duration = TestDuration::new(self_id, Duration::from_secs(10));
+    let dbg = "profinet_client_test";
+    let self_name = Name::new("", dbg);
+    log::debug!("\n{}", dbg);
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
-    let tp = ThreadPool::new(self_id, Some(8));
-    let services = Arc::new(Services::new(self_id, ServicesConf::new(
-        self_id, 
+    let tp = ThreadPool::new(dbg, Some(8));
+    let services = Arc::new(Services::new(dbg, ServicesConf::new(
+        dbg, 
         ConfTree::new_root(serde_yaml::from_str(r#""#).unwrap()),
     ), Some(tp.scheduler())));
     let conf = r#"
@@ -58,7 +58,7 @@ fn basic() {
     mq_service.run().unwrap();
     client.run().unwrap();
     thread::sleep(Duration::from_millis(2000));
-    let tx_id = PointTxId::from_str(self_id);
+    let tx_id = PointTxId::from_str(dbg);
     let test_data = [
         Value::Int(1),
         Value::Int(2),
@@ -73,10 +73,10 @@ fn basic() {
         Value::Double(9.10201),
     ];
     let send = mq_service.get_link("in-queue");
-    let (_, recv) = mq_service.subscribe(self_id, &[]);
+    let (_, recv) = mq_service.subscribe(dbg, &[]);
     for value in test_data {
         let point = match value {
-            Value::Bool(value) => panic!("{} | Bool does not supported: {:?}", self_id, value),
+            Value::Bool(value) => panic!("{} | Bool does not supported: {:?}", dbg, value),
             Value::Int(value) => {
                 Point::Int(PointHlr::new(tx_id, &Name::new("/Ied01/db999/", "Capacitor.Capacity").join(), value, Status::Ok, Cot::Act, Utc::now()))
             }
@@ -86,17 +86,17 @@ fn basic() {
             Value::Double(value) => {
                 Point::Double(PointHlr::new(tx_id, &Name::new("/Ied01/db899/", "Drive.Speed").join(), value, Status::Ok, Cot::Act, Utc::now()))
             }
-            Value::String(value) => panic!("{} | String does not supported: {:?}", self_id, value),
-            Value::Bytes(value) => panic!("{} | Bytes does not supported: {:?}", self_id, value),
+            Value::String(value) => panic!("{} | String does not supported: {:?}", dbg, value),
+            Value::Bytes(value) => panic!("{} | Bytes does not supported: {:?}", dbg, value),
         };
         if let Err(err) = send.send(point.clone()) {
-            log::warn!("{} | Send error: {:#?}", self_id, err);
+            log::warn!("{} | Send error: {:#?}", dbg, err);
         }
         match recv.recv_timeout(Duration::from_secs(3)) {
             Ok(received_point) => {
                 if received_point.cot() == Cot::Inf {
                     match received_point {
-                        Point::Bool(value) => panic!("{} | Bool does not supported: {:?}", self_id, value),
+                        Point::Bool(value) => panic!("{} | Bool does not supported: {:?}", dbg, value),
                         Point::Int(received_point) => {
                             let result = received_point.value;
                             let target = point.as_int().value;
@@ -112,13 +112,13 @@ fn basic() {
                             let target = point.as_double().value;
                             assert!(result.aprox_eq(target, 3), "\nresult: {:?}\ntarget: {:?}", result, target);
                         }
-                        Point::String(value) => panic!("{} | String does not supported: {:?}", self_id, value),
-                        Point::Bytes(value) => panic!("{} | Bytes does not supported: {:?}", self_id, value),
+                        Point::String(value) => panic!("{} | String does not supported: {:?}", dbg, value),
+                        Point::Bytes(value) => panic!("{} | Bytes does not supported: {:?}", dbg, value),
                     }
                 }
             }
             Err(err) => {
-                log::warn!("{} | Receive changed value error: {:#?}", self_id, err);
+                log::warn!("{} | Receive changed value error: {:#?}", dbg, err);
             }
         }
     }
