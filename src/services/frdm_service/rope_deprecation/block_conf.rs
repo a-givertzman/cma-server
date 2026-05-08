@@ -25,6 +25,8 @@ pub struct BlockConf {
     pub scheme: BlockScheme,
     /// Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
     pub bind: BlockBind,
+    /// Блок включается в работу только когда стрела проходит положение перекидывания.
+    pub deflector: Option<ConfAngle>
 }
 //
 // 
