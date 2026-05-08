@@ -48,9 +48,9 @@ impl S7ParseBool {
         start: usize,
         bit: usize,
     ) -> Result<bool, Error> {
-        let value = bytes.get(start..(start + 2))
+        let value = bytes.get(start..(start + 1))
             .and_then(|bytes| bytes.try_into().ok())
-            .map(|bytes| (i16::from_be_bytes(bytes) >> bit) & 1)
+            .map(|bytes| (u8::from_be_bytes(bytes) >> bit) & 1)
             .ok_or_else(|| Error::new(&self.name, "convert").err("Wrong bytes length"))?;
         Ok(value > 0)
     }
