@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use indexmap::IndexMap;
+use sal_core::error::Error;
 use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
 use crate::{
     domain::FnInOutRef, 
@@ -87,7 +88,8 @@ impl TaskNodes {
                 }
             }
             None => {
-                panic!("{}.add_input | Call beginNewNode first, then you can add inputs", self.id)
+                log::error!("{}.add_input | Call beginNewNode first, then you can add inputs", self.id);
+                panic!("{}.add_input | Error", self.id);
             }
         }
     }
@@ -99,10 +101,11 @@ impl TaskNodes {
         match self.new_node_vars {
             Some(_) => {
                 if self.vars.contains_key(&name.clone().into()) {
-                    panic!("{}.addVar | Dublicated variable name: {:?}", self.id, &name.clone().into());
+                    log::error!("{}.add_var | Dublicated variable name: {:?}", self.id, name.clone().into());
+                    panic!("{}.add_var | Error", self.id);
                 } else {
-                    log::trace!("{}.addVar | adding variable {:?}", self.id, &name.clone().into());
-                    log::trace!("{}.addVar | adding variable {:?}: {:?}", &name.clone().into(), self.id, &var);
+                    log::trace!("{}.add_var | adding variable {:?}", self.id, &name.clone().into());
+                    log::trace!("{}.add_var | adding variable {:?}: {:?}", &name.clone().into(), self.id, &var);
                     self.vars.insert(
                         name.clone().into(),
                         var,
@@ -110,7 +113,10 @@ impl TaskNodes {
                 }
                 self.new_node_vars.as_mut().unwrap().add_var(name.clone().into());
             }
-            None => panic!("{}.addVar | Error: call beginNewNode first, then you can add inputs", self.id),
+            None => {
+                log::error!("{}.add_var | Error: call beginNewNode first, then you can add inputs", self.id);
+                panic!("{}.add_var | Error", self.id);
+            }
         }
     }
     ///
@@ -121,7 +127,10 @@ impl TaskNodes {
             Some(_) => {
                 self.new_node_vars.as_mut().unwrap().add_var(name.clone().into());
             }
-            None => panic!("{}.addVarOut | Error: call beginNewNode first, then you can add inputs", self.id),
+            None => {
+                log::error!("{}.addVarOut | Error: call beginNewNode first, then you can add inputs", self.id);
+                panic!("{}.addVarOut | Error", self.id);
+            }
         }
     }    
     ///
@@ -137,35 +146,45 @@ impl TaskNodes {
                                 var.clone()
                             );
                         }
-                        None => panic!("{}.finishNewNode | Variable {:?} - not found", self.id, var_name),
+                        None => {
+                            log::error!("{}.finish_new_node | Variable {:?} - not found", self.id, var_name);
+                            panic!("{}.finish_new_node | Error", self.id);
+                        }
                     };
                 };
                 let inputs = out.borrow().inputs();
-                log::trace!("{}.finishNewNode | out {:#?} \n\tdipending on inputs:: {:#?}\n", self.id, &out, inputs);
+                log::trace!("{}.finish_new_node | out {:#?} \n\tdipending on inputs:: {:#?}\n", self.id, &out, inputs);
                 for input_name in inputs {
                     match self.nodes.get_mut(&input_name) {
                         Some(eval_node) => {
-                            log::trace!("{}.finishNewNode | updating input: {:?}", self.id, input_name);
+                            log::trace!("{}.finish_new_node | updating input: {:?}", self.id, input_name);
                             let len = vars.len();
                             eval_node.add_vars(&vars.clone());
                             if out.borrow().kind() != &FnKind::Var {
                                 eval_node.add_out(out.clone());
                             }
-                            log::trace!("{}.finishNewNode | evalNode '{}' appended: {:?}", self.id, eval_node.name(), len);
+                            log::trace!("{}.finish_new_node | evalNode '{}' appended: {:?}", self.id, eval_node.name(), len);
                         }
-                        None => panic!("{}.finishNewNode | Input {:?} - not found", self.id, input_name),
+                        None => {
+                            log::error!("{}.finish_new_node | Input {:?} - not found", self.id, input_name);
+                            panic!("{}.finish_new_node | Error", self.id);
+                        }
                     };
                 };
                 self.new_node_vars = None;
-                log::trace!("\n{}.finishNewNode | self.inputs: {:?}\n", self.id, self.nodes);
+                log::trace!("\n{}.finish_new_node | self.inputs: {:?}\n", self.id, self.nodes);
             }
-            None => panic!("{}.finishNewNode | Call beginNewNode first, then you can add inputs & vars, then finish node", self.id),
+            None => {
+                log::error!("{}.finish_new_node | Call beginNewNode first, then you can add inputs & vars, then finish node", self.id);
+                panic!("{}.finish_new_node | Error", self.id);
+            }
         }
     }
     ///
     /// Creates all task nodes depending on it config
     ///  - if Task config contains 'point [type] every' then single evaluation node allowed only
-    pub fn build_nodes(&mut self, parent: &Name, conf: TaskConf, services: Arc<Services>) {
+    pub fn build_nodes(&mut self, parent: &Name, conf: TaskConf, services: Arc<Services>) -> Result<(), Error>{
+        let error = Error::new(&self.id, "build_nodes");
         let tx_id = PointTxId::from_str(&parent.join());
         for (idx, (_node_name, mut node_conf)) in conf.nodes.into_iter().enumerate() {
             let node_name = node_conf.name();
@@ -179,16 +198,16 @@ impl TaskNodes {
                     FnBuilder::new(parent, tx_id, &mut node_conf, self, services.clone())
                 }
                 FnConfKind::Const(conf) => {
-                    panic!("{}.build_nodes | Const is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
+                    return Err(error.err(format!("Const is not supported in the root of the Task, config: {:?}: {:?}", node_name, conf)));
                 }
                 FnConfKind::Point(conf) => {
-                    panic!("{}.build_nodes | Point is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
+                    return Err(error.err(format!("Point is not supported in the root of the Task, config: {:?}: {:?}", node_name, conf)));
                 }
                 FnConfKind::PointConf(conf) => {
-                    panic!("{}.build_nodes | PointConf is not supported in the root of the Task, config: {:?}: {:?}", self.id, node_name, conf);
+                    return Err(error.err(format!("PointConf is not supported in the root of the Task, config: {:?}: {:?}", node_name, conf)));
                 }
                 FnConfKind::Param(conf) => {
-                    panic!("{}.build_nodes | Param (custom parameter) is not supported in the root of the Task, config: {:?}: {:?} - ", self.id, node_name, conf);
+                    return Err(error.err(format!("Param (custom parameter) is not supported in the root of the Task, config: {:?}: {:?} - ", node_name, conf)));
                 }
             };
             self.finish_new_node(out);
@@ -198,10 +217,11 @@ impl TaskNodes {
             for (_name, input) in &self.nodes {
                 let len = input.get_outs().len();
                 if len > 1 {
-                    panic!("{}.build_nodes | evalNode '{}' - contains {} Out's, but single Out allowed when 'point [type] every' was used", self.id, eval_node_name, len);
+                    return Err(error.err(format!("evalNode '{}' - contains {} Out's, but single Out allowed when 'point [type] every' was used", eval_node_name, len)));
                 }
             }
         }
+        Ok(())
     }
     ///
     /// Evaluates all containing node:
