@@ -72,7 +72,8 @@ impl Task {
             let subscriptions = conf.subscribe.with(&points);
             log::trace!("{}.subscriptions | subscriptions: {:#?}", self.dbg, subscriptions);
             if subscriptions.len() > 1 {
-                panic!("{}.subscriptions | Error. Task does not supports multiple subscriptions for now: {:#?}.\n\tTry to use single subscription.", self.dbg, subscriptions);
+                log::error!("{}.subscriptions | Task does not supports multiple subscriptions for now: {:#?}.\n\tTry to use single subscription.", self.dbg, subscriptions);
+                None
             } else {
                 let subscriptions_first = subscriptions.clone().into_iter().next();
                 match subscriptions_first {
@@ -80,10 +81,13 @@ impl Task {
                         Some((service_name, points))
                     }
                     Some((_, None)) => {
-                        log::warn!("{}.subscriptions | Error. Task subscription configuration error / empty in: {:#?}", self.dbg, subscriptions);
+                        log::error!("{}.subscriptions | Task subscription configuration error / empty in: {:#?}", self.dbg, subscriptions);
                         None
                     }
-                    None => panic!("{}.subscriptions | Error. Task subscription configuration error in: {:#?}", self.dbg, subscriptions),
+                    None => {
+                        log::error!("{}.subscriptions | Task subscription configuration error in: {:#?}", self.dbg, subscriptions);
+                        None
+                    }
                 }
             }
         }
@@ -130,7 +134,10 @@ impl Service for Task {
         // match self.in_send.get(name) {
         match self.in_send.iter().next() {
             Some((_, send)) => send.clone(),
-            None => panic!("{}.run | link '{:?}' - not found", self.dbg, name),
+            None => {
+                log::error!("{}.get_link | link '{}' - not found", self.dbg, name);
+                panic!("{}.get_link | Error", self.dbg);
+            }
         }
     }
     //
