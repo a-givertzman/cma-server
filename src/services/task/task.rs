@@ -3,11 +3,11 @@ use sal_sync::{services::{
     entity::{Name, Object, Point, PointConf, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
 }, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
 use std::{
-    collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration,
+    collections::HashMap, fmt::Debug, marker::PhantomData, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration
 };
 use concat_string::concat_string;
 use crate::{
-    domain::constants::constants::RECV_TIMEOUT, services::task::{task_conf::TaskConf, task_nodes::TaskNodes},
+    domain::constants::constants::RECV_TIMEOUT, services::task::{task_conf::TaskConf, task_nodes::TaskNodes}, sync::SendWrapper,
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations
@@ -126,7 +126,6 @@ impl Debug for Task {
     }
 }
 //
-//
 impl Service for Task {
     //
     //
@@ -156,12 +155,17 @@ impl Service for Task {
         };
         let subscriptions = self.subscriptions_(&conf, &services);
         let rx_recv = self.subscribe_(&subscriptions, &services);
-        let handle = self.scheduler.spawn(move || {
-            let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
+        let task_nodes = {
             let mut task_nodes = TaskNodes::new(&dbg);
-            if let Err(err) = task_nodes.build_nodes(&self_name, conf, services.clone()) {
-                log::error!("{dbg}.run | Error: {:?}", err);
-            }
+            task_nodes.build_nodes(&self_name, conf, services.clone())
+                .map_err(|err| Error::new(&dbg, "run").pass(err))?;
+            SendWrapper::wrap(task_nodes)
+        };
+        let handle = self.scheduler.spawn({
+            let dbg = dbg.clone();
+            move || {
+            let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
+            let mut task_nodes = task_nodes.extract();
             log::trace!("{dbg}.run | task_nodes: {:#?}", task_nodes);
             'main: while !exit.load(Ordering::SeqCst) {
                 log::trace!("{dbg}.run | Calculation step...");
@@ -204,15 +208,15 @@ impl Service for Task {
             }
             log::info!("{dbg}.run | Exit");
             Ok(())
-        });
+        }});
         match handle {
             Ok(handle) => {
-                log::info!("{}.run | Starting - ok", self.dbg);
+                log::info!("{dbg}.run | Starting - ok");
                 self.handles.push(handle);
                 Ok(())
             }
             Err(err) => {
-                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
+                let err = Error::new(&dbg, "run").pass_with("Start failed", err.to_string());
                 log::warn!("{}", err);
                 Err(err)
             }
