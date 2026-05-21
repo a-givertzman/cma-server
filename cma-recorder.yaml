@@ -1,26 +1,27 @@
 service Task RecorderTask:
+    wait-started: 100 ms
     cycle: 10 ms
     in queue recv-queue:
         max-length: 10000
     subscribe:
         /App/MultiQueue:                    # - multicast subscription to the MultiQueue
-            {cot: Inf}: []                      #   - on all points having Cot::Inf
+            Inf: []                      #   - on all points having Cot::Inf
     #
     # The nominal load of the crane
     let craneLoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok default 0.0
     #
     # The nominal load of the Winch1
     let winch1LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok default 0.0
     #
     # The nominal load of the Winch2
     let winch2LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch2.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch2.LoadR0' status ok default 0.0
     #
     # The nominal load of the Winch3
     let winch3LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch3.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch3.LoadR0' status ok default 0.0
     #
     # The nominal load of the crane
     let craneLoad:
@@ -52,11 +53,11 @@ service Task RecorderTask:
     #
     # Crane AOPS triggered
     let craneAopsTriggered:
-        input: point int '/App/ied14/db906_visual_data/CraneMode.AOPS' status ok
+        input: point int '/App/ied14/db906_visual_data/CraneMode.AOPS' status ok default 0
     #
     # Crane MOPS triggered
     let craneMopsTriggered:
-        input: point int '/App/ied14/db906_visual_data/CraneMode.MOPS' status ok
+        input: point int '/App/ied14/db906_visual_data/CraneMode.MOPS' status ok default 0
     #
     # Crane load in relative units
     let craneLoadRelative:
