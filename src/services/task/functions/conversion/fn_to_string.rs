@@ -2,10 +2,9 @@ use sal_sync::services::entity::{Point, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::functions::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult,
+        FnOut, FnKind, FnResult,
     },
 };
 ///
@@ -14,7 +13,7 @@ use crate::{
 pub struct FnToString {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
+    input: FnOutRef,
 }
 //
 // 
@@ -22,7 +21,7 @@ impl FnToString {
     ///
     /// Creates new instance of the FnToString
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnToString{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
             kind: FnKind::Fn,
@@ -32,17 +31,14 @@ impl FnToString {
 }
 //
 // 
-impl FnIn for FnToString {}
-//
-// 
 impl FnOut for FnToString { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -50,7 +46,8 @@ impl FnOut for FnToString {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
@@ -85,9 +82,6 @@ impl FnOut for FnToString {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnToString {}
 ///
 /// Global static counter of FnToString instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

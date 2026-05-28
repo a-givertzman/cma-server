@@ -3,10 +3,9 @@ use sal_sync::services::{entity::{Point, PointConfType, PointHlr}, types::TypeOf
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::functions::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult
+        FnOut, FnKind, FnResult
     }
 };
 ///
@@ -18,7 +17,7 @@ use crate::{
 pub struct FnPiecewiseLineApprox {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
+    input: FnOutRef,
     pieces: Linears,
 }
 //
@@ -27,7 +26,7 @@ impl FnPiecewiseLineApprox {
     ///
     /// Creates new instance of the FnPiecewiseLineApprox
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnInOutRef, pieces: IndexMap<serde_yaml::Value, serde_yaml::Value>) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef, pieces: IndexMap<serde_yaml::Value, serde_yaml::Value>) -> Self {
         let self_id = format!("{}/FnPiecewiseLineApprox{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst));
         let pieces = Linears::new(&self_id, &pieces);
         Self { 
@@ -77,17 +76,14 @@ impl FnPiecewiseLineApprox {
 }
 //
 // 
-impl FnIn for FnPiecewiseLineApprox {}
-//
-// 
 impl FnOut for FnPiecewiseLineApprox { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -95,7 +91,8 @@ impl FnOut for FnPiecewiseLineApprox {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
@@ -115,9 +112,6 @@ impl FnOut for FnPiecewiseLineApprox {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnPiecewiseLineApprox {}
 ///
 /// Global static counter of FnPiecewiseLineApprox instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

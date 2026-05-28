@@ -1,14 +1,15 @@
+use sal_core::error::Error;
 use sal_sync::services::{entity::{Name, Point, PointHlr, PointTxId, ToPoint}, Services, task::functions::FnConfig};
 use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use indexmap::IndexMap;
 use crate::{
     domain::{
         format::FormatPoint,
-        FnInOutRef,
+        FnOutRef,
     },
     services::task::{
         task_nodes::TaskNodes,
-        functions::{FnInOut, FnOut, FnIn, fn_builder::FnBuilder, FnKind, FnResult},
+        functions::{FnOut, FnBuilder, FnKind, FnResult},
     }
 };
 ///
@@ -39,7 +40,7 @@ pub struct SqlMetric {
     name: Name,
     tx_id: usize,
     kind: FnKind,
-    inputs: IndexMap<String, FnInOutRef>,
+    inputs: IndexMap<String, FnOutRef>,
     // initial: f64,
     // table: String,
     sql: FormatPoint,
@@ -50,7 +51,7 @@ pub struct SqlMetric {
 impl SqlMetric {
     //
     //
-    pub fn new(parent: impl Into<String>, conf: &mut FnConfig, task_nodes: &mut TaskNodes, services: Arc<Services>) -> SqlMetric {
+    pub fn new(parent: impl Into<String>, conf: &mut FnConfig, task_nodes: &mut TaskNodes, services: Arc<Services>) -> Result<SqlMetric, Error> {
         let self_name = Name::new(parent, format!("SqlMetric{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let self_id = self_name.join();
         let tx_id = PointTxId::from_str(&self_name.join());
@@ -65,7 +66,8 @@ impl SqlMetric {
             let input_conf = conf.input_conf(name).unwrap();
             inputs.insert(
                 name.to_owned(), 
-                FnBuilder::new(&self_name, tx_id, input_conf, task_nodes, services.clone()),
+                FnBuilder::new(&self_name, tx_id, input_conf, task_nodes, services.clone())
+                    .map_err(|err| Error::new(&self_id, "new").pass_with(format!("Can't build input '{name}'"), err))?,
             );
         }
         let id = conf.name.clone();
@@ -87,7 +89,7 @@ impl SqlMetric {
         sql_names.remove("table");
         sql_names.remove("sql");
         sql_names.remove("id");
-        SqlMetric {
+        Ok(SqlMetric {
             id: self_id,
             name: self_name,
             tx_id,
@@ -95,7 +97,7 @@ impl SqlMetric {
             inputs,
             sql,
             sql_names,
-        }
+        })
     }
 }
 //
@@ -106,8 +108,8 @@ impl FnOut for SqlMetric {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -153,12 +155,6 @@ impl FnOut for SqlMetric {
         }
     }
 }
-//
-// 
-impl FnIn for SqlMetric {}
-//
-// 
-impl FnInOut for SqlMetric {}
 ///
 /// Global static counter of SqlMetric instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

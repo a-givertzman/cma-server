@@ -1,3 +1,5 @@
+use sal_core::error::Error;
+
 // use std::collections::HashMap;
 // use crate::core_::FnInOutRef;
 ///
@@ -18,11 +20,15 @@ impl TaskNodeVars {
     }
     ///
     /// Adding new variable name
-    pub fn add_var(&mut self, name: impl Into<String> + Clone) {
-        // assert!(!self.vars.contains(name.clone().into().as_str()), "Dublicated variable name: {:?}", name.clone().into());
-        assert!(!name.clone().into().is_empty(), "Variable name can't be emty");
-        log::trace!("TaskNodeStuff.addVar | adding variable {:?}", name.clone().into());
-        self.vars.push(name.into());
+    pub fn add_var(&mut self, name: impl Into<String> + Clone) -> Result<(), Error> {
+        let name = name.into();
+        // assert!(!self.vars.contains(&name), "Dublicated variable name: {:?}", name);
+        if name.is_empty() {
+            return Err(Error::new("TaskNodeVars", "add_var").err("Variable name can't be emty"));
+        }
+        log::trace!("TaskNodeStuff.addVar | adding variable {:?}", name);
+        self.vars.push(name);
+        Ok(())
     }
     // ///
     // /// 

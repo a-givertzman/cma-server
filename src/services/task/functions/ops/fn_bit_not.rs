@@ -1,9 +1,9 @@
 use sal_sync::services::entity::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::{
-        FnIn, FnInOut, FnOut, FnKind, FnResult,
+        FnOut, FnKind, FnResult,
     },
 
 };
@@ -22,7 +22,7 @@ use crate::{
 pub struct FnBitNot {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
+    input: FnOutRef,
 }
 //
 // 
@@ -30,7 +30,7 @@ impl FnBitNot {
     ///
     /// Creates new instance of the FnBitNot
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnBitNot{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
@@ -40,24 +40,22 @@ impl FnBitNot {
 }
 //
 // 
-impl FnIn for FnBitNot {}
-//
-// 
 impl FnOut for FnBitNot {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
         self.input.borrow().inputs()
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         log::trace!("{}.out | input: {:#?}", self.id, input);
         match input {
@@ -96,9 +94,6 @@ impl FnOut for FnBitNot {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnBitNot {}
 ///
 /// Global static counter of FnBitNot instances
 pub static COUNT: AtomicUsize = AtomicUsize::new(1);

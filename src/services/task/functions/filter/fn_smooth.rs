@@ -1,9 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_sync::services::entity::{Point, PointConfType};
 use crate::{
-    domain::FnInOutRef, services::task::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult,
+    domain::FnOutRef, services::task::{
+        FnOut, FnKind, FnResult,
     }
 };
 ///
@@ -14,8 +13,8 @@ use crate::{
 pub struct FnSmooth {
     id: String,
     kind: FnKind,
-    factor: FnInOutRef,
-    input: FnInOutRef,
+    factor: FnOutRef,
+    input: FnOutRef,
     value: Point,
 }
 //
@@ -24,7 +23,7 @@ impl FnSmooth {
     ///
     /// Creates new instance of the FnSmooth
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, factor: FnInOutRef, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, factor: FnOutRef, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnSmooth{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
@@ -36,17 +35,14 @@ impl FnSmooth {
 }
 //
 // 
-impl FnIn for FnSmooth {}
-//
-// 
 impl FnOut for FnSmooth { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -57,7 +53,8 @@ impl FnOut for FnSmooth {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let factor = self.factor.borrow_mut().out();
         log::trace!("{}.out | factor: {:?}", self.id, factor);
         let factor = match factor {
@@ -98,9 +95,6 @@ impl FnOut for FnSmooth {
         self.value = Point::new(0, "", 0.0);
     }
 }
-//
-// 
-impl FnInOut for FnSmooth {}
 ///
 /// Global static counter of FnSmooth instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

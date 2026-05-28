@@ -22,9 +22,9 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, name: impl Into<String>, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: name.into(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ))
 }
 ///
 /// Testing accumulation of the Bool's

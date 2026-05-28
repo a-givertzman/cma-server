@@ -1,9 +1,9 @@
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{
-    entity::{Name, Object, Point, PointConf, PointTxId}, Service, ServiceCycle, Services, SubscriptionCriteria
-}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
+use sal_sync::{kernel::state::ExitNotify, services::{
+    ConfSubscribe, Service, ServiceCycle, Services, SubscriptionCriteria, entity::{Name, Object, Point, PointConf, PointTxId}
+}, sync::{Handles, Owner, channel::{self, Receiver, RecvTimeoutError, Sender}}, thread_pool::Scheduler};
 use std::{
-    collections::HashMap, fmt::Debug, marker::PhantomData, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration
+    collections::HashMap, fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration
 };
 use concat_string::concat_string;
 use crate::{
@@ -15,7 +15,6 @@ use crate::{
 ///  - executed event mode (future impl..)
 ///  - has some number of functions / variables / metrics or additional entities
 pub struct Task {
-    dbg: Dbg,
     name: Name,
     in_send: HashMap<String, Sender<Point>>,
     rx_recv: Owner<Receiver<Point>>,
@@ -23,7 +22,8 @@ pub struct Task {
     conf: TaskConf,
     scheduler: Scheduler,
     handles: Handles<()>,
-    exit: Arc<AtomicBool>,
+    exit: Arc<ExitNotify>,
+    dbg: Dbg,
 }
 //
 //
@@ -42,17 +42,17 @@ impl Task {
             conf,
             scheduler,
             handles: Handles::new(&dbg),
+            exit: Arc::new(ExitNotify::new(&dbg, None, None)),
             dbg,
-            exit: Arc::new(AtomicBool::new(false)),
         }
     }
     ///
     ///
-    fn subscriptions_(&self, conf: &TaskConf, services: &Arc<Services>) -> Option<(String, Vec<SubscriptionCriteria>)> {
-        if conf.subscribe.is_empty() {
+    fn subscriptions_(&self, conf: &ConfSubscribe, services: &Arc<Services>) -> Option<(String, Vec<SubscriptionCriteria>)> {
+        if conf.is_empty() {
             None
         } else {
-            log::debug!("{}.subscriptions | requesting points...", self.dbg);
+            log::trace!("{}.subscriptions | requesting points...", self.dbg);
             let mut self_points = self.conf.points();
             let mut points = services.points(&self.dbg).then(
                 |points| points,
@@ -62,22 +62,21 @@ impl Task {
                 },
             );
             points.append(&mut self_points);
-            log::debug!("{}.subscriptions | rceived points: {:#?}", self.dbg, points.len());
-            log::debug!(
+            log::trace!("{}.subscriptions | rceived points: {:#?}", self.dbg, points.len());
+            log::trace!(
                 "{}.subscriptions | rceived points: {:#?}",
                 self.dbg,
                 points.iter().map(|p| concat_string!(p.id.to_string(), " | ", p.type_.to_string(), " | ", p.name)).collect::<Vec<String>>(),
             );
-            log::debug!("{}.subscriptions | conf.subscribe: {:#?}", self.dbg, conf.subscribe);
-            let subscriptions = conf.subscribe.with(&points);
-            log::trace!("{}.subscriptions | subscriptions: {:#?}", self.dbg, subscriptions);
+            // log::debug!("{}.subscriptions | conf.subscribe: {:#?}", self.dbg, conf);
+            let subscriptions = conf.with(&points);
             if subscriptions.len() > 1 {
                 log::error!("{}.subscriptions | Task does not supports multiple subscriptions for now: {:#?}.\n\tTry to use single subscription.", self.dbg, subscriptions);
                 None
             } else {
-                let subscriptions_first = subscriptions.clone().into_iter().next();
-                match subscriptions_first {
+                match subscriptions.clone().into_iter().next() {
                     Some((service_name, Some(points))) => {
+                        log::debug!("{}.subscriptions | subscriptions: {:#?}", self.dbg, points.iter().map(|s| format!("{service_name}: {}", s.destination())).collect::<Vec<String>>());
                         Some((service_name, points))
                     }
                     Some((_, None)) => {
@@ -148,26 +147,27 @@ impl Service for Task {
         let self_name = self.name.clone();
         let exit = self.exit.clone();
         let conf = self.conf.clone();
+        let conf_cycle = conf.cycle;
         let services = self.services.clone();
-        let (cyclic, cycle_interval, recv_timeout) = match conf.cycle {
-            Some(interval) => (interval > Duration::ZERO, interval, interval),
-            None => (false, Duration::ZERO, RECV_TIMEOUT),
-        };
-        let subscriptions = self.subscriptions_(&conf, &services);
-        let rx_recv = self.subscribe_(&subscriptions, &services);
         let task_nodes = {
             let mut task_nodes = TaskNodes::new(&dbg);
-            task_nodes.build_nodes(&self_name, conf, services.clone())
+            task_nodes.build_nodes(&self_name, &conf, services.clone())
                 .map_err(|err| Error::new(&dbg, "run").pass(err))?;
             SendWrapper::wrap(task_nodes)
         };
+        let subscriptions = self.subscriptions_(&conf.subscribe, &services);
+        let rx_recv = self.subscribe_(&subscriptions, &services);
         let handle = self.scheduler.spawn({
             let dbg = dbg.clone();
+            let (cyclic, cycle_interval, recv_timeout) = match conf_cycle {
+                Some(interval) => (interval > Duration::ZERO, interval, interval),
+                None => (false, Duration::ZERO, RECV_TIMEOUT),
+            };
             move || {
             let mut cycle = ServiceCycle::new(&dbg, cycle_interval);
-            let mut task_nodes = task_nodes.extract();
+            let task_nodes = task_nodes.extract();
             log::trace!("{dbg}.run | task_nodes: {:#?}", task_nodes);
-            'main: while !exit.load(Ordering::SeqCst) {
+            'main: while !exit.get() {
                 log::trace!("{dbg}.run | Calculation step...");
                 if cyclic {
                     cycle.start();
@@ -175,8 +175,13 @@ impl Service for Task {
                         Ok(point) => {
                             // log::debug!("{dbg}.run | point: {:?}", &point);
                             log::debug!("{dbg}.run | Event '{}': {:?}  {:?}  {:?}", point.name(), point.value(), point.status(), point.cot());
-                            task_nodes.eval(point);
-                            log::debug!("{dbg}.run | Calculation step - done ({:?})", cycle.elapsed());
+                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                task_nodes.eval(point);
+                            }));
+                            match result {
+                                Ok(_) => log::debug!("{dbg}.run | Calculation step - done ({:?})", cycle.elapsed()),
+                                Err(err) => log::error!("{dbg}.run | Calculation step - fails {:?}", err),
+                            }
                             cycle.wait();
                         }
                         Err(err) => match err {
@@ -188,15 +193,23 @@ impl Service for Task {
                         }
                     };
                 } else {
-                    match rx_recv.recv() {
+                    match rx_recv.recv_timeout(RECV_TIMEOUT) {
                         Ok(point) => {
                             log::debug!("{dbg}.run | point: {:?}", &point);
-                            task_nodes.eval(point);
-                            log::debug!("{dbg}.run | calculation step - done ({:?})", cycle.elapsed());
+                            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                task_nodes.eval(point);
+                            }));
+                            match result {
+                                Ok(_) => log::debug!("{dbg}.run | Calculation step - done ({:?})", cycle.elapsed()),
+                                Err(err) => log::error!("{dbg}.run | Calculation step - fails {:?}", err),
+                            }
                         }
-                        Err(err) => {
-                            log::error!("{dbg}.run | Error receiving from queue: {:?}", err);
-                            break 'main;
+                        Err(err) => match err {
+                            RecvTimeoutError::Timeout => {},
+                            _ => {
+                                log::error!("{dbg}.run | Error receiving from queue: {:?}", err);
+                                break 'main;
+                            }
                         }
                     };
                 }
@@ -240,7 +253,6 @@ impl Service for Task {
     //
     //
     fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
-        log::debug!("{}.run | Exit: {}", self.dbg, self.exit.load(Ordering::SeqCst));
+        self.exit.exit();
     }
 }

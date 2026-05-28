@@ -2,8 +2,8 @@ use sal_core::error::Error;
 use sal_sync::services::{conf::ConfDuration, entity::{Cot, Point, PointHlr}, types::Bool};
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::{Duration, Instant}};
 use crate::{
-    domain::FnInOutRef,
-    services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
+    domain::FnOutRef,
+    services::task::{FnOut, FnKind, FnResult},
 };
 ///
 /// Function | Retirns TRUE only after the Input has remained TRUE for the specified duration.
@@ -12,11 +12,11 @@ pub struct FnTimerOnDelay {
     id: String,
     kind: FnKind,
     /// Input, activates behavior, if `false`, always returns Input value immediately, default `true`
-    enable: Option<FnInOutRef>,
+    enable: Option<FnOutRef>,
     /// Input, delay
     delay: Duration,
     /// Input, value
-    input: FnInOutRef,
+    input: FnOutRef,
     time: Option<Instant>,
 }
 //
@@ -27,7 +27,7 @@ impl FnTimerOnDelay {
     /// `delay` = Time being waited for return `true` since input is `true`
     /// `input` - Input value, number or bool
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, delay: ConfDuration, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, delay: ConfDuration, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnTimerOnDelay{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
@@ -40,17 +40,14 @@ impl FnTimerOnDelay {
 }
 //
 //
-impl FnIn for FnTimerOnDelay {}
-//
-//
 impl FnOut for FnTimerOnDelay {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -62,7 +59,8 @@ impl FnOut for FnTimerOnDelay {
         inputs
     }
     ///
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let enable = match &mut self.enable {
             Some(en) => match en.borrow_mut().out() {
                 FnResult::Ok(en) => en.to_bool().as_bool().value.0,
@@ -130,9 +128,6 @@ impl FnOut for FnTimerOnDelay {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnTimerOnDelay {}
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

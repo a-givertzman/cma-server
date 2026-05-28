@@ -2,8 +2,8 @@ use sal_core::error::Error;
 use sal_sync::services::{conf::ConfDuration, entity::{Cot, Point, PointHlr}, types::Bool};
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::{Duration, Instant}};
 use crate::{
-    domain::FnInOutRef,
-    services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
+    domain::FnOutRef,
+    services::task::{FnOut, FnKind, FnResult},
 };
 ///
 /// State
@@ -21,11 +21,11 @@ pub struct FnTimerOffDelay {
     id: String,
     kind: FnKind,
     /// Input, activates behavior, if `false`, always returns Input value immediately, default `true`
-    enable: Option<FnInOutRef>,
+    enable: Option<FnOutRef>,
     /// Input, delay
     delay: Duration,
     /// Input, value
-    input: FnInOutRef,
+    input: FnOutRef,
     state: State,
 }
 //
@@ -36,7 +36,7 @@ impl FnTimerOffDelay {
     /// `delay` = Time being waited for return `false` since input becomes `false`
     /// `input` - Input value, number or bool
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, delay: ConfDuration, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, delay: ConfDuration, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnTimerOffDelay{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
@@ -49,17 +49,14 @@ impl FnTimerOffDelay {
 }
 //
 //
-impl FnIn for FnTimerOffDelay {}
-//
-//
 impl FnOut for FnTimerOffDelay {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -71,7 +68,8 @@ impl FnOut for FnTimerOffDelay {
         inputs
     }
     ///
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let enable = match &mut self.enable {
             Some(en) => match en.borrow_mut().out() {
                 FnResult::Ok(en) => en.to_bool().as_bool().value.0,
@@ -139,9 +137,6 @@ impl FnOut for FnTimerOffDelay {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnTimerOffDelay {}
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

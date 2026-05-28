@@ -43,9 +43,9 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
         }),
             ..Default::default()}, ..Default::default()
     };        
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new(parent, 0, &mut conf)
-    )))
+    ))
 }
 ///
 /// Threshold Reals's
@@ -53,18 +53,18 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
 fn fn_smooth_real() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    let self_id = "fn_smooth_real";
-    log::info!("{}", self_id);
-    let factor = init_each(&self_id, Value::Double(0.125));
-    let input = init_each(&self_id, Value::Real(0.0));
+    let dbg = "fn_smooth_real";
+    log::info!("{}", dbg);
+    let factor = init_each(&dbg, Value::Real(0.125));
+    let input = init_each(&dbg, Value::Real(0.0));
     let mut fn_smooth = FnSmooth::new(
-        self_id,
+        dbg,
         factor,
         input.clone(),
     );
     let test_data = vec![
     //  step    input  target
-        (0,    0.00,        0.0),
+        (0,    0.00f32,     0.0),
         (1,    0.00,        0.0),
         (2,    3.30,        0.4125),
         (3,    0.10,        0.3734375),
@@ -137,7 +137,6 @@ fn fn_smooth_real() {
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_real().value.aprox_eq(target, 4), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
-        println!("------------")
     }
 }
 ///
@@ -146,18 +145,18 @@ fn fn_smooth_real() {
 fn fn_smooth_double() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    let self_id = "fn_smooth_double";
-    log::info!("{}", self_id);
-    let factor = init_each(&self_id, Value::Double(0.125));
-    let input = init_each(&self_id, Value::Double(0.0));
+    let dbg = "fn_smooth_double";
+    log::info!("{}", dbg);
+    let factor = init_each(&dbg, Value::Double(0.125));
+    let input = init_each(&dbg, Value::Double(0.0));
     let mut fn_smooth = FnSmooth::new(
-        self_id,
+        dbg,
         factor,
         input.clone(),
     );
     let test_data = vec![
     //  step    input  target
-        (0,    0.00,        0.0),
+        (0,    0.00f64,     0.0),
         (1,    0.00,        0.0),
         (2,    3.30,        0.4125),
         (3,    0.10,        0.3734375),
@@ -230,7 +229,6 @@ fn fn_smooth_double() {
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_double().value.aprox_eq(target, 6), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
-        println!("------------")
     }
 }
 ///
@@ -241,7 +239,7 @@ fn fn_smooth_user() {
     init_once();
     let self_id = "fn_smooth_user";
     log::info!("{}", self_id);
-    let factor = init_each(&self_id, Value::Double(0.125));
+    let factor = init_each(&self_id, Value::Real(0.125));
     let input = init_each(&self_id, Value::Real(0.0));
     let mut fn_smooth = FnSmooth::new(
         self_id,
@@ -250,7 +248,7 @@ fn fn_smooth_user() {
     );
     let test_data = vec![
     //  step    input  target
-        (00, 0.00, 0.00),
+        (00, 0.00f32, 0.00),
         (01, 5.17, 5.17),
         (02, 15.92, 15.92),
         (03, 16.44, 16.44),
@@ -303,6 +301,5 @@ fn fn_smooth_user() {
         // debug!("input: {:?}", &mut input);
         log::debug!("step {}  value: {:?}   |   result: {:?}", step, value, result.value());
         // assert!(result.as_real().value.aprox_eq(target, 4), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
-        println!("------------")
     }
 }

@@ -1,37 +1,31 @@
-use sal_sync::services::entity::Point;
 use std::sync::atomic::{Ordering, AtomicUsize};
-use crate::domain::FnInOutRef;
-use super::{FnIn, FnInOut, FnOut, FnKind, FnResult};
+use crate::{domain::FnOutRef, services::task::FnFlow};
+use super::{FnOut, FnKind, FnResult};
 ///
-/// Specific kinde of function
-/// - has additional method .eval(), 
-/// nothing returns, 
-/// but evaluete all calculations,
-/// result stores into inner
-/// - calculated result returns in .out() method
-/// - out() method do not evaluete calculations, just returns the result
+/// ### Variable | Specific kinde of function
+/// - has reference to calculations corresponding to the variable name
 #[derive(Debug, Clone)]
 pub struct FnVar {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
-    value: Option<FnResult<Point, String>>,
+    input: FnOutRef,
+    // value: Option<FnResult<Point, String>>,
 }
 //
 // 
 impl FnVar {
-    pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self {
             id: format!("{}/FnVar{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Var,
             input,
-            value: None, 
+            // value: None, 
         }
     }
 }
 //
 // 
-impl FnIn for FnVar {}
+// impl FnIn for FnVar {}
 //
 // 
 impl FnOut for FnVar {
@@ -40,50 +34,36 @@ impl FnOut for FnVar {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
         self.input.borrow().inputs()
     }
     ///
-    /// Returns nothing, 
-    /// - Evaluetes all calculations,
-    /// - Result stores into inner
-    /// - calculated result returns in .out() method
-    fn eval(&mut self) {
+    /// - Evaluate calculations
+    /// - Returns calculated value
+    /// - Returns error if:
+    ///   - Calculations fails
+    ///   - Input not initialized
+    /// - Returns None if:
+    ///   - Point filtered by any kind of filtering function
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         log::trace!("{}.eval | evaluating...", self.id);
-        self.value = Some(self.input.borrow_mut().out());
-    }
-    ///
-    /// Do not evaluete calculations, 
-    /// just returns the result if evalueted, evaluate
-    fn out(&mut self) -> FnResult<Point, String> {
-        let value = match &self.value {
-            Some(value) => {
-                log::trace!("{}.out | value: {:?}", self.id, &self.value);
-                value.clone()
-            }
-            None => {
-                log::trace!("{}.eval | evaluating...", self.id);
-                let value = self.input.borrow_mut().out();
-                self.value = Some(value.clone());
-                value
-                // panic!("{}.out | not initialised", self.id);
-            }
-        };
+        let value = self.input.borrow_mut().out();
+        log::trace!("{}.out | value: {:?}", self.id, value);
         value
     }
     //
     fn reset(&mut self) {
-        self.value = None;
         self.input.borrow_mut().reset();
     }
 }
 //
 // 
-impl FnInOut for FnVar {}
+// impl FnInOut for FnVar {}
 ///
 /// Global static counter of FnVar instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

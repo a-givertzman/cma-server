@@ -1,10 +1,9 @@
 use sal_sync::services::entity::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::{
-        FnInOut, FnIn, FnOut,
-        FnKind, FnResult
+        FnOut, FnKind, FnResult
     },
 };
 ///
@@ -13,8 +12,8 @@ use crate::{
 pub struct FnSub {
     id: String,
     kind: FnKind,
-    input1: FnInOutRef,
-    input2: FnInOutRef,
+    input1: FnOutRef,
+    input2: FnOutRef,
 }
 //
 // 
@@ -22,7 +21,7 @@ impl FnSub {
     ///
     /// Creates new instance of the FnSub
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input1: FnInOutRef, input2: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, input1: FnOutRef, input2: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnSub{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
             kind: FnKind::Fn,
@@ -33,17 +32,14 @@ impl FnSub {
 }
 //
 // 
-impl FnIn for FnSub {}
-//
-// 
 impl FnOut for FnSub { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -53,7 +49,8 @@ impl FnOut for FnSub {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         // TODO Add overflow check
         let input1 = self.input1.borrow_mut().out();
         log::trace!("{}.out | input1: {:?}", self.id, &input1);
@@ -80,9 +77,6 @@ impl FnOut for FnSub {
         self.input2.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnSub {}
 ///
 /// Global static counter of FnSub instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

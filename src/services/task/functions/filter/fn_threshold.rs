@@ -1,9 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_sync::services::entity::{Point, PointConfType, PointHlr};
 use crate::{
-    domain::FnInOutRef, services::task::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult,
+    domain::FnOutRef, services::task::{
+        FnOut, FnKind, FnResult,
     }
 };
 ///
@@ -28,10 +27,10 @@ use crate::{
 pub struct FnThreshold {
     id: String,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
-    threshold: FnInOutRef,
-    factor: Option<FnInOutRef>,
-    input: FnInOutRef,
+    enable: Option<FnOutRef>,
+    threshold: FnOutRef,
+    factor: Option<FnOutRef>,
+    input: FnOutRef,
     value: Option<Point>,
     delta: PointHlr<f64>,
 }
@@ -41,7 +40,7 @@ impl FnThreshold {
     ///
     /// Creates new instance of the FnThreshold
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, threshold: FnInOutRef, factor: Option<FnInOutRef>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, threshold: FnOutRef, factor: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnThreshold{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
@@ -56,17 +55,14 @@ impl FnThreshold {
 }
 //
 // 
-impl FnIn for FnThreshold {}
-//
-// 
 impl FnOut for FnThreshold { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -83,7 +79,8 @@ impl FnOut for FnThreshold {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let enable = match &self.enable {
             Some(enable) => match enable.borrow_mut().out() {
                 FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
@@ -176,9 +173,6 @@ impl FnOut for FnThreshold {
         self.delta = PointHlr::new_double(0, "", 0.0);
     }
 }
-//
-// 
-impl FnInOut for FnThreshold {}
 ///
 /// Global static counter of FnThreshold instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

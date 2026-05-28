@@ -3,10 +3,9 @@ use indexmap::IndexMap;
 use sal_sync::{services::{entity::{Cot, Point, PointHlr, PointTxId, Status}, types::Bool}, sync::channel::Sender};
 use std::{sync::{atomic::{AtomicUsize, Ordering}}, thread};
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult,
+        FnOut, FnKind, FnResult,
     },
 };
 use lazy_static::lazy_static;
@@ -27,9 +26,9 @@ pub struct FnPlot {
     id: String,
     tx_id: usize,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
-    x: Option<FnInOutRef>,
-    inputs: IndexMap<String, FnInOutRef>,
+    enable: Option<FnOutRef>,
+    x: Option<FnOutRef>,
+    inputs: IndexMap<String, FnOutRef>,
     plot_send: Sender<(String, egui::accesskit::Point)>
 }
 //
@@ -38,7 +37,7 @@ impl FnPlot {
     ///
     /// Creates new instance of the FnPlot
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, x: Option<FnInOutRef>, inputs: IndexMap<String, FnInOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, x: Option<FnOutRef>, inputs: IndexMap<String, FnOutRef>) -> Self {
         let id = format!("{}/FnPlot{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         let tx_id = PointTxId::from_str(&id);
         Self { 
@@ -54,17 +53,14 @@ impl FnPlot {
 }
 //
 // 
-impl FnIn for FnPlot {}
-//
-// 
 impl FnOut for FnPlot { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -82,7 +78,8 @@ impl FnOut for FnPlot {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let mut inputs = self.inputs.iter();
         let enable = match &self.enable {
             Some(enable) => {
@@ -142,9 +139,6 @@ impl FnOut for FnPlot {
         }
     }
 }
-//
-// 
-impl FnInOut for FnPlot {}
 ///
 /// Global static counter of FnPlot instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

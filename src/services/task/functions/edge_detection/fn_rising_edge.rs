@@ -1,10 +1,9 @@
 use sal_sync::services::{entity::{Point, PointHlr}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult,
+        FnOut, FnKind, FnResult,
     },
 };
 ///
@@ -14,7 +13,7 @@ use crate::{
 pub struct FnRisingEdge {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
+    input: FnOutRef,
     prev: bool,
 }
 //
@@ -23,7 +22,7 @@ impl FnRisingEdge {
     ///
     /// Creates new instance of the FnRisingEdge
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnRisingEdge{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
@@ -34,17 +33,14 @@ impl FnRisingEdge {
 }
 //
 // 
-impl FnIn for FnRisingEdge {}
-//
-// 
 impl FnOut for FnRisingEdge { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -52,7 +48,8 @@ impl FnOut for FnRisingEdge {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         log::trace!("{}.out | input: {:#?}", self.id, input);
         match input {
@@ -82,9 +79,6 @@ impl FnOut for FnRisingEdge {
         self.prev = false;
     }
 }
-//
-// 
-impl FnInOut for FnRisingEdge {}
 ///
 /// Global static counter of FnRisingEdge instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

@@ -1,18 +1,20 @@
 use sal_sync::{services::{entity::{Point, PointConf, PointConfType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{
-    domain::FnInOutRef, 
-    services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
+    domain::FnOutRef, 
+    services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
-/// Function | Used for export Point from Task service to another service
-///  - Poiont will be sent to the queue only if:
-///     - [enable] 
-///         - if specified and is true (or [enable] > 0)
+/// ### Function | Used to export Point from Task service to another service
+///  
+/// - Point will be sent to the queue only if:
+///     - the incoming data flow is explicitly `New`
+///     - `enable` (handled via `FnEnable` decorator)
+///         - if specified and is true (or `enable` > 0)
 ///         - if not specified - default is true
-///     - send-to - is specified
-///  - if point conf is not specified - input Point will be sent
-///  - Returns input Point
+///     - `send-to` is specified
+/// - If point conf is not specified - input Point will be sent as is.
+/// - Returns the input Point wrapped in `FnFlow`.
 /// 
 /// Example
 /// 
@@ -29,35 +31,32 @@ pub struct FnExport {
     id: String,
     txid: usize,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
     conf: Option<PointConf>,
-    input: FnInOutRef,
+    input: FnOutRef,
     tx_send: Option<Sender<Point>>,
 }
 //
-//
 impl FnExport {
     ///
-    /// Creates new instance of the FnExport
-    /// - parent - the name of the parent entitie
-    /// - enable - boolean (numeric) input enables the export if true (> 0)
-    /// - conf - the configuration of the Point to be prodused, if None - input Point will be sent
-    /// - input - incoming points
-    /// - send-to - destination queue
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, conf: Option<PointConf>, input: FnInOutRef, send: Option<Sender<Point>>) -> Self {
+    /// Creates new instance of FnExport
+    /// - `parent` - the name of the parent entity
+    /// - `conf` - the configuration of the Point to be produced. If None, input Point is sent
+    /// - `input` - the incoming eval reference
+    /// - `send` - the destination queue sender
+    pub fn new(parent: impl Into<String>, conf: Option<PointConf>, input: FnOutRef, send: Option<Sender<Point>>) -> Self {
         let self_id = format!("{}/FnExport{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
             txid: PointTxId::from_str(&self_id),
             kind: FnKind::Fn,
-            enable,
             conf,
             input,
             tx_send: send,
         }
     }
     ///
-    /// Sending Point to the external service if 'send-to' specified
+    /// Sends Point to the external service if 'send-to' specified
+    /// - `point` will be renamed into `self.conf.name`
     fn send(&self, point: Point) {
         if let Some(tx_send) = &self.tx_send {
             let (type_, name) = match &self.conf {
@@ -148,62 +147,34 @@ impl FnExport {
     }
 }
 //
-//
-impl FnIn for FnExport {}
-//
-//
 impl FnOut for FnExport {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        if let Some(enable) = &self.enable {
-            inputs.append(&mut enable.borrow().inputs());
-        }
-        inputs.append(&mut self.input.borrow().inputs());
-        inputs
+        self.input.borrow().inputs()
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
-        let enable = match &self.enable {
-            Some(enable) => match enable.borrow_mut().out() {
-                FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
-                FnResult::None => return FnResult::None,
-                FnResult::Err(err) => return FnResult::Err(err),
-            },
-            None => true,
-        };
-        let input = self.input.borrow_mut().out();
-        log::trace!("{}.out | input: {:?}", self.id, input);
-        match input {
-            FnResult::Ok(input) => {
-                if enable {
-                    self.send(input.clone());
-                }
-                FnResult::Ok(input)
-            }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
+        let Some(val) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
+        log::trace!("{}.out | input: {:?}", self.id, val);
+        if flow.is_new() {
+            self.send(val.clone());
         }
+        flow.wrap(val)
     }
     //
     fn reset(&mut self) {
-        if let Some(enable) = &self.enable {
-            enable.borrow_mut().reset();
-        }
         self.input.borrow_mut().reset();
     }
 }
-//
-//
-impl FnInOut for FnExport {}
 ///
 /// Global static counter of FnExport instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

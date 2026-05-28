@@ -1,4 +1,6 @@
 use sal_sync::services::entity::Point;
+use crate::services::task::FnFlow;
+
 use super::{FnKind, FnResult};
 ///
 /// Input side interface for nested function
@@ -7,15 +9,10 @@ use super::{FnKind, FnResult};
 pub trait FnIn: std::fmt::Debug {
     ///
     /// Adds new value into Input
-    fn add(&mut self, point: &Point) {
-        let _ = point;
-        panic!("FnIn.add | don't use this method, used only for FnInput")
-    }
+    fn add(&mut self, point: &Point);
     ///
     /// Returns 'Options hash' to identify unique set of options of the Input
-    fn hash(&self) -> String {
-        panic!("FnIn.hash | don't use this method, used only for FnInput")
-    }
+    fn hash(&self) -> String;
 }
 ///
 /// Out side interface for the function
@@ -28,16 +25,10 @@ pub trait FnOut: std::fmt::Debug {
     fn id(&self) -> String;
     ///
     /// Returns enum kind of the FnOut
-    fn kind(&self) -> &FnKind;
+    fn kind(&self) -> FnKind;
     ///
     /// Returns names of inputs it depending on
     fn inputs(&self) -> Vec<String>;
-    ///
-    /// Evaluate calculations
-    /// - Used only for FnVar
-    fn eval(&mut self) {
-        panic!("FnOut.eval | don't use this method, used only for FnVar")
-    }
     ///
     /// - Evaluate calculations
     /// - Returns calculated value
@@ -46,7 +37,7 @@ pub trait FnOut: std::fmt::Debug {
     ///   - Input not initialized
     /// - Returns None if:
     ///   - Point filtered by any kind of filtering function
-    fn out(&mut self) -> FnResult<Point, String>;
+    fn out(&mut self) -> FnResult<FnFlow, String>;
     ///
     /// resets self state to the initial, calls reset method of all inputs 
     fn reset(&mut self);

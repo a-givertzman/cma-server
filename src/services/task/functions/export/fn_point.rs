@@ -1,7 +1,7 @@
 use sal_sync::{services::{entity::{Point, PointConf, PointConfType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{
-    domain::FnInOutRef, services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
+    domain::FnOutRef, services::task::{FnOut, FnKind, FnResult},
 };
 ///
 /// Function | Used for export Point from Task service to another service
@@ -32,9 +32,9 @@ pub struct FnPoint {
     txid: usize,
     kind: FnKind,
     conf: PointConf,
-    enable: Option<FnInOutRef>,
-    changes_only: Option<FnInOutRef>,
-    input: Option<FnInOutRef>,
+    enable: Option<FnOutRef>,
+    changes_only: Option<FnOutRef>,
+    input: Option<FnOutRef>,
     send_to: Option<Sender<Point>>,
     state: Option<Point>,
 }
@@ -46,7 +46,7 @@ impl FnPoint {
     /// - id - just for proper debugging
     /// - input - incoming points
     /// - if [changes-only] is specified and true - changes only will be sent, default false (sending all points)
-    pub fn new(parent: impl Into<String>, conf: PointConf, enable: Option<FnInOutRef>, changes_only: Option<FnInOutRef>, input: Option<FnInOutRef>, send_to: Option<Sender<Point>>) -> Self {
+    pub fn new(parent: impl Into<String>, conf: PointConf, enable: Option<FnOutRef>, changes_only: Option<FnOutRef>, input: Option<FnOutRef>, send_to: Option<Sender<Point>>) -> Self {
         let self_id = format!("{}/FnPoint{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
@@ -149,17 +149,14 @@ impl FnPoint {
 }
 //
 //
-impl FnIn for FnPoint {}
-//
-//
 impl FnOut for FnPoint {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -173,7 +170,8 @@ impl FnOut for FnPoint {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         match &self.input {
             Some(input) => {
                 let enable = match &self.enable {
@@ -239,9 +237,6 @@ impl FnOut for FnPoint {
         }
     }
 }
-//
-//
-impl FnInOut for FnPoint {}
 ///
 /// Global static counter of FnPoint instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

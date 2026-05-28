@@ -1,39 +1,34 @@
-use sal_sync::services::entity::{Point, PointConfType, PointHlr};
+use sal_sync::services::entity::{Point, PointConfType, PointHlr, PointType};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use crate::domain::FnInOutRef;
-use crate::services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult};
+use crate::domain::FnOutRef;
+use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 ///
 /// Accumulates numeric incoming Point's value
-/// - if input is not numeric - will panic
+/// - if input is not numeric - returns Err
 /// - if input is bool, false = 0, true = 1
 #[derive(Debug)]
 pub struct FnAcc {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
+    input: FnOutRef,
     acc: Option<Point>,
-    initial: Option<FnInOutRef>,
+    initial: Option<FnOutRef>,
 }
-//
 // 
 impl FnAcc {
     ///
     /// Creates new instance of the FnAcc
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, initial: Option<FnInOutRef>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, initial: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnAcc{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
-            kind:FnKind::Fn,
+            kind: FnKind::Fn,
             input,
             acc: None,
             initial,
         }
     }
 }
-//
-// 
-impl FnIn for FnAcc {}
-//
 // 
 impl FnOut for FnAcc {
     //
@@ -41,8 +36,8 @@ impl FnOut for FnAcc {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -54,48 +49,45 @@ impl FnOut for FnAcc {
         inputs
     }
     ///
-    fn out(&mut self) -> FnResult<Point, String> {
-        let input = self.input.borrow_mut().out();
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
+        let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
+        let input_is_new = flow.is_new();
         // trace!("{}.out | input: {:?}", self.id, input);
-        match input {
-            FnResult::Ok(input) => {
-                let acc = match self.acc.clone() {
-                    Some(acc) => acc,
-                    None => {
-                        match &mut self.initial {
-                            Some(initial) => {
-                                match initial.borrow_mut().out() {
-                                    FnResult::Ok(initial) => initial,
-                                    FnResult::None => return FnResult::None,
-                                    FnResult::Err(err) => return FnResult::Err(err),
-                                }
-                            }
-                            None => match input.type_() {
-                                PointConfType::Bool | PointConfType::Int  => Point::Int(PointHlr::new(
-                                    input.txid(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
-                                )),
-                                PointConfType::Real => Point::Real(PointHlr::new(
-                                    input.txid(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
-                                )),
-                                PointConfType::Double => Point::Double(PointHlr::new(
-                                    input.txid(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
-                                )),
-                                _ => panic!("{}.out | Invalit input type '{:?}'", self.id, input.type_()),
-                            }
-                        }
+        let acc = match self.acc.as_ref() {
+            Some(acc) => acc.clone(),
+            None => {
+                let acc = if let Some(initial) = &self.initial {
+                    let Some(initial) = flow.map(initial.borrow_mut().out())? else { return Ok(None) };
+                    initial
+                } else {
+                    match input.type_() {
+                        PointType::Bool | PointType::Int => Point::Int(PointHlr::new(
+                            input.txid(), &input.name(), 0, input.status(), input.cot(), input.timestamp(),
+                        )),
+                        PointType::Real => Point::Real(PointHlr::new(
+                            input.txid(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
+                        )),
+                        PointType::Double => Point::Double(PointHlr::new(
+                            input.txid(), &input.name(), 0.0, input.status(), input.cot(), input.timestamp(),
+                        )),
+                        _ => return Err(format!("{}.out | Invalid input type '{:?}', expected number", self.id, input.type_())),
                     }
                 };
-                let acc = match &input {
-                    Point::Bool(_) => acc + input.to_int(),
-                    _ => acc + input,
-                };
-                log::trace!("{}.out | out: {:?}", self.id, acc);
                 self.acc = Some(acc.clone());
-                FnResult::Ok(acc)
+                acc
             }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
-        }
+        };
+        if !input_is_new {
+            return flow.wrap(acc);
+        };
+        let acc = match &input {
+            Point::Bool(_) => acc + input.to_int(),
+            _ => acc + input,
+        };
+        log::trace!("{}.out | out: {:?}", self.id, acc);
+        self.acc = Some(acc.clone());
+        flow.wrap(acc)
     }
     fn reset(&mut self) {
         if let Some(initial) = &self.initial {
@@ -105,9 +97,6 @@ impl FnOut for FnAcc {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnAcc {}
 ///
 /// Global static counter of FnAcc instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

@@ -2,10 +2,9 @@ use sal_sync::services::{entity::{Point, PointHlr}, types::{Bool, DebugTypeOf}};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::functions::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult,
+        FnOut, FnKind, FnResult,
     },
 };
 ///
@@ -17,7 +16,7 @@ use crate::{
 pub struct FnToBool {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
+    input: FnOutRef,
 }
 //
 // 
@@ -25,7 +24,7 @@ impl FnToBool {
     ///
     /// Creates new instance of the FnToBool
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnToBool{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
             kind: FnKind::Fn,
@@ -35,17 +34,14 @@ impl FnToBool {
 }
 //
 // 
-impl FnIn for FnToBool {}
-//
-// 
 impl FnOut for FnToBool { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -53,7 +49,8 @@ impl FnOut for FnToBool {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         match input {
             FnResult::Ok(input) => {
@@ -102,9 +99,6 @@ impl FnOut for FnToBool {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnToBool {}
 ///
 /// Global static counter of FnToBool instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

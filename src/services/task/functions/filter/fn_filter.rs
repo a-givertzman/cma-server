@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_sync::services::entity::Point;
 use crate::{
-    domain::FnInOutRef,
-    services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
+    domain::FnOutRef,
+    services::task::{FnOut, FnKind, FnResult},
 };
 ///
 /// Function | Returns filtered input or default value
@@ -13,9 +13,9 @@ pub struct FnFilter {
     id: String,
     // tx_id: usize,
     kind: FnKind,
-    default: Option<FnInOutRef>,
-    input: FnInOutRef,
-    pass: FnInOutRef,
+    default: Option<FnOutRef>,
+    input: FnOutRef,
+    pass: FnOutRef,
     state: Option<Point>,
 }
 //
@@ -25,7 +25,7 @@ impl FnFilter {
     /// Creates new instance of the FnFilter
     /// - id - just for proper debugging
     /// - input - incoming points
-    pub fn new(parent: impl Into<String>, default: Option<FnInOutRef>, input: FnInOutRef, pass: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, default: Option<FnOutRef>, input: FnOutRef, pass: FnOutRef) -> Self {
         let self_id = format!("{}/FnFilter{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
             id: self_id.clone(),
@@ -40,17 +40,14 @@ impl FnFilter {
 }
 //
 //
-impl FnIn for FnFilter {}
-//
-//
 impl FnOut for FnFilter {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -63,7 +60,8 @@ impl FnOut for FnFilter {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let pass_point = self.pass.borrow_mut().out();
         log::trace!("{}.out | pass: {:?}", self.id, pass_point);
         let pass = match pass_point {
@@ -96,9 +94,6 @@ impl FnOut for FnFilter {
         self.pass.borrow_mut().reset();
     }
 }
-//
-//
-impl FnInOut for FnFilter {}
 ///
 /// Global static counter of FnFilter instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

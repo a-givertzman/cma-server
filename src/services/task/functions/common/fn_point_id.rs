@@ -4,10 +4,9 @@ use sal_sync::services::entity::{Point, PointConf, PointHlr};
 use std::{hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use concat_string::concat_string;
 use crate::{
-    domain::FnInOutRef, 
+    domain::FnOutRef, 
     services::task::functions::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult
+        FnOut, FnKind, FnResult
     },
 };
 ///
@@ -23,7 +22,7 @@ use crate::{
 pub struct FnPointId {
     id: String,
     kind: FnKind,
-    input: FnInOutRef,
+    input: FnOutRef,
     points: IndexMap<String, usize, BuildHasherDefault<FxHasher>>,
 }
 //
@@ -32,7 +31,7 @@ impl FnPointId {
     ///
     /// Creates new instance of the FnPointId
     // #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnInOutRef, points: Vec<PointConf>) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef, points: Vec<PointConf>) -> Self {
         Self { 
             id: format!("{}/FnPointId{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
@@ -43,17 +42,14 @@ impl FnPointId {
 }
 //
 // 
-impl FnIn for FnPointId {}
-//
-// 
 impl FnOut for FnPointId { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -61,7 +57,8 @@ impl FnOut for FnPointId {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         log::trace!("{}.out | input: {:?}", self.id, input);
         match input {
@@ -93,9 +90,6 @@ impl FnOut for FnPointId {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnPointId {}
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

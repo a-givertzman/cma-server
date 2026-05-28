@@ -40,7 +40,7 @@ fn int() {
             retain:
         "#).unwrap()),
     ), Some(tp.scheduler())));
-    nodes.build_nodes(&self_name, conf, services);
+    nodes.build_nodes(&self_name, &conf, services).unwrap();
     log::debug!("taskNodes: {:?}", nodes);
     let test_data = vec![
         (1, "/path/Point.Name", 3),
@@ -63,14 +63,15 @@ fn int() {
         let input_name = &point.name();
         match nodes.get_eval_node(&input_name) {
             Some(eval_node) => {
-                eval_node.add(&point);
-                for eval_node_var in eval_node.get_vars() {
-                    log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
+                eval_node.borrow().add(&point);
+                let eval_node_name = eval_node.borrow().name();
+                for eval_node_var in eval_node.borrow().get_vars() {
+                    log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node_name, eval_node_var.borrow().id());
                     eval_node_var.borrow_mut().eval();
-                    log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
+                    log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node_name, eval_node_var.borrow().id());
                 };
-                for eval_node_out in eval_node.get_outs() {
-                    log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
+                for eval_node_out in eval_node.borrow().get_outs() {
+                    log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node_name);
                     let out = eval_node_out.borrow_mut().out();
                     match out {
                         FnResult::Ok(out) => {
@@ -82,15 +83,15 @@ fn int() {
                                 Point::String(point) => point.value.clone(),
                                 Point::Bytes(point) => point.to_string().value,
                             };
-                            log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                            log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node_name, eval_node_out.borrow().id(), out);
                             assert_eq!(
                                 out_value,
                                 format!("UPDATE SelectMetric_test_table_name SET kind = '{:.1}' WHERE id = '{}';",target_value, 1.11),
                                 // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
                             );
                         }
-                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node.name(), eval_node_out.borrow().id()),
-                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node.name(), eval_node_out.borrow().id(), err),
+                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
+                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
                     } 
                 }
             }
@@ -120,7 +121,7 @@ fn real() {
             retain:
         "#).unwrap()),
     ), Some(tp.scheduler())));
-    nodes.build_nodes(&self_name, conf, services);
+    nodes.build_nodes(&self_name, &conf, services).unwrap();
     log::debug!("taskNodes: {:?}", nodes);
     let test_data = vec![
         (1.1f32, "/path/Point.Name", 3.3f32),
@@ -143,14 +144,15 @@ fn real() {
         let input_name = &point.name();
         match nodes.get_eval_node(&input_name) {
             Some(eval_node) => {
-                eval_node.add(&point);
-                for eval_node_var in eval_node.get_vars() {
-                    log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
+                eval_node.borrow().add(&point);
+                let eval_node_name = eval_node.borrow().name();
+                for eval_node_var in eval_node.borrow().get_vars() {
+                    log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node_name, eval_node_var.borrow().id());
                     eval_node_var.borrow_mut().eval();
-                    log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
+                    log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node_name, eval_node_var.borrow().id());
                 };
-                for eval_node_out in eval_node.get_outs() {
-                    log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
+                for eval_node_out in eval_node.borrow().get_outs() {
+                    log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node_name);
                     let out = eval_node_out.borrow_mut().out();
                     match out {
                         FnResult::Ok(out) => {
@@ -162,7 +164,7 @@ fn real() {
                                 Point::String(point) => point.value.clone(),
                                 Point::Bytes(point) => point.to_string().value,
                             };
-                            log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                            log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node_name, eval_node_out.borrow().id(), out);
                             let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
                             log::trace!("re: {}", re);
                             let re = RegexBuilder::new(&re).multi_line(false).build().unwrap();
@@ -179,8 +181,8 @@ fn real() {
                                 // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
                             );
                         }
-                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node.name(), eval_node_out.borrow().id()),
-                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node.name(), eval_node_out.borrow().id(), err),
+                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
+                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
                     }
                 }
             }
@@ -209,7 +211,7 @@ fn double() {
             retain:
         "#).unwrap()),
     ), None));
-    nodes.build_nodes(&self_name, conf, services);
+    nodes.build_nodes(&self_name, &conf, services).unwrap();
     log::debug!("taskNodes: {:?}", nodes);
     let test_data = vec![
         (1.1f64, "/path/Point.Name", 3.3),
@@ -232,14 +234,15 @@ fn double() {
         let input_name = &point.name();
         match nodes.get_eval_node(&input_name) {
             Some(eval_node) => {
-                eval_node.add(&point);
-                for eval_node_var in eval_node.get_vars() {
-                    log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.name(), eval_node_var.borrow().id());
+                eval_node.borrow().add(&point);
+                let eval_node_name = eval_node.borrow().name();
+                for eval_node_var in eval_node.borrow().get_vars() {
+                    log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node_name, eval_node_var.borrow().id());
                     eval_node_var.borrow_mut().eval();
-                    log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.name(), eval_node_var.borrow().id());
+                    log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node_name, eval_node_var.borrow().id());
                 };
-                for eval_node_out in eval_node.get_outs() {
-                    log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.name());
+                for eval_node_out in eval_node.borrow().get_outs() {
+                    log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node_name);
                     let out = eval_node_out.borrow_mut().out();
                     match out {
                         FnResult::Ok(out) => {
@@ -251,7 +254,7 @@ fn double() {
                                 Point::String(point) => point.value.clone(),
                                 Point::Bytes(point) => point.to_string().value,
                             };
-                            log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.name(), eval_node_out.borrow().id(), out);
+                            log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node_name, eval_node_out.borrow().id(), out);
                             let re = r"(UPDATE SelectMetric_test_table_name SET kind = ')(\d+(?:\.\d+)*)(' WHERE id = '3.33';)";
                             log::trace!("re: {}", re);
                             let re = RegexBuilder::new(&re).multi_line(false).build().unwrap();
@@ -268,8 +271,8 @@ fn double() {
                                 // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
                             );
                         }
-                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node.name(), eval_node_out.borrow().id()),
-                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node.name(), eval_node_out.borrow().id(), err),
+                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
+                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
                     };
                 }
             }

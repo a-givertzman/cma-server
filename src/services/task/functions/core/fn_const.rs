@@ -1,6 +1,8 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
 use sal_sync::services::entity::Point;
-use super::{FnIn, FnInOut, FnOut, FnKind, FnResult};
+use crate::services::task::FnFlow;
+
+use super::{FnOut, FnKind, FnResult};
 ///
 /// Function | Constant value
 #[derive(Debug, Clone)]
@@ -26,33 +28,27 @@ impl FnConst {
 }
 //
 // 
-impl FnIn for FnConst {}
-//
-// 
 impl FnOut for FnConst {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
         vec![]
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
         log::trace!("{}.out | value: {:?}", self.id, &self.point);
-        FnResult::Ok(self.point.clone())
+        Ok(Some(FnFlow::Old(self.point.clone())))
     }
     //
     fn reset(&mut self) {}
 }
-//
-// 
-impl FnInOut for FnConst {}
 ///
 /// Global static counter of FnConst instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

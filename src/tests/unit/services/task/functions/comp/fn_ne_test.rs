@@ -21,9 +21,9 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ))
 }
 ///
 /// Testing Task Ne Bool's

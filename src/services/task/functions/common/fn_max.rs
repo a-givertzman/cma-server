@@ -1,16 +1,16 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use sal_sync::services::entity::Point;
-use crate::domain::FnInOutRef;
-use crate::services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult};
+use crate::domain::FnOutRef;
+use crate::services::task::{FnOut, FnKind, FnResult};
 ///
 /// Returns an max value (in Double) of the input
 #[derive(Debug)]
 pub struct FnMax {
     id: String,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
-    input: FnInOutRef,
+    enable: Option<FnOutRef>,
+    input: FnOutRef,
     max: Option<Point>,
 }
 //
@@ -19,7 +19,7 @@ impl FnMax {
     ///
     /// Creates new instance of the FnMax
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnMax{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
@@ -31,17 +31,14 @@ impl FnMax {
 }
 //
 // 
-impl FnIn for FnMax {}
-//
-// 
 impl FnOut for FnMax {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -53,7 +50,8 @@ impl FnOut for FnMax {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let enable = match &self.enable {
             Some(enable) => match enable.borrow_mut().out() {
                 FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
@@ -117,9 +115,6 @@ impl FnOut for FnMax {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnMax {}
 ///
 /// Global static counter of FnMax instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

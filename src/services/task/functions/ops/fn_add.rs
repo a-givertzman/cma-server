@@ -5,9 +5,9 @@ use sal_sync::services::{
 use std::sync::atomic::{AtomicUsize, Ordering};
 use chrono::Utc;
 use crate::{
-    domain::FnInOutRef,
+    domain::FnOutRef,
     services::task::{
-        FnIn, FnInOut, FnOut, FnKind, FnResult,
+        FnOut, FnKind, FnResult,
     },
 };
 ///
@@ -28,7 +28,7 @@ use crate::{
 pub struct FnAdd {
     id: String,
     kind: FnKind,
-    inputs: Vec<FnInOutRef>,
+    inputs: Vec<FnOutRef>,
 }
 //
 // 
@@ -36,7 +36,7 @@ impl FnAdd {
     ///
     /// Creates new instance of the FnAdd
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, inputs: Vec<FnInOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Self {
         Self { 
             id: format!("{}/FnAdd{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
@@ -46,17 +46,14 @@ impl FnAdd {
 }
 //
 // 
-impl FnIn for FnAdd {}
-//
-// 
 impl FnOut for FnAdd {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -67,7 +64,8 @@ impl FnOut for FnAdd {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let txid = PointTxId::from_str(&self.id);
         let first = self.inputs.first();
         let mut value: Point = match first {
@@ -88,7 +86,9 @@ impl FnOut for FnAdd {
                     log::trace!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
                     value = match &value {
                         Point::Bool(val) => {
-                            let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            let Ok(input_val) = input.try_as_bool() else {
+                                return FnResult::Err(format!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            };
                             Point::Bool(
                                 PointHlr::new(
                                     txid,
@@ -101,7 +101,9 @@ impl FnOut for FnAdd {
                             )
                         }
                         Point::Int(val) => {
-                            let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            let Ok(input_val) = input.try_as_int() else {
+                                return FnResult::Err(format!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            };
                             Point::Int(
                                 PointHlr::new(
                                     txid,
@@ -114,7 +116,9 @@ impl FnOut for FnAdd {
                             )
                         }
                         Point::Real(val) => {
-                            let input_val = input.try_as_real().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            let Ok(input_val) = input.try_as_real() else {
+                                return FnResult::Err(format!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            };
                             Point::Real(
                                 PointHlr::new(
                                     txid,
@@ -127,7 +131,9 @@ impl FnOut for FnAdd {
                             )
                         }
                         Point::Double(val) => {
-                            let input_val = input.try_as_double().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            let Ok(input_val) = input.try_as_double() else {
+                                return FnResult::Err(format!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+                            };
                             Point::Double(
                                 PointHlr::new(
                                     txid,
@@ -140,10 +146,10 @@ impl FnOut for FnAdd {
                             )
                         }
                         Point::String(_) => {
-                            panic!("{}.out | Not implemented for String", self.id);
+                            return FnResult::Err(format!("{}.out | Not implemented for String", self.id));
                         }
                         Point::Bytes(_) => {
-                            panic!("{}.out | Not implemented for Bytes", self.id);
+                            return FnResult::Err(format!("{}.out | Not implemented for Bytes", self.id));
                         }
                     };
                 }
@@ -160,9 +166,6 @@ impl FnOut for FnAdd {
         }
     }
 }
-//
-// 
-impl FnInOut for FnAdd {}
 ///
 /// Global static counter of FnAdd instances
 pub static COUNT: AtomicUsize = AtomicUsize::new(1);

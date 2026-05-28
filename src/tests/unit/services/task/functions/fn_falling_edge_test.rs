@@ -44,9 +44,9 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
             ..Default::default()}, ..Default::default()
     };
 
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new(parent, 0, &mut conf)
-    )))
+    ))
 }
 ///
 ///
@@ -142,7 +142,7 @@ fn test_real() {
         input.clone(),
     );
     let test_data = vec![
-        (00,    0.0,      false),
+        (00,    0.0f32,   false),
         (01,    0.0,      false),
         (02,    0.1,      false),
         (03,    0.0,      true),

@@ -76,6 +76,7 @@
 //! input <type> <'/path/PointName'>
 //! ```
 //! 
+mod fn_eval_once;
 mod functions;
 mod task_conf;
 mod task;
@@ -85,6 +86,9 @@ mod task_eval_node;
 mod task_test_receiver;
 mod task_test_producer;
 
+use std::{cell::Cell, rc::Rc};
+
+pub(super) use fn_eval_once::*;
 pub use functions::*;
 pub use task_conf::*;
 pub use task::*;
@@ -93,3 +97,5 @@ pub use task_node_vars::*;
 pub use task_eval_node::*;
 pub use task_test_receiver::*;
 pub use task_test_producer::*;
+
+pub(self) type EvalCycle = Rc<Cell<usize>>;

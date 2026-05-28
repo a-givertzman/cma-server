@@ -6,8 +6,8 @@ use sal_sync::{
 use std::{collections::HashMap, hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use chrono::Utc;
 use hashers::fx_hash::FxHasher;
-use crate::domain::FnInOutRef;
-use crate::services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult};
+use crate::domain::FnOutRef;
+use crate::services::task::{FnOut, FnKind, FnResult};
 ///
 /// Function | Returns true if at least one input is changed from prev value
 /// - status chcanges will not registered
@@ -24,7 +24,7 @@ use crate::services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult};
 pub struct FnIsChangedValue {
     id: String,
     kind: FnKind,
-    inputs: Vec<FnInOutRef>,
+    inputs: Vec<FnOutRef>,
     state: FxHashMap<String, Point>,
 }
 //
@@ -33,7 +33,7 @@ impl FnIsChangedValue {
     ///
     /// Creates new instance of the FnIsChangedValue
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, inputs: Vec<FnInOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Self {
         Self { 
             id: format!("{}/FnIsChangedValue{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
@@ -44,17 +44,14 @@ impl FnIsChangedValue {
 }
 //
 // 
-impl FnIn for FnIsChangedValue {}
-//
-// 
 impl FnOut for FnIsChangedValue {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -65,7 +62,8 @@ impl FnOut for FnIsChangedValue {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let tx_id = PointTxId::from_str(&self.id);
         let mut value = false;
         let state = FxHashMap::from_iter(self.state.iter().map(|(name, p)| (name, p.value())));
@@ -111,9 +109,6 @@ impl FnOut for FnIsChangedValue {
         self.state.clear();
     }
 }
-//
-// 
-impl FnInOut for FnIsChangedValue {}
 ///
 /// Global static counter of FnIsChangedValue instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

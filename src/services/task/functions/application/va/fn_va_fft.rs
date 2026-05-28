@@ -13,9 +13,9 @@ use sal_sync::{collections::FxHashMap, services::{
 }, sync::channel::Sender};
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
-    domain::{filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::FormatPoint, FnInOutRef},
+    domain::{FnInOutRef, FnOutRef, filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, format::FormatPoint},
     services::task::{
-        FnIn, FnInOut, FnOut, FnConst, FnInput, FnKind, FnResult, FnRetain
+        FlowContext, FnConst, FnFlow, FnInput, FnKind, FnOut, FnResult, FnRetain
     }
 };
 use super::fft_buff::FftBuf;
@@ -77,11 +77,11 @@ pub struct FnVaFft {
     txid: usize,
     id: String,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
+    enable: Option<FnOutRef>,
     /// Point config for exported Point's
     point_conf: PointConf,
     fft_size: usize,
-    input: FnInOutRef,
+    input: FnOutRef,
     #[derivative(Debug="ignore")]
     fft: Arc<dyn Fft<f64>>,
     /// Vector of frequences correponding to the FFT.len ( Sampling `freq` / `len`) 
@@ -106,7 +106,7 @@ impl FnVaFft {
     ///
     /// Creates new instance of the FnVaFft
     #[allow(unused)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef, conf: FnConfig, services: Arc<Services>) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, input: FnOutRef, conf: FnConfig, services: Arc<Services>) -> Self {
         let parent = parent.into();
         let name = Name::new(&parent, format!("FnVaFft-{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let dbg = name.join();      //format!("{}/FnVaFft{}", parent, COUNT.fetch_add(1, Ordering::Relaxed));
@@ -169,15 +169,15 @@ impl FnVaFft {
                 enable.clone(),
                 false,
                 &freq_name,
-                Some(Rc::new(RefCell::new(Box::new(
+                Some(Rc::new(RefCell::new(
                     FnConst::new(&name.join(), 0.0.to_point(txid, &name.join())),
-                )))),
+                ))),
                 None,
             );
             let retained = match fn_retain_load.out() {
-                FnResult::Ok(val) => Some(val.as_double().value),
-                FnResult::None => None,
-                FnResult::Err(err) => {
+                Ok(Some(val)) => Some(val.into_value().as_double().value),
+                Ok(None) => None,
+                Err(err) => {
                     log::warn!("{dbg}.new | Initial | {freq_name}: error: {:?}", err);
                     None
                 }
@@ -209,7 +209,7 @@ impl FnVaFft {
     ///
     /// Rturns the input for retain
     fn retain_input(parent: impl Into<String>, txid: usize, freq_name: &str) -> FnInOutRef {
-        Rc::new(RefCell::new(Box::new(
+        Rc::new(RefCell::new(
             FnInput::new(
                 parent,
                 txid,
@@ -219,8 +219,9 @@ impl FnVaFft {
                     type_: FnConfPointType::Double,
                     options: FnConfOptions::default(),
                 },
+                todo!("Pass an calculation cycle if realy required !"),
             )
-        )))
+        ))
     }
     ///
     /// Returns Threshold (key filter)
@@ -415,17 +416,14 @@ impl FnVaFft {
 }
 //
 //
-impl FnIn for FnVaFft {}
-//
-//
 impl FnOut for FnVaFft {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -433,31 +431,24 @@ impl FnOut for FnVaFft {
     }
     //
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let (enable, en_point) = match &self.enable {
             Some(enable) => {
-                let enable = enable.borrow_mut().out();
-                match enable {
-                    FnResult::Ok(enable) => (enable.to_bool().as_bool().value.0, Some(enable)),
-                    FnResult::None => return FnResult::None,
-                    FnResult::Err(err) => return FnResult::Err(err),
-                }
+                let Some(enable) = flow.map(enable.borrow_mut().out())? else { return Ok(None) };
+                (enable.to_bool().as_bool().value.0, Some(enable))
             }
             None => (true, None),
         };
         log::trace!("{}.out | enable: {:?}", self.id, enable);
-        let input = self.input.borrow_mut().out();
+        let input = flow.map(self.input.borrow_mut().out());
         log::trace!("{}.out | input: {:#?}", self.id, input);
         match &input {
-            FnResult::Ok(input) => {
-                self.fft_process(enable, input);
-            }
-            FnResult::None => {},
-            FnResult::Err(err) => {
-                log::trace!("{}.out | Input error: {:#?}", self.id, err);
-            },
+            Ok(Some(input)) => self.fft_process(enable, input),
+            Ok(None) => {},
+            Err(err) => log::trace!("{}.out | Input error: {:#?}", self.id, err),
         }
-        FnResult::Ok(match en_point {
+        flow.wrap(match en_point {
             Some(point) => point,
             None => Point::Bool(PointHlr::new(
                 self.txid,
@@ -476,9 +467,6 @@ impl FnOut for FnVaFft {
         self.fft_buf.reset();
     }
 }
-//
-//
-impl FnInOut for FnVaFft {}
 ///
 /// Global static counter of FnVaFft instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

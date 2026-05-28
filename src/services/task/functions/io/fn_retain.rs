@@ -6,8 +6,8 @@ use sal_sync::services::{
 };
 use std::{env, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
 use crate::{
-    domain::FnInOutRef, 
-    services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
+    domain::FnOutRef, 
+    services::task::{FnOut, FnKind, FnResult},
 };
 ///
 /// Function | Used for store input Point value to the local disk
@@ -31,11 +31,11 @@ pub struct FnRetain {
     // name: Name,
     txid: usize,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
+    enable: Option<FnOutRef>,
     every_cycle: bool,
     key: String,
-    default: Option<FnInOutRef>,
-    input: Option<FnInOutRef>,
+    default: Option<FnOutRef>,
+    input: Option<FnOutRef>,
     path: PathBuf,
     cache: Option<Point>,
 }
@@ -51,7 +51,7 @@ impl FnRetain {
     /// - `every-cycle` - if true read will done in every computing cycle, else read will done only once
     /// - `key` - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
     /// - `input` - incoming Point's
-    pub fn new(parent: &Name, path: impl AsRef<Path>, enable: Option<FnInOutRef>, every_cycle: bool, key: &str, default: Option<FnInOutRef>, input: Option<FnInOutRef>) -> Self {
+    pub fn new(parent: &Name, path: impl AsRef<Path>, enable: Option<FnOutRef>, every_cycle: bool, key: &str, default: Option<FnOutRef>, input: Option<FnOutRef>) -> Self {
         let self_id = format!("{}/FnRetain{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
         let mut path = PathBuf::from(path.as_ref());
         path.push(parent.join().trim_start_matches('/'));
@@ -220,17 +220,14 @@ impl FnRetain {
 }
 //
 //
-impl FnIn for FnRetain {}
-//
-//
 impl FnOut for FnRetain {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -247,7 +244,8 @@ impl FnOut for FnRetain {
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let enable = match &self.enable {
             Some(enable) => {
                 let enable = enable.borrow_mut().out();
@@ -330,9 +328,6 @@ impl FnOut for FnRetain {
         }
     }
 }
-//
-//
-impl FnInOut for FnRetain {}
 ///
 /// Global static counter of FnRetain instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

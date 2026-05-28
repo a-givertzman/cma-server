@@ -4,8 +4,8 @@ use sal_sync::{
 };
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
 use crate::{
-    domain::FnInOutRef,
-    services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult},
+    domain::FnOutRef,
+    services::task::{FnIn, FnOut, FnKind, FnResult},
 };
 //
 //
@@ -25,9 +25,9 @@ enum TimerState {
 pub struct FnTimer {
     id: String,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
-    initial: Option<FnInOutRef>,
-    input: FnInOutRef,
+    enable: Option<FnOutRef>,
+    initial: Option<FnOutRef>,
+    input: FnOutRef,
     state: SwitchState<TimerState, bool>,
     session_elapsed: f64,
     total_elapsed: Option<f64>,
@@ -37,7 +37,7 @@ pub struct FnTimer {
 // 
 impl FnTimer {
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, initial: Option<FnInOutRef>, input: FnInOutRef, repeat: bool) -> Self {
+    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, initial: Option<FnOutRef>, input: FnOutRef, repeat: bool) -> Self {
         let switches = vec![
             Switch{
                 state: TimerState::Off,
@@ -102,7 +102,7 @@ impl FnTimer {
     }
     ///
     /// Returns initial value
-    fn total_elapsed<'a>(total_elapsed: &'a mut Option<f64>, initial: Option<FnInOutRef>) -> FnResult<&'a mut f64, String> {
+    fn total_elapsed<'a>(total_elapsed: &'a mut Option<f64>, initial: Option<FnOutRef>) -> FnResult<&'a mut f64, String> {
         let mut default = 0.0;
         if total_elapsed.is_none() {
             if let Some(init) = initial {
@@ -120,17 +120,14 @@ impl FnTimer {
 }
 //
 //
-impl FnIn for FnTimer {}
-//
-//
 impl FnOut for FnTimer {
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
@@ -145,7 +142,8 @@ impl FnOut for FnTimer {
         inputs
     }
     ///
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
         let enable = match &mut self.enable {
             Some(en) => match en.borrow_mut().out() {
                 FnResult::Ok(en) => en.to_bool().as_bool().value.0,
@@ -252,9 +250,6 @@ impl FnOut for FnTimer {
         self.input.borrow_mut().reset();
     }
 }
-//
-// 
-impl FnInOut for FnTimer {}
 ///
 /// Global static counter of FnOut instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

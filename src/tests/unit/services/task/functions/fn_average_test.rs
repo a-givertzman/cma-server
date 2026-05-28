@@ -2,7 +2,7 @@
 use testing::entities::test_value::Value;
 use sal_sync::{math::AproxEq, services::{entity::{Point, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
 use std::{cell::RefCell, rc::Rc, sync::Once};
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{
@@ -43,9 +43,9 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
         }),
             ..Default::default()}, ..Default::default()
     };
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new(parent, 0, &mut conf)
-    )))
+    ))
 }
 ///
 ///
