@@ -4,7 +4,19 @@ service Task RecorderTask:
         max-length: 10000
     subscribe:
         /App/MultiQueue:                    # - multicast subscription to the MultiQueue
-            {cot: Inf}: []                      #   - on all points having Cot::Inf
+            {cot: Inf}: #[]                      #   - on all points having Cot::Inf
+                - /App/ied13/db905_visual_data_fast/Winch1.LoadR0
+                - /App/ied13/db905_visual_data_fast/Winch2.LoadR0
+                - /App/ied13/db905_visual_data_fast/Winch3.LoadR0
+                - /App/ied14/db906_visual_data/Winch1.Load
+                - /App/ied14/db906_visual_data/Winch2.Load
+                - /App/ied14/db906_visual_data/Winch3.Load
+                - /App/ied14/db906_visual_data/Winch1.SWLProtection
+                - /App/ied14/db906_visual_data/Winch2.SWLProtection
+                - /App/ied14/db906_visual_data/Winch3.SWLProtection
+                - /App/ied14/db906_visual_data/CraneMode.AOPS
+                - /App/ied14/db906_visual_data/CraneMode.MOPS
+
     #
     # The nominal load of the crane
     let craneLoadNom:

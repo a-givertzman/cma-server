@@ -62,7 +62,10 @@ impl TaskConf {
         log::trace!("{}.new | cycle: {:?}", dbg, cycle);
         let (rx, rx_max_length) = conf.get_in_queue().unwrap();
         log::trace!("{}.new | RX: {},\tmax-length: {:?}", dbg, rx, rx_max_length);
-        let subscribe = conf.get("subscribe").unwrap_or(serde_yaml::Value::Null);
+        let subscribe = conf.get("subscribe").unwrap_or_else(|| {
+            log::warn!("{dbg}.new | 'subscribe' - not found, {self_name} will listen only default Receiver");
+            serde_yaml::Value::Null
+        });
         let subscribe = ConfSubscribe::new(subscribe);
         log::trace!("{}.new | subscribe: {:#?}", dbg, subscribe);
         let mut node_index = 0;

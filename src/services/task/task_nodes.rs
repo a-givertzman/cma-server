@@ -48,6 +48,11 @@ impl TaskNodes {
         }
     }
     ///
+    /// Returns all configured inputs
+    pub fn get_inputs(&self) -> Vec<String> {
+        self.nodes.keys().map(|k| k.to_string()).collect()
+    }
+    ///
     /// Returns input by it's name
     pub fn get_eval_node(&mut self, name: &str) -> Option<&mut TaskEvalNode> {
         self.nodes.get_mut(name)
@@ -183,10 +188,11 @@ impl TaskNodes {
     ///
     /// Creates all task nodes depending on it config
     ///  - if Task config contains 'point [type] every' then single evaluation node allowed only
-    pub fn build_nodes(&mut self, parent: &Name, conf: TaskConf, services: Arc<Services>) -> Result<(), Error>{
+    pub fn build_nodes(&mut self, parent: &Name, conf: &TaskConf, services: Arc<Services>) -> Result<(), Error>{
         let error = Error::new(&self.id, "build_nodes");
         let tx_id = PointTxId::from_str(&parent.join());
-        for (idx, (_node_name, mut node_conf)) in conf.nodes.into_iter().enumerate() {
+        let conf_nodes = conf.nodes.clone();
+        for (idx, (_node_name, mut node_conf)) in conf_nodes.into_iter().enumerate() {
             let node_name = node_conf.name();
             log::trace!("{}.build_nodes | node[{}]: {:?}", self.id, idx, node_name);
             self.new_node_vars = Some(TaskNodeVars::new());
