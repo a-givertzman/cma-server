@@ -38,6 +38,11 @@ impl FnAverage {
             average: None,
         }
     }
+    ///
+    /// Возвращает `Point` `p` с обновленными `name` и `value`  
+    fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+    }
 }
 //
 // 
@@ -75,42 +80,9 @@ impl FnOut for FnAverage {
         log::trace!("{}.out | count: {:?}", self.id, self.count);
         log::trace!("{}.out | average: {:?}", self.id, average);
         let average = match input.type_() {
-            PointConfType::Int => {
-                Point::Int(
-                    PointHlr::new(
-                        input.txid(),
-                        &self.id,
-                        average.round() as i64,
-                        input.status(),
-                        input.cot(),
-                        input.timestamp(),
-                    )
-                )
-            }
-            PointConfType::Real => {
-                Point::Real(
-                    PointHlr::new(
-                        input.txid(),
-                        &self.id,
-                        average as f32,
-                        input.status(),
-                        input.cot(),
-                        input.timestamp(),
-                    )
-                )
-            }
-            PointConfType::Double => {
-                Point::Double(
-                    PointHlr::new(
-                        input.txid(),
-                        &self.id,
-                        average,
-                        input.status(),
-                        input.cot(),
-                        input.timestamp(),
-                    )
-                )
-            }
+            PointConfType::Int => Point::Int(Self::point_with(&input, &self.id, average.round() as i64)),
+            PointConfType::Real => Point::Real(Self::point_with(&input, &self.id, average as f32)),
+            PointConfType::Double => Point::Double(Self::point_with(&input, &self.id, average)),
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
         };
         self.average = Some(average.clone());

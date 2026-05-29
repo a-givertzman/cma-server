@@ -1,0 +1,129 @@
+///
+/// ### Детектор фронтов (Edge Detector)
+/// - Накапливает значения `bool` или числовые типы.
+/// - Фиксирует переход 0 -> 1 как передний фронт (Rising).
+/// - Фиксирует переход 1 -> 0 как задний фронт (Falling).
+#[derive(Debug, Clone, Default)]
+pub struct EdgeDetector {
+    init: Option<bool>,
+    prev: Option<bool>,
+    edge: Option<Edge>,
+}
+impl EdgeDetector {
+    ///
+    /// Создает `EdgeDetection` с неопределенным исходным состоянием
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// 
+    /// Создает `EdgeDetection` с заданным исходным состоянием
+    pub fn with(init: Option<impl IsZero>) -> Self {
+        let init = init.map(|v| v.is_zero());
+        Self {
+            init,
+            prev: init,
+            edge: None,
+        }
+    }
+    ///
+    /// Добавляет новое значение, обновляет состояние и возвращает зафиксированный фронт.
+    pub fn add(&mut self, val: impl IsZero) -> Option<Edge> {
+        let val = !val.is_zero();
+        self.edge = match (self.prev, val) {
+            (Some(false), true) => Some(Edge::Rising),
+            (Some(true), false) => Some(Edge::Falling),
+            _ => None,
+        };
+        self.prev = Some(val);
+        self.edge
+    }
+    ///
+    /// Возвращает текущий фронт если зафиксирован или `None`
+    pub fn get(&self) -> Option<Edge> {
+        self.edge
+    }
+    ///
+    /// Возвращает `true`, если последним зафиксирован передний фронт.
+    pub fn is_rising(&self) -> bool {
+        matches!(self.edge, Some(Edge::Rising))
+    }
+    ///
+    /// Возвращает `true`, если последним зафиксирован задний фронт.
+    pub fn is_falling(&self) -> bool {
+        matches!(self.edge, Some(Edge::Falling))
+    }
+    ///
+    /// Сброс в исходное состояние
+    pub fn reset(&mut self) {
+        self.prev = self.init;
+        self.edge = None;
+    }
+}
+///
+/// ### Фронт сигнала
+/// - `Rising`: Передний фронт (переход 0 -> 1).
+/// - `Falling`: Задний фронт (переход 1 -> 0).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Edge {
+    Rising,
+    Falling,
+}
+impl Edge {
+    ///
+    /// Возвращает `true`, если последним зафиксирован передний фронт.
+    pub fn is_rising(&self) -> bool {
+        *self == Edge::Rising
+    }
+    ///
+    /// Возвращает `true`, если последним зафиксирован задний фронт.
+    pub fn is_falling(&self) -> bool {
+        *self == Edge::Falling
+    }
+}
+pub trait IsZero {
+    fn is_zero(&self) -> bool;
+}
+impl IsZero for bool { fn is_zero(&self) -> bool { *self == false } }
+impl IsZero for i8 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for i16 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for i32 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for i64 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for i128 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for isize { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for u8 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for u16 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for u32 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for u64 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for u128 { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for usize { fn is_zero(&self) -> bool { *self == 0 } }
+impl IsZero for f32 { fn is_zero(&self) -> bool { *self == 0.0 } }
+impl IsZero for f64 { fn is_zero(&self) -> bool { *self == 0.0 } }
+///
+/// Basic tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_undefined_initial_state() {
+        let mut detector = EdgeDetector::new();
+        assert_eq!(detector.add(true), None); // Неизвестно, был ли переход
+        assert_eq!(detector.add(false), Some(Edge::Falling)); // Теперь четкий задний фронт
+        assert_eq!(detector.add(true), Some(Edge::Rising)); // Передний фронт
+    }
+    #[test]
+    fn test_defined_initial_state() {
+        let mut detector = EdgeDetector::with(Some(false));
+        assert_eq!(detector.add(true), Some(Edge::Rising)); // Сразу фиксируем фронт
+        assert_eq!(detector.add(true), None); // Состояние не изменилось
+    }
+    #[test]
+    fn test_reset_behavior() {
+        let mut detector = EdgeDetector::with(Some(true));
+        detector.add(false);
+        assert_eq!(detector.get(), Some(Edge::Falling));
+        detector.reset();
+        assert_eq!(detector.get(), None);
+        // После сброса начальное состояние снова Some(true)
+        assert_eq!(detector.add(false), Some(Edge::Falling));
+    }
+}

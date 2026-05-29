@@ -1,15 +1,18 @@
-use concat_string::concat_string;
-use sal_sync::services::entity::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     domain::FnOutRef,
     services::task::{
-        FnOut, FnKind, FnResult
+        FlowContext, FnFlow, FnKind, FnOut, FnResult
     },
 };
 ///
-/// Function | Just doing debug of values coming from inputs
-/// - Returns value from the last input
+/// ### Function | Debug values coming from inputs
+///
+/// Узел для отладки потока данных (Taint Tracking) в графе вычислений.
+/// Перехватывает вызовы `out()` своих зависимостей, логирует актуальные значения 
+/// и их статус (New/Old)
+/// 
+/// Возвращая `Ok(None)`.
 #[derive(Debug)]
 pub struct FnDebug {
     id: String,
@@ -20,7 +23,9 @@ pub struct FnDebug {
 // 
 impl FnDebug {
     ///
-    /// Creates new instance of the FnDebug
+    /// ### Creates new instance of the `FnDebug`
+    /// - `parent` - Идентификатор родительского узла
+    /// - `inputs` - Список ссылок на зависимости (`FnOutRef`), значения которых требуется отслеживать.
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Self {
         Self { 
@@ -43,45 +48,20 @@ impl FnOut for FnDebug {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        for input in &self.inputs {
-            inputs.append(&mut input.borrow().inputs());
-        }
-        inputs
+        self.inputs.iter().flat_map(|input| input.borrow().inputs()).collect()
     }
     //
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let mut inputs = self.inputs.iter();
-        let mut value: Point;
-        // let first = .cloned();
-        match inputs.next() {
-            Some(first) => {
-                let first = first.borrow_mut().out();
-                match first {
-                    FnResult::Ok(input) => {
-                        value = input.to_owned();
-                        log::debug!("{}.out | value: {:#?}", self.id, value);
-                        while let Some(input) = inputs.next().cloned() {
-                            let input = input.borrow_mut().out();
-                            match input {
-                                FnResult::Ok(input) => {
-                                    value = input.clone();
-                                    log::debug!("{}.out | value: {:#?}", self.id, value);
-                                }
-                                FnResult::None => return FnResult::None,
-                                FnResult::Err(err) => return FnResult::Err(err),
-                            }
-                        }        
-                    }
-                    FnResult::None => return FnResult::None,
-                    FnResult::Err(err) => return FnResult::Err(err),
-                }
-            }
-            None => return FnResult::Err(concat_string!(self.id, ".out | No inputs found")),
+        for input in &self.inputs {
+            let Some(v) = flow.map(input.borrow_mut().out())? else { return Ok(None) };
+            log::debug!(
+                "{}.out | Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
+                self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.timestamp().format("%H:%M:%S%.3f")
+            );
         }
-        FnResult::Ok(value)
+        Ok(None)
     }
     //
     //

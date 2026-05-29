@@ -110,6 +110,8 @@ class CMA green
 %% class di orange    
 ```
 
+---
+
 ## 1 Task service
 
 ### Overview
@@ -124,6 +126,59 @@ The computations can be executed:
 
 - periodically with configured cycle time (min 10ms for now)
 - event-trigger, computation node will be performed if at least one if it's input received new point
+
+### Coverage
+
+1. Базовая математика и логика (Math & Logic)
+- ✅ `Add`, `Sub`, `Mul`, `Div`, `Pow`, `Max` — базовые арифметические операции.
+- ✅ `Gt`, `Ge`, `Eq`, `Le`, `Lt`, `Ne` — компараторы.
+- ✅ `BitAnd`, `BitOr`, `BitXor`, `BitNot` — битовые операции.
+- ❌ `Min` — поиск минимума
+- ❌ `Mod` — остаток от деления (критично для циклических расчетов).
+- ❌ `Abs` — модуль числа.
+- ❌ `Sqrt` — квадратный корень.
+- ❌ `Sin`, `Cos`, `Tan`, `Asin`, `Acos`, `Atan` — базовая тригонометрия (нужна для сложной кинематики, например, кранов).
+- ❌ `Log`, `Ln`, `Exp` — логарифмы и экспоненты.
+- ❌ `Select` / `Mux` — мультиплексор (переключение входов по условию).
+- ❌ `LogicalAnd`, `LogicalOr` — строгие логические операторы для Bool (если битовые не делают короткое замыкание).
+
+2. Триггеры, память и состояния (State & Triggers)
+- ✅ `RisingEdge` (R_TRIG), `FallingEdge` (F_TRIG) — детекторы фронтов.
+- ✅ `Retain` — энергонезависимая память в рамках узла.
+- ✅ `Acc` — аккумулятор (накопитель).
+- ✅ `IsChangedValue`, `KeepValid` — удержание статуса.
+- ✅ `Count` — счетчик срабатываний.
+- ❌ `RS_FlipFlop` / `SR_FlipFlop` — триггеры с приоритетом сброса или установки.
+- ❌ `Latch` — фиксация значения по управляющему сигналу до явного сброса.
+
+3. Таймеры и время (Timers)
+- ✅ `Timer`, `TimerOnDelay` (TON), `TimerOffDelay` (TOF).
+- ❌ `TimerPulse` (TP) — генератор импульса заданной длины.
+- ❌ `RTC` (Real-Time Clock) — извлечение текущего системного времени (часы, минуты, день недели) для вычислений.
+- ❌ `Cron` — срабатывание узла по расписанию.
+
+4. Обработка сигналов (Signal Processing)
+- ✅ `Filter`, `Smooth`, `Average`.
+- ✅ `PiecewiseLineApprox` — кусочно-линейная аппроксимация (отличная вещь для калибровки датчиков).
+- ✅ `Threshold` — пороговые фильтры.
+- ❌ `Integral` — интегрирование по времени (например, расчет кубов из текущего расхода м3/ч).
+- ❌ `Derivative` — дифференцирование по времени (например, расчет скорости изменения давления).
+- ❌ `RateLimiter` — ограничение скорости нарастания/спада сигнала (защита от скачков).
+- ❌ `Deadband` — мертвая зона (сигнал не меняется, пока вход не выйдет за пределы коридора).
+- ❌ `PID` — полноценный ПИД-регулятор прямо в графе.
+
+5. Работа со строками (Strings)
+- ✅ `ToString`.
+- ❌ `Concat` — склейка строк (динамическое формирование сообщений).
+- ❌ `Substr` — обрезка строк (например, извлечение кода ошибки из сырого ответа ПЛК).
+
+6. Интеграция, БД и специфичные операции (Routing & Domain)
+- ✅ ToApiQueue, ToMultiQueue, Export — маршрутизация.
+- ✅ SqlMetric — прямая запись в БД.
+- ✅ RecOpCycleMetric, PointId — доменные регистраторы.
+- ✅ Input, Const, Var, Debug, Plot — системные узлы и отладка.
+- ✅ ToBool, ToInt, ToReal, ToDouble — касты типов.
+- ❓ HttpRequest / Webhook — возможность пнуть внешнее API прямо из графа по событию (опасно для потока, требует асинхронности).
 
 ### Basic entities and principles of the Tasck service computations
 

@@ -1,4 +1,4 @@
-use sal_sync::services::entity::{Point, PointConfType, PointHlr, PointType};
+use sal_sync::services::entity::{Point, PointHlr, PointType};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::domain::FnOutRef;
 use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
@@ -52,14 +52,13 @@ impl FnOut for FnAcc {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
-        let input_is_new = flow.is_new();
         // trace!("{}.out | input: {:?}", self.id, input);
         let acc = match self.acc.as_ref() {
             Some(acc) => acc.clone(),
             None => {
                 let acc = if let Some(initial) = &self.initial {
-                    let Some(initial) = flow.map(initial.borrow_mut().out())? else { return Ok(None) };
-                    initial
+                    let Some(initial) = initial.borrow_mut().out()? else { return Ok(None) };
+                    initial.into_value()
                 } else {
                     match input.type_() {
                         PointType::Bool | PointType::Int => Point::Int(PointHlr::new(
@@ -78,7 +77,7 @@ impl FnOut for FnAcc {
                 acc
             }
         };
-        if !input_is_new {
+        if !flow.is_new() {
             return flow.wrap(acc);
         };
         let acc = match &input {

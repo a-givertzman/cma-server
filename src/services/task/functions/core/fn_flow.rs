@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Display};
+
 use sal_sync::services::entity::Point;
 
 use crate::services::task::FnResult;
@@ -73,12 +75,25 @@ impl FlowContext {
     ///
     /// ### Оборачивает итоговый `Point` обратно в `FnFlow`, 
     /// - Учитывая историю опроса всех входов в текущем контексте.
-    /// - Возвращает `Ok(Some(p))`
+    /// - Возвращает `Ok(Some(FnFlow(p)))`
     pub fn wrap(&self, p: Point) -> FnResult<FnFlow, String> {
         Ok(Some(match self.is_new {
             true => FnFlow::New(p),
             false => FnFlow::Old(p)
         }))
+    }
+    ///
+    /// ### Принудительно оборачивает итоговый `Point` в `FnFlow::New`, 
+    /// - Учитывая историю опроса всех входов в текущем контексте.
+    /// - Возвращает `Ok(Some(FnFlow(p)))`
+    pub fn wrap_new(&self, p: Point) -> FnResult<FnFlow, String> {
+        Ok(Some(FnFlow::New(p)))
+    }
+    ///
+    /// ### Принудительно оборачивает итоговый `Point` в `FnFlow::Old`, 
+    /// - Возвращает `Ok(Some(FnFlow(p)))`
+    pub fn wrap_old(&self, p: Point) -> FnResult<FnFlow, String> {
+        Ok(Some(FnFlow::Old(p)))
     }
     ///
     /// ### Возвращает `true` если `FnFlow::New` зарегистрирован
@@ -91,5 +106,21 @@ impl FlowContext {
     /// - Все входы вернули устаревшее значение
     pub fn is_old(&self) -> bool {
         !self.is_new
+    }
+}
+//
+impl Display for FlowContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_new {
+            write!(f, "Flow::New")
+        } else {
+            write!(f, "Flow::Old")
+        }
+    }
+}
+//
+impl Debug for FlowContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }

@@ -135,7 +135,7 @@ impl FnIn for FnInput {
                     Point::Real(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
                     Point::Double(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
                     Point::String(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.clone(), p.status, p.cot, p.timestamp)),
-                    Point::Bytes(p) => {
+                    Point::Bytes(_) => {
                         log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.type_(), self.typ);
                         return;
                     }
