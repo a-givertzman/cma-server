@@ -1,10 +1,10 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
-use std::{sync::Once, rc::Rc, cell::RefCell};
+use std::{cell::{Cell, RefCell}, rc::Rc, sync::Once};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
-    services::task::{FnEq, FnOut, FnInput},
+    services::task::{EvalCycle, FnEq, FnInput, FnOut},
 };
 ///
 ///
@@ -19,10 +19,10 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+fn init_each(default: &str, type_: FnConfPointType, cycle: &EvalCycle) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
     Rc::new(RefCell::new(
-        FnInput::new("test", 0, &mut conf)
+        FnInput::new("test", 0, &mut conf, cycle)
     ))
 }
 ///
@@ -34,8 +34,9 @@ fn test_bool() {
     let self_id = "test_bool";
     log::info!("{}", self_id);
     let mut target: bool;
-    let input1 = init_each("false", FnConfPointType::Bool);
-    let input2 = init_each("false", FnConfPointType::Bool);
+    let cycle = Rc::new(Cell::new(0));
+    let input1 = init_each("false", FnConfPointType::Bool, &cycle);
+    let input2 = init_each("false", FnConfPointType::Bool, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
         input1.clone(),
@@ -48,11 +49,12 @@ fn test_bool() {
         (03, true,  true),
     ];
     for (step, value1, value2) in test_data {
+        cycle.update(|c| c + 1);
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
-        let result = fn_eq.out().unwrap().as_bool().value.0;
+        let result = fn_eq.out().unwrap().unwrap().into_value().as_bool().value.0;
         log::debug!("step {}  |  value1: {:?} == value2: {:?} | result: {:?}", step, value1, value2, result);
         target = value1 == value2;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -67,8 +69,9 @@ fn test_int() {
     let self_id = "test_int";
     log::info!("{}", self_id);
     let mut target: bool;
-    let input1 = init_each("0", FnConfPointType::Int);
-    let input2 = init_each("0", FnConfPointType::Int);
+    let cycle = Rc::new(Cell::new(0));
+    let input1 = init_each("0", FnConfPointType::Int, &cycle);
+    let input2 = init_each("0", FnConfPointType::Int, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
         input1.clone(),
@@ -88,11 +91,12 @@ fn test_int() {
         (10, 0,  -4),
     ];
     for (step, value1, value2) in test_data {
+        cycle.update(|c| c + 1);
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
-        let result = fn_eq.out().unwrap().as_bool().value.0;
+        let result = fn_eq.out().unwrap().unwrap().into_value().as_bool().value.0;
         log::debug!("step {}  |  value1: {:?} == value2: {:?} | result: {:?}", step, value1, value2, result);
         target = value1 == value2;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -107,8 +111,9 @@ fn test_real() {
     let self_id = "test_real";
     log::info!("{}", self_id);
     let mut target: bool;
-    let input1 = init_each("0.0", FnConfPointType::Real);
-    let input2 = init_each("0.0", FnConfPointType::Real);
+    let cycle = Rc::new(Cell::new(0));
+    let input1 = init_each("0.0", FnConfPointType::Real, &cycle);
+    let input2 = init_each("0.0", FnConfPointType::Real, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
         input1.clone(),
@@ -137,11 +142,12 @@ fn test_real() {
         (20, 1.0, f32::MAX),
     ];
     for (step, value1, value2) in test_data {
+        cycle.update(|c| c + 1);
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
-        let result = fn_eq.out().unwrap().as_bool().value.0;
+        let result = fn_eq.out().unwrap().unwrap().into_value().as_bool().value.0;
         log::debug!("step {}  |  value1: {:?} == value2: {:?} | result: {:?}", step, value1, value2, result);
         target = value1 == value2;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -156,8 +162,9 @@ fn test_double() {
     let self_id = "test_double";
     log::info!("{}", self_id);
     let mut target: bool;
-    let input1 = init_each("0.0", FnConfPointType::Double);
-    let input2 = init_each("0.0", FnConfPointType::Double);
+    let cycle = Rc::new(Cell::new(0));
+    let input1 = init_each("0.0", FnConfPointType::Double, &cycle);
+    let input2 = init_each("0.0", FnConfPointType::Double, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
         input1.clone(),
@@ -186,11 +193,12 @@ fn test_double() {
         (20, 1.0, f64::MAX),
     ];
     for (step, value1, value2) in test_data {
+        cycle.update(|c| c + 1);
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
-        let result = fn_eq.out().unwrap().as_bool().value.0;
+        let result = fn_eq.out().unwrap().unwrap().into_value().as_bool().value.0;
         log::debug!("step {}  |  value1: {:?} == value2: {:?} | result: {:?}", step, value1, value2, result);
         target = value1 == value2;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);

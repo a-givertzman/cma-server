@@ -116,3 +116,90 @@ impl FnOut for FnIsChangedValue {
 ///
 /// Global static counter of FnIsChangedValue instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
+/// Basic tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::services::task::{FnFlow, FnKind, FnResult};
+    use sal_sync::services::entity::{Cot, Point, PointHlr, Status};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use chrono::Utc;
+    #[derive(Debug)]
+    struct FakeInput {
+        point: Option<Point>,
+        is_new: bool,
+    }
+    impl FakeInput {
+        fn new() -> Self {
+            Self { point: None, is_new: false }
+        }
+        fn set(&mut self, val: i64, is_new: bool) {
+            self.point = Some(Point::Int(PointHlr::new(
+                0,
+                "test_input",
+                val,
+                Status::Ok,
+                Cot::Inf,
+                Utc::now(),
+            )));
+            self.is_new = is_new;
+        }
+    }
+    impl FnOut for FakeInput {
+        fn id(&self) -> String { "fake_input".to_string() }
+        fn kind(&self) -> FnKind { FnKind::Input }
+        fn inputs(&self) -> Vec<String> { vec![] }
+        fn out(&mut self) -> FnResult<FnFlow, String> {
+            let p = self.point.clone().unwrap();
+            if self.is_new {
+                Ok(Some(FnFlow::New(p)))
+            } else {
+                Ok(Some(FnFlow::Old(p)))
+            }
+        }
+        fn reset(&mut self) {}
+    }
+    #[test]
+    fn test_edge_detection_sequence() {
+        let input = Rc::new(RefCell::new(FakeInput::new()));
+        let mut fn_node = FnIsChangedValue::new("TestNs", vec![input.clone() as FnOutRef]);
+        // Такт 1: Приходят новые данные, значение изменилось (инициализация)
+        input.borrow_mut().set(10, true);
+        let res1 = fn_node.out().unwrap().unwrap();
+        assert!(res1.is_new(), "T1: Ожидается New (передний фронт)");
+        if let Point::Bool(p) = res1.value() {
+            assert_eq!(p.value.0, true);
+        } else {
+            panic!("Ожидался тип Bool");
+        }
+        // Такт 2: Вход отдает старые данные (тишина в эфире)
+        input.borrow_mut().set(10, false);
+        let res2 = fn_node.out().unwrap().unwrap();
+        assert!(res2.is_new(), "T2: Ожидается принудительный выброс New (задний фронт)");
+        if let Point::Bool(p) = res2.value() {
+            assert_eq!(p.value.0, false);
+        } else {
+            panic!("Ожидался тип Bool");
+        }
+        // Такт 3: Продолжение тишины
+        input.borrow_mut().set(10, false);
+        let res3 = fn_node.out().unwrap().unwrap();
+        assert!(!res3.is_new(), "T3: Ожидается Old (состояние стабилизировалось)");
+        if let Point::Bool(p) = res3.value() {
+            assert_eq!(p.value.0, false);
+        } else {
+            panic!("Ожидался тип Bool");
+        }
+        // Такт 4: Значение снова меняется
+        input.borrow_mut().set(20, true);
+        let res4 = fn_node.out().unwrap().unwrap();
+        assert!(res4.is_new(), "T4: Ожидается повторный New (передний фронт)");
+        if let Point::Bool(p) = res4.value() {
+            assert_eq!(p.value.0, true);
+        } else {
+            panic!("Ожидался тип Bool");
+        }
+    }
+}

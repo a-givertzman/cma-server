@@ -98,4 +98,4 @@ pub use task_eval_node::*;
 pub use task_test_receiver::*;
 pub use task_test_producer::*;
 
-pub(self) type EvalCycle = Rc<Cell<usize>>;
+pub(crate) type EvalCycle = Rc<Cell<usize>>;

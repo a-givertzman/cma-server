@@ -6,31 +6,30 @@ use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 ///
 /// Returns an max value (in Double) of the input
 #[derive(Debug)]
-pub struct FnMax {
+pub struct FnMin {
     id: String,
     kind: FnKind,
-    // enable: Option<FnOutRef>,
     input: FnOutRef,
-    max: Option<Point>,
+    min: Option<Point>,
 }
 //
 // 
-impl FnMax {
+impl FnMin {
     ///
-    /// Creates new instance of the FnMax
+    /// Creates new instance of the FnMin
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 
-            id: format!("{}/FnMax{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
+            id: format!("{}/FnMin{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
             input,
-            max: None,
+            min: None,
         }
     }
 }
 //
 // 
-impl FnOut for FnMax {
+impl FnOut for FnMin {
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -65,8 +64,8 @@ impl FnOut for FnMax {
             // trace!("{}.out | input: {:?}", self.id, input);
             match input {
                 FnResult::Ok(input) => {
-                    log::trace!("{}.out | max: {:?}", self.id, self.max);
-                    let max = self.max.get_or_insert(input.clone());
+                    log::trace!("{}.out | max: {:?}", self.id, self.min);
+                    let max = self.min.get_or_insert(input.clone());
                     match &input {
                         Point::Bool(input_val) => {
                             let max_val = max.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incompitable types: max: '{:?}', input: '{:?}'", self.id, max.type_(), input.type_()));
@@ -99,15 +98,15 @@ impl FnOut for FnMax {
                 FnResult::None => {}
                 FnResult::Err(err) => return FnResult::Err(err),
             };
-            self.max.clone().map_or(FnResult::None, |max| FnResult::Ok(max))
+            self.min.clone().map_or(FnResult::None, |max| FnResult::Ok(max))
         } else {
-            self.max = None;
+            self.min = None;
             FnResult::None
         }
     }
     //
     fn reset(&mut self) {
-        self.max = None;
+        self.min = None;
         if let Some(enable) = &self.enable {
             enable.borrow_mut().reset();
         }
@@ -115,5 +114,5 @@ impl FnOut for FnMax {
     }
 }
 ///
-/// Global static counter of FnMax instances
+/// Global static counter of FnMin instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

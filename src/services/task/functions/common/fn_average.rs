@@ -31,7 +31,7 @@ impl FnAverage {
     pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnAverage{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
-            kind:FnKind::Fn,
+            kind: FnKind::Fn,
             input,
             count: 0,
             sum: 0.0,

@@ -48,7 +48,9 @@ impl FnOut for FnDebug {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        self.inputs.iter().flat_map(|input| input.borrow().inputs()).collect()
+        self.inputs.iter()
+            .flat_map(|input| input.borrow().inputs())
+            .collect()
     }
     //
     //

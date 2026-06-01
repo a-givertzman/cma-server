@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use crate::{
     domain::FnOutRef,
     services::task::{
-        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnInput, FnIsChangedValue, FnKeepValid, FnMax, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, SqlMetric, functions::{
+        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnInput, FnIsChangedValue, FnHold, FnMax, FnMin, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, SqlMetric, functions::{
             comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
             edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
             filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
@@ -716,9 +716,28 @@ impl FnBuilder {
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
                             .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?;
-                        Ok(Rc::new(RefCell::new(
-                            FnMax::new(parent, enable, input)
-                        )))
+                        Ok(match enable {
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnMax::new(parent, input), task_nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnMax::new(parent, input))),
+                        })
+                    }
+                    //
+                    Functions::Min => {
+                        let name = "enable";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let enable = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnMin | Can't get '{name}'"), err))?),
+                            None => None,
+                        };
+                        let name = "input";
+                        let input_conf = conf.input_conf(name).unwrap();
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                            .map_err(|err| error.pass_with(format!("FnMin | Can't get '{name}'"), err))?;
+                        Ok(match enable {
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnMin::new(parent, input), task_nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnMin::new(parent, input))),
+                        })
                     }
                     //
                     Functions::PiecewiseLineApprox => {
@@ -754,13 +773,13 @@ impl FnBuilder {
                         )))
                     }
                     //
-                    Functions::KeepValid => {
+                    Functions::Hold => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnKeepValid | Can't get '{name}'"), err))?;
+                            .map_err(|err| error.pass_with(format!("FnHold | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnKeepValid::new(parent, input)
+                            FnHold::new(parent, input)
                         )))
                     }
                     //
