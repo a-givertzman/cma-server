@@ -1,7 +1,7 @@
 use sal_sync::services::entity::{Point, PointConfType, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
-use crate::domain::FnOutRef;
+use crate::domain::{Edge, EdgeDetector, FnOutRef};
 use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 
 /// ### Function | Average
@@ -11,6 +11,7 @@ use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 /// Особенности работы:
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) принудительно сбрасывает накопленную сумму 
 ///   и счетчик итераций, прерывая передачу данных (возвращает `None`).
+/// - `reset`: Сбрасывает накопленную сумму и счетчик по переднему фронту сигнала (переход 0 -> 1).
 /// - `input`: Источник числовых данных. Выходной `Point` автоматически наследует 
 ///   тип данных входа (Int, Real или Double).
 /// - Игнорирует нечисловые типы (возвращает `Err`).
@@ -18,28 +19,35 @@ use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 pub struct FnAverage {
     id: String,
     kind: FnKind,
+    reset: Option<FnOutRef>,
     input: FnOutRef,
     count: i64,
     sum: f64,
     average: Option<Point>,
+    reset_edge: EdgeDetector,
 }
 //
 // 
 impl FnAverage {
     ///
     /// Creates new instance of the FnAverage
-    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
+    /// * `parent` - Идентификатор родительского узла
+    /// * `reset` - Входной сигнал для сброса накопителя (опциональный).
+    /// * `input` - Входной числовой сигнал для расчета среднего.
+    pub fn new(parent: impl Into<String>, reset: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnAverage{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
+            reset,
             input,
             count: 0,
             sum: 0.0,
             average: None,
+            reset_edge: EdgeDetector::new(),
         }
     }
     ///
-    /// Возвращает `Point` `p` с обновленными `name` и `value`  
+    /// Возвращает `Point` с обновленными `name` и `value`  
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
         PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
     }
@@ -57,15 +65,30 @@ impl FnOut for FnAverage {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        self.input.borrow().inputs()
+        let mut inputs = self.input.borrow().inputs();
+        if let Some(reset) = self.reset.as_ref() {
+            inputs.append(&mut reset.borrow().inputs());
+        }
+        inputs
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
+        let mut force_recalc = false;
+        if let Some(reset) = self.reset.as_ref() {
+            if let Some(reset) = reset.borrow_mut().out()? {
+                if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
+                    self.count = 0;
+                    self.sum = 0.0;
+                    self.average = None;
+                    force_recalc = true;
+                }
+            }
+        }
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
-        if !flow.is_new() {
+        if !flow.is_new() && !force_recalc {
             let Some(average) = self.average.as_ref() else { return Ok(None) };
-            return flow.wrap(average.clone());
+            return flow.wrap_old(average.clone());
         }
         // trace!("{}.out | input: {:?}", self.id, input);
         let value = input.to_double().as_double().value;
@@ -93,6 +116,10 @@ impl FnOut for FnAverage {
         self.count = 0;
         self.sum = 0.0;
         self.average = None;
+        self.reset_edge.reset();
+        if let Some(reset) = &self.reset {
+            reset.borrow_mut().reset();
+        }
         self.input.borrow_mut().reset();
     }
 }

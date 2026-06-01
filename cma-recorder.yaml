@@ -191,9 +191,9 @@ service Task RecorderTask:
     #
     # Crane Average load in operating cycle, ??? unit ???
     let craneCycleAverageLoad:
-        input fn KeepValid:
+        input fn Hold:
             input fn Average:
-                enable: opCycleIsActive_
+                reset: opCycleIsActive_
                 input: craneLoad   # ??? unit ???
     #
     # Crane Average load in operating cycle in relative units
@@ -204,15 +204,15 @@ service Task RecorderTask:
     #
     # Crane Max load in operating cycle, ??? unit ???
     let craneCycleMaxLoad:
-        input fn KeepValid:
+        input fn Hold:
             input fn Max:
-                enable: opCycleIsActive_
+                reset: opCycleIsActive_
                 input: craneLoad   # ??? unit ???
     # Winch1 Average load in operating cycle, ??? unit ???
     let winch1CycleAverageLoad:
-        input fn KeepValid:
+        input fn Hold:
             input fn Average:
-                enable: opCycleIsActive_
+                reset: opCycleIsActive_
                 input: winch1Load   # ??? unit ???
     #
     # Winch1 Average load in operating cycle in relative units
@@ -223,9 +223,9 @@ service Task RecorderTask:
     #
     # Winch2 Average load in operating cycle, ??? unit ???
     let winch2CycleAverageLoad:
-        input fn KeepValid:
+        input fn Hold:
             input fn Average:
-                enable: opCycleIsActive_
+                reset: opCycleIsActive_
                 input: winch2Load   # ??? unit ???
     #
     # Winch2 Average load in operating cycle in relative units
@@ -236,9 +236,9 @@ service Task RecorderTask:
     #
     # Winch3 Average load in operating cycle, ??? unit ???
     let winch3CycleAverageLoad:
-        input fn KeepValid:
+        input fn Hold:
             input fn Average:
-                enable: opCycleIsActive_
+                reset: opCycleIsActive_
                 input: winch3Load   # ??? unit ???
     #
     # Winch3 Average load in operating cycle in relative units
@@ -2781,7 +2781,7 @@ service Task RecorderTask:
             table: public.rec_operating_cycle
             sql: insert into {table} (id, timestamp_start, timestamp_stop, alarm_class) values ({opCycleId.value}, '{start.timestamp}', '{stop.timestamp}', {alarmClass.value});
             opCycleId: opCycleId
-            start fn KeepValid:
+            start fn Hold:
                 input fn Filter:
                     pass fn RisingEdge:
                         input: opCycleIsActive

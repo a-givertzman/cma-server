@@ -2,14 +2,14 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use sal_sync::services::entity::Point;
 use crate::domain::FnOutRef;
-use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
+use crate::services::task::{FnOut, FnKind, FnResult};
 ///
 /// Returns an max value (in Double) of the input
 #[derive(Debug)]
 pub struct FnMax {
     id: String,
     kind: FnKind,
-    // enable: Option<FnOutRef>,
+    reset: Option<FnOutRef>,
     input: FnOutRef,
     max: Option<Point>,
 }
@@ -19,10 +19,11 @@ impl FnMax {
     ///
     /// Creates new instance of the FnMax
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, reset: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnMax{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
+            reset,
             input,
             max: None,
         }
@@ -41,17 +42,16 @@ impl FnOut for FnMax {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        if let Some(enable) = &self.enable {
-            inputs.append(&mut enable.borrow().inputs());
+        let mut inputs = self.input.borrow().inputs();
+        if let Some(reset) = &self.reset {
+            inputs.append(&mut reset.borrow().inputs());
         }
-        inputs.append(&mut self.input.borrow().inputs());
         inputs
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let enable = match &self.enable {
+        let enable = match &self.reset {
             Some(enable) => match enable.borrow_mut().out() {
                 FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
                 FnResult::None => return FnResult::None,
@@ -108,8 +108,8 @@ impl FnOut for FnMax {
     //
     fn reset(&mut self) {
         self.max = None;
-        if let Some(enable) = &self.enable {
-            enable.borrow_mut().reset();
+        if let Some(reset) = &mut self.reset {
+            reset.borrow_mut().reset();
         }
         self.input.borrow_mut().reset();
     }
