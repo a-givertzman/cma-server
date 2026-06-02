@@ -1,16 +1,15 @@
-use sal_sync::services::entity::{Point, PointConfType, PointHlr};
+use sal_sync::services::entity::{Point, PointHlr, PointType};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::domain::{Edge, EdgeDetector, FnOutRef};
-use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
+use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult};
 
 /// ### Function | Average
 /// 
 /// Вычисляет накопительное среднее значение (Cumulative Average) входного сигнала.
 ///
 /// Особенности работы:
-/// - `enable`: (Через `FnEnable`) При значении `false` (или 0) принудительно сбрасывает накопленную сумму 
-///   и счетчик итераций, прерывая передачу данных (возвращает `None`).
+/// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
 /// - `reset`: Сбрасывает накопленную сумму и счетчик по переднему фронту сигнала (переход 0 -> 1).
 /// - `input`: Источник числовых данных. Выходной `Point` автоматически наследует 
 ///   тип данных входа (Int, Real или Double).
@@ -19,8 +18,8 @@ use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 pub struct FnAverage {
     id: String,
     kind: FnKind,
-    reset: Option<FnOutRef>,
-    input: FnOutRef,
+    reset: Option<FnChange>,
+    input: FnChange,
     count: i64,
     sum: f64,
     average: Option<Point>,
@@ -38,8 +37,8 @@ impl FnAverage {
         Self { 
             id: format!("{}/FnAverage{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            reset,
-            input,
+            reset: reset.map(FnChange::new),
+            input: FnChange::new(input),
             count: 0,
             sum: 0.0,
             average: None,
@@ -47,7 +46,8 @@ impl FnAverage {
         }
     }
     ///
-    /// Возвращает `Point` с обновленными `name` и `value`  
+    /// Возвращает `Point` с обновленными `name` и `value`
+    #[inline]
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
         PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
     }
@@ -65,9 +65,9 @@ impl FnOut for FnAverage {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = self.input.borrow().inputs();
+        let mut inputs = self.input.inputs();
         if let Some(reset) = self.reset.as_ref() {
-            inputs.append(&mut reset.borrow().inputs());
+            inputs.append(&mut reset.inputs());
         }
         inputs
     }
@@ -75,8 +75,8 @@ impl FnOut for FnAverage {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let mut force_recalc = false;
-        if let Some(reset) = self.reset.as_ref() {
-            if let Some(reset) = reset.borrow_mut().out()? {
+        if let Some(reset) = &mut self.reset {
+            if let Some(reset) = reset.out()? {
                 if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
                     self.count = 0;
                     self.sum = 0.0;
@@ -85,13 +85,17 @@ impl FnOut for FnAverage {
                 }
             }
         }
-        let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
+        let Some(input) = flow.map(self.input.out())? else { return Ok(None) };
+        // Возвращаем предыдущее значение, если нет новых данных на входе и не было сброса
         if !flow.is_new() && !force_recalc {
             let Some(average) = self.average.as_ref() else { return Ok(None) };
             return flow.wrap_old(average.clone());
         }
         // trace!("{}.out | input: {:?}", self.id, input);
-        let value = input.to_double().as_double().value;
+        let value = match input.type_() {
+            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+        };
         self.sum += value;
         self.count += 1;
         let average = if self.count != 0 {
@@ -103,13 +107,13 @@ impl FnOut for FnAverage {
         log::trace!("{}.out | count: {:?}", self.id, self.count);
         log::trace!("{}.out | average: {:?}", self.id, average);
         let average = match input.type_() {
-            PointConfType::Int => Point::Int(Self::point_with(&input, &self.id, average.round() as i64)),
-            PointConfType::Real => Point::Real(Self::point_with(&input, &self.id, average as f32)),
-            PointConfType::Double => Point::Double(Self::point_with(&input, &self.id, average)),
+            PointType::Int => Point::Int(Self::point_with(&input, &self.id, average.round() as i64)),
+            PointType::Real => Point::Real(Self::point_with(&input, &self.id, average as f32)),
+            PointType::Double => Point::Double(Self::point_with(&input, &self.id, average)),
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
         };
         self.average = Some(average.clone());
-        flow.wrap(average)
+        flow.wrap_new(average)
     }
     //
     fn reset(&mut self) {
@@ -117,10 +121,10 @@ impl FnOut for FnAverage {
         self.sum = 0.0;
         self.average = None;
         self.reset_edge.reset();
-        if let Some(reset) = &self.reset {
-            reset.borrow_mut().reset();
+        if let Some(reset) = &mut self.reset {
+            reset.reset();
         }
-        self.input.borrow_mut().reset();
+        self.input.reset();
     }
 }
 ///

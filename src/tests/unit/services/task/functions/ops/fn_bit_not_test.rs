@@ -4,7 +4,7 @@ use std::{sync::Once, rc::Rc, cell::RefCell};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
-    services::task::{FnOut, FnInput, FnBitNot}
+    services::task::{FnOut, FnInput, FnNot}
 };
 ///
 ///
@@ -35,7 +35,7 @@ fn test_bool() {
     log::info!("{}", self_id);
     let mut target: bool;
     let input = init_each("false", FnConfPointType::Bool);
-    let mut fn_bit_not = FnBitNot::new(
+    let mut fn_bit_not = FnNot::new(
         self_id,
         input.clone(),
     );
@@ -64,7 +64,7 @@ fn test_int() {
     log::info!("{}", self_id);
     let mut target: i64;
     let input = init_each("0", FnConfPointType::Int);
-    let mut fn_bit_not = FnBitNot::new(
+    let mut fn_bit_not = FnNot::new(
         self_id,
         input.clone(),
     );

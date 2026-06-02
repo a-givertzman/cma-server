@@ -49,7 +49,7 @@ pub enum Functions {
     BitAnd,
     BitOr,
     BitXor,
-    BitNot,
+    Not,
     Threshold,
     Smooth,
     Average,
@@ -105,7 +105,7 @@ impl Functions {
     const BIT_AND                       : &'static str = "BitAnd";
     const BIT_OR                        : &'static str = "BitOr";
     const BIT_XOR                       : &'static str = "BitXor";
-    const BIT_NOT                       : &'static str = "BitNot";
+    const NOT                           : &'static str = "Not";
     const THRESHOLD                     : &'static str = "Threshold";
     const SMOOTH                        : &'static str = "Smooth";
     const AVERAGE                       : &'static str = "Average";
@@ -159,7 +159,7 @@ impl Functions {
             Self::BitAnd                => Self::BIT_AND,
             Self::BitOr                 => Self::BIT_OR,
             Self::BitXor                => Self::BIT_XOR,
-            Self::BitNot                => Self::BIT_NOT,
+            Self::Not                   => Self::NOT,
             Self::Threshold             => Self::THRESHOLD,
             Self::Smooth                => Self::SMOOTH,
             Self::Average               => Self::AVERAGE,
@@ -213,7 +213,7 @@ impl Functions {
             Self::BIT_AND                   => Ok( Self::BitAnd ),
             Self::BIT_OR                    => Ok( Self::BitOr ),
             Self::BIT_XOR                   => Ok( Self::BitXor ),
-            Self::BIT_NOT                   => Ok( Self::BitNot ),
+            Self::NOT                       => Ok( Self::Not ),
             Self::THRESHOLD                 => Ok( Self::Threshold ),
             Self::SMOOTH                    => Ok( Self::Smooth ),
             Self::AVERAGE                   => Ok( Self::Average ),

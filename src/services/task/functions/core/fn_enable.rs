@@ -63,9 +63,8 @@ impl<T: FnOut> FnOut for FnEnable<T> {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
-        let en = match flow.map(self.enable.borrow_mut().out())? {
-            Some(en) => en.to_bool().as_bool().value.0,
+        let en = match self.enable.borrow_mut().out()? {
+            Some(en) => en.into_value().to_bool().as_bool().value.0,
             None => self.prev_en, // Если enable не приходит (None), то используем прежнее значение
         };
         // Детектируем передний фронт (false -> true)
@@ -79,6 +78,7 @@ impl<T: FnOut> FnOut for FnEnable<T> {
                     if rising_edge {
                         self.origin.reset();
                     }
+                    let mut flow = FlowContext::new();
                     let Some(val) = flow.map(self.origin.out())? else { return Ok(None) };
                     self.last_val = Some(val.clone());
                     if rising_edge {
@@ -88,11 +88,14 @@ impl<T: FnOut> FnOut for FnEnable<T> {
                 } else {
                     if falling_edge {
                         self.origin.reset();
+                        self.last_val = None; // Очищаем стейт для чистоты
                     }
-                    Ok(self.last_val.clone().map(FnFlow::Old))
+                    // Cold означает полное отсутствие сигнала при выключении
+                    Ok(None)
                 }
             }
             FnEnableMode::Warm => {
+                let mut flow = FlowContext::new();
                 // Всегда дергаем оригинал, чтобы кэш/математика внутри оставались актуальными
                 let val = flow.map(self.origin.out())?;
                 if !en {
@@ -107,7 +110,6 @@ impl<T: FnOut> FnOut for FnEnable<T> {
                 } else {
                     Ok(None)
                 }
-
             }
         }
     }
@@ -133,105 +135,90 @@ pub enum FnEnableMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{cell::{Cell, RefCell}, rc::Rc};
     use sal_sync::services::entity::{Point, ToPoint};
-    use crate::services::task::{FnFlow, FnKind, FnResult};
+    use std::{cell::RefCell, rc::Rc};
     #[derive(Debug)]
-    struct FakeEnable {
-        val: bool,
+    struct MockFn {
+        id: String,
+        calls: usize,
+        resets: usize,
+        flow_to_return: FnFlow,
     }
-    impl FakeEnable {
-        fn new(val: bool) -> Rc<RefCell<Self>> {
-            Rc::new(RefCell::new(Self { val }))
+    impl MockFn {
+        fn new(flow: FnFlow) -> Self {
+            Self {
+                id: "MockFn".to_string(),
+                calls: 0,
+                resets: 0,
+                flow_to_return: flow,
+            }
         }
     }
-    impl FnOut for FakeEnable {
-        fn id(&self) -> String { "fake_en".into() }
-        fn kind(&self) -> FnKind { FnKind::Var }
-        fn inputs(&self) -> Vec<String> { vec![] }
-        fn out(&mut self) -> FnResult<FnFlow, String> {
-            Ok(Some(FnFlow::New(self.val.to_point(0, "en"))))
-        }
-        fn reset(&mut self) {}
-    }
-    #[derive(Debug)]
-    struct FakeOrigin {
-        val: Option<FnFlow>,
-        reset_count: Rc<Cell<usize>>,
-    }
-    impl FakeOrigin {
-        fn new(reset_count: Rc<Cell<usize>>) -> Self {
-            Self { val: None, reset_count }
-        }
-    }
-    impl FnOut for FakeOrigin {
-        fn id(&self) -> String { "fake_origin".into() }
+    impl FnOut for MockFn {
+        fn id(&self) -> String { self.id.clone() }
         fn kind(&self) -> FnKind { FnKind::Fn }
         fn inputs(&self) -> Vec<String> { vec![] }
-        fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.val.clone()) }
-        fn reset(&mut self) {
-            self.reset_count.set(self.reset_count.get() + 1);
+        fn out(&mut self) -> FnResult<FnFlow, String> {
+            self.calls += 1;
+            Ok(Some(self.flow_to_return.clone()))
         }
+        fn reset(&mut self) { self.resets += 1; }
+    }
+    fn bool_point(val: bool) -> Point {
+        val.to_point(1, "test_en")
     }
     #[test]
-    fn test_fn_enable_cold_mode() {
-        let enable = FakeEnable::new(false);
-        let resets = Rc::new(Cell::new(0));
-        let origin = FakeOrigin::new(resets.clone());
-        let mut fn_enable = FnEnable::new(origin, FnEnableMode::Cold, enable.clone());
+    fn test_cold_mode() {
+        let enable_mock = Rc::new(RefCell::new(MockFn::new(FnFlow::New(bool_point(false)))));
+        let origin_mock = MockFn::new(FnFlow::Old(bool_point(true)));
+        let mut fn_enable = FnEnable::new(origin_mock, FnEnableMode::Cold, enable_mock.clone());
+        // 1. Старт с en=false. Ожидаем Ok(None)
         let out = fn_enable.out().unwrap();
-        assert!(out.is_none(), "Должен вернуть None, так как сигнал изначально опущен");
-        assert_eq!(resets.get(), 0);
-        enable.borrow_mut().val = true;
-        fn_enable.origin.val = Some(FnFlow::New(42_i64.to_point(0, "val")));
+        assert!(out.is_none(), "Cold mode must return None when disabled");
+        assert_eq!(fn_enable.origin.calls, 0, "Origin must not be called in Cold mode when disabled");
+        // 2. Rising edge (en=true)
+        enable_mock.borrow_mut().flow_to_return = FnFlow::New(bool_point(true));
         let out = fn_enable.out().unwrap().unwrap();
-        assert!(out.is_new(), "Low -> High: должно вернуться New");
-        if let Point::Int(p) = out.value() { assert_eq!(p.value, 42); }
-        assert_eq!(resets.get(), 1, "При rising_edge в Cold режиме должен быть вызван reset");
-        fn_enable.origin.val = Some(FnFlow::Old(43_i64.to_point(0, "val")));
+        assert!(out.is_new(), "Rising edge must force FnFlow::New");
+        assert_eq!(fn_enable.origin.resets, 1, "Origin must be reset on rising edge");
+        assert_eq!(fn_enable.origin.calls, 1, "Origin must be evaluated");
+        // 3. Steady high
+        enable_mock.borrow_mut().flow_to_return = FnFlow::Old(bool_point(true)); // Старый enable
         let out = fn_enable.out().unwrap().unwrap();
-        assert!(!out.is_new(), "Сквозной проброс Old");
-        assert_eq!(resets.get(), 1, "При стабильном сигнале reset не вызывается");
-        enable.borrow_mut().val = false;
-        let out = fn_enable.out().unwrap().unwrap();
-        assert!(!out.is_new(), "High -> Low: должно вернуться Old");
-        if let Point::Int(p) = out.value() { assert_eq!(p.value, 43, "Должно сохраниться последнее валидное значение"); }
-        assert_eq!(resets.get(), 2, "При falling_edge в Cold режиме должен быть вызван reset");
+        assert!(!out.is_new(), "Steady high with Old origin must return Old");
+        // 4. Falling edge (en=false)
+        enable_mock.borrow_mut().flow_to_return = FnFlow::New(bool_point(false));
+        let out = fn_enable.out().unwrap();
+        assert!(out.is_none(), "Falling edge in Cold mode must return None");
+        assert_eq!(fn_enable.origin.resets, 2, "Origin must be reset on falling edge");
     }
     #[test]
-    fn test_fn_enable_warm_mode() {
-        let enable = FakeEnable::new(false);
-        let resets = Rc::new(Cell::new(0));
-        let origin = FakeOrigin::new(resets.clone());
-        let mut fn_enable = FnEnable::new(origin, FnEnableMode::Warm, enable.clone());
-        fn_enable.origin.val = Some(FnFlow::New(10_i64.to_point(0, "val")));
-        let out = fn_enable.out().unwrap();
-        assert!(out.is_none(), "В Warm режиме при опущенном сигнале отдаем last_val (который None)");
-        assert_eq!(resets.get(), 0);
-        enable.borrow_mut().val = true;
-        fn_enable.origin.val = Some(FnFlow::New(20_i64.to_point(0, "val")));
+    fn test_warm_mode() {
+        let enable_mock = Rc::new(RefCell::new(MockFn::new(FnFlow::New(bool_point(true)))));
+        let origin_mock = MockFn::new(FnFlow::Old(bool_point(true)));
+        let mut fn_enable = FnEnable::new(origin_mock, FnEnableMode::Warm, enable_mock.clone());
+        // 1. Старт с en=true
         let out = fn_enable.out().unwrap().unwrap();
-        assert!(out.is_new());
-        if let Point::Int(p) = out.value() { assert_eq!(p.value, 20); }
-        assert_eq!(resets.get(), 0, "В Warm режиме reset не вызывается никогда");
-        enable.borrow_mut().val = false;
-        fn_enable.origin.val = Some(FnFlow::New(30_i64.to_point(0, "val")));
+        assert!(out.is_new(), "Rising edge forces FnFlow::New");
+        assert_eq!(fn_enable.origin.calls, 1);
+        // 2. Переход в en=false (Warm)
+        enable_mock.borrow_mut().flow_to_return = FnFlow::New(bool_point(false));
         let out = fn_enable.out().unwrap().unwrap();
-        assert!(!out.is_new());
-        if let Point::Int(p) = out.value() { assert_eq!(p.value, 20, "High -> Low: отдаем last_val, игнорируя внутренние вычисления"); }
-        assert_eq!(resets.get(), 0);
+        assert!(!out.is_new(), "Disabled Warm mode must return Old flow");
+        assert_eq!(fn_enable.origin.calls, 2, "Origin MUST be evaluated in Warm mode even if disabled");
+        // 3. Убедимся, что reset не вызывался
+        assert_eq!(fn_enable.origin.resets, 0, "Warm mode must never reset origin on edges");
     }
     #[test]
-    fn test_fn_enable_warm_mode_none_handling() {
-        let enable = FakeEnable::new(true);
-        let resets = Rc::new(Cell::new(0));
-        let origin = FakeOrigin::new(resets.clone());
-        let mut fn_enable = FnEnable::new(origin, FnEnableMode::Warm, enable.clone());
-        fn_enable.origin.val = Some(FnFlow::New(100_i64.to_point(0, "val")));
+    fn test_flow_isolation() {
+        // Убеждаемся, что FnFlow::New на управляющем сигнале не делает полезные данные 'New'
+        let enable_mock = Rc::new(RefCell::new(MockFn::new(FnFlow::New(bool_point(true))))); // enable сигналит "New"
+        let origin_mock = MockFn::new(FnFlow::Old(bool_point(true))); // Данные старые
+        let mut fn_enable = FnEnable::new(origin_mock, FnEnableMode::Warm, enable_mock.clone());
+        // Первый проход (rising edge) всегда дает New, поэтому пропустим его
+        let _ = fn_enable.out(); 
+        // Второй проход. Enable все еще сыпет New(true), данные Old
         let out = fn_enable.out().unwrap().unwrap();
-        assert!(out.is_new());
-        fn_enable.origin.val = None;
-        let out = fn_enable.out().unwrap();
-        assert!(out.is_none(), "Если оригинальная функция возвращает None, мы также возвращаем None, не трогая last_val");
+        assert!(!out.is_new(), "FnFlow::New from enable must not pollute the FlowContext of the origin");
     }
 }

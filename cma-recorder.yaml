@@ -2054,6 +2054,8 @@ service Task RecorderTask:
     #
     fn RecOpCycleMetric BasicMetric:
         send-to: /App/ApiClient.in-queue
+        reset: fn Not:
+            input: opCycleIsActive
         op-cycle: opCycleIsActive
         #
         # ========= DEBUGGING =========
@@ -2772,6 +2774,8 @@ service Task RecorderTask:
     #
     fn RecOpCycleMetric OpCycle:
         send-to: /App/ApiClient.in-queue
+        reset: fn Not:
+            input: opCycleIsActive
         op-cycle: opCycleIsActive
         # conf point OpCycleSql:
         #     type: 'String'

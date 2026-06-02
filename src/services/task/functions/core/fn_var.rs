@@ -50,7 +50,6 @@ impl FnOut for FnVar {
     /// - Returns None if:
     ///   - Point filtered by any kind of filtering function
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
         log::trace!("{}.eval | evaluating...", self.id);
         let value = self.input.borrow_mut().out();
         log::trace!("{}.out | value: {:?}", self.id, value);

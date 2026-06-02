@@ -1,15 +1,17 @@
 use indexmap::IndexMap;
-use sal_sync::services::{entity::{Point, PointConfType, PointHlr}, types::TypeOf};
+use sal_core::error::Error;
+use sal_sync::services::{entity::{Point, PointHlr, PointType}, types::{Bool, TypeOf}};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
     domain::FnOutRef,
-    services::task::functions::{
-        FnOut, FnKind, FnResult
-    }
+    services::task::{FlowContext, FnFlow, functions::{
+        FnKind, FnOut, FnResult
+    }}
 };
 ///
-/// Function | Piecewise Linear Approximation (кусочно-линейная аппроксимация)
+/// ### Function | Piecewise Linear Approximation (кусочно-линейная аппроксимация)
+/// 
 ///  - bool: true -> 1, false -> 0
 ///  - real: 0.1 -> 0 | 0.5 -> 1 | 0.9 -> 1 | 1.1 -> 1
 ///  - string: try to parse int
@@ -20,15 +22,13 @@ pub struct FnPiecewiseLineApprox {
     input: FnOutRef,
     pieces: Linears,
 }
-//
 // 
 impl FnPiecewiseLineApprox {
     ///
     /// Creates new instance of the FnPiecewiseLineApprox
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnOutRef, pieces: IndexMap<serde_yaml::Value, serde_yaml::Value>) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef, pieces: Linears) -> Self {
         let self_id = format!("{}/FnPiecewiseLineApprox{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst));
-        let pieces = Linears::new(&self_id, &pieces);
         Self { 
             id: self_id,
             kind: FnKind::Fn,
@@ -37,40 +37,22 @@ impl FnPiecewiseLineApprox {
         }
     }
     ///
-    /// Build an out Point deppending on the input type
-    fn build_point(&self, input: &Point, value: f64) -> Point {
+    /// Возвращает `PointHlr` с обновленными `name` и `value`
+    #[inline]
+    fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+    }
+    ///
+    /// Возвращает `Point` с обновленными `name` и `value` сохраняя тип
+    #[inline]
+    fn point(id: &str, input: &Point, val: f64) -> Result<Point, String> {
         match input.type_() {
-            PointConfType::Int => Point::Int(
-                PointHlr::new(
-                    input.txid(),
-                    &concat_string!(self.id, ".out"),
-                    value.round() as i64,
-                    input.status(),
-                    input.cot(),
-                    input.timestamp(),
-                )
-            ),
-            PointConfType::Real => Point::Real(
-                PointHlr::new(
-                    input.txid(),
-                    &concat_string!(self.id, ".out"),
-                    value as f32,
-                    input.status(),
-                    input.cot(),
-                    input.timestamp(),
-                )
-            ),
-            PointConfType::Double => Point::Double(
-                PointHlr::new(
-                    input.txid(),
-                    &concat_string!(self.id, ".out"),
-                    value,
-                    input.status(),
-                    input.cot(),
-                    input.timestamp(),
-                )
-            ),
-            _ => panic!("{}.line_approx | Input type '{:?}' - is not supported", self.id, input.type_()),
+            PointType::Bool => Ok(Point::Bool(Self::point_with(input, id, Bool(val != 0.0)))),
+            PointType::Int => Ok(Point::Int(Self::point_with(input, id, val.round() as i64))),
+            PointType::Real => Ok(Point::Real(Self::point_with(input, id, val as f32))),
+            PointType::Double => Ok(Point::Double(Self::point_with(input, id, val))),
+            PointType::String => Ok(Point::String(Self::point_with(input, id, val.to_string()))),
+            _ => Err(concat_string!(id, ".out | Invalid input type '", input.type_().to_string(), "'")),
         }
     }
 }
@@ -90,23 +72,23 @@ impl FnOut for FnPiecewiseLineApprox {
         self.input.borrow().inputs()
     }
     //
-    //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let input = self.input.borrow_mut().out();
+        let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
         log::trace!("{}.out | input: {:?}", self.id, input);
-        match input {
-            FnResult::Ok(input) => {
-                let value = self.pieces.line_approx(input.to_double().as_double().value);
-                let out = self.build_point(&input, value);
-                log::trace!("{}.out | out: {:?}", self.id, &out);
-                FnResult::Ok(out)
+        let value: f64 = match &input {
+            Point::Bool(_) | Point::Int(_) | Point::Real(_) | Point::Double(_) => input.to_double().as_double().value,
+            Point::String(val) => {
+                val.value.parse()
+                    .map_err(|_| concat_string!(self.id, ".out | Invalid input '", val.value, "'"))?
             }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
-        }
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+        };
+        let val = self.pieces.line_approx(value)?;
+        let out = Self::point(&self.id, &input, val)?;
+        log::trace!("{}.out | out: {:?}", self.id, &out);
+        flow.wrap(out)
     }
-    //
     //
     fn reset(&mut self) {
         self.input.borrow_mut().reset();
@@ -181,19 +163,19 @@ impl Linears {
     const IS_EMPTY_MSG: &'static str = "Piecewise function must contains at least two points";
     ///
     /// Creates new instance of the [Linears]
-    fn new(parent: impl Into<String>, pieces: &IndexMap<serde_yaml::Value, serde_yaml::Value>) -> Self {
+    fn new(parent: impl Into<String>, pieces: &IndexMap<serde_yaml::Value, serde_yaml::Value>) -> Result<Self, Error> {
         let self_id = format!("{}/Linears", parent.into());
         assert!(pieces.len() > 1, "{}.line_approx | {}", self_id, Self::IS_EMPTY_MSG);
         let mut pieces_iter = pieces.iter();
         let mut pieces = vec![];
         match pieces_iter.next() {
             Some((x, y)) => {
-                let x = Self::serde_value_to_f64(&self_id, x);
-                let y = Self::serde_value_to_f64(&self_id, y);
+                let x = Self::serde_value_to_f64(&self_id, x)?;
+                let y = Self::serde_value_to_f64(&self_id, y)?;
                 let mut p1 = LinePoint::new(x, y);
                 while let Some((x, y)) = pieces_iter.next() {
-                    let x = Self::serde_value_to_f64(&self_id, x);
-                    let y = Self::serde_value_to_f64(&self_id, y);
+                    let x = Self::serde_value_to_f64(&self_id, x)?;
+                    let y = Self::serde_value_to_f64(&self_id, y)?;
                     let p2 = LinePoint::new(x, y);
                     pieces.push(LinearApprox::new(p1, p2));
                     p1 = p2;
@@ -201,45 +183,43 @@ impl Linears {
             }
             None => panic!("{}.line_approx | {}", self_id, Self::IS_EMPTY_MSG),
         }
-        Self { id: self_id, pieces }
+        Ok(Self { id: self_id, pieces })
     }
     ///
     /// 
-    fn line_approx(&self, value: f64) -> f64 {
+    fn line_approx(&self, value: f64) -> Result<f64, String> {
         log::trace!("{}.line_approx | value: {:?}", self.id, value);
         let mut pieces = self.pieces.iter();
         match pieces.next() {
             Some(first) => if first.is_less(value) {
                 log::trace!("{}.line_approx | less first: {:#?}", self.id, first);
-                return first.left.y
+                return Ok(first.left.y);
             } else {
                 if first.contains(value) {
                     log::trace!("{}.line_approx | first: {:#?}", self.id, first);
-                    return first.linear_approx(value);
+                    return Ok(first.linear_approx(value));
                 }
                 while let Some(piece) = pieces.next() {
                     if piece.contains(value) {
                         log::trace!("{}.line_approx | piece: {:#?}", self.id, piece);
-                        return piece.linear_approx(value);
+                        return Ok(piece.linear_approx(value));
                     }
                 }
                 match self.pieces.last() {
-                    Some(last) => {
-                        return last.right.y
-                    }
-                    None => panic!("{}.line_approx | {}", self.id, Self::IS_EMPTY_MSG),
+                    Some(last) => Ok(last.right.y),
+                    None => Err(format!("{}.line_approx | {}", self.id, Self::IS_EMPTY_MSG)),
                 }
             }
-            None => panic!("{}.line_approx | {}", self.id, Self::IS_EMPTY_MSG),
+            None => Err(format!("{}.line_approx | {}", self.id, Self::IS_EMPTY_MSG)),
         }
     }
     ///
     /// Extracts containing number as f64
-    fn serde_value_to_f64(self_id: &str, value: &serde_yaml::Value) -> f64 {
+    fn serde_value_to_f64(self_id: &str, value: &serde_yaml::Value) -> Result<f64, String> {
         if value.is_number() {
-            value.as_f64().unwrap_or_else(|| panic!("{}.serde_value_to_f64 | Piecewise function point type '{:?}' - is not supported", self_id, value.type_of()))
+            value.as_f64().ok_or(format!("{}.serde_value_to_f64 | Piecewise function point type '{:?}' - is not supported", self_id, value.type_of()))
         } else {
-            panic!("{}.serde_value_to_f64 | Piecewise function point type '{:?}' - is not supported", self_id, value.type_of())
+            Err(format!("{}.serde_value_to_f64 | Piecewise function point type '{:?}' - is not supported", self_id, value.type_of()))
         }
     }
 }

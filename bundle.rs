@@ -67,6 +67,50 @@ pub static COUNT: AtomicUsize = AtomicUsize::new(1);
 }
 mod functions {
 mod core {
+mod fn_change {
+use crate::{domain::FnOutRef, services::task::{FnFlow, FnKind, FnOut, FnResult}};
+use sal_sync::services::entity::Point;
+use std::fmt::Debug;
+#[derive(Debug)]
+pub struct FnChange {
+    input: FnOutRef,
+    last_val: Option<Point>,
+}
+impl FnChange {
+    pub fn new(inp: FnOutRef) -> Self {
+        Self { input: inp, last_val: None }
+    }
+}
+impl FnOut for FnChange {
+    fn id(&self) -> String { self.input.borrow().id() }
+    fn kind(&self) -> FnKind { self.input.borrow().kind() }
+    fn inputs(&self) -> Vec<String> { self.input.borrow().inputs() }
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let result = self.input.borrow_mut().out()?;
+        match result {
+            Some(FnFlow::New(point)) | Some(FnFlow::Old(point)) => {
+                let is_changed = match &self.last_val {
+                    Some(last) => {
+                        last.value() != point.value() || last.status() != point.status()
+                    },
+                    None => true,
+                };
+                if is_changed {
+                    self.last_val = Some(point.clone());
+                    Ok(Some(FnFlow::New(point)))
+                } else {
+                    Ok(Some(FnFlow::Old(point)))
+                }
+            }
+            other => Ok(other),
+        }
+    }
+    fn reset(&mut self) {
+        self.last_val = None;
+        self.input.borrow_mut().reset();
+    }
+}
+}
 mod fn_const {
 use std::sync::atomic::{Ordering, AtomicUsize};
 use sal_sync::services::entity::Point;
@@ -142,9 +186,8 @@ impl<T: FnOut> FnOut for FnEnable<T> {
         inputs
     }
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
-        let en = match flow.map(self.enable.borrow_mut().out())? {
-            Some(en) => en.to_bool().as_bool().value.0,
+        let en = match self.enable.borrow_mut().out()? {
+            Some(en) => en.into_value().to_bool().as_bool().value.0,
             None => self.prev_en,
         };
         let rising_edge = !self.prev_en && en;
@@ -156,6 +199,7 @@ impl<T: FnOut> FnOut for FnEnable<T> {
                     if rising_edge {
                         self.origin.reset();
                     }
+                    let mut flow = FlowContext::new();
                     let Some(val) = flow.map(self.origin.out())? else { return Ok(None) };
                     self.last_val = Some(val.clone());
                     if rising_edge {
@@ -165,16 +209,19 @@ impl<T: FnOut> FnOut for FnEnable<T> {
                 } else {
                     if falling_edge {
                         self.origin.reset();
+                        self.last_val = None;
                     }
-                    Ok(self.last_val.clone().map(FnFlow::Old))
+                    Ok(None)
                 }
             }
             FnEnableMode::Warm => {
+                let mut flow = FlowContext::new();
                 let val = flow.map(self.origin.out())?;
                 if !en {
                     return Ok(self.last_val.clone().map(FnFlow::Old));
                 }
                 if let Some(val) = val {
+                    self.last_val = Some(val.clone());
                     if rising_edge {
                         return Ok(Some(FnFlow::New(val)));
                     }
@@ -199,6 +246,7 @@ pub enum FnEnableMode {
 }
 }
 mod fn_flow {
+use std::fmt::{Debug, Display};
 use sal_sync::services::entity::Point;
 use crate::services::task::FnResult;
 #[derive(Debug, Clone)]
@@ -246,11 +294,32 @@ impl FlowContext {
             false => FnFlow::Old(p)
         }))
     }
+    pub fn wrap_new(&self, p: Point) -> FnResult<FnFlow, String> {
+        Ok(Some(FnFlow::New(p)))
+    }
+    pub fn wrap_old(&self, p: Point) -> FnResult<FnFlow, String> {
+        Ok(Some(FnFlow::Old(p)))
+    }
     pub fn is_new(&self) -> bool {
         self.is_new
     }
     pub fn is_old(&self) -> bool {
         !self.is_new
+    }
+}
+impl Display for FlowContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_new {
+            write!(f, "Flow::New")
+        } else {
+            write!(f, "Flow::Old")
+        }
+    }
+}
+//
+impl Debug for FlowContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 }
@@ -393,7 +462,7 @@ impl FnIn for FnInput {
                     Point::Real(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
                     Point::Double(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
                     Point::String(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.clone(), p.status, p.cot, p.timestamp)),
-                    Point::Bytes(p) => {
+                    Point::Bytes(_) => {
                         log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.type_(), self.typ);
                         return;
                     }
@@ -485,7 +554,6 @@ impl FnOut for FnVar {
         self.input.borrow().inputs()
     }
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
         log::trace!("{}.eval | evaluating...", self.id);
         let value = self.input.borrow_mut().out();
         log::trace!("{}.out | value: {:?}", self.id, value);
@@ -497,6 +565,7 @@ impl FnOut for FnVar {
 }
 static COUNT: AtomicUsize = AtomicUsize::new(1);
 }
+pub use fn_change::*;
 pub use fn_const::*;
 pub use fn_enable::*;
 pub use fn_flow::*;
@@ -514,7 +583,7 @@ use indexmap::IndexMap;
 use crate::{
     domain::FnOutRef,
     services::task::{
-        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnInput, FnIsChangedValue, FnKeepValid, FnMax, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, SqlMetric, functions::{
+        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnHold, FnInput, FnIsChangedValue, FnMax, FnMin, FnOut, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, SqlMetric, functions::{
             comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
             edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
             filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
@@ -864,9 +933,10 @@ impl FnBuilder {
                                 None
                             },
                         };
-                        Ok(Rc::new(RefCell::new(
-                            FnExport::new(parent, enable, point_conf, input, send_queue)
-                        )))
+                        Ok(match enable {
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnExport::new(parent, point_conf, input, send_queue), task_nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnExport::new(parent, point_conf, input, send_queue))),
+                        })
                     }
                     Functions::Filter => {
                         let name = "default";
@@ -1094,13 +1164,20 @@ impl FnBuilder {
                                 .map_err(|err| error.pass_with(format!("FnAverage | Can't get '{name}'"), err))?),
                             None => None,
                         };
+                        let name = "reset";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let reset = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?),
+                            None => None,
+                        };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, txid, name, input_conf, task_nodes, services)
                             .map_err(|err| error.pass_with(format!("FnAverage | Can't get '{name}'"), err))?;
                         Ok(match enable {
-                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnAverage::new(parent, input), task_nodes.enable_mode(), en))),
-                            None => Rc::new(RefCell::new(FnAverage::new(parent, input))),
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnAverage::new(parent, reset, input), task_nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnAverage::new(parent, reset, input))),
                         })
                     }
                     Functions::Pow => {
@@ -1170,13 +1247,45 @@ impl FnBuilder {
                                 .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?),
                             None => None,
                         };
+                        let name = "reset";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let reset = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?),
+                            None => None,
+                        };
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
                             .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?;
-                        Ok(Rc::new(RefCell::new(
-                            FnMax::new(parent, enable, input)
-                        )))
+                        Ok(match enable {
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnMax::new(parent, reset, input), task_nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnMax::new(parent, reset, input))),
+                        })
+                    }
+                    Functions::Min => {
+                        let name = "enable";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let enable = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnMin | Can't get '{name}'"), err))?),
+                            None => None,
+                        };
+                        let name = "reset";
+                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
+                        let reset = match input_conf {
+                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?),
+                            None => None,
+                        };
+                        let name = "input";
+                        let input_conf = conf.input_conf(name).unwrap();
+                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                            .map_err(|err| error.pass_with(format!("FnMin | Can't get '{name}'"), err))?;
+                        Ok(match enable {
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnMin::new(parent, reset, input), task_nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnMin::new(parent, reset, input))),
+                        })
                     }
                     Functions::PiecewiseLineApprox => {
                         let name = "input";
@@ -1209,13 +1318,13 @@ impl FnBuilder {
                             FnIsChangedValue::new(parent, inputs)
                         )))
                     }
-                    Functions::KeepValid => {
+                    Functions::Hold => {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnKeepValid | Can't get '{name}'"), err))?;
+                            .map_err(|err| error.pass_with(format!("FnHold | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnKeepValid::new(parent, input)
+                            FnHold::new(parent, input)
                         )))
                     }
                     Functions::ToString => {
@@ -1319,12 +1428,12 @@ impl FnBuilder {
     }
     fn fn_var(parent: impl Into<String>, input: FnOutRef,) -> FnOutRef {
         Rc::new(RefCell::new(
-            FnVar::new(parent, input),
+        FnVar::new(parent, input),
         ))
     }
     fn fn_const(parent: &str, value: Point) -> FnOutRef {
         Rc::new(RefCell::new(
-            FnConst::new(parent, value)
+        FnConst::new(parent, value)
         ))
     }
 }
@@ -1376,9 +1485,10 @@ pub enum Functions {
     Average,
     Pow,
     Max,
+    Min,
     PiecewiseLineApprox,
     IsChangedValue,
-    KeepValid,
+    Hold,
     RecOpCycleMetric,
 }
 impl Functions {
@@ -1427,8 +1537,10 @@ impl Functions {
     const AVERAGE                       : &'static str = "Average";
     const POW                           : &'static str = "Pow";
     const MAX                           : &'static str = "Max";
+    const MIN                           : &'static str = "Min";
     const PIECEWISE_LINE_APPROX         : &'static str = "PiecewiseLineApprox";
     const IS_CHANGED_VALUE              : &'static str = "IsChangedValue";
+    const HOLD                          : &'static str = "Hold";
     const KEEP_VALID                    : &'static str = "KeepValid";
     const REC_OP_CYCLE_METRIC           : &'static str = "RecOpCycleMetric";
     ///
@@ -1479,62 +1591,64 @@ impl Functions {
             Self::Pow                   => Self::POW,
             Self::RecOpCycleMetric      => Self::REC_OP_CYCLE_METRIC,
             Self::Max                   => Self::MAX,
+            Self::Min                   => Self::MIN,
             Self::PiecewiseLineApprox   => Self::PIECEWISE_LINE_APPROX,
             Self::IsChangedValue        => Self::IS_CHANGED_VALUE,
-            Self::KeepValid             => Self::KEEP_VALID,
+            Self::Hold             => Self::HOLD,
         }
     }
     ///
     /// Returns enum Function corresponding to the function name
     fn match_name(input: &str) -> Result<Functions, String> {
         match input {
-            Self::ADD                   => Ok( Self::Add ),
-            Self::CONST                 => Ok( Self::Const ),
-            Self::COUNT                 => Ok( Self::Count ),
-            Self::GT                    => Ok( Self::Gt ),
-            Self::GE                    => Ok( Self::Ge ),
-            Self::EQ                    => Ok( Self::Eq ),
-            Self::LE                    => Ok( Self::Le ),
-            Self::LT                    => Ok( Self::Lt ),
-            Self::NE                    => Ok( Self::Ne ),
-            Self::INPUT                 => Ok( Self::Input ),
-            Self::TIMER                 => Ok( Self::Timer ),
-            Self::TIMER_ON_DELAY        => Ok( Self::TimerOnDelay ),
-            Self::TIMER_OFF_DELAY       => Ok( Self::TimerOffDelay ),
-            Self::VAR                   => Ok( Self::Var ),
-            Self::TO_API_QUEUE          => Ok( Self::ToApiQueue ),
-            Self::TO_MULTI_QUEUE        => Ok( Self::ToMultiQueue ),
-            Self::SQL_METRIC            => Ok( Self::SqlMetric ),
-            Self::POINT_ID              => Ok( Self::PointId ),
-            Self::DEBUG                 => Ok( Self::Debug ),
-            Self::PLOT                  => Ok( Self::Plot ),
-            Self::TO_BOOL               => Ok( Self::ToBool ),
-            Self::TO_INT                => Ok( Self::ToInt ),
-            Self::TO_REAL               => Ok( Self::ToReal ),
-            Self::TO_DOUBLE             => Ok( Self::ToDouble ),
-            Self::TO_STRING             => Ok( Self::ToString ),
-            Self::EXPORT                => Ok( Self::Export ),
-            Self::FILTER                => Ok( Self::Filter ),
-            Self::RISING_EDGE           => Ok( Self::RisingEdge ),
-            Self::FALLING_EDGE          => Ok( Self::FallingEdge ),
-            Self::RETAIN                => Ok( Self::Retain ),
-            Self::ACC                   => Ok( Self::Acc ),
-            Self::MUL                   => Ok( Self::Mul ),
-            Self::DIV                   => Ok( Self::Div ),
-            Self::SUB                   => Ok( Self::Sub ),
-            Self::BIT_AND               => Ok( Self::BitAnd ),
-            Self::BIT_OR                => Ok( Self::BitOr ),
-            Self::BIT_XOR               => Ok( Self::BitXor ),
-            Self::BIT_NOT               => Ok( Self::BitNot ),
-            Self::THRESHOLD             => Ok( Self::Threshold ),
-            Self::SMOOTH                => Ok( Self::Smooth ),
-            Self::AVERAGE               => Ok( Self::Average ),
-            Self::POW                   => Ok( Self::Pow ),
-            Self::REC_OP_CYCLE_METRIC   => Ok( Self::RecOpCycleMetric ),
-            Self::MAX                   => Ok( Self::Max ),
-            Self::PIECEWISE_LINE_APPROX => Ok( Self::PiecewiseLineApprox ),
-            Self::IS_CHANGED_VALUE      => Ok( Self::IsChangedValue ),
-            Self::KEEP_VALID            => Ok( Self::KeepValid ),
+            Self::ADD                       => Ok( Self::Add ),
+            Self::CONST                     => Ok( Self::Const ),
+            Self::COUNT                     => Ok( Self::Count ),
+            Self::GT                        => Ok( Self::Gt ),
+            Self::GE                        => Ok( Self::Ge ),
+            Self::EQ                        => Ok( Self::Eq ),
+            Self::LE                        => Ok( Self::Le ),
+            Self::LT                        => Ok( Self::Lt ),
+            Self::NE                        => Ok( Self::Ne ),
+            Self::INPUT                     => Ok( Self::Input ),
+            Self::TIMER                     => Ok( Self::Timer ),
+            Self::TIMER_ON_DELAY            => Ok( Self::TimerOnDelay ),
+            Self::TIMER_OFF_DELAY           => Ok( Self::TimerOffDelay ),
+            Self::VAR                       => Ok( Self::Var ),
+            Self::TO_API_QUEUE              => Ok( Self::ToApiQueue ),
+            Self::TO_MULTI_QUEUE            => Ok( Self::ToMultiQueue ),
+            Self::SQL_METRIC                => Ok( Self::SqlMetric ),
+            Self::POINT_ID                  => Ok( Self::PointId ),
+            Self::DEBUG                     => Ok( Self::Debug ),
+            Self::PLOT                      => Ok( Self::Plot ),
+            Self::TO_BOOL                   => Ok( Self::ToBool ),
+            Self::TO_INT                    => Ok( Self::ToInt ),
+            Self::TO_REAL                   => Ok( Self::ToReal ),
+            Self::TO_DOUBLE                 => Ok( Self::ToDouble ),
+            Self::TO_STRING                 => Ok( Self::ToString ),
+            Self::EXPORT                    => Ok( Self::Export ),
+            Self::FILTER                    => Ok( Self::Filter ),
+            Self::RISING_EDGE               => Ok( Self::RisingEdge ),
+            Self::FALLING_EDGE              => Ok( Self::FallingEdge ),
+            Self::RETAIN                    => Ok( Self::Retain ),
+            Self::ACC                       => Ok( Self::Acc ),
+            Self::MUL                       => Ok( Self::Mul ),
+            Self::DIV                       => Ok( Self::Div ),
+            Self::SUB                       => Ok( Self::Sub ),
+            Self::BIT_AND                   => Ok( Self::BitAnd ),
+            Self::BIT_OR                    => Ok( Self::BitOr ),
+            Self::BIT_XOR                   => Ok( Self::BitXor ),
+            Self::BIT_NOT                   => Ok( Self::BitNot ),
+            Self::THRESHOLD                 => Ok( Self::Threshold ),
+            Self::SMOOTH                    => Ok( Self::Smooth ),
+            Self::AVERAGE                   => Ok( Self::Average ),
+            Self::POW                       => Ok( Self::Pow ),
+            Self::REC_OP_CYCLE_METRIC       => Ok( Self::RecOpCycleMetric ),
+            Self::MAX                       => Ok( Self::Max ),
+            Self::MIN                       => Ok( Self::Min ),
+            Self::PIECEWISE_LINE_APPROX     => Ok( Self::PiecewiseLineApprox ),
+            Self::IS_CHANGED_VALUE          => Ok( Self::IsChangedValue ),
+            Self::HOLD | Self::KEEP_VALID   => Ok( Self::Hold ),
             _ => Err(format!("Functions.from_str | Unknown function name '{}'", &input)),
         }
     }
@@ -2333,4 +2447,4 @@ pub use task_node_vars::*;
 pub use task_eval_node::*;
 pub use task_test_receiver::*;
 pub use task_test_producer::*;
-pub(self) type EvalCycle = Rc<Cell<usize>>;
+pub(crate) type EvalCycle = Rc<Cell<usize>>;
