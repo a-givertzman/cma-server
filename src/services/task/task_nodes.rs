@@ -54,7 +54,7 @@ impl TaskNodes {
             vars: IndexMap::new(),
             new_node_vars: None,
             cycle: Rc::new(Cell::new(0)),
-            enable_mode: FnEnableMode::Warm,
+            enable_mode: FnEnableMode::Cold,
         }
     }
     ///

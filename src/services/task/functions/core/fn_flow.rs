@@ -64,6 +64,14 @@ impl FlowContext {
         }
     }
     ///
+    /// ### Пропускает `FnResult<FnFlow>`
+    /// - Игнорирует `FnFlow`
+    /// - Извлекает чистый `Point` для дальнейшей бизнес-логики.
+    pub fn ignore(&self, v: FnResult<FnFlow, String>) -> FnResult<Point, String> {
+        let Some(flow) = v? else { return Ok(None) };
+        Ok(Some(flow.into_value()))
+    }
+    ///
     /// ### Пропускает через себя `FnResult<FnFlow>`
     /// - Фиксирует `FnFlow::New`
     /// - Извлекает чистый `Point` для дальнейшей бизнес-логики.

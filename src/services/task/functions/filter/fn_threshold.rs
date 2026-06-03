@@ -1,8 +1,9 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use sal_sync::services::entity::{Point, PointConfType, PointHlr};
+use concat_string::concat_string;
+use sal_sync::services::{entity::{Point, PointConfType, PointHlr, PointType}, types::Bool};
 use crate::{
-    domain::FnOutRef, services::task::{
-        FnOut, FnKind, FnResult,
+    domain::{FnOutRef, filter::filter_threshold::FilterThreshold}, services::task::{
+        FlowContext, FnFlow, FnKind, FnOut, FnResult
     }
 };
 ///
@@ -27,12 +28,12 @@ use crate::{
 pub struct FnThreshold {
     id: String,
     kind: FnKind,
-    enable: Option<FnOutRef>,
     threshold: FnOutRef,
     factor: Option<FnOutRef>,
     input: FnOutRef,
-    value: Option<Point>,
-    delta: PointHlr<f64>,
+    value: Option<f64>,
+    filter: Option<FilterThreshold<f64>>,
+    delta: f64,
 }
 //
 // 
@@ -40,18 +41,36 @@ impl FnThreshold {
     ///
     /// Creates new instance of the FnThreshold
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, threshold: FnOutRef, factor: Option<FnOutRef>, input: FnOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, threshold: FnOutRef, factor: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnThreshold{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            enable,
             threshold,
             factor,
             input,
             value: None,
-            delta: PointHlr::new_double(0, "", 0.0),
+            filter: FilterThreshold::new(None, threshold, factor),
+            delta: 0.0,
         }
-    }    
+    }
+    ///
+    /// Возвращает `PointHlr` с обновленными `name` и `value`
+    #[inline]
+    fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+    }
+    ///
+    /// Возвращает `Point` с обновленными `name` и `value` сохраняя тип
+    #[inline]
+    fn point(id: &str, input: &Point, val: f64) -> Result<Point, String> {
+        match input.type_() {
+            PointType::Bool => Ok(Point::Bool(Self::point_with(input, id, Bool(val != 0.0)))),
+            PointType::Int => Ok(Point::Int(Self::point_with(input, id, val.round() as i64))),
+            PointType::Real => Ok(Point::Real(Self::point_with(input, id, val as f32))),
+            PointType::Double => Ok(Point::Double(Self::point_with(input, id, val))),
+            _ => Err(concat_string!(id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+        }
+    }
 }
 //
 // 
@@ -67,9 +86,6 @@ impl FnOut for FnThreshold {
     //
     fn inputs(&self) -> Vec<String> {
         let mut inputs = vec![];
-        if let Some(enable) = &self.enable {
-            inputs.append(&mut enable.borrow().inputs());
-        }
         inputs.append(&mut self.threshold.borrow().inputs());
         if let Some(factor) = &self.factor {
             inputs.append(&mut factor.borrow().inputs());
@@ -81,96 +97,77 @@ impl FnOut for FnThreshold {
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let enable = match &self.enable {
-            Some(enable) => match enable.borrow_mut().out() {
-                FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
-                FnResult::None => return FnResult::None,
-                FnResult::Err(err) => return FnResult::Err(err),
-            },
-            None => true,
+        let Some(threshold) = flow.ignore(self.threshold.borrow_mut().out())? else { return Ok(None) };
+        log::trace!("{}.out | threshold: {:?}", self.id, threshold);
+        let threshold = match threshold.type_() {
+            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => threshold.to_double().as_double().value,
+            _ => return Err(concat_string!(self.id, ".out | Invalid threshold type '", threshold.type_().to_string(), "'")),
         };
-        if enable {
-            let threshold = self.threshold.borrow_mut().out();
-            log::trace!("{}.out | threshold: {:?}", self.id, threshold);
-            let threshold = match threshold {
-                FnResult::Ok(threshold) => threshold.to_double().as_double(),
-                FnResult::None => return FnResult::None,
-                FnResult::Err(err) => return FnResult::Err(err),
-            };
-            let factor = match &self.factor {
-                Some(factor) => {
-                    let factor = factor.borrow_mut().out();
-                    log::trace!("{}.out | factor: {:?}", self.id, factor);
-                    match factor {
-                        FnResult::Ok(factor) => Some(factor.to_double().as_double()),
-                        FnResult::None => return FnResult::None,
-                        FnResult::Err(err) => return FnResult::Err(err),
-                    }
-                }
-                None => None,
-            };
-            let input = self.input.borrow_mut().out();
-            log::trace!("{}.out | input: {:?}", self.id, input);
-            match input {
-                FnResult::Ok(input) => {
-                    let input_type = input.type_();
-                    let input = input.to_double().as_double();
-                    match &mut self.value {
-                        Some(value) => {
-                            let delta = (input.clone() - value.to_double().as_double()).abs();
-                            log::trace!("{}.out | Absolute delta: {}", self.id, delta.value);
-                            if delta >= threshold {
-                                *value = Point::Double(input);
-                                self.delta = PointHlr::new_double(0, "", 0.0);
-                            } else {
-                                if let Some(factor) = factor {
-                                    self.delta = self.delta.clone() + (delta * factor);
-                                    log::debug!("{}.out | Integral delta: {}", self.id, self.delta.value);
-                                    if self.delta >= threshold {
-                                        self.value = Some(Point::Double(input));
-                                        self.delta = PointHlr::new_double(0, "", 0.0);
-                                    }
-                                }
-                            }
-                        }
-                        None => {
-                            self.value = Some(Point::Double(input));
-                        }
-                    }
-                    let value = match &self.value {
-                        Some(value) => match input_type {
-                            PointConfType::Int => value.to_int(),
-                            PointConfType::Real => value.to_real(),
-                            PointConfType::Double => value.to_double(),
-                            _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
-                        }
-                        None => panic!("{}.out | Internal error - self.value is not initialised", self.id),
-                    };
-                    log::trace!("{}.out | value: {:?}", self.id, value);
-                    FnResult::Ok(value)
-                }
-                FnResult::None => FnResult::None,
-                FnResult::Err(err) => FnResult::Err(err),
+        let factor = match &self.factor {
+            Some(factor) => {
+                let Some(factor) = flow.ignore(factor.borrow_mut().out())? else { return Ok(None) };
+                log::trace!("{}.out | factor: {:?}", self.id, factor);
+                Some(match factor.type_() {
+                    PointType::Bool | PointType::Int | PointType::Real | PointType::Double => factor.to_double().as_double().value,
+                    _ => return Err(concat_string!(self.id, ".out | Invalid factor type '", factor.type_().to_string(), "'")),
+                })
             }
-        } else {
-            self.value = None;
-            self.delta = PointHlr::new_double(0, "", 0.0);
-            FnResult::None
+            None => None,
+        };
+        let input = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
+        let input = match input.type_() {
+            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+        };
+        log::trace!("{}.out | input: {:?}", self.id, input);
+        let input_type = input.type_();
+        let input = input.to_double().as_double();
+        match &mut self.value {
+            Some(value) => {
+                let delta = (input - value).abs();
+                log::trace!("{}.out | Absolute delta: {}", self.id, delta.value);
+                if delta >= threshold {
+                    *value = input;
+                    self.delta = 0.0;
+                } else {
+                    if let Some(factor) = factor {
+                        self.delta = self.delta.clone() + (delta * factor);
+                        log::debug!("{}.out | Integral delta: {}", self.id, self.delta.value);
+                        if self.delta >= threshold {
+                            self.value = Some(input);
+                            self.delta = 0.0;
+                        }
+                    }
+                }
+            }
+            None => {
+                self.value = Some(input);
+            }
         }
+        let value = Self::point(self.id, &input, self.value)
+        let value = match &self.value {
+            Some(value) => match input_type {
+                PointConfType::Int => value.to_int(),
+                PointConfType::Real => value.to_real(),
+                PointConfType::Double => value.to_double(),
+                _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
+            }
+            None => panic!("{}.out | Internal error - self.value is not initialised", self.id),
+        };
+        log::trace!("{}.out | value: {:?}", self.id, value);
+        flow.wrap(value)
     }
     //
     //
     fn reset(&mut self) {
-        if let Some(enable) = &self.enable {
-            enable.borrow_mut().reset();
-        }
         self.threshold.borrow_mut().reset();
         if let Some(factor) = &self.factor {
             factor.borrow_mut().reset();
         }
         self.input.borrow_mut().reset();
         self.value = None;
-        self.delta = PointHlr::new_double(0, "", 0.0);
+        self.factor = None;
+        self.delta = 0.0;
     }
 }
 ///

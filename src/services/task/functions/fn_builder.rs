@@ -582,31 +582,24 @@ impl FnBuilder {
                     }
                     //
                     Functions::Threshold => {
-                        let name = "enable";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnThreshold | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "threshold";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let threshold = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnThreshold | Can't get '{name}'"), err))?;
-                        let name = "factor";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let factor = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnThreshold | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "input";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services)
-                            .map_err(|err| error.pass_with(format!("FnThreshold | Can't get '{name}'"), err))?;
-                        Ok(Rc::new(RefCell::new(
-                            FnThreshold::new(parent, enable, threshold, factor, input)
-                        )))
+                        let enable = Self::get_input_config(txid, parent, "enable", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnThreshold | Can't get 'enable'"), err))?;
+                        let threshold = Self::get_input_config(txid, parent, "threshold", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnThreshold | 'threshold' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnThreshold | Can't get 'threshold'"), err))?;
+                        let factor = Self::get_input_config(txid, parent, "factor", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnThreshold | Can't get 'factor'"), err))?;
+                        let input = Self::get_input_config(txid, parent, "input", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnThreshold | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnThreshold | Can't get 'input'"), err))?;
+                        Ok(match enable {
+                            Some(enable) => Rc::new(RefCell::new(FnEnable::new(
+                                FnThreshold::new(parent, threshold, factor, input),
+                                task_nodes.enable_mode(),
+                                enable
+                            ))),
+                            None => Rc::new(RefCell::new(FnThreshold::new(parent, threshold, factor, input))),
+                        })
                     }
                     //
                     Functions::Smooth => {
