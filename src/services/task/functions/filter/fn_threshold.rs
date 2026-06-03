@@ -110,17 +110,12 @@ impl FnOut for FnThreshold {
                 PointType::Bool | PointType::Int | PointType::Real | PointType::Double => threshold.to_double().as_double().value,
                 _ => return Err(concat_string!(self.id, ".out | Invalid threshold type '", threshold.type_().to_string(), "'")),
             };
-            let factor = match &self.factor {
-                Some(factor) => {
-                    let Some(factor) = flow.ignore(factor.borrow_mut().out())? else { return Ok(None) };
-                    log::trace!("{}.out | factor: {:?}", self.id, factor);
-                    match factor.type_() {
-                        PointType::Bool | PointType::Int | PointType::Real | PointType::Double => factor.to_double().as_double().value,
-                        _ => return Err(concat_string!(self.id, ".out | Invalid factor type '", factor.type_().to_string(), "'")),
-                    }
-                }
-                None => 0.0,
-            };
+            let Some(factor) = flow.ignore(self.factor.borrow_mut().out())? else { return Ok(None) };
+            log::trace!("{}.out | factor: {:?}", self.id, factor);
+            match factor.type_() {
+                PointType::Bool | PointType::Int | PointType::Real | PointType::Double => factor.to_double().as_double().value,
+                _ => return Err(concat_string!(self.id, ".out | Invalid factor type '", factor.type_().to_string(), "'")),
+            }
             self.filter = Some(FilterThreshold::new(None, threshold, factor));
         }
         let Some(filter) = self.filter else { return Ok(None) };
