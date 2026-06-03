@@ -64,9 +64,9 @@ impl FlowContext {
         }
     }
     ///
-    /// ### Пропускает `FnResult<FnFlow>`
-    /// - Игнорирует `FnFlow`
+    /// Пропускает через себя управляющие сигналы `FnResult<FnFlow>`, ни как не помечая контекст
     /// - Извлекает чистый `Point` для дальнейшей бизнес-логики.
+    /// - Используется для входов вроде `reset` или `limits`. 
     pub fn ignore(&self, v: FnResult<FnFlow, String>) -> FnResult<Point, String> {
         let Some(flow) = v? else { return Ok(None) };
         Ok(Some(flow.into_value()))

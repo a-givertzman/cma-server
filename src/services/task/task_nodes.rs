@@ -255,7 +255,10 @@ impl TaskNodes {
     ///  - evaluating each node
     pub fn eval(&self, point: Point) {
         let dbg = self.dbg.clone();
-        self.cycle.update(|c| c + 1);
+        self.cycle.update(|c| {
+            if c >= usize::MAX { return 1 }
+            c + 1
+        });
         let point_name = point.name();
         let node_every = self.get_eval_node("every").map(|eval_node_every| {
             log::trace!("{dbg}.eval | evalNode '{}' - adding point...", &eval_node_every.borrow().name());
