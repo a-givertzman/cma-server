@@ -19,20 +19,20 @@ pub struct FnPiecewiseLineApprox {
     id: String,
     kind: FnKind,
     input: FnOutRef,
-    piecewise_linear: PiecewiseLinear,
+    piecewise: PiecewiseLinear,
 }
 // 
 impl FnPiecewiseLineApprox {
     ///
     /// Creates new instance of the FnPiecewiseLineApprox
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnOutRef, piecewise_linear: PiecewiseLinear) -> Self {
+    pub fn new(parent: impl Into<String>, input: FnOutRef, piecewise: PiecewiseLinear) -> Self {
         let self_id = format!("{}/FnPiecewiseLineApprox{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst));
         Self { 
             id: self_id,
             kind: FnKind::Fn,
             input,
-            piecewise_linear,
+            piecewise,
         }
     }
     ///
@@ -83,8 +83,13 @@ impl FnOut for FnPiecewiseLineApprox {
             }
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
         };
-        let Some(val) = self.piecewise_linear.eval(value) else { return Ok(None) };
-            // .ok_or(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'"))?;
+        if value.is_nan() {
+            return Err(concat_string!(self.id, ".out | Math error: Received NaN value instead of valid number"));
+        }
+        let val = match self.piecewise.eval(value) {
+            Some(v) => v,
+            None => return Ok(None), // Если нет значения, попали в разрыв функции -> останавливаем ветку вычислений
+        };
         let out = Self::point(&self.id, &input, val)?;
         log::trace!("{}.out | out: {:?}", self.id, &out);
         flow.wrap(out)
@@ -212,7 +217,7 @@ impl PiecewiseLinear {
     /// x3: y3
     /// ...
     /// ```
-    pub fn from_yaml(parent: impl Into<String>, points: serde_yaml::Value) -> Result<Self, Error> {
+    pub fn from_yaml(parent: impl Into<String>, points: &serde_yaml::Value) -> Result<Self, Error> {
         let parent = parent.into();
         let dbg = Dbg::new(&parent, "Linears");
         let error = Error::new(&dbg, "from_yaml");
@@ -369,7 +374,7 @@ mod piecewise_linear_tests {
           2.0: 20.0
         ";
         let points: serde_yaml::Value = serde_yaml::from_str(yaml_str).unwrap();
-        let func = PiecewiseLinear::from_yaml("test_yaml", points);
+        let func = PiecewiseLinear::from_yaml("test_yaml", &points);
         assert!(func.is_ok()); // Должно распарситься успешно
         let valid_func = func.unwrap();
         assert_eq!(valid_func.eval(0.5), Some(5.0));
@@ -382,7 +387,7 @@ mod piecewise_linear_tests {
           1.0: 'invalid_value'
         ";
         let points: serde_yaml::Value = serde_yaml::from_str(yaml_str).unwrap();
-        let func = PiecewiseLinear::from_yaml("test_yaml", points);
+        let func = PiecewiseLinear::from_yaml("test_yaml", &points);
         assert!(func.is_err());
     }
 }

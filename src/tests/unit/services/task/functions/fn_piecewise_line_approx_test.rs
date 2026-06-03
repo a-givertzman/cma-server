@@ -38,7 +38,7 @@ fn line_approx_int() {
     let mut fn_line_approx = FnPiecewiseLineApprox::new(
         "test",
         input.clone(),
-        PiecewiseLinear::parse(dbg, &serde_yaml::from_str("
+        PiecewiseLinear::from_yaml(dbg, &serde_yaml::from_str("
             0: 0
             5: 0
             10: 3
@@ -85,7 +85,7 @@ fn line_approx_real() {
     let mut fn_line_approx = FnPiecewiseLineApprox::new(
         "test",
         input.clone(),
-        PiecewiseLinear::parse(dbg, &serde_yaml::from_str("
+        PiecewiseLinear::from_yaml(dbg, &serde_yaml::from_str("
             0: 0
             5: 0
             10: 3
@@ -133,7 +133,7 @@ fn line_approx_double() {
     let mut fn_line_approx = FnPiecewiseLineApprox::new(
         "test",
         input.clone(),
-        PiecewiseLinear::parse(dbg, &serde_yaml::from_str(r"
+        PiecewiseLinear::from_yaml(dbg, &serde_yaml::from_str(r"
             0: 0
             5: 0
             10: 3

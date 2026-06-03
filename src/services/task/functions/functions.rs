@@ -38,7 +38,7 @@ pub enum Functions {
     SqlMetric,
     PointId,
     Export,
-    Filter,
+    Select,
     RisingEdge,
     FallingEdge,
     Retain,
@@ -94,7 +94,7 @@ impl Functions {
     const TO_DOUBLE                     : &'static str = "ToDouble";
     const TO_STRING                     : &'static str = "ToString";
     const EXPORT                        : &'static str = "Export";
-    const FILTER                        : &'static str = "Filter";
+    const SELECT                        : &'static str = "Select";
     const RISING_EDGE                   : &'static str = "RisingEdge";
     const FALLING_EDGE                  : &'static str = "FallingEdge";
     const RETAIN                        : &'static str = "Retain";
@@ -148,7 +148,7 @@ impl Functions {
             Self::ToDouble              => Self::TO_DOUBLE,
             Self::ToString              => Self::TO_STRING,
             Self::Export                => Self::EXPORT,
-            Self::Filter                => Self::FILTER,
+            Self::Select                => Self::SELECT,
             Self::RisingEdge            => Self::RISING_EDGE,
             Self::FallingEdge           => Self::FALLING_EDGE,
             Self::Retain                => Self::RETAIN,
@@ -202,7 +202,7 @@ impl Functions {
             Self::TO_DOUBLE                 => Ok( Self::ToDouble ),
             Self::TO_STRING                 => Ok( Self::ToString ),
             Self::EXPORT                    => Ok( Self::Export ),
-            Self::FILTER                    => Ok( Self::Filter ),
+            Self::SELECT                    => Ok( Self::Select ),
             Self::RISING_EDGE               => Ok( Self::RisingEdge ),
             Self::FALLING_EDGE              => Ok( Self::FallingEdge ),
             Self::RETAIN                    => Ok( Self::Retain ),

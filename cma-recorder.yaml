@@ -2660,9 +2660,9 @@ service Task RecorderTask:
             input fn Retain:
                 key: 'crane-total-lifted-mass'
                 input fn Add:
-                    input1 fn Filter:
+                    input1 fn Select:
+                        select: opCycleIsActive
                         default: const real 0.0
-                        pass: opCycleIsActive
                         input: craneCycleAverageLoad
                     input2 fn Retain:
                         default: const real 0.0
@@ -2675,9 +2675,9 @@ service Task RecorderTask:
             input fn Retain:
                 key: 'winch1-total-lifted-mass'
                 input fn Add:
-                    input1 fn Filter:
+                    input1 fn Select:
+                        select: opCycleIsActive
                         default: const real 0.0
-                        pass: opCycleIsActive
                         input: winch1CycleAverageLoad
                     input2 fn Retain:
                         default: const real 0.0
@@ -2690,9 +2690,9 @@ service Task RecorderTask:
             input fn Retain:
                 key: 'winch2-total-lifted-mass'
                 input fn Add:
-                    input1 fn Filter:
+                    input1 fn Select:
+                        select: opCycleIsActive
                         default: const real 0.0
-                        pass: opCycleIsActive
                         input: winch2CycleAverageLoad
                     input2 fn Retain:
                         default: const real 0.0
@@ -2705,9 +2705,9 @@ service Task RecorderTask:
             input fn Retain:
                 key: 'winch3-total-lifted-mass'
                 input fn Add:
-                    input1 fn Filter:
+                    input1 fn Select:
+                        select: opCycleIsActive
                         default: const real 0.0
-                        pass: opCycleIsActive
                         input: winch3CycleAverageLoad
                     input2 fn Retain:
                         default: const real 0.0
@@ -2786,8 +2786,8 @@ service Task RecorderTask:
             sql: insert into {table} (id, timestamp_start, timestamp_stop, alarm_class) values ({opCycleId.value}, '{start.timestamp}', '{stop.timestamp}', {alarmClass.value});
             opCycleId: opCycleId
             start fn Hold:
-                input fn Filter:
-                    pass fn RisingEdge:
+                input fn Select:
+                    select fn RisingEdge:
                         input: opCycleIsActive
                     input: craneLoad
             stop: craneLoad
@@ -2834,8 +2834,8 @@ service Task RecorderTask:
             factor: const real 0.05
             input: craneLoad
     let craneLoadFiltered:
-        input fn Filter:
-            pass fn IsChangedValue:
+        input fn Select:
+            select fn IsChangedValue:
                 input: craneLoadFiltered_
             input: craneLoadFiltered_
     #
@@ -2860,8 +2860,8 @@ service Task RecorderTask:
     #
     # Winch1 load leve data compressed
     let winch1LoadFiltered:
-        input fn Filter:
-            pass fn IsChangedValue:
+        input fn Select:
+            select fn IsChangedValue:
                 input: winch1LoadFiltered_
             input: winch1LoadFiltered_
     #
@@ -2886,8 +2886,8 @@ service Task RecorderTask:
     #
     # Winch2 load leve data compressed
     let winch2LoadFiltered:
-        input fn Filter:
-            pass fn IsChangedValue:
+        input fn Select:
+            select fn IsChangedValue:
                 input: winch2LoadFiltered_
             input: winch2LoadFiltered_
     #
@@ -2912,8 +2912,8 @@ service Task RecorderTask:
     #
     # Winch3 load leve data compressed
     let winch3LoadFiltered:
-        input fn Filter:
-            pass fn IsChangedValue:
+        input fn Select:
+            select fn IsChangedValue:
                 input: winch3LoadFiltered_
             input: winch3LoadFiltered_
     #
