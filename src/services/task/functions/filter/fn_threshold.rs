@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use sal_sync::services::{entity::{Point, PointConfType, PointHlr, PointType}, types::Bool};
 use crate::{
-    domain::{FnOutRef, filter::filter_threshold::FilterThreshold}, services::task::{
+    domain::{FnOutRef, filter::{filter::Filter, filter_threshold::FilterThreshold}}, services::task::{
         FlowContext, FnFlow, FnKind, FnOut, FnResult
     }
 };
@@ -49,7 +49,7 @@ impl FnThreshold {
             factor,
             input,
             value: None,
-            filter: FilterThreshold::new(None, threshold, factor),
+            filter: None,
             delta: 0.0,
         }
     }
@@ -99,61 +99,36 @@ impl FnOut for FnThreshold {
         let mut flow = FlowContext::new();
         let Some(threshold) = flow.ignore(self.threshold.borrow_mut().out())? else { return Ok(None) };
         log::trace!("{}.out | threshold: {:?}", self.id, threshold);
-        let threshold = match threshold.type_() {
-            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => threshold.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid threshold type '", threshold.type_().to_string(), "'")),
-        };
-        let factor = match &self.factor {
-            Some(factor) => {
-                let Some(factor) = flow.ignore(factor.borrow_mut().out())? else { return Ok(None) };
-                log::trace!("{}.out | factor: {:?}", self.id, factor);
-                Some(match factor.type_() {
-                    PointType::Bool | PointType::Int | PointType::Real | PointType::Double => factor.to_double().as_double().value,
-                    _ => return Err(concat_string!(self.id, ".out | Invalid factor type '", factor.type_().to_string(), "'")),
-                })
-            }
-            None => None,
-        };
-        let input = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
-        let input = match input.type_() {
+        let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
+        let value = match input.type_() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
         };
-        log::trace!("{}.out | input: {:?}", self.id, input);
-        let input_type = input.type_();
-        let input = input.to_double().as_double();
-        match &mut self.value {
-            Some(value) => {
-                let delta = (input - value).abs();
-                log::trace!("{}.out | Absolute delta: {}", self.id, delta.value);
-                if delta >= threshold {
-                    *value = input;
-                    self.delta = 0.0;
-                } else {
-                    if let Some(factor) = factor {
-                        self.delta = self.delta.clone() + (delta * factor);
-                        log::debug!("{}.out | Integral delta: {}", self.id, self.delta.value);
-                        if self.delta >= threshold {
-                            self.value = Some(input);
-                            self.delta = 0.0;
-                        }
+        log::trace!("{}.out | input: {:?}", self.id, value);
+        if self.filter.is_none() {
+            let threshold = match threshold.type_() {
+                PointType::Bool | PointType::Int | PointType::Real | PointType::Double => threshold.to_double().as_double().value,
+                _ => return Err(concat_string!(self.id, ".out | Invalid threshold type '", threshold.type_().to_string(), "'")),
+            };
+            let factor = match &self.factor {
+                Some(factor) => {
+                    let Some(factor) = flow.ignore(factor.borrow_mut().out())? else { return Ok(None) };
+                    log::trace!("{}.out | factor: {:?}", self.id, factor);
+                    match factor.type_() {
+                        PointType::Bool | PointType::Int | PointType::Real | PointType::Double => factor.to_double().as_double().value,
+                        _ => return Err(concat_string!(self.id, ".out | Invalid factor type '", factor.type_().to_string(), "'")),
                     }
                 }
-            }
-            None => {
-                self.value = Some(input);
-            }
+                None => 0.0,
+            };
+            self.filter = Some(FilterThreshold::new(None, threshold, factor));
         }
-        let value = Self::point(self.id, &input, self.value)
-        let value = match &self.value {
-            Some(value) => match input_type {
-                PointConfType::Int => value.to_int(),
-                PointConfType::Real => value.to_real(),
-                PointConfType::Double => value.to_double(),
-                _ => panic!("{}.out | Illegal type of input {:?}", self.id, input_type),
-            }
-            None => panic!("{}.out | Internal error - self.value is not initialised", self.id),
+        let Some(filter) = self.filter else { return Ok(None) };
+        let value = match filter.add(value) {
+            Some(v) => v,
+            None => filter.last() ,
         };
+        let value = Self::point(self.id, &input, self.value)
         log::trace!("{}.out | value: {:?}", self.id, value);
         flow.wrap(value)
     }
