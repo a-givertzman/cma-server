@@ -586,7 +586,7 @@ use crate::{
         FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnHold, FnInput, FnIsChangedValue, FnMax, FnMin, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, PiecewiseLinear, SqlMetric, functions::{
             comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
             edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
-            filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
+            filter::{FnSelect, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
             ops::{FnAdd, FnBitAnd, FnBitOr, FnBitXor, FnDiv, FnMul, FnNot, FnPow, FnSub}, plot::FnPlot,
         }, task_nodes::TaskNodes
     },
@@ -945,40 +945,31 @@ impl FnBuilder {
                             None => Rc::new(RefCell::new(FnExport::new(parent, point_conf, input, send_queue))),
                         })
                     }
-                    Functions::Filter => {
-                        let name = "default";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let default = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnFilter | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "input";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnFilter | Can't get '{name}'"), err))?;
-                        let name = "pass";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let pass = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnFilter | Can't get '{name}'"), err))?;
+                    Functions::Select => {
+                        let select = Self::get_input_config(txid, parent, "select", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnSelect | 'select' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnSelect | Can't get 'select'"), err))?;
+                        let default = Self::get_input_config(txid, parent, "default", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnSelect | Can't get 'default'"), err))?;
+                        let input = Self::get_input_config(txid, parent, "input", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnSelect | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnSelect | Can't get 'input'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnFilter::new(parent, default, input, pass)
+                            FnSelect::new(parent, default, input, select)
                         )))
                     }
                     Functions::RisingEdge => {
-                        let name = "input";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnRisingEdge | Can't get '{name}'"), err))?;
+                        let input = Self::get_input_config(txid, parent, "input", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnRisingEdge | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnRisingEdge | Can't get 'input'"), err))?;
                         Ok(Rc::new(RefCell::new(
                             FnRisingEdge::new(parent, input)
                         )))
                     }
                     Functions::FallingEdge => {
-                        let name = "input";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnFallingEdge | Can't get '{name}'"), err))?;
+                        let input = Self::get_input_config(txid, parent, "input", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnFallingEdge | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnFallingEdge | Can't get 'input'"), err))?;
                         Ok(Rc::new(RefCell::new(
                             FnFallingEdge::new(parent, input)
                         )))
@@ -1273,17 +1264,11 @@ impl FnBuilder {
                             .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Can't get 'input'"), err))?;
                         log::trace!("{}.function | PiecewiseLineApprox | conf: {:#?}", dbg, conf);
                         let name = "piecewise";
-                        let pieces: IndexMap<serde_yaml::Value, serde_yaml::Value> = {
-                            let piecewise = conf.param(name).ok_or(error.err(format!("FnPiecewiseLineApprox | Can't get '{name}'")))?;
-                            match piecewise {
-                                FnConfKind::Param(piecewise) => {
-                                    serde_yaml::from_value(piecewise.conf.clone())
-                                        .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Wrong conf in '{name}'"), err.to_string()))?
-                                }
-                                _ => Err(error.err(format!("FnPiecewiseLineApprox | Parameter 'piecewise' - has invalid type (map expected) in '{}'", conf.name)))?,
-                            }
-                        };
-                        let pieces = PiecewiseLinear::from_yaml(parent, &pieces)
+                        let FnConfKind::Param(piecewise) = conf.param(name)
+                            .ok_or(error.err(format!("FnPiecewiseLineApprox | Can't get '{name}'")))? else {
+                                return Err(error.err(format!("FnPiecewiseLineApprox | Parameter 'piecewise' - has invalid type, expected map in '{}'", conf.name)));
+                            };
+                        let pieces = PiecewiseLinear::from_yaml(parent, &piecewise.conf)
                             .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Wrong conf in '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
                             FnPiecewiseLineApprox::new(parent, input, pieces)
@@ -1448,7 +1433,7 @@ pub enum Functions {
     SqlMetric,
     PointId,
     Export,
-    Filter,
+    Select,
     RisingEdge,
     FallingEdge,
     Retain,
@@ -1500,7 +1485,7 @@ impl Functions {
     const TO_DOUBLE                     : &'static str = "ToDouble";
     const TO_STRING                     : &'static str = "ToString";
     const EXPORT                        : &'static str = "Export";
-    const FILTER                        : &'static str = "Filter";
+    const SELECT                        : &'static str = "Select";
     const RISING_EDGE                   : &'static str = "RisingEdge";
     const FALLING_EDGE                  : &'static str = "FallingEdge";
     const RETAIN                        : &'static str = "Retain";
@@ -1553,7 +1538,7 @@ impl Functions {
             Self::ToDouble              => Self::TO_DOUBLE,
             Self::ToString              => Self::TO_STRING,
             Self::Export                => Self::EXPORT,
-            Self::Filter                => Self::FILTER,
+            Self::Select                => Self::SELECT,
             Self::RisingEdge            => Self::RISING_EDGE,
             Self::FallingEdge           => Self::FALLING_EDGE,
             Self::Retain                => Self::RETAIN,
@@ -1607,7 +1592,7 @@ impl Functions {
             Self::TO_DOUBLE                 => Ok( Self::ToDouble ),
             Self::TO_STRING                 => Ok( Self::ToString ),
             Self::EXPORT                    => Ok( Self::Export ),
-            Self::FILTER                    => Ok( Self::Filter ),
+            Self::SELECT                    => Ok( Self::Select ),
             Self::RISING_EDGE               => Ok( Self::RisingEdge ),
             Self::FALLING_EDGE              => Ok( Self::FallingEdge ),
             Self::RETAIN                    => Ok( Self::Retain ),
