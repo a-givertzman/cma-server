@@ -61,7 +61,7 @@ arc-swap = "~1.8"
 #
 # Collections
 linked-hash-map = "~0.5"
-indexmap = "~2.12"
+indexmap = "^2.12"
 hashers = "~1.0"
 circular-buffer = "~1.2"
 

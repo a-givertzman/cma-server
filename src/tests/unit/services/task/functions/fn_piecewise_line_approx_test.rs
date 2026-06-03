@@ -1,10 +1,10 @@
 #[cfg(test)]
 use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
-use std::{sync::Once, rc::Rc, cell::RefCell};
+use std::{cell::{Cell, RefCell}, rc::Rc, sync::Once};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
-    services::task::{FnOut, FnInput, FnPiecewiseLineApprox},
+    services::task::{EvalCycle, FnInput, FnOut, FnPiecewiseLineApprox, PiecewiseLinear},
 };
 ///
 ///
@@ -19,10 +19,10 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+fn init_each(default: &str, type_: FnConfPointType, cycle: &EvalCycle) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
     Rc::new(RefCell::new(
-        FnInput::new("test", 0, &mut conf)
+        FnInput::new("test", 0, &mut conf, cycle)
     ))
 }
 ///
@@ -31,16 +31,18 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 fn line_approx_int() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    log::info!("line_approx_int");
-    let input = init_each("0", FnConfPointType::Int);
+    let dbg = "line_approx_int";
+    log::info!("{dbg}");
+    let cycle = Rc::new(Cell::new(0));
+    let input = init_each("0", FnConfPointType::Int, &cycle);
     let mut fn_line_approx = FnPiecewiseLineApprox::new(
         "test",
         input.clone(),
-        serde_yaml::from_str("
+        PiecewiseLinear::parse(dbg, &serde_yaml::from_str("
             0: 0
             5: 0
             10: 3
-        ").unwrap(),
+        ").unwrap()).unwrap(),
     );
     log::info!("fn: {:#?}", fn_line_approx);
     let test_data = vec![
@@ -64,10 +66,10 @@ fn line_approx_int() {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let state = fn_line_approx.out().unwrap();
+        let state = fn_line_approx.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
-        log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state.as_int().value, target, "step: {}\n result: {:?} \ntarget: {}", step, state.as_int().value, target);
+        log::debug!("{dbg} | value: {:?}   |   state: {:?}", value, state);
+        assert_eq!(state.as_int().value, target, "{dbg} | step: {}\n result: {:?} \ntarget: {}", step, state.as_int().value, target);
     }
 }
 ///
@@ -76,17 +78,19 @@ fn line_approx_int() {
 fn line_approx_real() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    log::info!("line_approx_real");
-    let input = init_each("0.0", FnConfPointType::Real);
+    let dbg = "line_approx_real";
+    log::info!("{dbg}");
+    let cycle = Rc::new(Cell::new(0));
+    let input = init_each("0.0", FnConfPointType::Real, &cycle);
     let mut fn_line_approx = FnPiecewiseLineApprox::new(
         "test",
         input.clone(),
-        serde_yaml::from_str("
+        PiecewiseLinear::parse(dbg, &serde_yaml::from_str("
             0: 0
             5: 0
             10: 3
             20: 1
-        ").unwrap(),
+        ").unwrap()).unwrap(),
     );
     log::info!("fn: {:#?}", fn_line_approx);
     let test_data = vec![
@@ -110,10 +114,10 @@ fn line_approx_real() {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let state = fn_line_approx.out().unwrap();
+        let state = fn_line_approx.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
-        log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state.as_real().value, target, "step: {}\n result: {:?} \ntarget: {}", step, state.as_real().value, target);
+        log::debug!("{dbg} | value: {:?}   |   state: {:?}", value, state);
+        assert_eq!(state.as_real().value, target, "{dbg} | step: {}\n result: {:?} \ntarget: {}", step, state.as_real().value, target);
     }
 }
 ///
@@ -122,17 +126,19 @@ fn line_approx_real() {
 fn line_approx_double() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    log::info!("line_approx_double");
-    let input = init_each("0.0", FnConfPointType::Double);
+    let dbg = "line_approx_double";
+    log::info!("{dbg}");
+    let cycle = Rc::new(Cell::new(0));
+    let input = init_each("0.0", FnConfPointType::Double, &cycle);
     let mut fn_line_approx = FnPiecewiseLineApprox::new(
         "test",
         input.clone(),
-        serde_yaml::from_str("
+        PiecewiseLinear::parse(dbg, &serde_yaml::from_str(r"
             0: 0
             5: 0
             10: 3
             20: 1
-        ").unwrap(),
+        ").unwrap()).unwrap(),
     );
     log::info!("fn: {:#?}", fn_line_approx);
     let test_data = vec![
@@ -156,9 +162,9 @@ fn line_approx_double() {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let state = fn_line_approx.out().unwrap();
+        let state = fn_line_approx.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
-        log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert!(state.as_double().value.aprox_eq(target, 4), "step: {}\n result: {:?} \ntarget: {}", step, state.as_double().value, target);
+        log::debug!("{dbg} | value: {:?}   |   state: {:?}", value, state);
+        assert!(state.as_double().value.aprox_eq(target, 4), "{dbg} | step: {}\n result: {:?} \ntarget: {}", step, state.as_double().value, target);
     }
 }

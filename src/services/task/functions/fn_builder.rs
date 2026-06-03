@@ -5,11 +5,11 @@ use indexmap::IndexMap;
 use crate::{
     domain::FnOutRef,
     services::task::{
-        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnHold, FnInput, FnIsChangedValue, FnMax, FnMin, FnOut, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, SqlMetric, functions::{
+        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnHold, FnInput, FnIsChangedValue, FnMax, FnMin, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, PiecewiseLinear, SqlMetric, functions::{
             comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
             edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
             filter::{FnFilter, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
-            ops::{FnAdd, FnBitAnd, FnNot, FnBitOr, FnBitXor, FnDiv, FnMul, FnPow, FnSub}, plot::FnPlot,
+            ops::{FnAdd, FnBitAnd, FnBitOr, FnBitXor, FnDiv, FnMul, FnNot, FnPow, FnSub}, plot::FnPlot,
         }, task_nodes::TaskNodes
     },
 };
@@ -757,6 +757,8 @@ impl FnBuilder {
                                 _ => Err(error.err(format!("FnPiecewiseLineApprox | Parameter 'piecewise' - has invalid type (map expected) in '{}'", conf.name)))?,
                             }
                         };
+                        let pieces = PiecewiseLinear::from_yaml(parent, &pieces)
+                            .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Wrong conf in '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
                             FnPiecewiseLineApprox::new(parent, input, pieces)
                         )))
