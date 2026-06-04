@@ -4,7 +4,7 @@ use std::{cell::{Cell, RefCell}, rc::Rc, sync::Once};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
-    services::task::{EvalCycle, FnGt, FnInput, FnOut},
+    services::task::{EvalCycleRef, FnGt, FnInput, FnOut},
 };
 ///
 ///
@@ -19,7 +19,7 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType, cycle: &EvalCycle) -> FnInOutRef {
+fn init_each(default: &str, type_: FnConfPointType, cycle: &EvalCycleRef) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
     Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf, cycle)

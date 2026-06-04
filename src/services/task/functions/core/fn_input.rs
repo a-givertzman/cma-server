@@ -1,7 +1,7 @@
 use concat_string::concat_string;
 use sal_sync::services::{entity::{Point, PointHlr, Status, ToPoint}, task::functions::{FnConfPointType, FnConfig}, types::Bool};
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-use crate::services::task::{EvalCycle, FnFlow, FnInOut};
+use crate::services::task::{EvalCycleRef, FnFlow, FnInOut};
 
 use super::{FnIn, FnOut, FnKind, FnResult};
 ///
@@ -19,7 +19,7 @@ pub struct FnInput {
     status: Option<Status>,
     options_hash: String,
     /// Текущий номер вычислительного цикла, инкремнтируется в `TaskNodes` с каждым входом в `self.eval`
-    cycle: EvalCycle,
+    cycle: EvalCycleRef,
     /// Локальное значение вычислительного цикла в котором было оновление
     updated_at: usize,
 }
@@ -27,7 +27,7 @@ pub struct FnInput {
 // 
 impl FnInput {
     // pub fn new(parent: &str, name: impl Into<String>, initial: Option<PointType>, type_: FnConfPointType) -> Self {
-    pub fn new(parent: impl Into<String>, tx_id: usize, conf: &mut FnConfig, cycle: &EvalCycle) -> Self {
+    pub fn new(parent: impl Into<String>, tx_id: usize, conf: &mut FnConfig, cycle: &EvalCycleRef) -> Self {
         let dbg = format!("{}/FnInput{}", parent.into(), COUNT.fetch_add(1, Ordering::AcqRel));
         let (typ, initial) = match conf.type_.clone() {
             FnConfPointType::Bool => (PointType_::Bool, conf.options.default.as_ref().map_or(None, |d| match d.parse::<bool>() {

@@ -4,7 +4,7 @@ use sal_core::error::Error;
 use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
 use crate::{
     domain::{FnInOutRef, FnOutRef}, 
-    services::task::{EvalCycle, FnEnableMode, FnEvalOnce, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
+    services::task::{EvalCycleRef, EvalCycle, FnEnableMode, FnEvalOnce, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
 };
 use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
 ///
@@ -38,7 +38,7 @@ pub struct TaskNodes {
     vars: IndexMap<String, FnOutRef>,
     new_node_vars: Option<TaskNodeVars>,
     /// Текущий номер вычислительного цикла, инкремнтируется с каждым входом в `self.eval`
-    cycle: EvalCycle,
+    cycle: EvalCycleRef,
     /// Enable Strategy: Cold Standby / Warm Standby (TODO: read from config)
     enable_mode: FnEnableMode,
 }
@@ -53,7 +53,7 @@ impl TaskNodes {
             nodes: IndexMap::new(),
             vars: IndexMap::new(),
             new_node_vars: None,
-            cycle: Rc::new(Cell::new(0)),
+            cycle: Rc::new(EvalCycle::new()),
             enable_mode: FnEnableMode::Cold,
         }
     }
@@ -66,7 +66,7 @@ impl TaskNodes {
     /// ### Shared calculation cycle
     /// 
     /// Возвращает ссылку на текущий номер вычислительного цикла
-    pub fn cycle(&self) -> EvalCycle {
+    pub fn cycle(&self) -> EvalCycleRef {
         self.cycle.clone()
     }
     ///
@@ -255,10 +255,7 @@ impl TaskNodes {
     ///  - evaluating each node
     pub fn eval(&self, point: Point) {
         let dbg = self.dbg.clone();
-        self.cycle.update(|c| {
-            if c >= usize::MAX { return 1 }
-            c + 1
-        });
+        self.cycle.increment();
         let point_name = point.name();
         let node_every = self.get_eval_node("every").map(|eval_node_every| {
             log::trace!("{dbg}.eval | evalNode '{}' - adding point...", &eval_node_every.borrow().name());

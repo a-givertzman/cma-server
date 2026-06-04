@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     domain::FnOutRef,
     services::task::{
-        EvalCycle, FnFlow, FnKind, FnOut, FnResult
+        EvalCycleRef, EvalCycle, FnFlow, FnKind, FnOut, FnResult
     },
 };
 ///
@@ -21,7 +21,7 @@ pub struct FnEvalOnce {
     /// Локальное значение отработанного вычислительного цикла
     cycle: usize,
     /// Значение текущего вычислительного цикла из `TaskNodes`
-    eval_cycle: EvalCycle,
+    eval_cycle: EvalCycleRef,
     /// Вычисления
     input: FnOutRef,
     /// Текущий результат вычислений
@@ -33,10 +33,10 @@ impl FnEvalOnce {
     ///
     /// Creates new instance of the FnEvalOnce
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, eval_cycle: EvalCycle, input: FnOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, eval_cycle: EvalCycleRef, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnEvalOnce{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
-            cycle: usize::MAX,
+            cycle: EvalCycle::START,
             eval_cycle,
             input,
             state: Ok(None),
@@ -61,7 +61,7 @@ impl FnOut for FnEvalOnce {
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let eval_cycle = self.eval_cycle.get();
-        if self.eval_cycle.get() == self.cycle {
+        if eval_cycle == self.cycle {
             return self.state.clone();
         }
         self.cycle = eval_cycle;
