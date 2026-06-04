@@ -4,23 +4,23 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     domain::FnOutRef,
     services::task::{
-        EvalCycle, FnFlow, FnKind, FnOut, FnResult
+        EvalCycleRef, EvalCycle, FnFlow, FnKind, FnOut, FnResult
     },
 };
 #[derive(Debug)]
 pub struct FnEvalOnce {
     id: String,
     cycle: usize,
-    eval_cycle: EvalCycle,
+    eval_cycle: EvalCycleRef,
     input: FnOutRef,
     state: FnResult<FnFlow, String>,
 }
 impl FnEvalOnce {
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, eval_cycle: EvalCycle, input: FnOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, eval_cycle: EvalCycleRef, input: FnOutRef) -> Self {
         Self {
             id: format!("{}/FnEvalOnce{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
-            cycle: usize::MAX,
+            cycle: EvalCycle::START,
             eval_cycle,
             input,
             state: Ok(None),
@@ -39,7 +39,7 @@ impl FnOut for FnEvalOnce {
     }
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let eval_cycle = self.eval_cycle.get();
-        if self.eval_cycle.get() == self.cycle {
+        if eval_cycle == self.cycle {
             return self.state.clone();
         }
         self.cycle = eval_cycle;
@@ -347,7 +347,7 @@ mod fn_input {
 use concat_string::concat_string;
 use sal_sync::services::{entity::{Point, PointHlr, Status, ToPoint}, task::functions::{FnConfPointType, FnConfig}, types::Bool};
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-use crate::services::task::{EvalCycle, FnFlow, FnInOut};
+use crate::services::task::{EvalCycleRef, FnFlow, FnInOut};
 use super::{FnIn, FnOut, FnKind, FnResult};
 #[derive(Debug, Clone)]
 pub struct FnInput {
@@ -360,11 +360,11 @@ pub struct FnInput {
     initial: Option<Point>,
     status: Option<Status>,
     options_hash: String,
-    cycle: EvalCycle,
+    cycle: EvalCycleRef,
     updated_at: usize,
 }
 impl FnInput {
-    pub fn new(parent: impl Into<String>, tx_id: usize, conf: &mut FnConfig, cycle: &EvalCycle) -> Self {
+    pub fn new(parent: impl Into<String>, tx_id: usize, conf: &mut FnConfig, cycle: &EvalCycleRef) -> Self {
         let dbg = format!("{}/FnInput{}", parent.into(), COUNT.fetch_add(1, Ordering::AcqRel));
         let (typ, initial) = match conf.type_.clone() {
             FnConfPointType::Bool => (PointType_::Bool, conf.options.default.as_ref().map_or(None, |d| match d.parse::<bool>() {
@@ -2037,7 +2037,7 @@ use sal_core::error::Error;
 use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
 use crate::{
     domain::{FnInOutRef, FnOutRef},
-    services::task::{EvalCycle, FnEnableMode, FnEvalOnce, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
+    services::task::{EvalCycleRef, EvalCycle, FnEnableMode, FnEvalOnce, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
 };
 use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
 ///
@@ -2071,7 +2071,7 @@ pub struct TaskNodes {
     vars: IndexMap<String, FnOutRef>,
     new_node_vars: Option<TaskNodeVars>,
     /// Текущий номер вычислительного цикла, инкремнтируется с каждым входом в `self.eval`
-    cycle: EvalCycle,
+    cycle: EvalCycleRef,
     /// Enable Strategy: Cold Standby / Warm Standby (TODO: read from config)
     enable_mode: FnEnableMode,
 }
@@ -2086,7 +2086,7 @@ impl TaskNodes {
             nodes: IndexMap::new(),
             vars: IndexMap::new(),
             new_node_vars: None,
-            cycle: Rc::new(Cell::new(0)),
+            cycle: Rc::new(EvalCycle::new()),
             enable_mode: FnEnableMode::Cold,
         }
     }
@@ -2099,7 +2099,7 @@ impl TaskNodes {
     /// ### Shared calculation cycle
     ///
     /// Возвращает ссылку на текущий номер вычислительного цикла
-    pub fn cycle(&self) -> EvalCycle {
+    pub fn cycle(&self) -> EvalCycleRef {
         self.cycle.clone()
     }
     ///
@@ -2253,10 +2253,7 @@ impl TaskNodes {
     }
     pub fn eval(&self, point: Point) {
         let dbg = self.dbg.clone();
-        self.cycle.update(|c| {
-            if c >= usize::MAX { return 1 }
-            c + 1
-        });
+        self.cycle.increment();
         let point_name = point.name();
         let node_every = self.get_eval_node("every").map(|eval_node_every| {
             log::trace!("{dbg}.eval | evalNode '{}' - adding point...", &eval_node_every.borrow().name());
@@ -2412,4 +2409,24 @@ pub use task_node_vars::*;
 pub use task_eval_node::*;
 pub use task_test_receiver::*;
 pub use task_test_producer::*;
-pub(crate) type EvalCycle = Rc<Cell<usize>>;
+pub(crate) type EvalCycleRef = Rc<EvalCycle>;
+#[derive(Debug)]
+pub(crate) struct EvalCycle {
+    val: Cell<usize>,
+}
+impl EvalCycle {
+    pub(crate) const START: usize = 0;
+    const INIT: usize = 1;
+    pub fn new() -> Self {
+        Self { val: Cell::new(Self::INIT) }
+    }
+    pub fn increment(&self) {
+        self.val.update(|v| {
+            if v >= usize::MAX { return Self::INIT }
+            v + 1
+        })
+    }
+    pub fn get(&self) -> usize {
+        self.val.get()
+    }
+}
