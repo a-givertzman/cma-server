@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::entity::{Point, PointType}, sync::channel::Sender};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -70,14 +71,18 @@ impl FnOut for FnRecOpCycleMetric {
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        if let Some(reset) = &mut self.reset {
-            if let Some(reset) = reset.out()? {
+        let reset = self.reset.as_mut().map(|f| f.out());
+        let op_cycle = self.op_cycle.out();
+        let inputs: IndexMap<&String, FnResult<FnFlow, String>> = self.inputs.iter_mut()
+            .map(|(key, input)| (key, input.out())).collect();
+        if let Some(reset) = reset {
+            if let Some(reset) = reset? {
                 if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
                     self.state.reset();
                 }
             }
         }
-        let Some(op_cycle_point) = flow.map(self.op_cycle.out())? else { return Ok(None) };
+        let Some(op_cycle_point) = flow.map(op_cycle)? else { return Ok(None) };
         let op_cycle = match op_cycle_point.type_() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => op_cycle_point.to_bool().as_bool().value.0,
             _ => return Err(format!("{}.out | Invalid op_cycle type '{:?}', expected bool or number", self.id, op_cycle_point.type_())),
@@ -86,8 +91,8 @@ impl FnOut for FnRecOpCycleMetric {
             Cycle::None => {}
             Cycle::Started => {
                 log::trace!("{}.out | Operating Cycle - Active", self.id);
-                for (input_name, input) in &mut self.inputs {
-                    if let Some(val_flow) = input.out()? {
+                for (input_name, input) in inputs {
+                    if let Some(val_flow) = input? {
                         let value = val_flow.into_value();
                         if value.type_() == PointType::String {
                             // log::debug!("{}.out | '{}': {:?}", self.id, input_name, p.value);

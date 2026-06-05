@@ -63,7 +63,10 @@ impl FnOut for FnSelect {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let Some(select) = self.select.borrow_mut().out()? else { return Ok(None) };
+        let input = self.input.borrow_mut().out();
+        let default = self.default.as_mut().map(|f| f.borrow_mut().out());
+        let select = self.select.borrow_mut().out();
+        let Some(select) = select? else { return Ok(None) };
         let select = select.into_value();
         log::trace!("{}.out | select: {:?}", self.id, select);
         let is_selected = match select.type_() {
@@ -71,12 +74,12 @@ impl FnOut for FnSelect {
             _ => return Err(concat_string!(self.id, ".out | Invalid select type '", select.type_().to_string(), "'")),
         };
         if is_selected {
-            let Some(input) = self.input.borrow_mut().out()? else { return Ok(None) };
+            let Some(input) = input? else { return Ok(None) };
             log::trace!("{}.out | input value: {:?}", self.id, input);
             Ok(Some(input))
         } else {
-            if let Some(default) = &self.default {
-                let Some(default) = default.borrow_mut().out()? else { return Ok(None) };
+            if let Some(default) = default {
+                let Some(default) = default? else { return Ok(None) };
                 log::trace!("{}.out | default value: {:?}", self.id, default);
                 Ok(Some(default))
             } else {

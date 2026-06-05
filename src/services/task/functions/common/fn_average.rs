@@ -75,8 +75,10 @@ impl FnOut for FnAverage {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let mut force_recalc = false;
-        if let Some(reset) = &mut self.reset {
-            if let Some(reset) = reset.out()? {
+        let input = self.input.out();
+        let reset = self.reset.as_mut().map(|f| f.out());
+        if let Some(reset) = reset {
+            if let Some(reset) = reset? {
                 if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
                     self.count = 0;
                     self.sum = 0.0;
@@ -85,7 +87,7 @@ impl FnOut for FnAverage {
                 }
             }
         }
-        let Some(input) = flow.map(self.input.out())? else { return Ok(None) };
+        let Some(input) = flow.map(input)? else { return Ok(None) };
         // Возвращаем предыдущее значение, если нет новых данных на входе и не было сброса
         if !flow.is_new() && !force_recalc {
             let Some(average) = self.average.as_ref() else { return Ok(None) };

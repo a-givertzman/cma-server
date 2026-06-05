@@ -79,27 +79,19 @@ impl FnBuilder {
                     }
                     //
                     Functions::Timer => {
-                        let name = "enable";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnTimer | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "initial";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let initial = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnTimer | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "input";
-                        let conf = conf.inputs.get_mut(name).unwrap();
-                        let input = Self::function(parent, txid, name, conf, task_nodes, services)
-                            .map_err(|err| error.pass_with(format!("FnTimer | Can't get '{name}'"), err))?;
-                        Ok(Rc::new(RefCell::new(
-                            FnTimer::new(parent, enable, initial, input, true)
-                        )))
+                        let enable = Self::get_input_config(txid, parent, "enable", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnTimer | Can't get 'enable'"), err))?;
+                        let reset = Self::get_input_config(txid, parent, "reset", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnTimer | Can't get 'reset'"), err))?;
+                        let initial = Self::get_input_config(txid, parent, "initial", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnTimer | Can't get 'initial'"), err))?;
+                        let input = Self::get_input_config(txid, parent, "input", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnTimer | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnTimer | Can't get 'input'"), err))?;
+                        Ok(match enable {
+                            Some(enable) => Rc::new(RefCell::new(FnEnable::new(FnTimer::new(parent, initial, reset, input), task_nodes.enable_mode(), enable))),
+                            None => Rc::new(RefCell::new(FnTimer::new(parent, initial, reset, input))),
+                        })
                     }
                     //
                     Functions::TimerOnDelay => {

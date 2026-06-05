@@ -75,8 +75,10 @@ impl FnOut for FnIsChangedValue {
         let mut meta = None::<PointMeta>;
         let mut val = false;
         let mut has_active = false;
-        for input in &self.inputs {
-            if let Some(point) = flow.map(input.borrow_mut().out())? {
+        let inputs: Vec<FnResult<FnFlow, String>> = self.inputs.iter()
+            .map(|input| input.borrow_mut().out()).collect();
+        for input in inputs {
+            if let Some(point) = flow.map(input)? {
                 has_active = true;
                 fb_meta = fb_meta.update_latest(&point);
                 let key = point.name();

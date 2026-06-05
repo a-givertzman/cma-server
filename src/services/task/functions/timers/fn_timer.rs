@@ -1,124 +1,57 @@
-use sal_sync::{
-    kernel::state::{Switch, SwitchCondition, SwitchState},
-    services::entity::{Cot, {Point, PointConfType, PointHlr}}
-};
+use sal_core::error::Error;
+use sal_sync::services::entity::{Point, PointHlr, PointType};
+use concat_string::concat_string;
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
-use crate::{
-    domain::FnOutRef,
-    services::task::{FnIn, FnOut, FnKind, FnResult},
-};
-//
-//
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-// #[allow(dead_code)]
-enum TimerState {
-    Off,
-    Start,
-    Progress,
-    Stop,
-    Done,
-}
+use crate::{domain::{Edge, EdgeDetector, FnOutRef}, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult, TryTo}};
 ///
-/// Function | Returns elapsed time in seconds (double) from raised input (>0) to dropped (<=0)
-/// - if repeat = true, then elapsed is total secods of multiple periods
+/// Function | FnTimer
+/// 
+/// Интегратор времени (накопительный секундомер / моточасы).
+/// Считает время в секундах, пока на входе `true` (> 0).
+/// 
+/// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
+/// - `initial`: Начальное значение. Применяется строго один раз при первом успешном чтении.
+/// - `reset`: Сбрасывает накопленную сумму и счетчик по переднему фронту сигнала (переход 0 -> 1).
+/// - `input`: `true` - секундомер тикает (отдает `FnFlow::New`),
+/// `false` - замирает и хранит значение, отдает его в Flow::Old,
+/// снова `true` - счет продолжается с точки остановки.
 #[derive(Debug)]
 pub struct FnTimer {
     id: String,
     kind: FnKind,
-    enable: Option<FnOutRef>,
-    initial: Option<FnOutRef>,
-    input: FnOutRef,
-    state: SwitchState<TimerState, bool>,
-    session_elapsed: f64,
-    total_elapsed: Option<f64>,
-    start: Option<Instant>,
+    initial: Option<FnChange>,
+    reset: Option<FnChange>,
+    input: FnChange,
+    edge: EdgeDetector,
+    reset_edge: EdgeDetector,
+    first: bool,
+    total_t: f64,
+    t: Instant,
 }
-//
 // 
 impl FnTimer {
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnOutRef>, initial: Option<FnOutRef>, input: FnOutRef, repeat: bool) -> Self {
-        let switches = vec![
-            Switch{
-                state: TimerState::Off,
-                conditions: vec![
-                    SwitchCondition {
-                        condition: Box::new(|value| {value}),
-                        target: TimerState::Start,
-                    },
-                ],
-            },
-            Switch{
-                state: TimerState::Start,
-                conditions: vec![
-                    SwitchCondition {
-                        condition: Box::new(|value| {value}),
-                        target: TimerState::Progress,
-                    },
-                    SwitchCondition {
-                        condition: Box::new(|value| {!value}),
-                        target: TimerState::Stop,
-                    },
-                ],
-            },
-            Switch{
-                state: TimerState::Progress,
-                conditions: vec![
-                    SwitchCondition {
-                        condition: Box::new(|value| {!value}),
-                        target: TimerState::Stop,
-                    },
-                ],
-            },
-            Switch{
-                state: TimerState::Stop,
-                conditions: vec![
-                    SwitchCondition {
-                        condition: Box::new(|value| {value}),
-                        target: TimerState::Start,
-                    },
-                    SwitchCondition {
-                        condition: Box::new(|value| {!value}),
-                        target: if repeat {TimerState::Off} else {TimerState::Done},
-                    },
-                ],
-            },
-            Switch{
-                state: TimerState::Done,
-                conditions: vec![],
-            },
-        ];
+    pub fn new(parent: impl Into<String>, initial: Option<FnOutRef>, reset: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnTimer{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            enable,
-            input,
-            initial,
-            state: SwitchState::new(TimerState::Off, switches),
-            session_elapsed: 0.0,
-            total_elapsed: None,
-            start: None,
+            initial: initial.map(FnChange::new),
+            reset: reset.map(FnChange::new),
+            input: FnChange::new(input),
+            edge: EdgeDetector::new(),
+            reset_edge: EdgeDetector::new(),
+            first: true,
+            total_t: 0.0,
+            t: Instant::now(),
         }
     }
     ///
-    /// Returns initial value
-    fn total_elapsed<'a>(total_elapsed: &'a mut Option<f64>, initial: Option<FnOutRef>) -> FnResult<&'a mut f64, String> {
-        let mut default = 0.0;
-        if total_elapsed.is_none() {
-            if let Some(init) = initial {
-                match init.borrow_mut().out() {
-                    FnResult::Ok(init) => {
-                        default = init.to_double().as_double().value;
-                    }
-                    FnResult::None => return FnResult::None,
-                    FnResult::Err(err) => return FnResult::Err(err),
-                }
-            }
-        }
-        FnResult::Ok(total_elapsed.get_or_insert(default))
+    /// Возвращает `PointHlr` с обновленными `name` и `value`
+    #[inline]
+    fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
     }
 }
-//
 //
 impl FnOut for FnTimer {
     //
@@ -131,123 +64,87 @@ impl FnOut for FnTimer {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        if let Some(enable) = &self.enable {
-            inputs.append(&mut enable.borrow().inputs());
-        }
+        let mut inputs = self.input.inputs();
         if let Some(initial) = &self.initial {
-            inputs.append(& mut initial.borrow().inputs());
+            inputs.append(&mut initial.inputs());
         }
-        inputs.append(& mut self.input.borrow().inputs());
+        if let Some(reset) = &self.reset {
+            inputs.append(&mut reset.inputs());
+        }
         inputs
     }
-    ///
+    //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
-        let enable = match &mut self.enable {
-            Some(en) => match en.borrow_mut().out() {
-                FnResult::Ok(en) => en.to_bool().as_bool().value.0,
-                FnResult::None => return FnResult::None,
-                FnResult::Err(err) => return FnResult::Err(err),
-            }
-            None => true,
+        let initial = self.initial.as_mut().map(|f| f.out());
+        let reset = self.reset.as_mut().map(|f| f.out());
+        let input = self.input.out();
+        let flow = FlowContext::new();
+        let mut is_changed = false;
+        if let Some(reset) = reset {
+            if let Some(reset) = flow.ignore(reset)? {
+                let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
+                if let Some(Edge::Rising) = self.reset_edge.add(reset) {
+                    self.edge.reset();
+                    self.total_t = 0.0;
+                    self.t = Instant::now();
+                }
+            };
+        }
+        let Some(input) = flow.ignore(input)? else {
+            self.total_t = self.total_t + self.t.elapsed().as_secs_f64();
+            self.edge.reset();
+            return Ok(None);
         };
-        let input = self.input.borrow_mut().out();
+        if self.first {
+            if let Some(initial) = initial {
+                let Some(initial) = flow.ignore(initial)? else { return Ok(None) };
+                let initial: f64 = (&initial).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid initial ", err.to_string()))?;
+                self.total_t += initial;
+                is_changed = true;
+                self.first = false;
+            }
+        }
         // trace!("{}.out | input: {:?}", self.id, self.input.print());
-        match input {
-            FnResult::Ok(input) => {
-                let out = if enable {
-                    match Self::total_elapsed(&mut self.total_elapsed, self.initial.clone()) {
-                        FnResult::Ok(total_elapsed) => {
-                            let value = input.to_bool().as_bool().value.0;
-                            self.state.add(value);
-                            let state = self.state.state();
-                            log::trace!("{}.out | input: {:?}   |   state: {:?}", self.id, value, state);
-                            match state {
-                                TimerState::Off => {}
-                                TimerState::Start => {
-                                    self.start = Some(Instant::now());
-                                }
-                                TimerState::Progress => {
-                                    self.session_elapsed = self.start.unwrap().elapsed().as_secs_f64();
-                                }
-                                TimerState::Stop => {
-                                    self.session_elapsed = 0.0;
-                                    *total_elapsed += self.start.unwrap().elapsed().as_secs_f64();
-                                    self.start = None;
-                                }
-                                TimerState::Done => {
-                                    self.session_elapsed = 0.0;
-                                    if let Some(start) = self.start {
-                                        *total_elapsed += start.elapsed().as_secs_f64();
-                                        self.start = None;
-                                    }
-                                }
-                            };
-                            *total_elapsed + self.session_elapsed
-                        }
-                        FnResult::None => return FnResult::None,
-                        FnResult::Err(err) => return FnResult::Err(err),
-                    }
+        let is_active = (&input).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid input ", err.to_string()))?;
+        let elapsed = match self.edge.add(is_active) {
+            Some(Edge::Rising) => {
+                self.t = Instant::now();
+                self.total_t
+            }
+            Some(Edge::Falling) => {
+                self.total_t = self.total_t + self.t.elapsed().as_secs_f64();
+                is_changed = true;
+                self.total_t
+            }
+            None => {
+                if is_active {
+                    is_changed = true;
+                    self.total_t + self.t.elapsed().as_secs_f64()
                 } else {
-                    self.start = None;
-                    self.session_elapsed = 0.0;
-                    self.total_elapsed = None;
-                    self.state.reset();
-                    match Self::total_elapsed(&mut self.total_elapsed, self.initial.clone()) {
-                        FnResult::Ok(total_elapsed) => total_elapsed.to_owned(),
-                        FnResult::None => return FnResult::None,
-                        FnResult::Err(err) => return FnResult::Err(err),
-                    }                    
-                };
-                log::trace!("{}.out | out: {:?}", self.id, out);
-                let value = Point::Double(
-                    PointHlr::new(
-                        input.txid(),
-                        &format!("{}.out", self.id),
-                        out,
-                        input.status(),
-                        Cot::Inf,
-                        input.timestamp(),
-                    )
-                );
-                match &self.initial {
-                    Some(initial) => {
-                        match initial.borrow_mut().out() {
-                            FnResult::Ok(initial) => {
-                                match initial.type_() {
-                                    PointConfType::Int => FnResult::Ok(value.to_int()),
-                                    PointConfType::Real => FnResult::Ok(value.to_real()),
-                                    PointConfType::Double => FnResult::Ok(value),
-                                    _ => panic!("{}.out | Usupported type in initial input '{:?}'", self.id, initial.type_()),
-                                }
-                            }
-                            FnResult::None => FnResult::None,
-                            FnResult::Err(err) => FnResult::Err(err),
-                        }
-                    }
-                    None => FnResult::Ok(value),
+                    self.total_t
                 }
             }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
+        };
+        log::trace!("{}.out | elapsed: {:?}", self.id, self.total_t);
+        let point = Point::Double(Self::point_with(&input, &self.id, elapsed));
+        if is_changed {
+            flow.wrap_new(point)
+        } else {
+            flow.wrap_old(point)
         }
     }
     //
-    //
     fn reset(&mut self) {
-        self.start = None;
-        self.session_elapsed = 0.0;
-        self.total_elapsed = None;
-        // Some(self.initial.as_mut().map_or(0.0, |initial| {
-        //     initial.borrow_mut().reset();
-        //     initial.borrow_mut().out().to_double().as_double().value
-        // }));
-        self.state.reset();
-        if let Some(enable) = &self.enable {
-            enable.borrow_mut().reset();
+        self.edge.reset();
+        self.first = true;
+        self.total_t = 0.0;
+        if let Some(initial) = &mut self.initial {
+            initial.reset();
         }
-        self.input.borrow_mut().reset();
+        if let Some(reset) = &mut self.reset {
+            reset.reset();
+        }
+        self.input.reset();
     }
 }
 ///

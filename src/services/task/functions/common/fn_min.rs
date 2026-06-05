@@ -83,15 +83,17 @@ impl FnOut for FnMin {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let mut force_recalc = false;
-        if let Some(reset) = &mut self.reset {
-            if let Some(reset) = reset.out()? {
+        let input = self.input.out();
+        let reset = self.reset.as_mut().map(|f| f.out());
+        if let Some(reset) = reset {
+            if let Some(reset) = reset? {
                 if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
                     self.min = None;
                     force_recalc = true;
                 }
             }
         }
-        let Some(input) = flow.map(self.input.out())? else { return Ok(None) };
+        let Some(input) = flow.map(input)? else { return Ok(None) };
         if !flow.is_new() && !force_recalc {
             let Some(min) = self.min else { return Ok(None) };
             return flow.wrap_old(Self::point(&self.id, &input, min)?);

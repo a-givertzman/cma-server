@@ -58,13 +58,15 @@ impl FnOut for FnAcc {
     ///
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let Some(input) = flow.map(self.input.out())? else { return Ok(None) };
+        let input = self.input.out();
+        let initial = self.initial.as_mut().map(|f| f.out());
+        let Some(input) = flow.map(input)? else { return Ok(None) };
         // trace!("{}.out | input: {:?}", self.id, input);
         let acc = match self.acc.as_ref() {
             Some(acc) => acc.clone(),
             None => {
-                let acc = if let Some(initial) = &mut self.initial {
-                    let Some(initial) = initial.out()? else { return Ok(None) };
+                let acc = if let Some(initial) = initial {
+                    let Some(initial) = initial? else { return Ok(None) };
                     initial.into_value()
                 } else {
                     match input.type_() {

@@ -3,7 +3,7 @@ use sal_sync::{kernel::state::ExitNotify, services::{
     ConfSubscribe, Service, ServiceCycle, Services, SubscriptionCriteria, entity::{Name, Object, Point, PointConf, PointTxId}
 }, sync::{Handles, Owner, channel::{self, Receiver, RecvTimeoutError, Sender}}, thread_pool::Scheduler};
 use std::{
-    collections::HashMap, fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration
+    collections::HashMap, fmt::Debug, sync::Arc, time::Duration
 };
 use concat_string::concat_string;
 use crate::{
