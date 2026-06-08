@@ -76,6 +76,7 @@
 //! input <type> <'/path/PointName'>
 //! ```
 //! 
+mod eval_cycle;
 mod fn_eval_once;
 mod functions;
 mod task_conf;
@@ -86,8 +87,7 @@ mod task_eval_node;
 mod task_test_receiver;
 mod task_test_producer;
 
-use std::{cell::Cell, rc::Rc};
-
+pub(self) use eval_cycle::*;
 pub(super) use fn_eval_once::*;
 pub use functions::*;
 pub use task_conf::*;
@@ -97,29 +97,3 @@ pub use task_node_vars::*;
 pub use task_eval_node::*;
 pub use task_test_receiver::*;
 pub use task_test_producer::*;
-
-///
-/// Считает бесконечно по кругу
-pub(crate) type EvalCycleRef = Rc<EvalCycle>;
-///
-/// Считает бесконечно по кругу
-#[derive(Debug)]
-pub(crate) struct EvalCycle {
-    val: Cell<usize>,
-}
-impl EvalCycle {
-    pub(crate) const START: usize = 0;
-    const INIT: usize = 1;
-    pub fn new() -> Self {
-        Self { val: Cell::new(Self::INIT) }
-    }
-    pub fn increment(&self) {
-        self.val.update(|v| {
-            if v >= usize::MAX { return Self::INIT }
-            v + 1
-        })
-    }
-    pub fn get(&self) -> usize {
-        self.val.get()
-    }
-}

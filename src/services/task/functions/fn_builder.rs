@@ -95,13 +95,13 @@ impl FnBuilder {
                     }
                     //
                     Functions::TimerOnDelay => {
-                        let name = "enable";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnTimerOnDelay | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
+                        let enable = Self::get_input_config(txid, parent, "enable", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnTimerOnDelay | Can't get 'enable'"), err))?;
+                        let reset = Self::get_input_config(txid, parent, "reset", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnTimerOnDelay | Can't get 'reset'"), err))?;
+                        let input = Self::get_input_config(txid, parent, "input", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnTimerOnDelay | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnTimerOnDelay | Can't get 'input'"), err))?;
                         let delay = {
                             let name = "delay";
                             let param = conf.param(name).ok_or(error.err(format!("FnTimerOnDelay | Can't get '{name}'")))?;
@@ -111,23 +111,21 @@ impl FnBuilder {
                             ConfDuration::from_str(delay)
                                 .map_err(|err| error.pass_with(format!("FnTimerOnDelay | Wrong conf in '{name}': {:?}", param), err))?
                         };
-                        let name = "input";
-                        let conf = conf.inputs.get_mut(name).unwrap();
-                        let input = Self::function(parent, txid, name, conf, task_nodes, services)
-                            .map_err(|err| error.pass_with(format!("FnTimerOnDelay | Can't get '{name}'"), err))?;
-                        Ok(Rc::new(RefCell::new(
-                            FnTimerOnDelay::new(parent, enable, delay, input)
-                        )))
+                        Ok(match enable {
+                            Some(enable) => Rc::new(RefCell::new(FnEnable::new(
+                                FnTimerOnDelay::new(parent, reset, delay, input), task_nodes.enable_mode(), enable))),
+                            None => Rc::new(RefCell::new(FnTimerOnDelay::new(parent, reset, delay, input))),
+                        })
                     }
                     //
                     Functions::TimerOffDelay => {
-                        let name = "enable";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnTimerOffDelay | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
+                        let enable = Self::get_input_config(txid, parent, "enable", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnTimerOffDelay | Can't get 'enable'"), err))?;
+                        let reset = Self::get_input_config(txid, parent, "reset", conf, task_nodes, &services)
+                            .map_err(|err| error.pass_with(format!("FnTimerOffDelay | Can't get 'reset'"), err))?;
+                        let input = Self::get_input_config(txid, parent, "input", conf, task_nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnTimerOffDelay | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnTimerOffDelay | Can't get 'input'"), err))?;
                         let delay = {
                             let name = "delay";
                             let param = conf.param(name).ok_or(error.err(format!("FnTimerOffDelay | Can't get '{name}'")))?;
@@ -137,13 +135,11 @@ impl FnBuilder {
                             ConfDuration::from_str(delay)
                                 .map_err(|err| error.pass_with(format!("FnTimerOffDelay | Wrong conf in '{name}': {:?}", param), err))?
                         };
-                        let name = "input";
-                        let conf = conf.inputs.get_mut(name).unwrap();
-                        let input = Self::function(parent, txid, name, conf, task_nodes, services)
-                            .map_err(|err| error.pass_with(format!("FnTimerOffDelay | Can't get '{name}'"), err))?;
-                        Ok(Rc::new(RefCell::new(
-                            FnTimerOffDelay::new(parent, enable, delay, input)
-                        )))
+                        Ok(match enable {
+                            Some(enable) => Rc::new(RefCell::new(FnEnable::new(
+                                FnTimerOffDelay::new(parent, reset, delay, input), task_nodes.enable_mode(), enable))),
+                            None => Rc::new(RefCell::new(FnTimerOffDelay::new(parent, reset, delay, input))),
+                        })
                     }
                     //
                     Functions::ToApiQueue => {

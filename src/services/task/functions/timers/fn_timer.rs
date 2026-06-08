@@ -27,6 +27,7 @@ pub struct FnTimer {
     first: bool,
     total_t: f64,
     active_t: Option<Instant>,
+    ts: chrono::DateTime<chrono::Utc>
 }
 // 
 impl FnTimer {
@@ -44,13 +45,14 @@ impl FnTimer {
             first,
             total_t: 0.0,
             active_t: None,
+            ts: chrono::Utc::now(),
         }
     }
     ///
     /// Возвращает `PointHlr` с обновленными `name` и `value`
     #[inline]
-    fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
-        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+    fn point_with<T>(p: &Point, name: impl Into<String>, value: T, ts: chrono::DateTime<chrono::Utc>) -> PointHlr<T> {
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), ts)
     }
 }
 //
@@ -87,6 +89,7 @@ impl FnOut for FnTimer {
                 if let Some(Edge::Rising) = self.reset_edge.add(reset) {
                     self.edge.reset();
                     self.total_t = 0.0;
+                    self.ts = chrono::Utc::now();
                     self.active_t = None;
                     is_changed = true;
                 }
@@ -95,6 +98,7 @@ impl FnOut for FnTimer {
         let Some(input) = flow.ignore(input)? else {
             if let Some(t) = self.active_t {
                 self.total_t = self.total_t + t.elapsed().as_secs_f64();
+                self.ts = chrono::Utc::now();
                 self.active_t = None;
                 self.edge.reset();
             }
@@ -120,6 +124,7 @@ impl FnOut for FnTimer {
             None => {
                 if let Some(t) = self.active_t {
                     is_changed = true;
+                    self.ts = chrono::Utc::now();
                     self.total_t + t.elapsed().as_secs_f64()
                 } else {
                     self.total_t
@@ -128,6 +133,7 @@ impl FnOut for FnTimer {
             Some(Edge::Falling) => {
                 if let Some(t) = self.active_t {
                     self.total_t = self.total_t + t.elapsed().as_secs_f64();
+                    self.ts = chrono::Utc::now();
                 }
                 is_changed = true;
                 self.active_t = None;
@@ -135,7 +141,7 @@ impl FnOut for FnTimer {
             }
         };
         log::trace!("{}.out | elapsed: {:?}", self.id, self.total_t);
-        let point = Point::Double(Self::point_with(&input, &self.id, elapsed));
+        let point = Point::Double(Self::point_with(&input, &self.id, elapsed, self.ts));
         if is_changed {
             flow.wrap_new(point)
         } else {
@@ -147,6 +153,7 @@ impl FnOut for FnTimer {
         self.edge.reset();
         self.first = true;
         self.total_t = 0.0;
+        self.ts = chrono::Utc::now();
         self.active_t = None;
         if let Some(initial) = &mut self.initial {
             initial.reset();
@@ -222,19 +229,18 @@ mod tests {
         // 2. Запуск (Передний фронт)
         input.borrow_mut().push_bool(true);
         let res2 = timer.out().unwrap().unwrap();
-        // Внимание: Здесь зафиксировано то самое спорное поведение. Старт генерирует New
-        assert!(matches!(res2, FnFlow::New(_)), "Старт таймера должен генерировать событие New");
+        assert!(matches!(res2, FnFlow::Old(_)), "Старт таймера не меняет накопленное значение, возвращаем Old");
         assert_eq!(extract_val(&res2), 0.0);
         // 3. Активный счет (пауза для накопления времени)
         sleep(Duration::from_millis(15));
         let res3 = timer.out().unwrap().unwrap();
-        assert!(matches!(res3, FnFlow::Old(_)), "При неизменном активном входе генерируется Old");
+        assert!(matches!(res3, FnFlow::New(_)), "При активном входе генерируется непрерывный поток New с новым временем");
         let active_val = extract_val(&res3);
         assert!(active_val > 0.01, "Таймер должен накапливать время");
         // 4. Пауза (Задний фронт)
         input.borrow_mut().push_bool(false);
         let res4 = timer.out().unwrap().unwrap();
-        assert!(matches!(res4, FnFlow::New(_)), "Остановка таймера обязана генерировать New");
+        assert!(matches!(res4, FnFlow::New(_)), "Остановка таймера обязана генерировать New (значение зафиксировалось)");
         let paused_val = extract_val(&res4);
         assert!(paused_val >= active_val, "Накопленное время не должно уменьшаться");
         // 5. Удержание паузы
@@ -262,9 +268,7 @@ mod tests {
         // 3. Восстановление связи
         input.borrow_mut().push_bool(true);
         let res_restore = timer.out().unwrap().unwrap();
-        assert!(matches!(res_restore, FnFlow::New(_)), "Восстановление активности должно читаться как передний фронт (New)");
-        let restored_val = extract_val(&res_restore);
-        assert!(restored_val > 0.01, "Таймер должен был сохранить время, прошедшее до обрыва связи");
+        assert!(matches!(res_restore, FnFlow::Old(_)), "Восстановление активности читается как передний фронт (Old, значение еще не накопилось)");
     }
     #[test]
     fn test_transition_sleep_to_none_and_back() {
