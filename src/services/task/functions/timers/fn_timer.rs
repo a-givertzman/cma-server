@@ -167,7 +167,7 @@ mod tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc, thread::sleep, time::Duration};
     use crate::services::task::{FnFlow, FnKind, FnOut, FnResult};
-    use sal_sync::services::entity::{Cot, Point, PointHlr, Status};
+    use sal_sync::services::{entity::{Cot, Point, PointHlr, Status}, types::Bool};
     #[derive(Debug)]
     struct FakeNode {
         id: String,
@@ -182,7 +182,7 @@ mod tests {
         }
         fn push_bool(&mut self, val: bool) {
             self.flow = Some(FnFlow::New(Point::Bool(PointHlr::new(
-                0, &self.id, val, Status::Ok, Cot::Inf, chrono::Utc::now(),
+                0, &self.id, Bool(val), Status::Ok, Cot::Inf, chrono::Utc::now(),
             ))));
         }
         fn push_double(&mut self, val: f64) {
@@ -205,7 +205,7 @@ mod tests {
     }
     fn extract_val(flow: &FnFlow) -> f64 {
         match flow {
-            FnFlow::New(p) | FnFlow::Old(p) => p.value().as_double().unwrap_or(0.0),
+            FnFlow::New(p) | FnFlow::Old(p) => p.value().as_double(),
         }
     }
     #[test]
