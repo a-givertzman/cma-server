@@ -126,6 +126,7 @@ impl FnOut for FnTimerOnDelay {
     fn reset(&mut self) {
         self.active_t = None;
         self.edge.reset();
+        self.reset_edge.reset();
         self.value.reset();
         if let Some(reset) = &mut self.reset {
             reset.reset();

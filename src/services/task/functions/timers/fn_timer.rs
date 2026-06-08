@@ -151,6 +151,7 @@ impl FnOut for FnTimer {
     //
     fn reset(&mut self) {
         self.edge.reset();
+        self.reset_edge.reset();
         self.first = true;
         self.total_t = 0.0;
         self.ts = chrono::Utc::now();

@@ -1,38 +1,48 @@
+use concat_string::concat_string;
+use sal_core::error::Error;
 use sal_sync::services::{entity::{Point, PointHlr}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::FnOutRef,
-    services::task::{
-        FnOut, FnKind, FnResult,
-    },
+    domain::{Edge, EdgeDetector, FnOutRef},
+    services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult, TryTo},
 };
 ///
-/// Function | Returns true one tic (single computation cycle)
-/// if input value rising false -> true (0 (or any negative) -> any positive)
+/// ### Function | `FnRisingEdge`
+/// 
+/// Детектор положительного (переднего) фронта
+/// 
+/// - `input`: Последовательность `true -> false` - активирует выход на один такт
 #[derive(Debug)]
 pub struct FnRisingEdge {
     id: String,
     kind: FnKind,
-    input: FnOutRef,
-    prev: bool,
+    input: FnChange,
+    edge: EdgeDetector,
+    value: EdgeDetector,
 }
 //
-// 
 impl FnRisingEdge {
     ///
     /// Creates new instance of the FnRisingEdge
+    /// - `input`: `true` - активирует выход на один такт
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnRisingEdge{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            input,
-            prev: false,
+            input: FnChange::new(input),
+            edge: EdgeDetector::new(),
+            value: EdgeDetector::new(),
         }
     }    
+    ///
+    /// Возвращает `PointHlr` с обновленными `name` и `value`
+    #[inline]
+    fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+    }
 }
 //
-// 
 impl FnOut for FnRisingEdge { 
     //
     fn id(&self) -> String {
@@ -44,39 +54,35 @@ impl FnOut for FnRisingEdge {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        self.input.borrow().inputs()
+        self.input.inputs()
     }
-    //
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
-        let input = self.input.borrow_mut().out();
-        log::trace!("{}.out | input: {:#?}", self.id, input);
-        match input {
-            FnResult::Ok(input) => {
-                let input_value = input.to_bool().as_bool().value.0;
-                let value = Point::Bool(PointHlr::new(
-                    input.txid(),
-                    &input.name(),
-                    Bool(input_value && (! self.prev)),
-                    input.status(),
-                    input.cot(),
-                    input.timestamp(),
-                ));
-                self.prev = input_value;
-                log::trace!("{}.out | value: {:#?}", self.id, value);
-                FnResult::Ok(value)
-            }
-            FnResult::None => FnResult::None,
-            FnResult::Err(err) => FnResult::Err(err),
+        let input = self.input.out();
+        let flow = FlowContext::new();
+        let Some(input) = flow.ignore(input)? else {
+            self.edge.reset();
+            return Ok(None);
+        };
+        let val: bool = (&input).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid input ", err.to_string()))?;
+        let value = match self.edge.add(val) {
+            Some(Edge::Rising) => true,
+            _ => false,
+        };
+        let is_changed = self.value.add(value).is_some();
+        let point = Point::Bool(Self::point_with(&input, &self.id, Bool(value)));
+        // log::trace!("{}.out | value: {:#?}", self.id, point);
+        if is_changed {
+            flow.wrap_new(point)
+        } else {
+            flow.wrap_old(point)
         }
-
     }
     //
-    //
     fn reset(&mut self) {
-        self.input.borrow_mut().reset();
-        self.prev = false;
+        self.edge.reset();
+        self.value.reset();
+        self.input.reset();
     }
 }
 ///
