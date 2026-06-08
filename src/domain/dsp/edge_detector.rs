@@ -8,6 +8,7 @@ pub struct EdgeDetector {
     init: Option<bool>,
     prev: Option<bool>,
     edge: Option<Edge>,
+    is_high: bool,
 }
 impl EdgeDetector {
     ///
@@ -23,6 +24,7 @@ impl EdgeDetector {
             init,
             prev: init,
             edge: None,
+            is_high: false,
         }
     }
     ///
@@ -33,6 +35,11 @@ impl EdgeDetector {
             (Some(false), true) => Some(Edge::Rising),
             (Some(true), false) => Some(Edge::Falling),
             _ => None,
+        };
+        self.is_high = match self.edge {
+            Some(Edge::Rising) => true,
+            Some(Edge::Falling) => false,
+            None => self.is_high,
         };
         self.prev = Some(val);
         self.edge
@@ -51,6 +58,16 @@ impl EdgeDetector {
     /// Возвращает `true`, если последним зафиксирован задний фронт.
     pub fn is_falling(&self) -> bool {
         matches!(self.edge, Some(Edge::Falling))
+    }
+    ///
+    /// Возвращает `true` если был `Rising`, период между `Rising` и `Falling` - взведенное состояние
+    pub fn is_high(&self) -> bool {
+        self.is_high
+    }
+    ///
+    /// Возвращает `true` если не было `Rising`, сброшенное состояние
+    pub fn is_low(&self) -> bool {
+        !self.is_high
     }
     ///
     /// Сброс в исходное состояние
