@@ -3,8 +3,8 @@ use concat_string::concat_string;
 use sal_sync::services::{conf::ConfDuration, entity::{Point, PointHlr}, types::Bool};
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::{Duration, Instant}};
 use crate::{
-    domain::{Edge, EdgeDetector, FnOutRef},
-    services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult, TryTo},
+    domain::{Edge, EdgeDetector, FnOutRef, TryTo},
+    services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
 /// ### Function | `FnTimerOnDelay`

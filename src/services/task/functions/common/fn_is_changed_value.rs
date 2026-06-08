@@ -6,7 +6,7 @@ use sal_sync::{
 use std::{collections::HashMap, hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
 use chrono::{DateTime, Utc};
 use hashers::fx_hash::FxHasher;
-use crate::{domain::{EdgeDetector, FnOutRef}, services::task::{FlowContext, FnFlow}};
+use crate::{domain::{EdgeDetector, FnOutRef, PointMeta}, services::task::{FlowContext, FnFlow}};
 use crate::services::task::{FnOut, FnKind, FnResult};
 ///
 /// ### Function | FnIsChangedValue
@@ -129,35 +129,6 @@ impl FnOut for FnIsChangedValue {
 ///
 /// Global static counter of FnIsChangedValue instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
-///
-/// Local container for Point meta
-#[derive(Clone, Copy)]
-struct PointMeta {
-    pub status: Status,
-    pub cot: Cot,
-    pub ts: chrono::DateTime<Utc>,
-}
-impl PointMeta {
-    pub fn update(self, p: &Point) -> Self {
-        Self {
-            status: p.status(),
-            cot: p.cot(),
-            ts: p.timestamp(),
-        }
-    }
-    pub fn update_latest(self, p: &Point) -> Self {
-        if p.timestamp() > self.ts {
-            self.update(p)
-        } else {
-            self
-        }
-    }
-}
-impl Default for PointMeta {
-    fn default() -> Self {
-        Self { status: Status::Ok, cot: Cot::Inf, ts: DateTime::<Utc>::MIN_UTC }
-    }
-}
 ///
 /// Basic tests
 #[cfg(test)]

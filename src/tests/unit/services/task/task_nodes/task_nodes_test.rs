@@ -5,7 +5,7 @@ use sal_sync::{services::{Service, Services, conf::{ConfTree, ServicesConf}, ent
 use testing::entities::test_value::Value;
 use std::{cell::RefCell, collections::HashMap, fmt::{Debug, Display}, rc::Rc, sync::{Arc, Once, atomic::{AtomicBool, AtomicUsize, Ordering}}, thread::{self}};
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::services::task::{FnKind, FnResult, TaskConf, TaskEvalNode, TaskNodes};
+use crate::services::task::{FlowContext, FnKind, FnResult, TaskConf, TaskEvalNode, TaskNodes};
 ///
 ///
 static INIT: Once = Once::new();
@@ -129,6 +129,7 @@ fn manual_eval() {
         ),
     ];
     mock_service.run().unwrap();
+    let flow = FlowContext::new();
     for (name, value, target_value) in test_data {
         let point = value.to_point(0, name);
         // let inputName = &point.name();
@@ -140,14 +141,14 @@ fn manual_eval() {
                 log::trace!("evalNode outs: {:?}", eval_node.borrow().get_outs());
                 for eval_node_var in eval_node.borrow().get_vars() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.borrow().name(), eval_node_var.borrow().id());
-                    eval_node_var.borrow_mut().eval();
+                    eval_node_var.borrow_mut().out();
                     log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.borrow().name(), eval_node_var.borrow().id());
                 };
                 for eval_node_out in eval_node.borrow().get_outs() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node.borrow().name());
-                    let out = eval_node_out.borrow_mut().out();
+                    let out = flow.ignore(eval_node_out.borrow_mut().out());
                     match out {
-                        FnResult::Ok(out) => {
+                        Ok(Some(out)) => {
                             let out_value = out.value().to_string();
                             log::debug!("TaskEvalNode.eval | evalNode '{}' out - '{}': {:?}", eval_node.borrow().name(), eval_node_out.borrow().id(), out);
                             if eval_node_out.borrow().kind() != FnKind::Var {
@@ -162,8 +163,8 @@ fn manual_eval() {
                                 assert!(out_value == target, "\n   outValue: {} \ntargetValue: {}", out_value, target);
                             }
                         }
-                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out is None", eval_node.borrow().name()),
-                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out is Error: {:#?}", eval_node.borrow().name(), err),
+                        Ok(None) => log::warn!("TaskEvalNode.eval | evalNode '{}' out is None", eval_node.borrow().name()),
+                        Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out is Error: {:#?}", eval_node.borrow().name(), err),
                     };
                 };
             }
@@ -281,6 +282,7 @@ fn eval() {
         ),
     ];
     mock_service.run().unwrap();
+    let flow = FlowContext::new();
     for (name, value, target_value) in test_data {
         let point = value.to_point(0, name);
         // let inputName = &point.name();
@@ -290,8 +292,8 @@ fn eval() {
         match task_nodes.get_eval_node(&name) {
             Some(eval_node) => {
                 for eval_node_out in eval_node.borrow().get_outs() {
-                    let out = eval_node_out.borrow_mut().out();
-                    if let FnResult::Ok(out) = out {
+                    let out = flow.ignore(eval_node_out.borrow_mut().out());
+                    if let Ok(Some(out)) = out {
                         let out_value = out.value().to_string();
                         let out_name = out.name();
                         if eval_node_out.borrow().kind() != FnKind::Var {
@@ -360,13 +362,14 @@ fn test_state_retention() {
         ("/path/Point.B", 02, 12),
         ("/path/Point.A", 06, 08),
     ];
+    let flow = FlowContext::new();
     for (name, val, target) in test_data {
         let point = val.to_point(0, name);
         task_nodes.eval(point);
         // Проверяем, что выход пересчитался с учетом A=10, B=None
         let node = task_nodes.get_eval_node(name).unwrap();
         for out in node.borrow().get_outs() {
-            if let FnResult::Ok(result) = out.borrow_mut().out() {
+            if let Ok(Some(result)) = flow.ignore(out.borrow_mut().out()) {
                 let result = result.to_int().as_int().value;
                 // Если результат использует старое значение A, значит инкапсуляция состояния работает.
                 assert!(result == target, "{dbg} | input: {} \n result: {} \n target: {}", name, result, target);
@@ -409,11 +412,12 @@ fn poisoned_data() {
     task_nodes.eval(bad_point);
     // Проверяем результат вычислений
     let node = task_nodes.get_eval_node("/path/Sensor.B").unwrap();
+    let flow = FlowContext::new();
     for out in node.borrow().get_outs() {
-        let result = out.borrow_mut().out();
+        let result = flow.ignore(out.borrow_mut().out());
         // Движок должен честно сказать, что математика не сошлась, но остаться в живых
-        assert!(matches!(result, FnResult::Ok(_)), "Узел должен вернуть FnResult(Point {{Status::Invalid}}) при мусорных входных данных: \nresult: {:?} \ntarget: FnResult::Ok(_)", result);
-        let result = result.unwrap().status();
+        assert!(matches!(result, FnResult::Ok(Some(_))), "Узел должен вернуть FnResult(Point {{Status::Invalid}}) при мусорных входных данных: \nresult: {:?} \ntarget: FnResult::Ok(_)", result);
+        let result = result.unwrap().unwrap().status();
         let target = Status::Invalid;
         assert!(result == result, "Узел должен вернуть FnResult(Point {{Status::Invalid}}) при мусорных входных данных: \nresult: {:?} \ntarget: {:?}", result, target);
     }
@@ -488,9 +492,10 @@ fn every_logic() {
 /// Вспомогательная функция для извлечения результата
 fn get_first_out_value(dbg: impl Display, node: Rc<RefCell<TaskEvalNode>>) -> Option<Value> {
     let node_name = node.borrow().name();
+    let flow = FlowContext::new();
     for out in node.borrow().get_outs() {
-        let point = out.borrow_mut().out();
-        if let FnResult::Ok(result) = point {
+        let point = flow.ignore(out.borrow_mut().out());
+        if let Ok(Some(result)) = point {
             log::debug!("{dbg} | node {} take {:?} from '{}'", node_name, result.to_string().as_string().value, out.borrow().id());
             return Some(result.value());
         }

@@ -3,15 +3,15 @@ use sal_core::error::Error;
 use sal_sync::services::{entity::{Point, PointHlr}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::{Edge, EdgeDetector, FnOutRef},
-    services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult, TryTo},
+    domain::{Edge, EdgeDetector, FnOutRef, TryTo},
+    services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
 /// ### Function | `FnRisingEdge`
 /// 
 /// Детектор положительного (переднего) фронта
 /// 
-/// - `input`: Последовательность `true -> false` - активирует выход на один такт
+/// - `input`: Последовательность `false -> true` - активирует выход на один такт
 #[derive(Debug)]
 pub struct FnRisingEdge {
     id: String,
@@ -23,8 +23,8 @@ pub struct FnRisingEdge {
 //
 impl FnRisingEdge {
     ///
-    /// Creates new instance of the FnRisingEdge
-    /// - `input`: `true` - активирует выход на один такт
+    /// Returns `FnRisingEdge` new instance
+    /// - `input`: Последовательность `false -> true` - активирует выход на один такт
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
         Self { 

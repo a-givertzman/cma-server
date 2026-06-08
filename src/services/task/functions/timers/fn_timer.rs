@@ -2,7 +2,7 @@ use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr};
 use concat_string::concat_string;
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
-use crate::{domain::{Edge, EdgeDetector, FnOutRef}, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult, TryTo}};
+use crate::{domain::{Edge, EdgeDetector, FnOutRef, TryTo}, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult}};
 ///
 /// Function | FnTimer
 /// 
