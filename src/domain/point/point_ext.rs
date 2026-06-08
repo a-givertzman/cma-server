@@ -99,3 +99,90 @@ impl Default for PointMeta {
         Self { status: Status::Ok, cot: Cot::Inf, ts: chrono::DateTime::<chrono::Utc>::MIN_UTC }
     }
 }
+///
+/// Halper `Value` to simplify the math operations
+#[derive(Debug, Clone, Copy)]
+pub enum Value {
+    Bool(bool),
+    Int(i64),
+    Real(f32),
+    Double(f64),
+}
+//
+impl Value {
+    pub fn is_nan(&self) -> bool {
+        match self {
+            Value::Bool(_) => false,
+            Value::Int(_) => false,
+            Value::Real(v) => v.is_nan(),
+            Value::Double(v) => v.is_nan(),
+        }
+    }
+    pub fn is_zero(&self) -> bool {
+        match self {
+            Value::Bool(v) => !v,
+            Value::Int(v) => *v == 0,
+            Value::Real(v) => *v == 0.0,
+            Value::Double(v) => *v == 0.0,
+        }
+    }
+}
+//
+impl std::ops::Sub for Value {
+    type Output = Result<Value, String>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self.is_nan() | rhs.is_nan() {
+            return Err(format!("Value.sub | Invalid input: `{:?} - {:?}`", self, rhs));
+        }
+        match (self, rhs) {
+            (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int(v1 as i64 - v2 as i64)),
+            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int(v1 as i64 - v2)),
+            (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 - v2)),
+            (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 - v2)),
+            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1 - v2 as i64)),
+            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1 - v2)),
+            (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 - v2)),
+            (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 - v2)),
+            (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 - (v2 as u8) as f32)),
+            (Value::Real(v1), Value::Int(v2)) => Ok(Value::Real(v1 - v2 as f32)),
+            (Value::Real(v1), Value::Real(v2)) => Ok(Value::Real(v1 - v2)),
+            (Value::Real(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 - v2)),
+            (Value::Double(v1), Value::Bool(v2)) => Ok(Value::Double(v1 - (v2 as u8) as f64)),
+            (Value::Double(v1), Value::Int(v2)) => Ok(Value::Double(v1 - v2 as f64)),
+            (Value::Double(v1), Value::Real(v2)) => Ok(Value::Double(v1 - v2 as f64)),
+            (Value::Double(v1), Value::Double(v2)) => Ok(Value::Double(v1 - v2)),
+        }
+    }
+}
+//
+impl std::ops::Div for Value {
+    type Output = Result<Value, String>;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        if rhs.is_zero() {
+            return Err(format!("Value.div | Divizion dy zero: `{:?} / {:?}`", self, rhs));
+        }
+        if self.is_nan() | rhs.is_nan() {
+            return Err(format!("Value.div | Invalid input: `{:?} / {:?}`", self, rhs));
+        }
+        match (self, rhs) {
+            (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int(v1 as i64 / v2 as i64)),
+            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int(v1 as i64 / v2)),
+            (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 / v2)),
+            (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 / v2)),
+            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1 / v2 as i64)),
+            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1 / v2)),
+            (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 / v2)),
+            (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 / v2)),
+            (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 / (v2 as u8) as f32)),
+            (Value::Real(v1), Value::Int(v2)) => Ok(Value::Real(v1 / v2 as f32)),
+            (Value::Real(v1), Value::Real(v2)) => Ok(Value::Real(v1 / v2)),
+            (Value::Real(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 / v2)),
+            (Value::Double(v1), Value::Bool(v2)) => Ok(Value::Double(v1 / (v2 as u8) as f64)),
+            (Value::Double(v1), Value::Int(v2)) => Ok(Value::Double(v1 / v2 as f64)),
+            (Value::Double(v1), Value::Real(v2)) => Ok(Value::Double(v1 / v2 as f64)),
+            (Value::Double(v1), Value::Double(v2)) => Ok(Value::Double(v1 / v2)),
+        }
+    }
+}

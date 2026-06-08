@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointTxId};
 use crate::{
-    domain::{FnOutRef, PointMeta},
+    domain::{FnOutRef, PointMeta, Value},
     services::task::{
         FlowContext, FnFlow, FnKind, FnOut, FnResult
     },
@@ -15,21 +15,21 @@ use crate::{
 /// 
 /// **Example**
 /// ```yaml
-/// fn Add:
+/// fn Sub:
 ///     input1: point int '/App/Service/Point.Name1'
 ///     input2: point int '/App/Service/Point.Name2'
-/// fn Add:
+/// fn Sub:
 ///     in1: point double '/App/Service/Point.Name1'
 ///     in2: point double '/App/Service/Point.Name2'
 /// ```
 #[derive(Debug)]
 pub struct FnSub {
     txid: usize,
-    id: String,
     kind: FnKind,
     input1: FnOutRef,
     input2: FnOutRef,
     inputs: [FnOutRef; 2],
+    id: String,
 }
 //
 // 
@@ -42,7 +42,7 @@ impl FnSub {
     pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Result<Self, Error> {
         let id = format!("{}/FnSub{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         let inputs: [FnOutRef; 2] = inputs.try_into()
-            .map_err(|err| Error::new(&id, "new").err("Two inputs must be specified"))?;
+            .map_err(|_| Error::new(&id, "new").err("Two inputs must be specified"))?;
         Ok(Self { 
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
@@ -122,52 +122,6 @@ impl FnOut for FnSub {
 ///
 /// Global static counter of FnSub instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
-///
-/// 
-#[derive(Debug, Clone, Copy)]
-enum Value {
-    Bool(bool),
-    Int(i64),
-    Real(f32),
-    Double(f64),
-}
-impl Value {
-    pub fn is_nan(&self) -> bool {
-        match self {
-            Value::Bool(_) => false,
-            Value::Int(_) => false,
-            Value::Real(v) => v.is_nan(),
-            Value::Double(v) => v.is_nan(),
-        }
-    }
-}
-impl std::ops::Sub for Value {
-    type Output = Result<Value, String>;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        if self.is_nan() | rhs.is_nan() {
-            return Err(format!("Value.sub | Invalid input `{:?} - {:?}`", self, rhs));
-        }
-        match (self, rhs) {
-            (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int(v1 as i64 - v2 as i64)),
-            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int(v1 as i64 - v2)),
-            (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 - v2)),
-            (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 - v2)),
-            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1 - v2 as i64)),
-            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1 - v2)),
-            (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 - v2)),
-            (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 - v2)),
-            (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 - (v2 as u8) as f32)),
-            (Value::Real(v1), Value::Int(v2)) => Ok(Value::Real(v1 - v2 as f32)),
-            (Value::Real(v1), Value::Real(v2)) => Ok(Value::Real(v1 - v2)),
-            (Value::Real(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 - v2)),
-            (Value::Double(v1), Value::Bool(v2)) => Ok(Value::Double(v1 - (v2 as u8) as f64)),
-            (Value::Double(v1), Value::Int(v2)) => Ok(Value::Double(v1 - v2 as f64)),
-            (Value::Double(v1), Value::Real(v2)) => Ok(Value::Double(v1 - v2 as f64)),
-            (Value::Double(v1), Value::Double(v2)) => Ok(Value::Double(v1 - v2)),
-        }
-    }
-}
 ///
 /// Basic Tests
 #[cfg(test)]

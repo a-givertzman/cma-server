@@ -494,16 +494,14 @@ impl FnBuilder {
                     }
                     //
                     Functions::Div => {
-                        let name = "input1";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnDiv | Can't get '{name}'"), err))?;
-                        let name = "input2";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services)
-                            .map_err(|err| error.pass_with(format!("FnDiv | Can't get '{name}'"), err))?;
+                        let mut inputs = vec![];
+                        for (name, input_conf) in &mut conf.inputs {
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
+                            inputs.push(input);
+                        }
                         Ok(Rc::new(RefCell::new(
-                            FnDiv::new(parent, input1, input2)
+                            FnDiv::new(parent, inputs).map_err(|err| error.pass(err))?
                         )))
                     }
                     //
