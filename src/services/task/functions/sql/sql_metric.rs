@@ -1,106 +1,96 @@
 use sal_core::error::Error;
-use sal_sync::services::{entity::{Name, Point, PointHlr, PointTxId, ToPoint}, Services, task::functions::FnConfig};
-use std::{collections::HashMap, sync::{atomic::{AtomicUsize, Ordering}, Arc}};
-use indexmap::IndexMap;
+use sal_sync::{collections::FxIndexMap, services::{Services, entity::{Name, Point, PointHlr}, task::functions::FnConfig}};
+use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
     domain::{
-        format::FormatPoint,
-        FnOutRef,
+        FnOutRef, PointMeta, format::{FormatPoint, Sufix}
     },
     services::task::{
-        task_nodes::TaskNodes,
-        functions::{FnOut, FnBuilder, FnKind, FnResult},
+        FlowContext, FnFlow, functions::{FnBuilder, FnKind, FnOut, FnResult}, task_nodes::TaskNodes
     }
 };
 ///
-/// Function | SqlMetric, builds sql replacing {xyz} with the values from coresponding inputs 
-///     - values received from the [input]s puts into the target sql query
-///     - sql query bulit by replacing markers with current values:
-///         - table = 'point_values'
-///         - input1.name = 'test-point'
-///         - input1.value = 123.456
-///         - inpur1.timestamp = '20'
-///         - input1.status = 
-///         - "UPDATE {table} SET kind = '{input1}' WHERE id = '{input2}';"    =>  UPDATE table SET kind = input1 WHERE id = '{input2}';
+/// ### Function | SqlMetric
 /// 
-/// Example
+/// Строит SQL-запрос, подставляя актуальные значения входов вместо маркеров {xyz}.
+///
+/// Является чистой функцией (Stateless), не хранит внутренний кэш и пересобирает строку при каждом такте.
 /// 
+/// **Example 1**
+/// - `input1.value = 'Valid'`
+/// - `input2.value = 10`
+/// - `inpur1.timestamp = '20'`
+/// - `input1.status = Ok`
+/// "UPDATE table SET kind = '{input1}' WHERE id = '{input2}';"    =>  UPDATE table SET kind = 'Valid' WHERE id = '10';
+/// 
+/// **Example 2**
 /// ```yaml
 /// fn SqlMetric:
-///     initial: 0.123      # начальное значение
-///     table: SelectMetric_test_table_name
-///     sql: "UPDATE {table} SET value = '{input1}' WHERE id = '{input2}';"
+///     sql: "UPDATE table_name SET value = '{input1}' WHERE id = '{input2}';"
 ///     input1: point int '/path/Point.Name'
 ///     input2: const int 11
-///     ...
 /// ```
 #[derive(Debug)]
 pub struct SqlMetric {
-    id: String,
+    txid: usize,
     name: Name,
-    tx_id: usize,
     kind: FnKind,
-    inputs: IndexMap<String, FnOutRef>,
-    // initial: f64,
-    // table: String,
+    /// `Map<marker, (input, name, sufix)>`
+    inputs: FxIndexMap<String, (FnOutRef, String, Sufix)>,
     sql: FormatPoint,
-    sql_names: HashMap<String, (String, Option<String>)>,
+    id: String,
 }
 //
 // 
 impl SqlMetric {
-    //
-    //
-    pub fn new(parent: impl Into<String>, conf: &mut FnConfig, task_nodes: &mut TaskNodes, services: Arc<Services>) -> Result<SqlMetric, Error> {
+    ///
+    /// Returns `SqlMetric` new instance
+    /// - `parent`: Идентификатор родительского узла
+    /// - `inputs`: Вектор входных сигналов, должен содержать не менее одного входа
+    /// - `nodes`: Граф `TaskNodes`
+    /// - `services`: Ссылка на контейнер всех сервисов
+    pub fn new(parent: impl Into<String>, conf: &mut FnConfig, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<SqlMetric, Error> {
         let self_name = Name::new(parent, format!("SqlMetric{}", COUNT.fetch_add(1, Ordering::Relaxed)));
-        let self_id = self_name.join();
-        let tx_id = PointTxId::from_str(&self_name.join());
-        let mut inputs = IndexMap::new();
-        let input_confs = conf.inputs.clone();
-        let input_conf_names = input_confs.keys().filter(|v| {
-            let delete = matches!(v.as_str(), "initial" | "table" | "sql");
-            !delete
-        });
-        for name in input_conf_names {
-            log::trace!("{}.new | input name: {:?}", self_id, name);
-            let input_conf = conf.input_conf(name).unwrap();
+        let id = self_name.join();
+        let error = Error::new(&id, "new");
+        let txid = nodes.txid();
+        let sql = conf.param("sql")
+            .ok_or_else(|| error.err(format!("Can't find 'sql'")))?
+            .as_param();
+        let sql = sql.conf.as_str()
+            .ok_or_else(|| error.err(format!("Wrong conf in 'sql': {:?}", sql.conf)))?;
+        let sql = FormatPoint::new(sql).map_err(|err| error.pass(err))?;
+        let markers = sql.markers();
+        let mut inputs = FxIndexMap::default();
+        for (marker, (name, sufix)) in markers {
+            log::trace!("{}.new | input name: {:?}", id, name);
+            let input_conf = conf.input_conf(&name).unwrap();
             inputs.insert(
-                name.to_owned(), 
-                FnBuilder::new(&self_name, tx_id, input_conf, task_nodes, services.clone())
-                    .map_err(|err| Error::new(&self_id, "new").pass_with(format!("Can't build input '{name}'"), err))?,
+                marker, 
+                (
+                    FnBuilder::new(&self_name, input_conf, nodes, services.clone())
+                        .map_err(|err| error.pass_with(format!("Can't build input '{name}'"), err))?,
+                    name,
+                    sufix,
+                )
             );
         }
-        let id = conf.name.clone();
-        // let initial = conf.param("initial").name.parse().unwrap();
-        let table = conf.param("table").unwrap_or_else(||
-            panic!("{}.new | Parameter 'table' - missed", self_id)
-        ).as_param();
-        let table = table.conf.as_str().unwrap();
-        let sql = conf.param("sql").unwrap_or_else(||
-            panic!("{}.new | Parameter 'sql' - missed", self_id)
-        ).as_param();
-        let sql = sql.conf.as_str().unwrap();
-        let mut sql = FormatPoint::new(&sql);
-        sql.insert("id", id.clone().to_point(tx_id, ""));
-        sql.insert("table", table.to_point(tx_id, ""));
-        sql.prepare();
-        let mut sql_names = sql.names();
-        sql_names.remove("initial");
-        sql_names.remove("table");
-        sql_names.remove("sql");
-        sql_names.remove("id");
         Ok(SqlMetric {
-            id: self_id,
+            txid,
             name: self_name,
-            tx_id,
             kind: FnKind::Fn,
             inputs,
             sql,
-            sql_names,
+            id,
         })
     }
+    ///
+    /// Возвращает `PointHlr` с обновленными `txid`, `name` и `value`
+    #[inline]
+    fn point_with<T>(txid: usize, meta: &PointMeta, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)
+    }
 }
-//
 // 
 impl FnOut for SqlMetric {
     //
@@ -114,43 +104,32 @@ impl FnOut for SqlMetric {
     //
     fn inputs(&self) -> Vec<String> {
         let mut inputs = vec![];
-        for (_, input) in &self.inputs {
+        for (_, (input, _, _)) in &self.inputs {
             inputs.extend(input.borrow().inputs());
         }
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
-        let self_id = self.id.clone();
-        for (full_name, (name, sufix)) in &self.sql_names {
-            log::trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
-            match self.inputs.get(name) {
-                Some(input) => {
-                    log::trace!("{}.out | input: {:?} - found", self_id, name);
-                    let input = input.borrow_mut().out();
-                    match input {
-                        FnResult::Ok(input) => {
-                            self.sql.insert(full_name, input);
-                        }
-                        FnResult::None => return FnResult::None,
-                        FnResult::Err(err) => return FnResult::Err(err),
-                    }
-                }
-                None => {
-                    panic!("{}.out | input: {:?} - not found", self_id, name);
-                }
-            };
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let inputs: FxIndexMap<&String, (FnResult<FnFlow, String>, &String, &Sufix)> = self.inputs.iter().map(|(marker, (input, name, sufix))| {
+            (marker, (input.borrow_mut().out(), name, sufix))
+        }).collect();
+        let mut flow = FlowContext::new();
+        let mut meta = PointMeta::default();
+        for (marker, (input, name, _sufix)) in inputs {
+            // log::trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
+            log::trace!("{}.out | input: {:?} - found", self.id, name);
+            let Some(input) = flow.map(input)? else { return Ok(None) };
+            meta = meta.update_latest(&input).update_status(&input);
+            self.sql.insert(marker, input);
         }
-        log::trace!("{}.out | sql: {:?}", self_id, self.sql.out());
-        FnResult::Ok(Point::String(PointHlr::new_string(
-            self.tx_id,
-            &self.name.join(), 
-            self.sql.out(),
-        )))
+        let value = self.sql.out();
+        log::trace!("{}.out | sql: {:?}", self.id, self.sql.out());
+        flow.wrap(Point::String(Self::point_with(self.txid, &meta, &self.id, value)))
     }
     //
     fn reset(&mut self) {
-        for (_, input) in &self.inputs {
+        for (_, (input, _, _)) in &self.inputs {
             input.borrow_mut().reset();
         }
     }

@@ -309,7 +309,7 @@ impl FnVaFft {
                 let conf = conf.as_param().conf.as_str().unwrap().to_owned();
                 log::debug!("{dbg}.new | format: {conf}");
                 let format = FormatPoint::new(&conf);
-                let format_key = format.names().into_iter().enumerate().fold(String::new(), |prev, (i, (_, (name, _)))| {
+                let format_key = format.markers().into_iter().enumerate().fold(String::new(), |prev, (i, (_, (name, _)))| {
                     if (i > 0) & (prev != name) {
                         panic!("{dbg}.new | format '{conf}' has diferent inputs: '{prev}' and '{name}', but must have single");
                     }
@@ -377,7 +377,7 @@ impl FnVaFft {
                                     let point = match &mut self.format {
                                         Some(format) => {
                                             // log::debug!("{}.out | fft.process format.names: {:#?}", self.id, format.names());
-                                            for (key, _) in format.names() {
+                                            for (key, _) in format.markers() {
                                                 format.insert(&key, point.clone());
                                             }
                                             Point::String(PointHlr::new(

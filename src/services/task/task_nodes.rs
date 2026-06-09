@@ -41,13 +41,14 @@ pub struct TaskNodes {
     cycle: EvalCycleRef,
     /// Enable Strategy: Cold Standby / Warm Standby (TODO: read from config)
     enable_mode: FnEnableMode,
+    txid: usize,
 }
 //
 // 
 impl TaskNodes {
     ///
     /// Creates new empty instance 
-    pub fn new(parent: impl Into<String>) ->Self {
+    pub fn new(parent: impl Into<String>, txid: usize) ->Self {
         Self {
             dbg: format!("{}/TaskNodes", parent.into()),
             nodes: IndexMap::new(),
@@ -55,12 +56,18 @@ impl TaskNodes {
             new_node_vars: None,
             cycle: Rc::new(EvalCycle::new()),
             enable_mode: FnEnableMode::Cold,
+            txid,
         }
     }
     ///
     /// Returns Enable Strategy: Cold Standby / Warm Standby
     pub fn enable_mode(&self) -> FnEnableMode {
         self.enable_mode
+    }
+    ///
+    /// Returns `txid` of the parent `Task`
+    pub fn txid(&self) -> usize {
+        self.txid
     }
     ///
     /// ### Shared calculation cycle

@@ -38,7 +38,7 @@ fn manual_eval() {
     let dbg = "manual_eval";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg);
+    let mut task_nodes = TaskNodes::new(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -183,7 +183,7 @@ fn eval() {
     let dbg = "eval";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg);
+    let mut task_nodes = TaskNodes::new(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -325,7 +325,7 @@ fn test_state_retention() {
     let dbg = "state_retention";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg);
+    let mut task_nodes = TaskNodes::new(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -388,7 +388,7 @@ fn poisoned_data() {
     init_once();
     let dbg = "poisoned_data";
     let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::new_root(serde_yaml::from_str("retain:").unwrap())), None));
-    let mut task_nodes = TaskNodes::new(dbg);
+    let mut task_nodes = TaskNodes::new(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -433,7 +433,7 @@ fn every_logic() {
     let dbg = "every_logic";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg);
+    let mut task_nodes = TaskNodes::new(dbg, 0);
     let conf_yaml = serde_yaml::from_str(r#"
         service Task TaskEveryTest:
             cycle: 1 us

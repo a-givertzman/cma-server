@@ -150,7 +150,7 @@ impl Service for Task {
         let conf_cycle = conf.cycle;
         let services = self.services.clone();
         let task_nodes = {
-            let mut task_nodes = TaskNodes::new(&dbg);
+            let mut task_nodes = TaskNodes::new(&dbg, PointTxId::from_str(&self_name.join()));
             task_nodes.build_nodes(&self_name, &conf, services.clone())
                 .map_err(|err| Error::new(&dbg, "run").pass(err))?;
             SendWrapper::wrap(task_nodes)

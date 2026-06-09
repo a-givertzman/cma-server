@@ -5,7 +5,7 @@ mod tests {
     use sal_sync::services::entity::ToPoint;
     use std::sync::Once;
     use regex::RegexBuilder;
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::domain::format::FormatPoint;
     ///
     ///

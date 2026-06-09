@@ -2361,9 +2361,7 @@ service Task HistoryTask:
     fn ToApiQueue:
         queue: /App/ApiClient.in-queue
         input fn SqlMetric:
-            initial: 0.123      # начальное значение
-            table: public.event
-            sql: "insert into {table} (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
+            sql: "insert into public.event (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
             input1 fn ToInt:
                 input: point any every      # point: every point of any type
             input2 fn PointId:
