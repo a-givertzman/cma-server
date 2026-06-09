@@ -15,7 +15,6 @@ use crate::{
 /// деление выполняется с отсечением дробной части (например, `5 / 2 = 2`). 
 /// Для получения результата с плавающей точкой (например, `2.5`), хотя бы один 
 /// из источников должен быть приведен к типу `Real` или `Double`.
-
 /// 
 /// **Example**
 /// ```yaml
@@ -108,7 +107,7 @@ impl FnOut for FnDiv {
             Point::Double(p) => Value::Double(p.value),
             _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.type_().to_string(), "'")),
         };
-        let value = (v1 / v2).map_err(|_| format!("{}.out | Can't substruct {:?} - {:?}", self.id, v1, v2))?;
+        let value = (v1 / v2).map_err(|_| format!("{}.out | Can't div {:?} / {:?}", self.id, v1, v2))?;
         match value {
             Value::Bool(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value as i64))),
             Value::Int(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value))),

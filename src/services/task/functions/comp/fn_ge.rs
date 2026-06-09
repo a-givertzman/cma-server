@@ -3,11 +3,22 @@ use sal_sync::services::{entity::{Cot, {Point, PointHlr}}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     domain::FnOutRef,
-    services::task::{
-        FnOut, FnKind, FnResult,
-    },
+    services::task::{FnOut, FnKind, FnResult},
 };
 ///
+/// ### Function | `FnPow`
+/// 
+/// Выполняет операцию вычисления математической степени `v1 ^ v2` над входящими точками данных.
+/// Динамически повышает тип данных до наиболее точного.
+/// 
+/// **Example**
+/// ```yaml
+/// fn Pow:
+///     input1: point int '/App/Service/Point.Name1'
+///     input2: point int '/App/Service/Point.Name2'
+/// fn Pow:
+///     in1: point double '/App/Service/Point.Name1'
+///     in2: point double '/App/Service/Point.Name2'
 /// Function | Greater than or equal to
 /// FnGe ( input1, input2 ) === input1.value >= input2.value
 #[derive(Debug)]
