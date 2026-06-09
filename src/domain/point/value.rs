@@ -1,11 +1,31 @@
 ///
 /// Helper `Value` to simplify the math operations
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub enum Value {
     Bool(bool),
     Int(i64),
     Real(f32),
     Double(f64),
+}
+//
+impl TryFrom<sal_sync::services::entity::Point> for Value {
+    type Error = sal_core::error::Error;
+    fn try_from(p: sal_sync::services::entity::Point) -> Result<Self, Self::Error> {
+        TryFrom::<&sal_sync::services::entity::Point>::try_from(&p)
+    }
+}
+//
+impl TryFrom<&sal_sync::services::entity::Point> for Value {
+    type Error = sal_core::error::Error;
+    fn try_from(p: &sal_sync::services::entity::Point) -> Result<Self, Self::Error> {
+        match p {
+            sal_sync::services::entity::Point::Bool(p) => Ok(Self::Bool(p.value.0)),
+            sal_sync::services::entity::Point::Int(p) => Ok(Self::Int(p.value)),
+            sal_sync::services::entity::Point::Real(p) => Ok(Self::Real(p.value)),
+            sal_sync::services::entity::Point::Double(p) => Ok(Self::Double(p.value)),
+            _ => return Err(Self::Error::new("Value", "try_from").err(concat_string::concat_string!("Invalid type '", p.type_().to_string(), "'"))),
+        }
+    }
 }
 //
 impl Value {
@@ -85,6 +105,65 @@ impl Value {
             (Value::Double(v1), Value::Real(v2)) => Ok(Value::Double(v1.powf(v2 as f64))),
             (Value::Double(v1), Value::Double(v2)) => Ok(Value::Double(v1.powf(v2))),
         }
+    }
+}
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Bool(v1), Value::Bool(v2)) => v1 == v2,
+            (Value::Bool(_), _) => false,
+            (_, Value::Bool(_)) => false,
+            (Value::Int(v1), Value::Int(v2)) => v1 == v2,
+            (Value::Int(v1), Value::Real(v2)) => eq_i64_f64(*v1, *v2 as f64),
+            (Value::Int(v1), Value::Double(v2)) => eq_i64_f64(*v1, *v2),
+            (Value::Real(v1), Value::Int(v2)) => eq_i64_f64(*v2, *v1 as f64),
+            (Value::Real(v1), Value::Real(v2)) => v1 == v2,
+            (Value::Real(v1), Value::Double(v2)) => (*v1 as f64) == *v2,
+            (Value::Double(v1), Value::Int(v2)) => eq_i64_f64(*v2, *v1),
+            (Value::Double(v1), Value::Real(v2)) => *v1 == (*v2 as f64),
+            (Value::Double(v1), Value::Double(v2)) => v1 == v2,
+        }
+    }
+}
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Value::Bool(v1), Value::Bool(v2)) => v1.partial_cmp(v2),
+            (Value::Bool(_), _) => None,
+            (_, Value::Bool(_)) => None,
+            (Value::Int(v1), Value::Int(v2)) => v1.partial_cmp(v2),
+            (Value::Int(v1), Value::Real(v2)) => cmp_i64_f64(*v1, *v2 as f64),
+            (Value::Int(v1), Value::Double(v2)) => cmp_i64_f64(*v1, *v2),
+            (Value::Real(v1), Value::Int(v2)) => cmp_i64_f64(*v2, *v1 as f64).map(|o| o.reverse()),
+            (Value::Real(v1), Value::Real(v2)) => v1.partial_cmp(v2),
+            (Value::Real(v1), Value::Double(v2)) => (*v1 as f64).partial_cmp(v2),
+            (Value::Double(v1), Value::Int(v2)) => cmp_i64_f64(*v2, *v1).map(|o| o.reverse()),
+            (Value::Double(v1), Value::Real(v2)) => v1.partial_cmp(&(*v2 as f64)),
+            (Value::Double(v1), Value::Double(v2)) => v1.partial_cmp(v2),
+        }
+    }
+}
+/// Вспомогательное строгое сравнение целого i64 и вещественного f64 без потери точности мантиссы.
+fn eq_i64_f64(i: i64, f: f64) -> bool {
+    if f >= -9223372036854775808.0 && f < 9223372036854775808.0 {
+        f as i64 == i && (i as f64 == f)
+    } else {
+        false
+    }
+}
+/// Вспомогательное упорядочивание целого i64 и вещественного f64 с защитой от усечения разрядов.
+fn cmp_i64_f64(i: i64, f: f64) -> Option<std::cmp::Ordering> {
+    if f.is_nan() {
+        return None;
+    }
+    if f >= -9223372036854775808.0 && f < 9223372036854775808.0 {
+        let f_int = f as i64;
+        match i.cmp(&f_int) {
+            std::cmp::Ordering::Equal => (i as f64).partial_cmp(&f),
+            ord => Some(ord),
+        }
+    } else {
+        (i as f64).partial_cmp(&f)
     }
 }
 //
@@ -203,6 +282,42 @@ impl std::ops::Mul for Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn test_cross_type_equality() {
+        assert_eq!(Value::Int(42), Value::Double(42.0));
+        assert_eq!(Value::Real(10.5), Value::Double(10.5));
+        assert_ne!(Value::Int(42), Value::Bool(true));
+    }
+    #[test]
+    fn test_cross_type_ordering() {
+        assert!(Value::Double(10.5) > Value::Int(5));
+        assert!(Value::Int(-10) < Value::Real(0.0));
+        assert_eq!(Value::Bool(true).partial_cmp(&Value::Int(10)), None);
+    }
+    #[test]
+    fn test_nan_comparison_safety() {
+        let nan_val = Value::Double(f64::NAN);
+        let num_val = Value::Int(10);
+        assert_ne!(nan_val, num_val);
+        assert_eq!(nan_val.partial_cmp(&num_val), None);
+    }
+    #[test]
+    fn test_cross_type_strict_equality() {
+        assert!(Value::Int(1) != Value::Bool(true));
+        assert!(Value::Int(0) != Value::Bool(false));
+        assert!(Value::Real(1.0) != Value::Bool(true));
+        assert_eq!(Value::Int(42), Value::Real(42.0));
+        assert_eq!(Value::Int(100), Value::Double(100.0));
+        assert_ne!(Value::Int(100), Value::Real(100.05));
+    }
+    #[test]
+    fn test_large_values_safety() {
+        assert_eq!(Value::Int(150_000), Value::Real(150_000.0));
+        assert_ne!(Value::Int(16_777_217), Value::Real(16_777_216.0));
+        assert_ne!(Value::Int(16_777_217), Value::Double(16_777_216.0));
+        assert_ne!(Value::Real(16_777_216.0), Value::Int(16_777_217));
+        assert_ne!(Value::Double(16_777_216.0), Value::Int(16_777_217));
+    }
     #[test]
     fn test_is_zero_with_negative_floats() {
         let val1 = Value::Double(-5.5);

@@ -1,36 +1,57 @@
-use concat_string::concat_string;
-use sal_sync::services::{entity::{Cot, {Point, PointHlr}}, types::Bool};
+use sal_core::error::Error;
+use sal_sync::services::{entity::{Point, PointHlr, PointTxId}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::FnOutRef,
-    services::task::{
-        FnOut, FnKind, FnResult,
-    },
+    domain::{FnOutRef, PointMeta, Value},
+    services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
-/// Function | Less than or equal to
-/// FnLe ( input1, input2 ) === input1.value <= input2.value
+/// ### Function | `FnLe`
+/// 
+/// Выполняет операцию логического сравнения LE (Less or Equal) `v1 <= v2`
+/// Динамически приводит типы данных.
+/// 
+/// **Example**
+/// ```yaml
+/// fn Le:
+///     input1: point int '/App/Service/Point.Name1'
+///     input2: point int '/App/Service/Point.Name2'
+/// fn Le:
+///     in1: point double '/App/Service/Point.Name1'
+///     in2: point double '/App/Service/Point.Name2'
+/// ```
 #[derive(Debug)]
 pub struct FnLe {
-    id: String,
+    txid: usize,
     kind: FnKind,
-    input1: FnOutRef,
-    input2: FnOutRef,
+    inputs: [FnOutRef; 2],
+    id: String,
 }
 //
-// 
 impl FnLe {
+    ///
+    /// Returns `FnLe` new instance
+    /// - `parent` - Идентификатор родительского узла
+    /// - `inputs` - Вектор входных сигналов, должен содержать два входа
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input1: FnOutRef, input2: FnOutRef) -> Self {
-        Self { 
-            id: format!("{}/FnLe{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
+    pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Result<Self, Error> {
+        let id = format!("{}/FnLe{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+        let inputs: [FnOutRef; 2] = inputs.try_into()
+            .map_err(|_| Error::new(&id, "new").err("Two inputs must be specified"))?;
+        Ok(Self {
+            txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
-            input1,
-            input2,
-        }
+            inputs,
+            id,
+        })
+    }
+    ///
+    /// Возвращает `PointHlr` с обновленными `txid`, `name` и `value`
+    #[inline]
+    fn point_with<T>(txid: usize, meta: &PointMeta, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)
     }
 }
-//
 //
 impl FnOut for FnLe {
     //
@@ -43,60 +64,112 @@ impl FnOut for FnLe {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = self.input1.borrow().inputs();
-        inputs.extend(self.input2.borrow().inputs());
+        let mut inputs = vec![];
+        for input in &self.inputs {
+            inputs.append(&mut input.borrow().inputs());
+        }
         inputs
     }
     //
-    //
     fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut inputs: Vec<FnResult<FnFlow, String>> = self.inputs.iter().map(|input| {
+            input.borrow_mut().out()
+        }).collect();
+        let mut meta = PointMeta::default();
         let mut flow = FlowContext::new();
-        let input1 = self.input1.borrow_mut().out();     
-        let input2 = self.input2.borrow_mut().out();    
-        log::trace!("{}.out | input1: {:?}", self.id, &input1);
-        log::trace!("{}.out | input2: {:?}", self.id, &input2);
-        match (input1, input2) {
-            (FnResult::Ok(input1), FnResult::Ok(input2)) => {
-                let value = input1.value() <= input2.value();
-                log::trace!("{}.out | value: {:?}", self.id, &value);
-                let status = match input1.status().cmp(&input2.status()) {
-                    std::cmp::Ordering::Less => input2.status(),
-                    std::cmp::Ordering::Equal => input1.status(),
-                    std::cmp::Ordering::Greater => input1.status(),
-                };
-                let (tx_id, timestamp) = match input1.timestamp().cmp(&input2.timestamp()) {
-                    std::cmp::Ordering::Less => (input2.txid(), input2.timestamp()),
-                    std::cmp::Ordering::Equal => (input1.txid(), input1.timestamp()),
-                    std::cmp::Ordering::Greater => (input1.txid(), input1.timestamp()),
-                };
-                FnResult::Ok(Point::Bool(
-                    PointHlr::new(
-                        tx_id,
-                        &format!("{}.out", self.id),
-                        Bool(value),
-                        status,
-                        Cot::Inf,
-                        timestamp,
-                    )
-                ))
-            }
-            (FnResult::Ok(_), FnResult::None) => FnResult::None,
-            (FnResult::None, FnResult::Ok(_)) => FnResult::None,
-            (FnResult::None, FnResult::None) => FnResult::None,
-            (FnResult::Ok(_), FnResult::Err(err)) => FnResult::Err(err),
-            (FnResult::None, FnResult::Err(err)) => FnResult::Err(err),
-            (FnResult::Err(err), FnResult::Ok(_)) => FnResult::Err(err),
-            (FnResult::Err(err), FnResult::None) => FnResult::Err(err),
-            (FnResult::Err(err1), FnResult::Err(err2)) => FnResult::Err(concat_string!(err1, "\n", err2)),
-        }
+        let (input1, input2) = (inputs.remove(0), inputs.remove(0));
+        let Some(input) = flow.map(input1)? else { return Ok(None) };
+        meta = meta.update_latest(&input).update_status(&input);
+        let v1: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
+        let Some(input) = flow.map(input2)? else { return Ok(None) };
+        meta = meta.update_latest(&input).update_status(&input);
+        let v2: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
+        let value = v1 <= v2;
+        flow.wrap(Point::Bool(Self::point_with(self.txid, &meta, &self.id, Bool(value))))
     }
     //
-    //
     fn reset(&mut self) {
-        self.input1.borrow_mut().reset();
-        self.input2.borrow_mut().reset();
+        for input in &self.inputs {
+            input.borrow_mut().reset();
+        }
     }
 }
 ///
 /// Global static counter of FnLe instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
+/// Basic Tests
+#[cfg(test)]
+mod tests {
+    use sal_sync::services::entity::{Cot, Status};
+
+use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    #[derive(Debug)]
+    struct MockInput {
+        result: FnResult<FnFlow, String>,
+        inputs_called: usize,
+    }
+    impl FnOut for MockInput {
+        fn id(&self) -> String { "mock".to_string() }
+        fn kind(&self) -> FnKind { FnKind::Fn }
+        fn inputs(&self) -> Vec<String> { vec!["mock_point".to_string()] }
+        fn out(&mut self) -> FnResult<FnFlow, String> {
+            self.inputs_called += 1;
+            self.result.clone()
+        }
+        fn reset(&mut self) {}
+    }
+    fn create_mock(flow: FnFlow) -> FnOutRef {
+        Rc::new(RefCell::new(MockInput { result: Ok(Some(flow)), inputs_called: 0 }))
+    }
+    fn create_none_mock() -> FnOutRef {
+        Rc::new(RefCell::new(MockInput { result: Ok(None), inputs_called: 0 }))
+    }
+    #[test]
+    fn test_le_both_new_true() {
+        let ts = chrono::Utc::now();
+        let p1 = Point::Double(PointHlr::new(1, "p1", 10.5, Status::Ok, Cot::Inf, ts));
+        let p2 = Point::Double(PointHlr::new(1, "p2", 5.5, Status::Ok, Cot::Inf, ts));
+        let in1 = create_mock(FnFlow::New(p1));
+        let in2 = create_mock(FnFlow::New(p2));
+        let mut le = FnLe::new("test", vec![in1, in2]).unwrap();
+        let res = le.out().unwrap();
+        assert!(matches!(res, Some(FnFlow::New(_))));
+        assert_eq!(res.unwrap().into_value().to_bool().as_bool().value.0, false);
+    }
+    #[test]
+    fn test_le_both_old_optimization() {
+        let ts = chrono::Utc::now();
+        let p1 = Point::Double(PointHlr::new(1, "p1", 5.5, Status::Ok, Cot::Inf, ts));
+        let p2 = Point::Double(PointHlr::new(1, "p2", 5.5, Status::Ok, Cot::Inf, ts));
+        let in1 = create_mock(FnFlow::Old(p1));
+        let in2 = create_mock(FnFlow::Old(p2));
+        let mut le = FnLe::new("test", vec![in1, in2]).unwrap();
+        let res = le.out().unwrap();
+        assert!(matches!(res, Some(FnFlow::Old(_))));
+        assert_eq!(res.unwrap().into_value().to_bool().as_bool().value.0, true);
+    }
+    #[test]
+    fn test_le_one_new_triggers_recalculation() {
+        let ts = chrono::Utc::now();
+        let p1 = Point::Double(PointHlr::new(1, "p1", 3.0, Status::Ok, Cot::Inf, ts));
+        let p2 = Point::Double(PointHlr::new(1, "p2", 4.0, Status::Ok, Cot::Inf, ts));
+        let in1 = create_mock(FnFlow::New(p1));
+        let in2 = create_mock(FnFlow::Old(p2));
+        let mut le = FnLe::new("test", vec![in1, in2]).unwrap();
+        let res = le.out().unwrap();
+        assert!(matches!(res, Some(FnFlow::New(_))));
+    }
+    #[test]
+    fn test_le_none_short_circuit_propagation() {
+        let ts = chrono::Utc::now();
+        let p1 = Point::Double(PointHlr::new(1, "p1", 3.0, Status::Ok, Cot::Inf, ts));
+        let in1 = create_mock(FnFlow::New(p1));
+        let in2 = create_none_mock();
+        let mut le = FnLe::new("test", vec![in1, in2]).unwrap();
+        let res = le.out().unwrap();
+        assert!(res.is_none());
+    }
+}
