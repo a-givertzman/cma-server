@@ -1,5 +1,5 @@
 mod fn_bit_and;
-mod fn_bit_or;
+mod fn_or;
 mod fn_bit_xor;
 mod fn_not;
 mod fn_add;
@@ -9,7 +9,7 @@ mod fn_div;
 mod fn_pow;
 
 pub use fn_bit_and::*;
-pub use fn_bit_or::*;
+pub use fn_or::*;
 pub use fn_bit_xor::*;
 pub use fn_not::*;
 pub use fn_add::*;

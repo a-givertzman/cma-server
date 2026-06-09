@@ -12,7 +12,7 @@ use crate::{
 
 };
 ///
-/// Function | Returns bitwise OR of all inputs
+/// Function | `FnOr`
 /// 
 /// Example
 /// 
@@ -26,9 +26,9 @@ use crate::{
 /// ```
 #[derive(Debug)]
 pub struct FnBitOr {
-    id: String,
     kind: FnKind,
     inputs: Vec<FnOutRef>,
+    id: String,
 }
 //
 // 
@@ -37,10 +37,11 @@ impl FnBitOr {
     /// Creates new instance of the FnBitOr
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Self {
+        let id = format!("{}/FnBitOr{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self { 
-            id: format!("{}/FnBitOr{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
             inputs,
+            id,
         }
     }
 }

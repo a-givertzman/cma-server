@@ -163,7 +163,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
                             let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnAdd | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnGt | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -175,7 +175,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
                             let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnAdd | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnGe | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -184,16 +184,14 @@ impl FnBuilder {
                     }
                     //
                     Functions::Eq => {
-                        let name = "input1";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnEq | Can't get '{name}'"), err))?;
-                        let name = "input2";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services)
-                            .map_err(|err| error.pass_with(format!("FnEq | Can't get '{name}'"), err))?;
+                        let mut inputs = vec![];
+                        for (name, input_conf) in &mut conf.inputs {
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnEq | Can't get '{name}'"), err))?;
+                            inputs.push(input);
+                        }
                         Ok(Rc::new(RefCell::new(
-                            FnEq::new(parent, input1, input2)
+                            FnEq::new(parent, inputs).map_err(|err| error.pass(err))?
                         )))
                     }
                     //
@@ -201,7 +199,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
                             let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnAdd | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnLe | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -213,7 +211,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &mut conf.inputs {
                             let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnAdd | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnLt | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -222,16 +220,14 @@ impl FnBuilder {
                     }
                     //
                     Functions::Ne => {
-                        let name = "input1";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input1 = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnNe | Can't get '{name}'"), err))?;
-                        let name = "input2";
-                        let input_conf = conf.input_conf(name).unwrap();
-                        let input2 = Self::function(parent, txid, name, input_conf, task_nodes, services)
-                            .map_err(|err| error.pass_with(format!("FnNe | Can't get '{name}'"), err))?;
+                        let mut inputs = vec![];
+                        for (name, input_conf) in &mut conf.inputs {
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnNe | Can't get '{name}'"), err))?;
+                            inputs.push(input);
+                        }
                         Ok(Rc::new(RefCell::new(
-                            FnNe::new(parent, input1, input2)
+                            FnNe::new(parent, inputs).map_err(|err| error.pass(err))?
                         )))
                     }
                     //

@@ -22,6 +22,7 @@ pub enum Functions {
     Le,
     Lt,
     Ne,
+    Or,
     /// timers
     Timer,
     TimerOnDelay,
@@ -81,6 +82,7 @@ impl Functions {
     const LE                            : &'static str = "Le";
     const LT                            : &'static str = "Lt";
     const NE                            : &'static str = "Ne";
+    const OR                            : &'static str = "Or";
     const TIMER                         : &'static str = "Timer";
     const TIMER_ON_DELAY                : &'static str = "TimerOnDelay";
     const TIMER_OFF_DELAY               : &'static str = "TimerOffDelay";
@@ -131,6 +133,7 @@ impl Functions {
             Self::Le                    => Self::LE,
             Self::Lt                    => Self::LT,
             Self::Ne                    => Self::NE,
+            Self::Or                    => Self::OR,
             Self::Input                 => Self::INPUT,
             Self::Timer                 => Self::TIMER,
             Self::TimerOnDelay          => Self::TIMER_ON_DELAY,
@@ -185,6 +188,7 @@ impl Functions {
             Self::LE                        => Ok( Self::Le ),
             Self::LT                        => Ok( Self::Lt ),
             Self::NE                        => Ok( Self::Ne ),
+            Self::OR                        => Ok( Self::Or ),
             Self::INPUT                     => Ok( Self::Input ),
             Self::TIMER                     => Ok( Self::Timer ),
             Self::TIMER_ON_DELAY            => Ok( Self::TimerOnDelay ),
