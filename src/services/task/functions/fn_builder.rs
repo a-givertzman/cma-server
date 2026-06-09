@@ -5,12 +5,15 @@ use indexmap::IndexMap;
 use crate::{
     domain::FnOutRef,
     services::task::{
-        FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnHold, FnInput, FnIsChangedValue, FnMax, FnMin, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, PiecewiseLinear, SqlMetric, functions::{
-            comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
-            edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
-            filter::{FnSelect, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
-            ops::{FnAdd, FnBitAnd, FnBitOr, FnBitXor, FnDiv, FnMul, FnNot, FnPow, FnSub}, plot::FnPlot,
-        }, task_nodes::TaskNodes
+        functions::{*, functions::Functions},
+        // FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnHold, FnInput, FnIsChangedValue, FnMax, FnMin, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, PiecewiseLinear, SqlMetric, 
+        // functions::{
+        //     comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
+        //     edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
+        //     filter::{FnSelect, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
+        //     ops::{FnAdd, FnBitAnd, FnBitOr, FnBitXor, FnDiv, FnMul, FnNot, FnPow, FnSub}, plot::FnPlot,
+        // }
+        task_nodes::TaskNodes
     },
 };
 ///
@@ -513,7 +516,7 @@ impl FnBuilder {
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
-                            FnBitAnd::new(parent, inputs)
+                            FnBitAnd::new(parent, inputs).map_err(|err| error.pass(err))?
                         )))
                     }
                     //
@@ -525,7 +528,7 @@ impl FnBuilder {
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
-                            FnBitOr::new(parent, inputs)
+                            FnBitOr::new(parent, inputs).map_err(|err| error.pass(err))?
                         )))
                     }
                     //
@@ -537,7 +540,29 @@ impl FnBuilder {
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
-                            FnBitXor::new(parent, inputs)
+                            FnBitXor::new(parent, inputs).map_err(|err| error.pass(err))?
+                        )))
+                    }
+                    Functions::Or => {
+                        let mut inputs = vec![];
+                        for (name, input_conf) in &mut conf.inputs {
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnOr | Can't get '{name}'"), err))?;
+                            inputs.push(input);
+                        }
+                        Ok(Rc::new(RefCell::new(
+                            FnOr::new(parent, inputs).map_err(|err| error.pass(err))?
+                        )))
+                    }
+                    Functions::And => {
+                        let mut inputs = vec![];
+                        for (name, input_conf) in &mut conf.inputs {
+                            let input = Self::function(parent, txid, name, input_conf, task_nodes, services.clone())
+                                .map_err(|err| error.pass_with(format!("FnAnd | Can't get '{name}'"), err))?;
+                            inputs.push(input);
+                        }
+                        Ok(Rc::new(RefCell::new(
+                            FnOr::new(parent, inputs).map_err(|err| error.pass(err))?
                         )))
                     }
                     //

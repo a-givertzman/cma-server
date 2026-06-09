@@ -1,5 +1,9 @@
+use sal_core::error::Error;
+
 ///
-/// Helper `Value` to simplify the math operations
+/// Helper `Value` для операций с числами
+/// - Обеспечивает строгую типизацию, перекрестное приведение типов при вычислениях
+/// - Защищает от переполнений и распространения `NaN` в математическом ядре графа.
 #[derive(Debug, Clone, Copy)]
 pub enum Value {
     Bool(bool),
@@ -9,14 +13,14 @@ pub enum Value {
 }
 //
 impl TryFrom<sal_sync::services::entity::Point> for Value {
-    type Error = sal_core::error::Error;
+    type Error = Error;
     fn try_from(p: sal_sync::services::entity::Point) -> Result<Self, Self::Error> {
         TryFrom::<&sal_sync::services::entity::Point>::try_from(&p)
     }
 }
 //
 impl TryFrom<&sal_sync::services::entity::Point> for Value {
-    type Error = sal_core::error::Error;
+    type Error = Error;
     fn try_from(p: &sal_sync::services::entity::Point) -> Result<Self, Self::Error> {
         match p {
             sal_sync::services::entity::Point::Bool(p) => Ok(Self::Bool(p.value.0)),
@@ -77,15 +81,15 @@ impl Value {
             Value::Double(v) => v.is_sign_negative(),
         }
     }
-    pub fn pow(self, exp: Self) -> Result<Value, String> {
+    pub fn pow(self, exp: Self) -> Result<Value, Error> {
         if (self.is_bool() || self.is_int()) && exp.is_negative() {
-            return Err(format!("Value.pow | Exponent can't be negative for integer base: `{:?} ^ {:?}`", self, exp));
+            return Err(Error::new("Value", "pow").err(format!("Exponent can't be negative for integer base: `{:?} ^ {:?}`", self, exp)));
         }
         if self.is_nan() || exp.is_nan() {
-            return Err(format!("Value.pow | Invalid input: `{:?} ^ {:?}`", self, exp));
+            return Err(Error::new("Value", "pow").err(format!("Invalid input: `{:?} ^ {:?}`", self, exp)));
         }
-        let exp_as_u32 = |v: i64| -> Result<u32, String> {
-            u32::try_from(v).map_err(|_| format!("Value.pow | Exponent too large for integer pow: {}", v))
+        let exp_as_u32 = |v: i64| -> Result<u32, Error> {
+            u32::try_from(v).map_err(|_| Error::new("Value", "pow").err(format!("Exponent too large for integer pow: {}", v)))
         };
         match (self, exp) {
             (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int((v1 as i64).pow(v2 as u32))),
@@ -106,7 +110,72 @@ impl Value {
             (Value::Double(v1), Value::Double(v2)) => Ok(Value::Double(v1.powf(v2))),
         }
     }
+    ///
+    /// ### Boolean `Or`, operation `||`
+    /// 
+    /// Правила приведения типов
+    /// * `Bool` - в исходном виде.
+    /// * `Int`, `Real`, `Double` - значения `0` и `0.0` интерпретируются как `false`, ненулевые значения (включая отрицательные) интерпретируются как `true`.
+    ///
+    /// # Ошибки
+    /// Возвращает `Err`, если одно из значений является `NaN`, предотвращая распространение недостоверных данных в графе.
+    pub fn or(&self, other: &Value) -> Result<bool, Error> {
+        if self.is_nan() || other.is_nan() {
+            return Err(Error::new("Value", "or").err(format!("Invalid input: `{:?} || {:?}`", self, other)));
+        }
+        match (self, other) {
+            (Value::Bool(v1), Value::Bool(v2)) => Ok(*v1 || *v2),
+            (Value::Bool(v1), Value::Int(v2)) => Ok(*v1 || (*v2 != 0)),
+            (Value::Bool(v1), Value::Real(v2)) => Ok(*v1 || (*v2 != 0.0)),
+            (Value::Bool(v1), Value::Double(v2)) => Ok(*v1 || (*v2 != 0.0)),
+            (Value::Int(v1), Value::Bool(v2)) => Ok((*v1 != 0) || *v2),
+            (Value::Int(v1), Value::Int(v2)) => Ok((*v1 != 0) || (*v2 != 0)),
+            (Value::Int(v1), Value::Real(v2)) => Ok((*v1 != 0) || (*v2 != 0.0)),
+            (Value::Int(v1), Value::Double(v2)) => Ok((*v1 != 0) || (*v2 != 0.0)),
+            (Value::Real(v1), Value::Bool(v2)) => Ok((*v1 != 0.0) || *v2),
+            (Value::Real(v1), Value::Int(v2)) => Ok((*v1 != 0.0) || (*v2 != 0)),
+            (Value::Real(v1), Value::Real(v2)) => Ok((*v1 != 0.0) || (*v2 != 0.0)),
+            (Value::Real(v1), Value::Double(v2)) => Ok((*v1 != 0.0) || (*v2 != 0.0)),
+            (Value::Double(v1), Value::Bool(v2)) => Ok((*v1 != 0.0) || *v2),
+            (Value::Double(v1), Value::Int(v2)) => Ok((*v1 != 0.0) || (*v2 != 0)),
+            (Value::Double(v1), Value::Real(v2)) => Ok((*v1 != 0.0) || (*v2 != 0.0)),
+            (Value::Double(v1), Value::Double(v2)) => Ok((*v1 != 0.0) || (*v2 != 0.0)),
+        }
+    }
+    ///
+    /// ### Boolean `And`, operation `&&`
+    /// 
+    /// Правила приведения типов
+    /// * `Bool` - в исходном виде.
+    /// * `Int`, `Real`, `Double` - значения `0` и `0.0` интерпретируются как `false`, ненулевые значения (включая отрицательные) интерпретируются как `true`.
+    ///
+    /// # Ошибки
+    /// Возвращает `Err`, если одно из значений является `NaN`, предотвращая распространение недостоверных данных в графе.
+    pub fn and(&self, other: &Value) -> Result<bool, Error> {
+        if self.is_nan() || other.is_nan() {
+            return Err(Error::new("Value", "and").err(format!("Invalid input: `{:?} && {:?}`", self, other)));
+        }
+        match (self, other) {
+            (Value::Bool(v1), Value::Bool(v2)) => Ok(*v1 && *v2),
+            (Value::Bool(v1), Value::Int(v2)) => Ok(*v1 && (*v2 != 0)),
+            (Value::Bool(v1), Value::Real(v2)) => Ok(*v1 && (*v2 != 0.0)),
+            (Value::Bool(v1), Value::Double(v2)) => Ok(*v1 && (*v2 != 0.0)),
+            (Value::Int(v1), Value::Bool(v2)) => Ok((*v1 != 0) && *v2),
+            (Value::Int(v1), Value::Int(v2)) => Ok((*v1 != 0) && (*v2 != 0)),
+            (Value::Int(v1), Value::Real(v2)) => Ok((*v1 != 0) && (*v2 != 0.0)),
+            (Value::Int(v1), Value::Double(v2)) => Ok((*v1 != 0) && (*v2 != 0.0)),
+            (Value::Real(v1), Value::Bool(v2)) => Ok((*v1 != 0.0) && *v2),
+            (Value::Real(v1), Value::Int(v2)) => Ok((*v1 != 0.0) && (*v2 != 0)),
+            (Value::Real(v1), Value::Real(v2)) => Ok((*v1 != 0.0) && (*v2 != 0.0)),
+            (Value::Real(v1), Value::Double(v2)) => Ok((*v1 != 0.0) && (*v2 != 0.0)),
+            (Value::Double(v1), Value::Bool(v2)) => Ok((*v1 != 0.0) && *v2),
+            (Value::Double(v1), Value::Int(v2)) => Ok((*v1 != 0.0) && (*v2 != 0)),
+            (Value::Double(v1), Value::Real(v2)) => Ok((*v1 != 0.0) && (*v2 != 0.0)),
+            (Value::Double(v1), Value::Double(v2)) => Ok((*v1 != 0.0) && (*v2 != 0.0)),
+        }
+    }
 }
+//
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -167,19 +236,46 @@ fn cmp_i64_f64(i: i64, f: f64) -> Option<std::cmp::Ordering> {
     }
 }
 //
+// impl std::ops::BitAnd for Value {
+//     type Output = Result<Value, Error>;
+//     fn bitand(self, rhs: Self) -> Self::Output {
+//         if self.is_nan() || rhs.is_nan() {
+//             return Err(Error::new("Value", "add").err(format!("Value.add | Invalid input: `{:?} + {:?}`", self, rhs)));
+//         }
+//         match (self, rhs) {
+//             (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Bool(v1 | v2)),
+//             (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int((v1 as i64) | v2)),
+//             (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 | v2)),
+//             (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 | v2)),
+//             (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1.checked_add(v2 as i64).ok_or_else(|| Error::new("Value", "add").err(format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2)))?)),
+//             (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_add(v2).ok_or_else(|| Error::new("Value", "add").err(format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2)))?)),
+//             (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 + v2)),
+//             (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 + v2)),
+//             (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 + (v2 as u8) as f32)),
+//             (Value::Real(v1), Value::Int(v2)) => Ok(Value::Real(v1 + v2 as f32)),
+//             (Value::Real(v1), Value::Real(v2)) => Ok(Value::Real(v1 + v2)),
+//             (Value::Real(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 + v2)),
+//             (Value::Double(v1), Value::Bool(v2)) => Ok(Value::Double(v1 + (v2 as u8) as f64)),
+//             (Value::Double(v1), Value::Int(v2)) => Ok(Value::Double(v1 + v2 as f64)),
+//             (Value::Double(v1), Value::Real(v2)) => Ok(Value::Double(v1 + v2 as f64)),
+//             (Value::Double(v1), Value::Double(v2)) => Ok(Value::Double(v1 + v2)),
+//         }
+//     }
+// }
+//
 impl std::ops::Add for Value {
-    type Output = Result<Value, String>;
+    type Output = Result<Value, Error>;
     fn add(self, rhs: Self) -> Self::Output {
         if self.is_nan() || rhs.is_nan() {
-            return Err(format!("Value.add | Invalid input: `{:?} + {:?}`", self, rhs));
+            return Err(Error::new("Value", "add").err(format!("Value.add | Invalid input: `{:?} + {:?}`", self, rhs)));
         }
         match (self, rhs) {
             (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int(v1 as i64 + v2 as i64)),
-            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int((v1 as i64).checked_add(v2).ok_or_else(|| format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2))?)),
+            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int((v1 as i64).checked_add(v2).ok_or_else(|| Error::new("Value", "add").err(format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2)))?)),
             (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 + v2)),
             (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 + v2)),
-            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1.checked_add(v2 as i64).ok_or_else(|| format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2))?)),
-            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_add(v2).ok_or_else(|| format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2))?)),
+            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1.checked_add(v2 as i64).ok_or_else(|| Error::new("Value", "add").err(format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2)))?)),
+            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_add(v2).ok_or_else(|| Error::new("Value", "add").err(format!("Value.add | Overflow: `{:?} + {:?}`", v1, v2)))?)),
             (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 + v2)),
             (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 + v2)),
             (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 + (v2 as u8) as f32)),
@@ -195,18 +291,18 @@ impl std::ops::Add for Value {
 }
 //
 impl std::ops::Sub for Value {
-    type Output = Result<Value, String>;
+    type Output = Result<Value, Error>;
     fn sub(self, rhs: Self) -> Self::Output {
         if self.is_nan() || rhs.is_nan() {
-            return Err(format!("Value.sub | Invalid input: `{:?} - {:?}`", self, rhs));
+            return Err(Error::new("Value", "sub").err(format!("Value.sub | Invalid input: `{:?} - {:?}`", self, rhs)));
         }
         match (self, rhs) {
             (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int(v1 as i64 - v2 as i64)),
-            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int((v1 as i64).checked_sub(v2).ok_or_else(|| format!("Value.sub | Overflow: `{:?} - {:?}`", v1, v2))?)),
+            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int((v1 as i64).checked_sub(v2).ok_or_else(|| Error::new("Value", "sub").err(format!("Value.sub | Overflow: `{:?} - {:?}`", v1, v2)))?)),
             (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 - v2)),
             (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 - v2)),
-            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1.checked_sub(v2 as i64).ok_or_else(|| format!("Value.sub | Overflow: `{:?} - {:?}`", v1, v2))?)),
-            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_sub(v2).ok_or_else(|| format!("Value.sub | Overflow: `{:?} - {:?}`", v1, v2))?)),
+            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1.checked_sub(v2 as i64).ok_or_else(|| Error::new("Value", "sub").err(format!("Value.sub | Overflow: `{:?} - {:?}`", v1, v2)))?)),
+            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_sub(v2).ok_or_else(|| Error::new("Value", "sub").err(format!("Value.sub | Overflow: `{:?} - {:?}`", v1, v2)))?)),
             (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 - v2)),
             (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 - v2)),
             (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 - (v2 as u8) as f32)),
@@ -222,13 +318,13 @@ impl std::ops::Sub for Value {
 }
 //
 impl std::ops::Div for Value {
-    type Output = Result<Value, String>;
+    type Output = Result<Value, Error>;
     fn div(self, rhs: Self) -> Self::Output {
         if rhs.is_zero() {
-            return Err(format!("Value.div | Division by zero: `{:?} / {:?}`", self, rhs));
+            return Err(Error::new("Value", "div").err(format!("Value.div | Division by zero: `{:?} / {:?}`", self, rhs)));
         }
         if self.is_nan() || rhs.is_nan() {
-            return Err(format!("Value.div | Invalid input: `{:?} / {:?}`", self, rhs));
+            return Err(Error::new("Value", "div").err(format!("Value.div | Invalid input: `{:?} / {:?}`", self, rhs)));
         }
         match (self, rhs) {
             (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int(v1 as i64 / v2 as i64)),
@@ -236,7 +332,7 @@ impl std::ops::Div for Value {
             (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 / v2)),
             (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 / v2)),
             (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1 / v2 as i64)),
-            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_div(v2).ok_or_else(|| format!("Value.div | Overflow: `{:?} / {:?}`", v1, v2))?)),
+            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_div(v2).ok_or_else(|| Error::new("Value", "div").err(format!("Value.div | Overflow: `{:?} / {:?}`", v1, v2)))?)),
             (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 / v2)),
             (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 / v2)),
             (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 / (v2 as u8) as f32)),
@@ -252,18 +348,18 @@ impl std::ops::Div for Value {
 }
 //
 impl std::ops::Mul for Value {
-    type Output = Result<Value, String>;
+    type Output = Result<Value, Error>;
     fn mul(self, rhs: Self) -> Self::Output {
         if self.is_nan() || rhs.is_nan() {
-            return Err(format!("Value.mul | Invalid input: `{:?} * {:?}`", self, rhs));
+            return Err(Error::new("Value", "mul").err(format!("Value.mul | Invalid input: `{:?} * {:?}`", self, rhs)));
         }
         match (self, rhs) {
             (Value::Bool(v1), Value::Bool(v2)) => Ok(Value::Int(v1 as i64 * v2 as i64)),
-            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int((v1 as i64).checked_mul(v2).ok_or_else(|| format!("Value.mul | Overflow: `{:?} * {:?}`", v1, v2))?)),
+            (Value::Bool(v1), Value::Int(v2)) => Ok(Value::Int((v1 as i64).checked_mul(v2).ok_or_else(|| Error::new("Value", "mul").err(format!("Value.mul | Overflow: `{:?} * {:?}`", v1, v2)))?)),
             (Value::Bool(v1), Value::Real(v2)) => Ok(Value::Real((v1 as u8) as f32 * v2)),
             (Value::Bool(v1), Value::Double(v2)) => Ok(Value::Double((v1 as u8) as f64 * v2)),
-            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1.checked_mul(v2 as i64).ok_or_else(|| format!("Value.mul | Overflow: `{:?} * {:?}`", v1, v2))?)),
-            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_mul(v2).ok_or_else(|| format!("Value.mul | Overflow: `{:?} * {:?}`", v1, v2))?)),
+            (Value::Int(v1), Value::Bool(v2)) => Ok(Value::Int(v1.checked_mul(v2 as i64).ok_or_else(|| Error::new("Value", "mul").err(format!("Value.mul | Overflow: `{:?} * {:?}`", v1, v2)))?)),
+            (Value::Int(v1), Value::Int(v2)) => Ok(Value::Int(v1.checked_mul(v2).ok_or_else(|| Error::new("Value", "mul").err(format!("Value.mul | Overflow: `{:?} * {:?}`", v1, v2)))?)),
             (Value::Int(v1), Value::Real(v2)) => Ok(Value::Real(v1 as f32 * v2)),
             (Value::Int(v1), Value::Double(v2)) => Ok(Value::Double(v1 as f64 * v2)),
             (Value::Real(v1), Value::Bool(v2)) => Ok(Value::Real(v1 * (v2 as u8) as f32)),
@@ -282,6 +378,29 @@ impl std::ops::Mul for Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn test_or_pure_boolean() {
+        let t = Value::Bool(true);
+        let f = Value::Bool(false);
+        assert_eq!(t.or(&f).unwrap(), true);
+        assert_eq!(f.or(&f).unwrap(), false);
+    }
+    #[test]
+    fn test_or_negative_numeric_truthiness() {
+        let f = Value::Bool(false);
+        let i_neg = Value::Int(-1);
+        let r_neg = Value::Real(-10.5);
+        let d_zero = Value::Double(0.0);
+        assert_eq!(f.or(&i_neg).unwrap(), true);
+        assert_eq!(f.or(&r_neg).unwrap(), true);
+        assert_eq!(f.or(&d_zero).unwrap(), false);
+    }
+    #[test]
+    fn test_or_strict_nan_poisoning() {
+        let t = Value::Bool(true);
+        let nan_val = Value::Double(f64::NAN);
+        assert!(t.or(&nan_val).is_err());
+    }
     #[test]
     fn test_cross_type_equality() {
         assert_eq!(Value::Int(42), Value::Double(42.0));

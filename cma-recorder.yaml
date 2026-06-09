@@ -156,7 +156,7 @@ service Task RecorderTask:
     #
     # Detect if operating cycle is active (true - isActive, false - isNotActive)
     let opCycleIsActive_:
-        input fn BitOr:
+        input fn Or:
             input0: craneIsActive
             input1: winch1IsActive
             input2: winch2IsActive
@@ -167,7 +167,7 @@ service Task RecorderTask:
         input fn FallingEdge:
             input: opCycleIsActive_
     let opCycleIsActive:
-        input fn BitOr:
+        input fn Or:
             input1: opCycleIsActive_
             input2: opCycleIsDone
     let pumpIsActive:
@@ -265,7 +265,7 @@ service Task RecorderTask:
                 input1 fn Mul:
                     input1: const int 1
                     input2 fn ToInt:
-                        input fn BitOr:
+                        input fn Or:
                             input1: winch1LoadLimiterTrip
                             input2: winch2LoadLimiterTrip
                             input3: winch3LoadLimiterTrip
@@ -279,7 +279,7 @@ service Task RecorderTask:
                 input2 fn Mul:
                     input1: const int 10
                     input2 fn ToInt:
-                        input fn BitOr:
+                        input fn Or:
                             # Overload in 10..25 %
                             input1 fn Ge:
                                 input1: craneCycleMaxLoad
@@ -397,7 +397,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.05-0.15
     let craneLoadInRange_0_05_0_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -429,7 +429,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.15-0.25
     let craneLoadInRange_0_15_0_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -461,7 +461,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.25-0.35
     let craneLoadInRange_0_25_0_35:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -493,7 +493,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.35-0.45
     let craneLoadInRange_0_35_0_45:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -525,7 +525,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.45-0.55
     let craneLoadInRange_0_45_0_55:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -557,7 +557,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.55-0.65
     let craneLoadInRange_0_55_0_65:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -589,7 +589,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.65-0.75
     let craneLoadInRange_0_65_0_75:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -621,7 +621,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.75-0.85
     let craneLoadInRange_0_75_0_85:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -653,7 +653,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.85-0.95
     let craneLoadInRange_0_85_0_95:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -685,7 +685,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 0.95-1.05
     let craneLoadInRange_0_95_1_05:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -717,7 +717,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 1.05-1.15
     let craneLoadInRange_1_05_1_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -749,7 +749,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 1.15-1.25
     let craneLoadInRange_1_15_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -781,7 +781,7 @@ service Task RecorderTask:
     #
     # Count of Crane cycles in load-range 1.25-
     let craneLoadInRange_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: craneCycleAverageLoadRelative
@@ -810,7 +810,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.05-0.15
     let winch1LoadInRange_0_05_0_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -842,7 +842,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.15-0.25
     let winch1LoadInRange_0_15_0_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -874,7 +874,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.25-0.35
     let winch1LoadInRange_0_25_0_35:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -906,7 +906,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.35-0.45
     let winch1LoadInRange_0_35_0_45:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -938,7 +938,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.45-0.55
     let winch1LoadInRange_0_45_0_55:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -970,7 +970,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.55-0.65
     let winch1LoadInRange_0_55_0_65:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1002,7 +1002,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.65-0.75
     let winch1LoadInRange_0_65_0_75:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1034,7 +1034,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.75-0.85
     let winch1LoadInRange_0_75_0_85:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1066,7 +1066,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.85-0.95
     let winch1LoadInRange_0_85_0_95:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1098,7 +1098,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 0.95-1.05
     let winch1LoadInRange_0_95_1_05:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1130,7 +1130,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 1.05-1.15
     let winch1LoadInRange_1_05_1_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1162,7 +1162,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 1.15-1.25
     let winch1LoadInRange_1_15_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1194,7 +1194,7 @@ service Task RecorderTask:
     #
     # Count of Winch1 cycles in load-range 1.25-
     let winch1LoadInRange_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch1CycleAverageLoadRelative
@@ -1223,7 +1223,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.05-0.15
     let winch2LoadInRange_0_05_0_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1255,7 +1255,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.15-0.25
     let winch2LoadInRange_0_15_0_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1287,7 +1287,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.25-0.35
     let winch2LoadInRange_0_25_0_35:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1319,7 +1319,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.35-0.45
     let winch2LoadInRange_0_35_0_45:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1351,7 +1351,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.45-0.55
     let winch2LoadInRange_0_45_0_55:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1383,7 +1383,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.55-0.65
     let winch2LoadInRange_0_55_0_65:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1415,7 +1415,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.65-0.75
     let winch2LoadInRange_0_65_0_75:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1447,7 +1447,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.75-0.85
     let winch2LoadInRange_0_75_0_85:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1479,7 +1479,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.85-0.95
     let winch2LoadInRange_0_85_0_95:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1511,7 +1511,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 0.95-1.05
     let winch2LoadInRange_0_95_1_05:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1543,7 +1543,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 1.05-1.15
     let winch2LoadInRange_1_05_1_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1575,7 +1575,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 1.15-1.25
     let winch2LoadInRange_1_15_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1607,7 +1607,7 @@ service Task RecorderTask:
     #
     # Count of Winch2 cycles in load-range 1.25-
     let winch2LoadInRange_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch2CycleAverageLoadRelative
@@ -1636,7 +1636,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.05-0.15
     let winch3LoadInRange_0_05_0_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1668,7 +1668,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.15-0.25
     let winch3LoadInRange_0_15_0_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1700,7 +1700,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.25-0.35
     let winch3LoadInRange_0_25_0_35:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1732,7 +1732,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.35-0.45
     let winch3LoadInRange_0_35_0_45:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1764,7 +1764,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.45-0.55
     let winch3LoadInRange_0_45_0_55:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1796,7 +1796,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.55-0.65
     let winch3LoadInRange_0_55_0_65:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1828,7 +1828,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.65-0.75
     let winch3LoadInRange_0_65_0_75:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1860,7 +1860,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.75-0.85
     let winch3LoadInRange_0_75_0_85:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1892,7 +1892,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.85-0.95
     let winch3LoadInRange_0_85_0_95:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1924,7 +1924,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 0.95-1.05
     let winch3LoadInRange_0_95_1_05:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1956,7 +1956,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 1.05-1.15
     let winch3LoadInRange_1_05_1_15:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -1988,7 +1988,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 1.15-1.25
     let winch3LoadInRange_1_15_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative
@@ -2020,7 +2020,7 @@ service Task RecorderTask:
     #
     # Count of Winch3 cycles in load-range 1.25-
     let winch3LoadInRange_1_25:
-        input fn BitAnd:
+        input fn And:
             input1: opCycleIsDone
             input2 fn Ge:
                 input1: winch3CycleAverageLoadRelative

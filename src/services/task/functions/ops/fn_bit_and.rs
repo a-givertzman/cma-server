@@ -1,50 +1,70 @@
-use sal_sync::services::{
-    entity::{Cot, {Point, PointHlr, PointTxId}, Status},
-    types::Bool,
-};
+use sal_core::error::Error;
+use sal_sync::services::{entity::{Point, PointHlr, PointTxId}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use chrono::Utc;
 use crate::{
-    domain::FnOutRef,
-    services::task::{
-        FnOut, FnKind, FnResult,
-    },
+    domain::{FnOutRef, PointMeta, Value},
+    services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
-/// Function | Returns bitwise AND of all inputs
+/// ### Function | `FnBitAnd`
 /// 
-/// Example
+/// Побитовое логическое умножение всех входящих сигналов. 
+/// 
+/// **Example**
 /// 
 /// ```yaml
 /// fn BitAnd:
 ///     input1: point int '/App/Service/Point.Name1'
 ///     input2: point int '/App/Service/Point.Name2'
 /// fn BitAnd:
-///     input1: point bool '/App/Service/Point.Name1'
-///     input2: point bool '/App/Service/Point.Name2'
+///     in1: point bool '/App/Service/Point.Name1'
+///     in2: point bool '/App/Service/Point.Name2'
+///     in3: point bool '/App/Service/Point.Name3'
 /// ```
 #[derive(Debug)]
 pub struct FnBitAnd {
-    id: String,
+    txid: usize,
     kind: FnKind,
     inputs: Vec<FnOutRef>,
+    id: String,
 }
 //
-// 
 impl FnBitAnd {
     ///
-    /// Creates new instance of the FnBitAnd
+    /// Returns `FnBitAnd` new instance
+    /// - `parent`: Идентификатор родительского узла
+    /// - `inputs`: Вектор входных сигналов, должен содержать не менее одного входа
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Self {
-        Self { 
-            id: format!("{}/FnBitAnd{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
-            kind:FnKind::Fn,
+    pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Result<Self, Error> {
+        let id = format!("{}/FnBitAnd{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+        return Err(Error::new(&id, "new").err("Isn't implemented yet"));
+        if inputs.len() < 1 {
+            return Err(Error::new(&id, "new").err("At least one input must be specified"));
+        }
+        Ok(Self { 
+            txid: PointTxId::from_str(&id),
+            kind: FnKind::Fn,
             inputs,
+            id,
+        })
+    }
+    ///
+    /// Возвращает `Point` с обновленными `txid`, `name`, `meta` и `value`
+    /// - `txid`: Текущий идентификатор отправителя.
+    /// - `meta`: Объединенные метаданные всех задействованных входов.
+    /// - `name`: Имя формируемого сигнала.
+    /// - `value`: Значение формируемого сигнала.
+    #[inline]
+    fn point_with(txid: usize, meta: &PointMeta, name: impl Into<String>, value: Value) -> Point {
+        match value {
+            Value::Bool(value) => Point::Bool(PointHlr::new(txid, name, Bool(value), meta.status, meta.cot, meta.ts)),
+            Value::Int(value) => Point::Int(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
+            Value::Real(value) => Point::Real(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
+            Value::Double(value) => Point::Double(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
         }
     }
 }
 //
-// 
 impl FnOut for FnBitAnd {
     //
     fn id(&self) -> String {
@@ -64,72 +84,20 @@ impl FnOut for FnBitAnd {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
+        unimplemented!();
+        let inputs: Vec<FnResult<FnFlow, String>> = self.inputs.iter().map(|input| {
+            input.borrow_mut().out()
+        }).collect();
         let mut flow = FlowContext::new();
-        let tx_id = PointTxId::from_str(&self.id);
-        let mut inputs = self.inputs.iter();
-        let mut value: Point;
-        match inputs.next() {
-            Some(first) => {
-                value = match first.borrow_mut().out() {
-                    FnResult::Ok(first) => first,
-                    FnResult::None => return FnResult::None,
-                    FnResult::Err(err) => return FnResult::Err(err),
-                };
-                while let Some(input) = inputs.next() {
-                    let input = input.borrow_mut().out();
-                    match input {
-                        FnResult::Ok(input) => {
-                            log::trace!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
-                            value = match &value {
-                                Point::Bool(val) => {
-                                    let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
-                                    Point::Bool(
-                                        PointHlr::new(
-                                            tx_id,
-                                            &format!("{}.out", self.id),
-                                            Bool(val.value.0 & input_val.value.0),
-                                            Status::Ok,
-                                            Cot::Inf,
-                                            Utc::now(),
-                                        )
-                                    )
-                                }
-                                Point::Int(val) => {
-                                    let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
-                                    Point::Int(
-                                        PointHlr::new(
-                                            tx_id,
-                                            &format!("{}.out", self.id),
-                                            val.value & input_val.value,
-                                            Status::Ok,
-                                            Cot::Inf,
-                                            Utc::now(),
-                                        )
-                                    )
-                                }
-                                Point::Real(_) => {
-                                    panic!("{}.out | Not implemented for Real", self.id);
-                                }
-                                Point::Double(_) => {
-                                    panic!("{}.out | Not implemented for Double", self.id);
-                                }
-                                Point::String(_) => {
-                                    panic!("{}.out | Not implemented for String", self.id);
-                                }
-                                Point::Bytes(_) => {
-                                    panic!("{}.out | Not implemented for Bytes", self.id);
-                                }
-                            };
-                        }
-                        FnResult::None => return FnResult::None,
-                        FnResult::Err(err) => return FnResult::Err(err),
-                    }
-                }
-            },
-            None => panic!("{}.out | At least one input must be specified", self.id),
-        };
-        // trace!("{}.out | value: {:#?}", self.id, value);
-        FnResult::Ok(value)
+        let mut value = Value::Bool(true);
+        let mut meta = PointMeta::default();
+        for input in inputs {
+            let Some(input) = flow.map(input)? else { return Ok(None) };
+            meta = meta.update_latest(&input).update_status(&input);
+            let val: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
+            value = Value::Bool(value .and(&val).map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?);
+        }
+        flow.wrap(Self::point_with(self.txid, &meta, &self.id, value))
     }
     //
     fn reset(&mut self) {
@@ -141,3 +109,86 @@ impl FnOut for FnBitAnd {
 ///
 /// Global static counter of FnBitAnd instances
 pub static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
+/// Basic Tests
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell, rc::Rc};
+    use super::*;
+    use sal_sync::services::entity::{Cot, Status};
+    #[derive(Debug)]
+    struct MockOrigin {
+        id: String,
+        current_flow: FnResult<FnFlow, String>,
+        was_called: bool,
+        resets_count: usize,
+    }
+    impl MockOrigin {
+        fn new(id: &str, flow: FnResult<FnFlow, String>) -> Self {
+            Self { id: id.to_string(), current_flow: flow, was_called: false, resets_count: 0 }
+        }
+    }
+    impl FnOut for MockOrigin {
+        fn id(&self) -> String { self.id.clone() }
+        fn kind(&self) -> FnKind { FnKind::Var }
+        fn inputs(&self) -> Vec<String> { vec![self.id.clone()] }
+        fn out(&mut self) -> FnResult<FnFlow, String> {
+            self.was_called = true;
+            self.current_flow.clone()
+        }
+        fn reset(&mut self) { self.resets_count += 1; }
+    }
+    fn make_point(val: bool, status: Status) -> Point {
+        Point::Bool(PointHlr::new(0, "test", Bool(val), status, Cot::Inf, chrono::offset::Utc::now()))
+    }
+    #[test]
+    fn test_and_true_and_true() {
+        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
+        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
+        let mut and_node = FnBitAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap().unwrap();
+        match res {
+            FnFlow::New(point) => {
+                let val = point.as_bool().value.0;
+                assert!(val);
+            }
+            _ => panic!("Expected New flow"),
+        }
+    }
+    #[test]
+    fn test_and_true_and_false() {
+        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
+        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(false, Status::Ok)))))));
+        let mut and_node = FnBitAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap().unwrap();
+        match res {
+            FnFlow::New(point) => {
+                let val = point.as_bool().value.0;
+                assert!(!val);
+            }
+            _ => panic!("Expected New flow"),
+        }
+    }
+    #[test]
+    fn test_and_taint_tracking_old() {
+        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::Old(make_point(true, Status::Ok)))))));
+        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::Old(make_point(true, Status::Ok)))))));
+        let mut and_node = FnBitAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap().unwrap();
+        match res {
+            FnFlow::Old(point) => {
+                let val = point.as_bool().value.0;
+                assert!(val);
+            }
+            _ => panic!("Expected Old flow"),
+        }
+    }
+    #[test]
+    fn test_and_cold_mode() {
+        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(None))));
+        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
+        let mut and_node = FnBitAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap();
+        assert!(res.is_none());
+    }
+}

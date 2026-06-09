@@ -6,37 +6,37 @@ use crate::{
     services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
-/// ### Function | `FnOr`
+/// ### Function | `FnAnd`
 /// 
-/// Логическое сложение всех входящих сигналов. 
+/// Логическое умножение всех входящих сигналов. 
 /// 
 /// **Example**
 /// 
 /// ```yaml
-/// fn Or:
+/// fn And:
 ///     input1: point int '/App/Service/Point.Name1'
 ///     input2: point int '/App/Service/Point.Name2'
-/// fn Or:
+/// fn And:
 ///     in1: point bool '/App/Service/Point.Name1'
 ///     in2: point bool '/App/Service/Point.Name2'
 ///     in3: point bool '/App/Service/Point.Name3'
 /// ```
 #[derive(Debug)]
-pub struct FnOr {
+pub struct FnAnd {
     txid: usize,
     kind: FnKind,
     inputs: Vec<FnOutRef>,
     id: String,
 }
 //
-impl FnOr {
+impl FnAnd {
     ///
-    /// Returns `FnOr` new instance
+    /// Returns `FnAnd` new instance
     /// - `parent`: Идентификатор родительского узла
     /// - `inputs`: Вектор входных сигналов, должен содержать не менее одного входа
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Result<Self, Error> {
-        let id = format!("{}/FnOr{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+        let id = format!("{}/FnAnd{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         if inputs.len() < 1 {
             return Err(Error::new(&id, "new").err("At least one input must be specified"));
         }
@@ -49,6 +49,10 @@ impl FnOr {
     }
     ///
     /// Возвращает `Point` с обновленными `txid`, `name`, `meta` и `value`
+    /// - `txid`: Текущий идентификатор отправителя.
+    /// - `meta`: Объединенные метаданные всех задействованных входов.
+    /// - `name`: Имя формируемого сигнала.
+    /// - `value`: Значение формируемого сигнала.
     #[inline]
     fn point_with(txid: usize, meta: &PointMeta, name: impl Into<String>, value: Value) -> Point {
         match value {
@@ -60,7 +64,7 @@ impl FnOr {
     }
 }
 //
-impl FnOut for FnOr {
+impl FnOut for FnAnd {
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -83,13 +87,13 @@ impl FnOut for FnOr {
             input.borrow_mut().out()
         }).collect();
         let mut flow = FlowContext::new();
-        let mut value = Value::Bool(false);
+        let mut value = Value::Bool(true);
         let mut meta = PointMeta::default();
         for input in inputs {
             let Some(input) = flow.map(input)? else { return Ok(None) };
             meta = meta.update_latest(&input).update_status(&input);
             let val: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
-            value = Value::Bool(value.or(&val).map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?);
+            value = Value::Bool(value.and(&val).map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?);
         }
         flow.wrap(Self::point_with(self.txid, &meta, &self.id, value))
     }
@@ -101,7 +105,7 @@ impl FnOut for FnOr {
     }
 }
 ///
-/// Global static counter of FnOr instances
+/// Global static counter of FnAnd instances
 pub static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///
 /// Basic Tests
@@ -136,44 +140,53 @@ mod tests {
         Point::Bool(PointHlr::new(0, "test", Bool(val), status, Cot::Inf, chrono::offset::Utc::now()))
     }
     #[test]
-    fn test_or_logic_and_taint_tracking() {
+    fn test_and_true_and_true() {
         let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
-        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::Old(make_point(false, Status::Ok)))))));
-        let mut node = FnOr::new("node", vec![in1.clone(), in2.clone()]).unwrap();
-        let res = node.out().unwrap().unwrap();
-        assert!(matches!(res, FnFlow::New(_)), "Если хотя бы один вход New, результат должен быть New");
-        if let FnFlow::New(p) = res {
-            assert_eq!(p.value().as_bool(), true, "true || false должно быть true");
+        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
+        let mut and_node = FnAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap().unwrap();
+        match res {
+            FnFlow::New(point) => {
+                let val = point.as_bool().value.0;
+                assert!(val);
+            }
+            _ => panic!("Expected New flow"),
         }
     }
     #[test]
-    fn test_all_inputs_are_old_yields_old() {
-        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::Old(make_point(false, Status::Ok)))))));
-        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::Old(make_point(false, Status::Ok)))))));
-        let mut node = FnOr::new("node", vec![in1.clone(), in2.clone()]).unwrap();
-        let res = node.out().unwrap().unwrap();
-        assert!(matches!(res, FnFlow::Old(_)), "Если все входы Old, результат должен оставаться Old");
-        if let FnFlow::Old(p) = res {
-            assert_eq!(p.value().as_bool(), false, "false || false должно быть false");
+    fn test_and_true_and_false() {
+        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
+        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(false, Status::Ok)))))));
+        let mut and_node = FnAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap().unwrap();
+        match res {
+            FnFlow::New(point) => {
+                let val = point.as_bool().value.0;
+                assert!(!val);
+            }
+            _ => panic!("Expected New flow"),
         }
     }
     #[test]
-    fn test_fetch_phase_prevents_short_circuiting() {
-        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(None))));
+    fn test_and_taint_tracking_old() {
+        let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::Old(make_point(true, Status::Ok)))))));
         let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::Old(make_point(true, Status::Ok)))))));
-        let mut node = FnOr::new("node", vec![in1.clone(), in2.clone()]).unwrap();
-        let res = node.out().unwrap();
-        assert!(res.is_none(), "Если один из входов вернул None, весь узел выдает None");
-        assert!(in1.borrow().was_called, "Первый узел должен быть опрошен");
-        assert!(in2.borrow().was_called, "Второй узел обязан вызваться, предотвращая короткое замыкание");
+        let mut and_node = FnAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap().unwrap();
+        match res {
+            FnFlow::Old(point) => {
+                let val = point.as_bool().value.0;
+                assert!(val);
+            }
+            _ => panic!("Expected Old flow"),
+        }
     }
     #[test]
-    fn test_reset_propagation() {
+    fn test_and_cold_mode() {
         let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(None))));
-        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(None))));
-        let mut node = FnOr::new("node", vec![in1.clone(), in2.clone()]).unwrap();
-        node.reset();
-        assert_eq!(in1.borrow().resets_count, 1);
-        assert_eq!(in2.borrow().resets_count, 1);
+        let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
+        let mut and_node = FnAnd::new("task", vec![in1, in2]).unwrap();
+        let res = and_node.out().unwrap();
+        assert!(res.is_none());
     }
 }

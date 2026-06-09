@@ -13,43 +13,43 @@ use crate::{
 
 };
 ///
-/// Function | Returns bitwise XOR of all inputs
+/// Function | `FnBitOr`
 /// 
 /// Example
 /// 
 /// ```yaml
-/// fn BitXor:
+/// fn BitOr:
 ///     input1: point int '/App/Service/Point.Name1'
 ///     input2: point int '/App/Service/Point.Name2'
-/// fn BitXor:
+/// fn BitOr:
 ///     input1: point bool '/App/Service/Point.Name1'
 ///     input2: point bool '/App/Service/Point.Name2'
 /// ```
 #[derive(Debug)]
-pub struct FnBitXor {
-    id: String,
+pub struct FnBitOr {
     kind: FnKind,
     inputs: Vec<FnOutRef>,
+    id: String,
 }
 //
 // 
-impl FnBitXor {
+impl FnBitOr {
     ///
-    /// Creates new instance of the FnBitXor
+    /// Creates new instance of the FnBitOr
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Result<Self, Error> {
-        let id = format!("{}/FnBitXor{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+        let id = format!("{}/FnBitOr{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         return Err(Error::new(&id, "new").err("Isn't implemented yet"));
         Ok(Self { 
-            id: format!("{}/FnBitXor{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind:FnKind::Fn,
             inputs,
+            id,
         })
     }
 }
 //
 // 
-impl FnOut for FnBitXor {
+impl FnOut for FnBitOr {
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -70,8 +70,7 @@ impl FnOut for FnBitXor {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         unimplemented!();
-        // let txid = PointTxId::from_str(&self.id);
-        // let mut inputs = self.inputs.iter();
+        let mut inputs = self.inputs.iter();
         // let mut value: Point;
         // match inputs.next() {
         //     Some(first) => {
@@ -84,15 +83,15 @@ impl FnOut for FnBitXor {
         //             let input = input.borrow_mut().out();
         //             match input {
         //                 FnResult::Ok(input) => {
-        //                     log::debug!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
+        //                     log::trace!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
         //                     value = match &value {
         //                         Point::Bool(val) => {
         //                             let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
         //                             Point::Bool(
         //                                 PointHlr::new(
-        //                                     txid,
+        //                                     tx_id,
         //                                     &format!("{}.out", self.id),
-        //                                     Bool(val.value.0 ^ input_val.value.0),
+        //                                     Bool(val.value.0 | input_val.value.0),
         //                                     Status::Ok,
         //                                     Cot::Inf,
         //                                     Utc::now(),
@@ -103,9 +102,9 @@ impl FnOut for FnBitXor {
         //                             let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
         //                             Point::Int(
         //                                 PointHlr::new(
-        //                                     txid,
+        //                                     tx_id,
         //                                     &format!("{}.out", self.id),
-        //                                     val.value ^ input_val.value,
+        //                                     val.value | input_val.value,
         //                                     Status::Ok,
         //                                     Cot::Inf,
         //                                     Utc::now(),
@@ -144,5 +143,5 @@ impl FnOut for FnBitXor {
     }
 }
 ///
-/// Global static counter of FnBitXor instances
+/// Global static counter of FnBitOr instances
 pub static COUNT: AtomicUsize = AtomicUsize::new(1);
