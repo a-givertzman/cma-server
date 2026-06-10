@@ -7,10 +7,12 @@ use sal_sync::services::{
 use std::{env, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
 use crate::{
     domain::FnOutRef, 
-    services::task::{FnOut, FnKind, FnResult},
+    services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
-/// Function | Used for store input Point value to the local disk
+/// ### Function | FnRetain
+/// 
+/// Used for store input Point value to the local disk
 ///  - First store input, then returns loaded,
 ///  - Point will be read from disk if:
 ///     - if enable is true or >0 (if not specified - default true)
