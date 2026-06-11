@@ -1,335 +1,144 @@
-use chrono::Utc;
-use concat_string::concat_string;
-use sal_sync::services::{
-    entity::{Cot, Name, {Point, PointConfType, PointHlr, PointTxId}, Status},
-    types::Bool,
-};
-use std::{env, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
-use crate::{
-    domain::FnOutRef, 
-    services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
-};
+use function_name::named;
+use sal_core::error::Error;
+use sal_sync::services::{Services, entity::{Name, Status, }, task::functions::FnConfig};
+use serde::{Deserialize, Serialize};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
+use crate::{domain::{FnOutRef}, new_err, pass_err, services::task::{FnBuilder, FnEnable, TaskNodes, functions::{FnRetainRead, FnRetainWrite}}};
 ///
-/// ### Function | FnRetain
-/// 
-/// Used for store input Point value to the local disk
-///  - First store input, then returns loaded,
-///  - Point will be read from disk if:
-///     - if enable is true or >0 (if not specified - default true)
-///     - if retain file already exists
-///         - if [every-cycle] is true - read will done in every computing cycle
-///         - if [every-cycle] is false - read will be done only once
-///     - if retain file does not exists, [default] value will be returned
-///  - Point will be stored to the disk if:
-///     - if enable is true or >0 (if not specified - default true)
-///         - [input] is specified
-///  - [key] - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
-///  - Returns
-///     - read Point if [input] is not specified (read will be done only once)
-///     - input Point if [input] is specified
-#[derive(Debug)]
-pub struct FnRetain {
-    id: String,
-    // name: Name,
-    txid: usize,
-    kind: FnKind,
-    enable: Option<FnOutRef>,
-    every_cycle: bool,
-    key: String,
-    default: Option<FnOutRef>,
-    input: Option<FnOutRef>,
-    path: PathBuf,
-    cache: Option<Point>,
+/// ### `RetainValue` | Storage wrapper for `Point` retain
+/// Легковесная обертка для сериализации и десериализации типов данных `Point` на диск.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(super) enum RetainValue {
+    Bool(bool),
+    Int(i64),
+    Real(f32),
+    Double(f64),
+    String(String),
+    Bytes(Vec<u8>),
 }
-//
+///
+/// ### Состояние `Point` для хранения на диске
+/// Инкапсулирует полное физическое состояние точки данных на момент записи.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub(super) struct RetainState {
+    pub value: RetainValue,
+    pub status: Status,
+    pub ts: chrono::DateTime<chrono::Utc>,
+}
+///
+/// ### Builder | `FnRetain`
+/// 
+/// Билдер для создания узлов `FnRetainRead` или `FnRetainWrite`.
+/// 
+/// - **Формат данных на диске**
+/// ```json
+/// { "value": {"Bool": false}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
+/// { "value": {"Int": 123}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
+/// { "value": {"Real": 12.3}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
+/// { "value": {"Double": 12.3}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
+/// { "value": {"String": "String value"}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
+/// ```
+/// - **`FnRetainRead`** (Если `input` отсутствует)
+///     - Чтение значений с диска (по умолчанию читает с диска только в первый цикл, дальше возвращает закэшированное значение).
+///     - `default` на случай, когда значений еще не записано.
+///     - `every-cycle` - значение будет читаться на каждом цикле вычислений (учитывай нагрузку на диск)
+/// - **`FnRetainWrite`** (Если `input` задан)
+///     - Запись на диск при изменении значения, статуса или метки времени.
+///     - Для графа прозрачна, пропускает `FnFlow` сквозь себя без модификаций.
+#[derive(Debug)]
+pub struct FnRetain {}
 //
 impl FnRetain {
     ///
-    /// Creates new instance of the FnRetain
-    /// - `parent` - the name of the parent entitie
-    /// - `path` something like "assets/retain/"
-    /// - `name` - the name of the parent
-    /// - `enable` - boolean (numeric) input enables the readinf/storing and pass through if true (> 0)
-    /// - `every-cycle` - if true read will done in every computing cycle, else read will done only once
-    /// - `key` - the key to store Point with (full path: ./assets/retain/App/TaskName/key.json)
-    /// - `input` - incoming Point's
-    pub fn new(parent: &Name, path: impl AsRef<Path>, enable: Option<FnOutRef>, every_cycle: bool, key: &str, default: Option<FnOutRef>, input: Option<FnOutRef>) -> Self {
-        let self_id = format!("{}/FnRetain{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
-        let mut path = PathBuf::from(path.as_ref());
-        path.push(parent.join().trim_start_matches('/'));
-        Self {
-            id: self_id.clone(),
-            // name: parent.clone(),
-            txid: PointTxId::from_str(&self_id),
-            kind: FnKind::Fn,
-            enable,
-            every_cycle,
-            key: key.to_owned(),
-            default,
-            input,
-            path,
-            cache: None,
-        }
-    }
-    ///
-    /// Creates a directory of the specified `path`
-    fn path(&mut self) -> Result<PathBuf, String> {
-        match Self::create_dir(&self.id, &self.path) {
-            Ok(path) => {
-                let path = path.join(concat_string!(self.key, ".json"));
-                Ok(path)
-            }
-            Err(err) => Err(concat_string!(self.id, ".path | Error: {}", err)),
-        }
-    }
-    ///
-    /// Writing `value` to the `path`
-    fn write(&self, path: &Path, value: &[u8]) -> Result<(), String> {
-        match fs::OpenOptions::new().truncate(true).create(true).write(true).open(&path) {
-            Ok(mut f) => {
-                match f.write_all(value) {
-                    Ok(_) => {
-                        log::trace!("{}.store | Retain stored in: {:?}", self.id, path);
-                        Ok(())
-                    }
-                    Err(err) => {
-                        let message = format!("{}.store | Error writing to file: '{:?}'\n\terror: {:?}", self.id, path, err);
-                        log::error!("{}", message);
-                        Err(message)
-                    }
-                }
-            }
-            Err(err) => {
-                let message = format!("{}.store | Error open file: '{:?}'\n\terror: {:?}", self.id, path, err);
-                log::error!("{}", message);
-                Err(message)
-            }
-        }
-    }
-    ///
-    /// Writes Point value to the file
-    fn store(&mut self, point: &Point) -> Result<(), String> {
-        match self.path() {
-            Ok(path) => {
-                match &point {
-                    Point::Bool(point) => self.write(&path, point.value.0.to_string().as_bytes()),
-                    Point::Int(point) => self.write(&path, point.value.to_string().as_bytes()),
-                    Point::Real(point) => self.write(&path, point.value.to_string().as_bytes()),
-                    Point::Double(point) => self.write(&path, point.value.to_string().as_bytes()),
-                    Point::String(point) => self.write(&path, point.value.as_bytes()),
-                    Point::Bytes(point) => self.write(&path, point.value.as_slice()),
-                }
-            }
-            Err(err) => Err(err),
-        }
-    }
-    ///
-    /// Creates directiry (all necessary folders in the 'path' if not exists)
-    ///  - path is relative, will be joined with current working dir
-    fn create_dir(self_id: &str, path: impl AsRef<Path>) -> Result<PathBuf, String> {
-        let current_dir = env::current_dir().unwrap();
-        let path = current_dir.join(path);
-        match path.exists() {
-            true => Ok(path),
-            false => {
-                match fs::create_dir_all(&path) {
-                    Ok(_) => Ok(path),
-                    Err(err) => {
-                        let message = format!("{}.create_dir | Error create path: '{:?}'\n\terror: {:?}", self_id, path, err);
-                        log::error!("{}", message);
-                        Err(message)
-                    }
-                }
-            }
-        }
-    }
-    ///
-    /// Loads retained Point value from the disk
-    fn load(&mut self, type_: PointConfType) -> Option<Point> {
-        match self.path() {
-            Ok(path) => {
-                match fs::OpenOptions::new().read(true).open(&path) {
-                    Ok(mut f) => {
-                        let mut input = String::new();
-                        match f.read_to_string(&mut input) {
-                            Ok(_) => {
-                                match type_ {
-                                    PointConfType::Bool => match input.as_str() {
-                                        "true" => Some(Point::Bool(PointHlr::new(self.txid, &self.id, Bool(true), Status::Ok, Cot::Inf, Utc::now()))),
-                                        "false" => Some(Point::Bool(PointHlr::new(self.txid, &self.id, Bool(false), Status::Ok, Cot::Inf, Utc::now()))),
-                                        _ => {
-                                            log::error!("{}.load | Error parse 'bool' from '{}' \n\tretain: '{:?}'", self.id, input, path);
-                                            None
-                                        }
-                                    }
-                                    PointConfType::Int => match input.as_str().parse() {
-                                        Ok(value) => {
-                                            Some(Point::Int(PointHlr::new(self.txid, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
-                                        }
-                                        Err(err) => {
-                                            log::error!("{}.load | Error parse 'Int' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
-                                            None
-                                        }
-                                    }
-                                    PointConfType::Real => match input.as_str().parse() {
-                                        Ok(value) => {
-                                            Some(Point::Real(PointHlr::new(self.txid, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
-                                        }
-                                        Err(err) => {
-                                            log::error!("{}.load | Error parse 'Real' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
-                                            None
-                                        }
-                                    }
-                                    PointConfType::Double => match input.as_str().parse() {
-                                        Ok(value) => {
-                                            Some(Point::Double(PointHlr::new(self.txid, &self.id, value, Status::Ok, Cot::Inf, Utc::now())))
-                                        }
-                                        Err(err) => {
-                                            log::error!("{}.load | Error parse 'Double' from '{}' \n\tretain: '{:?}'\n\terror: {:?}", self.id, input, path, err);
-                                            None
-                                        }
-                                    }
-                                    PointConfType::String => {
-                                        Some(Point::String(PointHlr::new(self.txid, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
-                                    }
-                                    PointConfType::Bytes => {
-                                        Some(Point::Bytes(PointHlr::new(self.txid, &self.id, input.as_bytes().to_vec(), Status::Ok, Cot::Inf, Utc::now())))
-                                    }
-                                    PointConfType::Json => {
-                                        Some(Point::String(PointHlr::new(self.txid, &self.id, input, Status::Ok, Cot::Inf, Utc::now())))
-                                    }
-                                }
-
-                            }
-                            Err(err) => {
-                                log::error!("{}.load | Error read from retain: '{:?}'\n\terror: {:?}", self.id, path, err);
-                                None
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        log::error!("{}.load | Error open file: '{:?}'\n\terror: {:?}", self.id, path, err);
-                        None
-                    }
-                }
-            }
-            Err(err) => {
-                log::error!("{}.load | Error: {:?}", self.id, err);
-                None
-            }
-        }
-    }
-}
-//
-//
-impl FnOut for FnRetain {
-    //
-    fn id(&self) -> String {
-        self.id.clone()
-    }
-    //
-    fn kind(&self) -> FnKind {
-        self.kind
-    }
-    //
-    fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        if let Some(enable) = &self.enable {
-            inputs.append(&mut enable.borrow().inputs());
-        }
-        if let Some(input) = &self.input {
-            inputs.append(&mut input.borrow().inputs());
-        }
-        if let Some(default) = &self.default {
-            inputs.append(&mut default.borrow().inputs());
-        }
-        inputs
-    }
-    //
-    fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
-        let enable = match &self.enable {
-            Some(enable) => {
-                let enable = enable.borrow_mut().out();
-                log::trace!("{}.out | enable: {:?}", self.id, enable);
-                match enable {
-                    FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
-                    FnResult::None => return FnResult::None,
-                    FnResult::Err(err) => return FnResult::Err(err),
-                }
-            }
-            None => true,
+    /// ### Returns `FnRetainRead`  or `FnRetainWrite` new instance
+    /// - `parent`: Идентификатор родительского узла
+    /// - `conf`: Конфигурация узла
+    #[named]
+    pub fn new(parent: &Name, conf: &FnConfig, nodes: &mut TaskNodes, services: &Arc<Services>) -> Result<FnOutRef, Error> {
+        let self_id = format!("{parent}/FnRetain");
+        let enable = FnBuilder::get_input_config(parent, "enable", conf, nodes, services)
+            .map_err(|err| pass_err!(self_id, err, "Can't get 'enable'"))?;
+        let default = FnBuilder::get_input_config(parent, "default", conf, nodes, services)
+            .map_err(|err| pass_err!(self_id, err, "Can't get 'default'"))?;
+        let input = FnBuilder::get_input_config(parent, "input", conf, nodes, services)
+            .map_err(|err| pass_err!(self_id, err, "Can't get 'input'"))?;
+        let every_cycle = conf.param("every-cycle").map_or(Ok(false), |param| {
+            param.as_param().conf.as_bool().ok_or_else(|| new_err!(self_id, "'every-cycle' - wrong config"))
+        })?;
+        let Some(key) = conf.param("key").map(|v| v.as_param()) else {
+            return Err(new_err!(self_id, "Parameter 'key' - missed in '{}'", conf.name));
         };
-        log::trace!("{}.out | enable: {:?}", self.id, enable);
-        if enable {
-            match &self.input {
-                Some(input) => {
-                    let input = input.borrow_mut().out();
-                    log::trace!("{}.out | input: {:?}", self.id, input);
-                    match input {
-                        FnResult::Ok(input) => {
-                            if let Err(err) = self.store(&input) {
-                                log::error!("{}.out | Error: '{:?}'", self.id, err);
-                            };
-                            FnResult::Ok(input)
-                        }
-                        FnResult::None => FnResult::None,
-                        FnResult::Err(err) => FnResult::Err(err),
-                    }
-                }
-                None => {
-                    let default = match &self.default {
-                        Some(default) => {
-                            let default = default.borrow_mut().out();
-                            log::trace!("{}.out | default: {:?}", self.id, default);
-                            match default {
-                                FnResult::Ok(default) => default,
-                                FnResult::None => return FnResult::None,
-                                FnResult::Err(err) => return FnResult::Err(err),
-                            }
-                        }
-                        None => panic!("{}.out | The [default] input is not specified", self.id),
-                    };
-                    if self.every_cycle {
-                        let point = match self.load(default.type_()) {
-                            Some(point) => point,
-                            None => default,
-                        };
-                        log::trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
-                        FnResult::Ok(point)
-                    } else {
-                        let point = match &self.cache {
-                            Some(point) => point.clone(),
-                            None => match self.load(default.type_()) {
-                                Some(point) => {
-                                    point
-                                }
-                                None => default,
-                            }
-                        };
-                        self.cache = Some(point.clone());
-                        log::trace!("{}.out | every cycle: {} \t loaded '{}': \n\t{:?}", self.id, self.every_cycle, self.key, point);
-                        FnResult::Ok(point)
-                    }
-                }
+        let key = key.conf.as_str()
+            .ok_or_else(|| new_err!(self_id, "Parameter 'key' must be a string in '{}'", conf.name))?;
+        let Some(retain_path) = services.retain().path else {
+            return Err(new_err!(self_id, "Retain: path - missed in Application config"));
+        };
+        let cw_dir = std::env::current_dir().map_err(|err| pass_err!(self_id, err))?;
+        let dir = cw_dir.join(retain_path).join(parent.join().trim_start_matches("/"));
+        std::fs::create_dir_all(&dir).map_err(|err| pass_err!(self_id, err, "Error creating dir: '{}'", dir.display()))?;
+        let path = dir.join(key).with_extension("json");
+        Ok(if input.is_none() {
+            let read = FnRetainRead::new(parent, path, every_cycle, default).map_err(|err| pass_err!(self_id, err))?;
+            match enable {
+                Some(en) => Rc::new(RefCell::new(FnEnable::new(read, nodes.enable_mode(), en))),
+                None => Rc::new(RefCell::new(read)),
             }
-        } else {
-            FnResult::None
-        }
-    }
-    //
-    fn reset(&mut self) {
-        if let Some(enable) = &self.enable {
-            enable.borrow_mut().reset();
-        }
-        if let Some(default) = &self.default {
-            default.borrow_mut().reset();
-        }
-        if let Some(input) = &self.input {
-            input.borrow_mut().reset();
-        }
+        } else { 
+            let write = FnRetainWrite::new(parent, path, default, input).map_err(|err| pass_err!(self_id, err))?;
+            match enable {
+                Some(en) => Rc::new(RefCell::new(FnEnable::new(write, nodes.enable_mode(), en))),
+                None => Rc::new(RefCell::new(write)),
+            }
+        })
     }
 }
 ///
-/// Global static counter of FnRetain instances
-static COUNT: AtomicUsize = AtomicUsize::new(1);
+/// Basic Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+    use sal_sync::services::entity::Status;
+    use std::path::PathBuf;
+    #[test]
+    fn test_retain_state_contract() {
+        // Подготавливаем эталонный слепок памяти
+        let state = RetainState {
+            value: RetainValue::Double(12.345),
+            status: Status::Ok,
+            ts: chrono::Utc.with_ymd_and_hms(2026, 6, 11, 9, 6, 45).unwrap(),
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        // Проверяем, что сериализатор честно развернул enum в объектный формат
+        assert!(json.contains(r#"{"Double":12.345}"#));
+        // Вскрытие капота: проверяем десериализацию
+        let deserialized: RetainState = serde_json::from_str(&json).unwrap();
+        assert_eq!(state, deserialized);
+    }
+    #[test]
+    fn test_retain_value_polymorphism() {
+        // Проверяем способность контракта переваривать все поддерживаемые типы 
+        let values = vec![
+            RetainValue::Bool(true),
+            RetainValue::Int(-42),
+            RetainValue::Real(3.14),
+            RetainValue::String("Motor_Start".to_string()),
+        ];
+        for original in values {
+            let json = serde_json::to_string(&original).unwrap();
+            let restored: RetainValue = serde_json::from_str(&json).unwrap();
+            assert_eq!(original, restored);
+        }
+    }
+    #[test]
+    fn test_retain_path_building() {
+        // Тест цементирует механику склеивания путей через trim_start_matches
+        let retain_path = PathBuf::from("assets/retain");
+        let parent_str = "/AppName/TaskName";
+        let key = "retain_key";
+        let dir = retain_path.join(parent_str.trim_start_matches('/'));
+        let path = dir.join(key).with_extension("json");
+        let expected = PathBuf::from("assets/retain/AppName/TaskName/retain_key.json");
+        assert_eq!(path, expected);
+    }
+}

@@ -27,7 +27,7 @@ pub struct FnInput {
 // 
 impl FnInput {
     // pub fn new(parent: &str, name: impl Into<String>, initial: Option<PointType>, type_: FnConfPointType) -> Self {
-    pub fn new(parent: impl Into<String>, tx_id: usize, conf: &mut FnConfig, cycle: &EvalCycleRef) -> Self {
+    pub fn new(parent: impl Into<String>, tx_id: usize, conf: &FnConfig, cycle: &EvalCycleRef) -> Self {
         let dbg = format!("{}/FnInput{}", parent.into(), COUNT.fetch_add(1, Ordering::AcqRel));
         let (typ, initial) = match conf.type_.clone() {
             FnConfPointType::Bool => (PointType_::Bool, conf.options.default.as_ref().map_or(None, |d| match d.parse::<bool>() {

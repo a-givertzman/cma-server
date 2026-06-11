@@ -102,8 +102,7 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 #[cfg(test)]
 mod tests {
     use sal_sync::services::entity::{Cot, Status};
-
-use super::*;
+    use super::*;
     use std::cell::RefCell;
     use std::rc::Rc;
     #[derive(Debug)]

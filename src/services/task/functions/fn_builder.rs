@@ -6,13 +6,6 @@ use crate::{
     domain::FnOutRef,
     services::task::{
         functions::{*, functions::Functions},
-        // FnAcc, FnAverage, FnConst, FnCount, FnDebug, FnEnable, FnHold, FnInput, FnIsChangedValue, FnMax, FnMin, FnPiecewiseLineApprox, FnPointId, FnRecOpCycleMetric, FnTimer, FnTimerOffDelay, FnTimerOnDelay, FnToBool, FnToDouble, FnVar, PiecewiseLinear, SqlMetric, 
-        // functions::{
-        //     comp::{FnEq, FnGe, FnGt, FnLe, FnLt, FnNe}, conversion::{FnToInt, FnToReal, FnToString},
-        //     edge_detection::{FnFallingEdge, FnRisingEdge}, export::{FnExport, FnPoint, FnToApiQueue},
-        //     filter::{FnSelect, FnSmooth, FnThreshold}, functions::Functions, io::FnRetain,
-        //     ops::{FnAdd, FnBitAnd, FnBitOr, FnBitXor, FnDiv, FnMul, FnNot, FnPow, FnSub}, plot::FnPlot,
-        // }
         task_nodes::TaskNodes
     },
 };
@@ -23,12 +16,12 @@ pub struct FnBuilder {}
 impl FnBuilder {
     ///
     /// Creates nested functions tree from it config
-    pub fn new(parent: &Name, conf: &mut FnConfKind, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<FnOutRef, Error> {
+    pub fn new(parent: &Name, conf: &FnConfKind, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<FnOutRef, Error> {
         Self::function(parent, "", conf, nodes, services)
         // trace!("{}.function | fn '{}': {:#?}", format!("{}/FnBuilder", parent), conf.borrow().id(), conf);
         // conf
     }
-    fn get_input_config(parent: &Name, name: &str, conf: &mut FnConfig, nodes: &mut TaskNodes, services: &Arc<Services>) -> Result<Option<FnOutRef>, Error> {
+    pub fn get_input_config(parent: &Name, name: &str, conf: &FnConfig, nodes: &mut TaskNodes, services: &Arc<Services>) -> Result<Option<FnOutRef>, Error> {
         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
         Ok(match input_conf {
             Some(input_conf) => Some(Self::function(parent, name, input_conf, nodes, services.clone())?),
@@ -37,7 +30,7 @@ impl FnBuilder {
     }
     ///
     ///
-    fn function(parent: &Name, input_name: &str, conf: &mut FnConfKind, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<FnOutRef, Error> {
+    fn function(parent: &Name, input_name: &str, conf: &FnConfKind, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<FnOutRef, Error> {
         let dbg = Dbg::new(parent, "FnBuilder");
         let error = Error::new(&dbg, "function");
         match conf {
@@ -71,7 +64,7 @@ impl FnBuilder {
                     //
                     Functions::Add => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnAdd | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -164,7 +157,7 @@ impl FnBuilder {
                     //
                     Functions::Gt => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnGt | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -176,7 +169,7 @@ impl FnBuilder {
                     //
                     Functions::Ge => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnGe | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -188,7 +181,7 @@ impl FnBuilder {
                     //
                     Functions::Eq => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnEq | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -200,7 +193,7 @@ impl FnBuilder {
                     //
                     Functions::Le => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnLe | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -212,7 +205,7 @@ impl FnBuilder {
                     //
                     Functions::Lt => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnLt | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -224,7 +217,7 @@ impl FnBuilder {
                     //
                     Functions::Ne => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnNe | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -261,7 +254,7 @@ impl FnBuilder {
                     //
                     Functions::Debug => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnDebug | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -411,49 +404,7 @@ impl FnBuilder {
                         )))
                     }
                     //
-                    Functions::Retain => {
-                        let name = "default";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let default = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnRetain | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "input";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let input = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnRetain | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "enable";
-                        let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
-                        let enable = match input_conf {
-                            Some(input_conf) => Some(Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnRetain | Can't get '{name}'"), err))?),
-                            None => None,
-                        };
-                        let name = "every-cycle";
-                        let every_cycle = conf.param(name).map_or(false, |param| {
-                            match param.as_param().conf.as_bool() {
-                                Some(param) => param,
-                                None => {
-                                    log::warn!("{}.function | FnRetain | Illegal 'every_cycle' parameter value in '{:#?}'", dbg, conf);
-                                    false
-                                },
-                            }
-                        });
-                        let Some(key) = conf.param("key").map(|v| v.as_param()) else {
-                            return Err(error.err(format!("FnRetain | Parameter 'key' - missed in '{}'", conf.name)));
-                        };
-                        let key = key.conf.as_str().ok_or(error.err(format!("FnRetain | Parameter 'key' must be a string in '{}'", conf.name)))?;
-                        let Some(retain_path) = services.retain().path else {
-                            return Err(error.err(format!("FnRetain | Retain: path - missed in Application config")));
-                        };
-                        Ok(Rc::new(RefCell::new(
-                            FnRetain::new(parent, retain_path, enable, every_cycle, key, default, input)
-                        )))
-                    }
+                    Functions::Retain => FnRetain::new(parent, &conf, nodes, &services).map_err(|err| error.pass(err)),
                     //
                     Functions::Acc => {
                         let name = "initial";
@@ -474,7 +425,7 @@ impl FnBuilder {
                     //
                     Functions::Mul => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -486,7 +437,7 @@ impl FnBuilder {
                     //
                     Functions::Div => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -498,7 +449,7 @@ impl FnBuilder {
                     //
                     Functions::Sub => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -510,7 +461,7 @@ impl FnBuilder {
                     //
                     Functions::BitAnd => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnBitAnd | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -522,7 +473,7 @@ impl FnBuilder {
                     //
                     Functions::BitOr => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnBitOr | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -534,7 +485,7 @@ impl FnBuilder {
                     //
                     Functions::BitXor => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnBitXor | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -545,7 +496,7 @@ impl FnBuilder {
                     }
                     Functions::Or => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnOr | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -556,7 +507,7 @@ impl FnBuilder {
                     }
                     Functions::And => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnAnd | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -638,7 +589,7 @@ impl FnBuilder {
                     //
                     Functions::Pow => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -672,7 +623,7 @@ impl FnBuilder {
                             .and_then(|v| v.ok_or_else(|| error.err(format!("FnRecOpCycleMetric | '{name}' - is missed"))))
                             .map_err(|err| error.pass_with(format!("FnRecOpCycleMetric | Can't get '{name}'"), err))?;
                         let mut inputs = IndexMap::new();
-                        let conf_inputs = conf.inputs.iter_mut().filter(|(name, _)| {
+                        let conf_inputs = conf.inputs.iter().filter(|(name, _)| {
                             ! ["enable", "reset", "send-to", "conf", "op-cycle"].contains(&name.as_str())
                         });
                         for (name, input_conf) in conf_inputs {
@@ -737,7 +688,7 @@ impl FnBuilder {
                     //
                     Functions::IsChangedValue => {
                         let mut inputs = vec![];
-                        for (name, input_conf) in &mut conf.inputs {
+                        for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnIsChangedValue | Can't get '{name}'"), err))?;
                             inputs.push(input);
@@ -772,7 +723,7 @@ impl FnBuilder {
             FnConfKind::Var(conf) => {
                 let var_name = conf.name.clone();
                 log::trace!("{}.function | Var: {:?}...", dbg, var_name);
-                match conf.inputs.iter_mut().next() {
+                match conf.inputs.iter().next() {
                     //
                     // New var declaration
                     Some((input_conf_name, input_conf)) => {
@@ -838,17 +789,17 @@ impl FnBuilder {
                     }
                     None => None,
                 };
-                let enable = match conf.enable.as_mut() {
+                let enable = match conf.enable.as_ref() {
                     Some(input_conf) => Some(Self::function(parent, "enable", input_conf, nodes, services.clone())
                         .map_err(|err| error.pass_with(format!("PointConf | Can't get 'enable'"), err))?),
                     None => None,
                 };
-                let input = match conf.input.as_mut() {
+                let input = match conf.input.as_ref() {
                     Some(input_conf) => Some(Self::function(parent, "input", input_conf, nodes, services.clone())
                         .map_err(|err| error.pass_with(format!("PointConf | Can't get 'input'"), err))?),
                     None => None,
                 };
-                let changes_only = match conf.changes_only.as_mut() {
+                let changes_only = match conf.changes_only.as_ref() {
                     Some(input_conf) => Some(Self::function(parent, "changes-only", input_conf, nodes, services.clone())
                         .map_err(|err| error.pass_with(format!("PointConf | Can't get 'input'"), err))?),
                     None => None,

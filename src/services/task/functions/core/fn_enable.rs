@@ -33,12 +33,12 @@ impl<T: FnOut> FnEnable<T> {
     /// Creates a new instance of the FnEnable decorator
     /// - `origin` - Оборачиваемая вычислительная функция (`FnXyz`).
     /// - `mode` - Режим работы при отключении сигнала (Cold / Warm).
-    /// - `enable` - Ссылка на `enable`, выдающий логический сигнал активности.
-    pub fn new(origin: T, mode: FnEnableMode, enable: FnOutRef) -> Self {
+    /// - `en` - Ссылка на `enable`, выдающий логический сигнал активности.
+    pub fn new(origin: T, mode: FnEnableMode, en: FnOutRef) -> Self {
         Self {
             origin,
             mode,
-            enable,
+            enable: en,
             prev_en: false,
             last_val: None,
         }

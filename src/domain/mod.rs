@@ -24,4 +24,6 @@ pub(crate) use point::*;
 pub mod retain_buffer;
 pub mod testing;
 mod types;
-pub use types::*;
+pub(crate) use types::*;
+mod error;
+pub(crate) use error::*;

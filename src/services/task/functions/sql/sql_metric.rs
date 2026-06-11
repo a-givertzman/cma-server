@@ -49,7 +49,7 @@ impl SqlMetric {
     /// - `inputs`: Вектор входных сигналов, должен содержать не менее одного входа
     /// - `nodes`: Граф `TaskNodes`
     /// - `services`: Ссылка на контейнер всех сервисов
-    pub fn new(parent: impl Into<String>, conf: &mut FnConfig, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<SqlMetric, Error> {
+    pub fn new(parent: impl Into<String>, conf: &FnConfig, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<SqlMetric, Error> {
         let self_name = Name::new(parent, format!("SqlMetric{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let id = self_name.join();
         let error = Error::new(&id, "new");

@@ -11,12 +11,12 @@ build = "build.rs"
 plot = ["dep:winit"]
 
 [dependencies]
-log = "~0.4"
-env_logger = "~0.11"
+log = "^0.4"
+env_logger = "^0.11"
 
 #
 # date & time
-chrono = "^0.4"
+chrono = { version = "^0.4", features = ["serde"] }
 
 #
 # Internal
@@ -25,14 +25,14 @@ testing = { tag = "0.1.2", git = "https://github.com/a-givertzman/rust-testing.g
 debugging = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-debuging.git" }
 api-tools = { tag = "0.2.2", git = "https://github.com/a-givertzman/rust-api-tools.git" }
 # sal-sync = { path = "../sal-sync" }
-sal-sync = { tag = "0.3.1", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
+sal-sync = { tag = "0.3.2", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
 # frdm-tools = { tag = "0.2.0", git = "https://github.com/a-givertzman/frdm-server.git" }
 
 #
 # Serde
-serde = { version = "~1.0", features = ["derive"] }
-serde_yaml = "~0.9"
-serde_json = "~1.0"
+serde = { version = "^1.0", features = ["derive"] }
+serde_yaml = "^0.9"
+serde_json = "^1.0"
 
 #
 # Regex
@@ -40,67 +40,71 @@ regex = "^1.12"
 
 #
 # IO
-csv = "~1.4"
-spreadsheet-ods = "~1.0"
+csv = "^1.4"
+spreadsheet-ods = "^1.0"
 
 #
 # Math
-rand = "~0.9"
-rustfft = "~6.4"
+rand = "^0.9"
+rustfft = "^6.4"
 
 #
 # Tread safe
-parking_lot = "~0.12"
-once_cell = "~1.21"
-lazy_static = "~1.5"
-kanal = { version = "~0.1" }
-dashmap = "~6.1"
-coco = "~0.3"
-arc-swap = "~1.8"
+parking_lot = "^0.12"
+once_cell = "^1.21"
+lazy_static = "^1.5"
+kanal = { version = "^0.1" }
+dashmap = "^6.1"
+coco = "^0.3"
+arc-swap = "^1.8"
 
 #
 # Collections
-linked-hash-map = "~0.5"
+linked-hash-map = "^0.5"
 indexmap = "^2.12"
-hashers = "~1.0"
-circular-buffer = "~1.2"
+hashers = "^1.0"
+circular-buffer = "^1.2"
 
 #
 # CPP integrations
 # snap7 = "~0.0"
 snap7-sys = "~0.1"
-libc = "~0.2"
-libloading = "~0.9"
+libc = "^0.2"
+libloading = "^0.9"
 
 #
 # fast string concatinations
-concat-string = "~1.0"
+concat-string = "^1.0"
 
-signal-hook = "~0.3"
+signal-hook = "^0.3"
 
-strum = "~0.27"
-strum_macros = "~0.27"
+strum = "^0.27"
+strum_macros = "^0.27"
 
 #
 # CLI
-clap = { version = "~4.5", features = ["derive"] }
+clap = { version = "^4.5", features = ["derive"] }
 
 #
 # UI
-egui = "~0.33"
-egui_plot = "~0.34"
-egui_extras = "~0.33"
-eframe = "~0.33"
+egui = "^0.33"
+egui_plot = "^0.34"
+egui_extras = "^0.33"
+eframe = "^0.33"
 hsl = "~0.1"
-winit = { version = "~0.30", optional = true }
+winit = { version = "^0.30", optional = true }
 #winit = { version = "~0.30" }
 
-uid = "~0.1"
+uid = "^0.1"
 
-derivative = "~2.2"
+derivative = "^2.2"
 
-# plotters = "~0.3"
-plotters = { version = "~0.3", features = ["ab_glyph", "fontconfig-dlopen"] }
+function_name = "^0.3"
+
+# plotters
+plotters = { version = "^0.3", features = ["ab_glyph", "fontconfig-dlopen"] }
+
+[dev-dependencies]
 
 [build-dependencies]
 cc = "~1.2"
