@@ -50,7 +50,7 @@ impl FnRetainWrite {
     #[named]
     pub fn new(parent: &Name, path: impl AsRef<Path>, default: Option<FnOutRef>, input: Option<FnOutRef>) -> Result<Self, Error> {
         let id = format!("{}/FnRetainWrite{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
-        let tmp_path = path.as_ref().join(&key).with_extension("json.tmp");
+        let tmp_path = path.as_ref().with_extension("json.tmp");
         Ok(Self {
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
@@ -58,7 +58,7 @@ impl FnRetainWrite {
             input,
             cache: None,
             tmp_path,
-            path,
+            path: path.as_ref().to_path_buf(),
             id,
         })
     }
