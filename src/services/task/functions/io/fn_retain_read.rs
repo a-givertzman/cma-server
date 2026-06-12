@@ -5,20 +5,20 @@ use sal_sync::services::{
     types::Bool,
 };
 use std::{fs, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
-use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, functions::io::{RetainState, RetainValue}}};
+use crate::{domain::FnOutRef, err, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, functions::io::{RetainState, RetainValue}}};
 ///
 /// ### Function | `FnRetainRead`
 /// 
-/// Чтение значений с диска.
+/// Чтение значения `Point` с диска.
 /// По умолчанию читает с диска только в первый цикл,
 /// дальше возвращает закэшированное значение.
 /// 
-/// - **Особенности работы:**
+/// **Особенности работы:**
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
 /// - `default`: Запасной источник данных (вычисляется лениво), если файл на диске отсутствует.
 /// - `every-cycle`: При `true` файл будет читаться с диска на каждом такте вычислений.
 /// 
-/// - **Формат данных на диске:**
+/// **Формат данных на диске:**
 /// ```json
 /// { "value": {"Bool": false}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
 /// { "value": {"Int": 123}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
@@ -29,11 +29,10 @@ use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOu
 /// 
 /// **Пример:**
 /// ```yaml
-/// let opCycleId:
-/// input fn Retain:
+/// fn Retain:
 ///     key: 'OperatingCycleId'
 ///     input fn Acc:
-///         initial fn Retain:
+///         initial fn Retain:      # Тут происходит чтение
 ///             default: const int 0
 ///             key: 'OperatingCycleId'
 ///         input: opCycleIsDone
@@ -59,6 +58,9 @@ impl FnRetainRead {
     #[named]
     pub fn new(parent: &Name, path: impl AsRef<Path>, every_cycle: bool, default: Option<FnOutRef>) -> Result<Self, Error> {
         let id = format!("{}/FnRetainRead{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
+        if !path.as_ref().is_file() {
+            return Err(err!(id, "Rerain path is not a file: {}", path.as_ref().display()));
+        }
         Ok(Self {
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,

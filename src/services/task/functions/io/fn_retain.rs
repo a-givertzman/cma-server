@@ -3,7 +3,7 @@ use sal_core::error::Error;
 use sal_sync::services::{Services, entity::{Name, Status, }, task::functions::FnConfig};
 use serde::{Deserialize, Serialize};
 use std::{cell::RefCell, rc::Rc, sync::Arc};
-use crate::{domain::{FnOutRef}, new_err, pass_err, services::task::{FnBuilder, FnEnable, TaskNodes, functions::{FnRetainRead, FnRetainWrite}}};
+use crate::{domain::{FnOutRef}, err, err_pass, services::task::{FnBuilder, FnEnable, TaskNodes, functions::{FnRetainRead, FnRetainWrite}}};
 ///
 /// ### `RetainValue` | Storage wrapper for `Point` retain
 /// Легковесная обертка для сериализации и десериализации типов данных `Point` на диск.
@@ -16,6 +16,30 @@ pub(super) enum RetainValue {
     String(String),
     Bytes(Vec<u8>),
 }
+impl From<sal_sync::services::entity::Point> for RetainValue {
+    fn from(p: sal_sync::services::entity::Point) -> Self {
+        match p {
+            sal_sync::services::entity::Point::Bool(p) => Self::Bool(p.value.0),
+            sal_sync::services::entity::Point::Int(p) => Self::Int(p.value),
+            sal_sync::services::entity::Point::Real(p) => Self::Real(p.value),
+            sal_sync::services::entity::Point::Double(p) => Self::Double(p.value),
+            sal_sync::services::entity::Point::String(p) => Self::String(p.value),
+            sal_sync::services::entity::Point::Bytes(p) => Self::Bytes(p.value),
+        }
+    }
+}
+impl From<&sal_sync::services::entity::Point> for RetainValue {
+    fn from(p: &sal_sync::services::entity::Point) -> Self {
+        match p {
+            sal_sync::services::entity::Point::Bool(p) => Self::Bool(p.value.0),
+            sal_sync::services::entity::Point::Int(p) => Self::Int(p.value),
+            sal_sync::services::entity::Point::Real(p) => Self::Real(p.value),
+            sal_sync::services::entity::Point::Double(p) => Self::Double(p.value),
+            sal_sync::services::entity::Point::String(p) => Self::String(p.value.clone()),
+            sal_sync::services::entity::Point::Bytes(p) => Self::Bytes(p.value.clone()),
+        }
+    }
+}
 ///
 /// ### Состояние `Point` для хранения на диске
 /// Инкапсулирует полное физическое состояние точки данных на момент записи.
@@ -24,6 +48,16 @@ pub(super) struct RetainState {
     pub value: RetainValue,
     pub status: Status,
     pub ts: chrono::DateTime<chrono::Utc>,
+}
+impl From<&sal_sync::services::entity::Point> for RetainState {
+    fn from(p: &sal_sync::services::entity::Point) -> Self {
+        Self { value: RetainValue::from(p), status: p.status(), ts: p.timestamp() }
+    }
+}
+impl From<sal_sync::services::entity::Point> for RetainState {
+    fn from(p: sal_sync::services::entity::Point) -> Self {
+        Self { status: p.status(), ts: p.timestamp(), value: RetainValue::from(p) }
+    }
 }
 ///
 /// ### Builder | `FnRetain`
@@ -57,34 +91,34 @@ impl FnRetain {
     pub fn new(parent: &Name, conf: &FnConfig, nodes: &mut TaskNodes, services: &Arc<Services>) -> Result<FnOutRef, Error> {
         let self_id = format!("{parent}/FnRetain");
         let enable = FnBuilder::get_input_config(parent, "enable", conf, nodes, services)
-            .map_err(|err| pass_err!(self_id, err, "Can't get 'enable'"))?;
+            .map_err(|err| err_pass!(self_id, err, "Can't get 'enable'"))?;
         let default = FnBuilder::get_input_config(parent, "default", conf, nodes, services)
-            .map_err(|err| pass_err!(self_id, err, "Can't get 'default'"))?;
+            .map_err(|err| err_pass!(self_id, err, "Can't get 'default'"))?;
         let input = FnBuilder::get_input_config(parent, "input", conf, nodes, services)
-            .map_err(|err| pass_err!(self_id, err, "Can't get 'input'"))?;
+            .map_err(|err| err_pass!(self_id, err, "Can't get 'input'"))?;
         let every_cycle = conf.param("every-cycle").map_or(Ok(false), |param| {
-            param.as_param().conf.as_bool().ok_or_else(|| new_err!(self_id, "'every-cycle' - wrong config"))
+            param.as_param().conf.as_bool().ok_or_else(|| err!(self_id, "'every-cycle' - wrong config"))
         })?;
         let Some(key) = conf.param("key").map(|v| v.as_param()) else {
-            return Err(new_err!(self_id, "Parameter 'key' - missed in '{}'", conf.name));
+            return Err(err!(self_id, "Parameter 'key' - missed in '{}'", conf.name));
         };
         let key = key.conf.as_str()
-            .ok_or_else(|| new_err!(self_id, "Parameter 'key' must be a string in '{}'", conf.name))?;
+            .ok_or_else(|| err!(self_id, "Parameter 'key' must be a string in '{}'", conf.name))?;
         let Some(retain_path) = services.retain().path else {
-            return Err(new_err!(self_id, "Retain: path - missed in Application config"));
+            return Err(err!(self_id, "Retain: path - missed in Application config"));
         };
-        let cw_dir = std::env::current_dir().map_err(|err| pass_err!(self_id, err))?;
+        let cw_dir = std::env::current_dir().map_err(|err| err_pass!(self_id, err))?;
         let dir = cw_dir.join(retain_path).join(parent.join().trim_start_matches("/"));
-        std::fs::create_dir_all(&dir).map_err(|err| pass_err!(self_id, err, "Error creating dir: '{}'", dir.display()))?;
+        std::fs::create_dir_all(&dir).map_err(|err| err_pass!(self_id, err, "Error creating dir: '{}'", dir.display()))?;
         let path = dir.join(key).with_extension("json");
         Ok(if input.is_none() {
-            let read = FnRetainRead::new(parent, path, every_cycle, default).map_err(|err| pass_err!(self_id, err))?;
+            let read = FnRetainRead::new(parent, path, every_cycle, default).map_err(|err| err_pass!(self_id, err))?;
             match enable {
                 Some(en) => Rc::new(RefCell::new(FnEnable::new(read, nodes.enable_mode(), en))),
                 None => Rc::new(RefCell::new(read)),
             }
         } else { 
-            let write = FnRetainWrite::new(parent, path, default, input).map_err(|err| pass_err!(self_id, err))?;
+            let write = FnRetainWrite::new(parent, path, default, input).map_err(|err| err_pass!(self_id, err))?;
             match enable {
                 Some(en) => Rc::new(RefCell::new(FnEnable::new(write, nodes.enable_mode(), en))),
                 None => Rc::new(RefCell::new(write)),

@@ -14,7 +14,7 @@ pub fn short_type_name<T: ?Sized>() -> &'static str {
 /// * `new_err!(self.dbg, "Текст")` — использует имя текущей функции и поле класса `self.dbg`.
 /// * `new_err!(Self, "Текст")` — преобразует имя структуры `Self` в строку и использует её как ID класса.
 #[macro_export]
-macro_rules! new_err {
+macro_rules! err {
     // Ветка 1: Если передали ключевое слово Self
     (Self, $($arg:tt)+) => {
         $crate::Error::new(
@@ -38,7 +38,7 @@ macro_rules! new_err {
 /// * `pass_err!(Self, err)` — передает ошибку дальше, используя имя структуры `Self` как ID класса.
 /// * `pass_err!(Self, err, "Описание")` — передает ошибку с описанием и именем `Self``.
 #[macro_export]
-macro_rules! pass_err {
+macro_rules! err_pass {
     // Ветка 1: Чистый проброс для Self
     (Self, $err:expr) => {
         $crate::Error::new(
