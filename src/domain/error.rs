@@ -1,24 +1,17 @@
 ///
-/// Извлекает короткое имя типа без пути модуля.
-/// Например: "cma_server::task::FnRetain" -> "FnRetain"
-pub fn short_type_name<T: ?Sized>() -> &'static str {
-    let full = std::any::type_name::<T>();
-    full.rsplit("::").next().unwrap_or(full)
-}
-///
 /// ### Создает новую ошибку на основе текущего контекста выполнения.
 /// 
 /// Добавь атрибут метода `#[named]` из крейта `function_name`
 ///
 /// **Примеры использования:**
-/// * `new_err!(self.dbg, "Текст")` — использует имя текущей функции и поле класса `self.dbg`.
-/// * `new_err!(Self, "Текст")` — преобразует имя структуры `Self` в строку и использует её как ID класса.
+/// * `err!(self.dbg, "Текст")` — использует имя текущей функции и поле класса `self.dbg`.
+/// * `err!(Self, "Текст")` — преобразует имя структуры `Self` в строку и использует её как ID класса.
 #[macro_export]
 macro_rules! err {
     // Ветка 1: Если передали ключевое слово Self
     (Self, $($arg:tt)+) => {
         $crate::Error::new(
-            $crate::utils::short_type_name::<Self>(), 
+            $crate::short_type_name::<Self>(), 
             function_name!()
         ).err(format!($($arg)+))
     };
@@ -33,10 +26,10 @@ macro_rules! err {
 /// Добавь атрибут метода `#[named]` из крейта `function_name`
 /// 
 /// **Примеры использования:**
-/// * `pass_err!(self.dbg, err)` — передает ошибку дальше с именем класса `self.dbg` и именем текущей функции.
-/// * `pass_err!(self.dbg, err, "Описание")` — передает ошибку с дополнительным описанием и `self.dbg`.
-/// * `pass_err!(Self, err)` — передает ошибку дальше, используя имя структуры `Self` как ID класса.
-/// * `pass_err!(Self, err, "Описание")` — передает ошибку с описанием и именем `Self``.
+/// * `err_pass!(self.dbg, err)` — передает ошибку дальше с именем класса `self.dbg` и именем текущей функции.
+/// * `err_pass!(self.dbg, err, "Описание")` — передает ошибку с дополнительным описанием и `self.dbg`.
+/// * `err_pass!(Self, err)` — передает ошибку дальше, используя имя структуры `Self` как ID класса.
+/// * `err_pass!(Self, err, "Описание")` — передает ошибку с описанием и именем `Self``.
 #[macro_export]
 macro_rules! err_pass {
     // Ветка 1: Чистый проброс для Self
@@ -49,7 +42,7 @@ macro_rules! err_pass {
     // Ветка 2: Проброс с описанием для Self
     (Self, $err:expr, $($arg:tt)+) => {
         $crate::Error::new(
-            $crate::utils::short_type_name::<Self>(), 
+            $crate::short_type_name::<Self>(), 
             function_name!()
         ).pass_with(format!($($arg)+), $err.to_string())
     };

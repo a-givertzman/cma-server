@@ -9,7 +9,7 @@ use sal_sync::{
 };
 use crate::{
     conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
-    domain::{constants::constants::RECV_TIMEOUT, Mutex},
+    domain::{RECV_TIMEOUT, Mutex},
     services::{
         diagnosis::diag_point::DiagPoint,
         slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},

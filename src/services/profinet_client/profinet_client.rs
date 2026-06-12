@@ -17,7 +17,7 @@ use sal_sync::{
 };
 use crate::{
     conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf,
-    domain::{FxDashMap, RwLock, constants::constants::RECV_TIMEOUT},
+    domain::{FxDashMap, RwLock, RECV_TIMEOUT},
     services::{
         diagnosis::diag_point::DiagPoint,
         profinet_client::{profinet_db::ProfinetDb, s7::s7_client::S7Client},

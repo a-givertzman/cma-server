@@ -72,25 +72,6 @@ impl FnRetainWrite {
             id,
         })
     }
-    ///
-    /// ### Физическая запись состояния на диск
-    /// 
-    /// `RetainState` пишется через атомарную подмену файлов
-    #[named]
-    fn store(&self, state: &RetainState) -> Result<(), Error> {
-        let json = serde_json::to_string(state)
-            .map_err(|err| err_pass!(self.id, err, "Can't serialize JSON {:?}", state))?;
-        let mut f = fs::OpenOptions::new().truncate(true).create(true).write(true).open(&self.tmp_path)
-            .map_err(|err| err_pass!(self.id, err, "Can't open '{}'", self.tmp_path.display()))?;
-        f.write_all(json.as_bytes())
-            .map_err(|err| err_pass!(self.id, err, "Can't Write '{}'", self.tmp_path.display()))?;
-        f.sync_data()
-            .map_err(|err| err_pass!(self.id, err, "Can't Sync {}", self.tmp_path.display()))?;
-        fs::rename(&self.tmp_path, &self.path)
-            .map_err(|err| err_pass!(self.id, err, "Can't Rename '{}' -> '{}'", self.tmp_path.display(), self.path.display()))?;
-        log::trace!("{}.store | Can't retain state to '{}'", self.id, self.path.display());
-        Ok(())
-    }
 }
 //
 impl FnOut for FnRetainWrite {

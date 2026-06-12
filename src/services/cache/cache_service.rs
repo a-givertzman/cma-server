@@ -25,7 +25,7 @@ use sal_sync::{
 use serde::Serialize;
 use serde_json::json;
 use crate::{
-    domain::{FxDashMap, Sender, constants::constants::RECV_TIMEOUT}, services::{CacheServiceConf, cache::delay_store::DelyStore}
+    domain::{FxDashMap, Sender, RECV_TIMEOUT}, services::{CacheServiceConf, cache::delay_store::DelyStore}
 };
 ///
 /// CacheService service

@@ -79,6 +79,8 @@
 mod eval_cycle;
 mod fn_eval_once;
 mod functions;
+mod retain;
+pub(super) use retain::*;
 mod task_conf;
 mod task;
 mod task_nodes;

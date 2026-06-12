@@ -1786,7 +1786,7 @@ use std::{
 };
 use concat_string::concat_string;
 use crate::{
-    domain::constants::constants::RECV_TIMEOUT, services::task::{task_conf::TaskConf, task_nodes::TaskNodes}, sync::SendWrapper,
+    domain::RECV_TIMEOUT, services::task::{task_conf::TaskConf, task_nodes::TaskNodes}, sync::SendWrapper,
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations

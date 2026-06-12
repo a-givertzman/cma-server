@@ -71,22 +71,6 @@ impl FnRetainRead {
             id,
         })
     }
-    ///
-    /// ### Чтение с диска и парсинг `RetainState`
-    fn load(&self) -> Option<Point> {
-        let f = fs::File::open(&self.path).ok()?;
-        let state: RetainState = serde_json::from_reader(f).map_err(|err| {
-            log::error!("{}.load | Can't parse JSON from {}: {:?}", self.id, self.path.display(), err);
-        }).ok()?;
-        Some(match state.value {
-            RetainValue::Bool(v) => Point::Bool(PointHlr::new(self.txid, &self.id, Bool(v), state.status, Cot::Inf, state.ts)),
-            RetainValue::Int(v) => Point::Int(PointHlr::new(self.txid, &self.id, v, state.status, Cot::Inf, state.ts)),
-            RetainValue::Real(v) => Point::Real(PointHlr::new(self.txid, &self.id, v, state.status, Cot::Inf, state.ts)),
-            RetainValue::Double(v) => Point::Double(PointHlr::new(self.txid, &self.id, v, state.status, Cot::Inf, state.ts)),
-            RetainValue::String(v) => Point::String(PointHlr::new(self.txid, &self.id, v, state.status, Cot::Inf, state.ts)),
-            RetainValue::Bytes(v) => Point::Bytes(PointHlr::new(self.txid, &self.id, v, state.status, Cot::Inf, state.ts)),
-        })
-    }
 }
 //
 impl FnOut for FnRetainRead {

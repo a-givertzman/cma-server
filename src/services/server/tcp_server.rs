@@ -4,7 +4,7 @@ use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration
 };
 use crate::{
-    domain::{constants::constants::RECV_TIMEOUT},
+    domain::{RECV_TIMEOUT},
     services::server::{
         connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection,
         TcpServerConf,

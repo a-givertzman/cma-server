@@ -14,7 +14,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, PointTxId, PointType}}, sync::{Handles, Owner}, thread_pool::Scheduler
 };
-use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::{CmdKind, Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
+use crate::{domain::RECV_TIMEOUT, infra::ApiClient, services::{CmdKind, Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
 ///
 /// ## `VirtualDevice` Service | Emulation of the real device behavior
 /// - Read events from the table file

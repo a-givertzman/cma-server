@@ -7,7 +7,7 @@ use sal_sync::{services::{Service, Services, SubscriptionCriteria, entity::{Cot,
 use serde_json::json;
 use crate::{
     domain::{
-        constants::constants::RECV_TIMEOUT, net::protocols::jds::{
+        RECV_TIMEOUT, net::protocols::jds::{
             jds_decode_message::JdsDecodeMessage, 
             jds_deserialize::JdsDeserialize, 
             jds_encode_message::JdsEncodeMessage, 

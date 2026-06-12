@@ -12,7 +12,8 @@
 //! 
 pub mod auth;
 pub mod cli;
-pub mod constants;
+mod constants;
+pub(crate) use constants::*;
 mod dsp;
 pub use dsp::*;
 pub mod failure;

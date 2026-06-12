@@ -7,7 +7,8 @@ mod tcp;
 #[cfg(test)]
 mod tests;
 
-pub use sal_core::error::Error;
+pub(crate) use domain::short_type_name;
+pub(crate) use sal_core::error::Error;
 
 use std::path::PathBuf;
 use clap::Parser;
