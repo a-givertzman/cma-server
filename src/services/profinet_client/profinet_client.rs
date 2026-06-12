@@ -1,11 +1,8 @@
 use std::{
-    fmt::Debug, hash::BuildHasherDefault,
-    sync::{Arc, atomic::{AtomicBool, Ordering}},
+    fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}},
     thread::{self}, time::Duration,
 };
-use hashers::fx_hash::FxHasher;
-use indexmap::IndexMap;
-use sal_core::{dbg::Dbg, error::{Error, ErrorLimit}};
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ChangeNotify,
     services::{
@@ -17,7 +14,7 @@ use sal_sync::{
 };
 use crate::{
     conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf,
-    domain::{FxDashMap, RwLock, RECV_TIMEOUT},
+    domain::{FxDashMap, RECV_TIMEOUT},
     services::{
         diagnosis::diag_point::DiagPoint,
         profinet_client::{profinet_db::ProfinetDb, s7::s7_client::S7Client},
@@ -206,7 +203,7 @@ impl ProfinetClient {
                 .on(true,  |message| log::info!("{}", message))
                 .on(false, |message| log::warn!("{}", message))
                 .build();
-            let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
+            let mut dbs = FxIndexMap::default();
             let mut points: Vec<PointConf> = vec![];
             for (db_name, db_conf) in conf.dbs {
                 log::info!("{}.write | configuring ProfinetDb: {:?}...", dbg, db_name);

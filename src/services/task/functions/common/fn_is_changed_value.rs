@@ -1,11 +1,9 @@
 use sal_sync::{
     collections::FxHashMap,
-    services::{entity::{Cot, Point, PointHlr, PointTxId, Status},
+    services::{entity::{Point, PointHlr, PointTxId},
     types::Bool,
 }};
-use std::{collections::HashMap, hash::BuildHasherDefault, sync::atomic::{AtomicUsize, Ordering}};
-use chrono::{DateTime, Utc};
-use hashers::fx_hash::FxHasher;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{domain::{EdgeDetector, FnOutRef, PointMeta}, services::task::{FlowContext, FnFlow}};
 use crate::services::task::{FnOut, FnKind, FnResult};
 ///
@@ -45,7 +43,7 @@ impl FnIsChangedValue {
             txid,
             kind: FnKind::Fn,
             inputs,
-            state: HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
+            state: FxHashMap::default(),
             edge: EdgeDetector::new(),
         }
     }

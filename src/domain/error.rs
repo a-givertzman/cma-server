@@ -48,7 +48,7 @@ macro_rules! err_pass {
     };
     // Ветка 3: Чистый проброс для переменной
     ($ctx:expr, $err:expr) => {
-        $crate::Error::new(&$ctx, function_name!()).pass($err.to_string())
+        $crate::Error::new($ctx, function_name!()).pass($err.to_string())
     };
     // Ветка 4: Проброс с описанием для переменной
     ($ctx:expr, $err:expr, $($arg:tt)+) => {

@@ -1,9 +1,6 @@
-use std::{
-    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Instant 
-};
-use hashers::fx_hash::FxHasher;
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Instant};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{Service, Services, SubscriptionCriteria, entity::{Cot, Name, Object, Point}}, sync::{Handles, Owner, channel::{self, Receiver, RecvTimeoutError, Sender}}, thread_pool::Scheduler};
+use sal_sync::{collections::FxHashMap, services::{Service, Services, SubscriptionCriteria, entity::{Cot, Name, Object, Point}}, sync::{Handles, Owner, channel::{self, Receiver, RecvTimeoutError, Sender}}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     domain::{
@@ -139,7 +136,7 @@ impl Service for JdsConnection {
         let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             let receivers = Arc::new(RwLock::new(
-                HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
+                FxHashMap::default(),
             ));
             receivers.write().insert(Cot::Req, services.get_link(&self_conf_send_to));
             let points = services.points(&dbg)

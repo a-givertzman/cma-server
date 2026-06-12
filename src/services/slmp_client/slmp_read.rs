@@ -1,9 +1,7 @@
 use std::{
-    hash::BuildHasherDefault, net::TcpStream,
+    net::TcpStream,
     sync::{atomic::{AtomicU32, Ordering}, Arc},
 };
-use hashers::fx_hash::FxHasher;
-use indexmap::IndexMap;
 use sal_core::error::{Error, ErrorLimit};
 use sal_sync::{
     collections::FxIndexMap,
@@ -76,7 +74,7 @@ impl SlmpRead {
     ///
     ///
     pub fn build_dbs(self_id: &str, tx_id: usize, conf: &SlmpClientConf) -> FxIndexMap<String, SlmpDb> {
-        let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
+        let mut dbs = FxIndexMap::default();
         for (db_name, db_conf) in &conf.dbs {
             log::info!("{}.build_dbs | Configuring SlmpDb: {:?}...", self_id, db_name);
             let db = SlmpDb::new(self_id, tx_id, &db_conf);
