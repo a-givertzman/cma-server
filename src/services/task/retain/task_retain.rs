@@ -190,12 +190,12 @@ impl Service for TaskRetain {
                 cycle.start();
                 match rx_recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(event) => {
-                        log::trace!("{dbg}.run | point '{}': {:?}", event.key, event.val);
-                        let sate = RetainState::from(&event.val);
+                        log::trace!("{dbg}.run | point '{}': {:?}", event.key, event.p);
+                        let sate = RetainState::from(&event.p);
                         if let Err(err) = Self::append(&dbg, &mut writer, conf.mode, &event.key, &sate) {
                             log::warn!("{dbg}.run | Can't store retain '{}' to '{}', error: {:?}", event.key, path.display(), err)
                         }
-                        cache.insert_sync(event.key, event.val);
+                        cache.insert_sync(event.key, event.p);
                     }
                     Err(err) => match err {
                         RecvTimeoutError::Timeout => {},

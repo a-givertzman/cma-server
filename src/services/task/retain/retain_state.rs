@@ -3,9 +3,17 @@ use serde::{Deserialize, Serialize};
 
 ///
 /// ### Key for retation value
-pub(super) struct RetainEvent {
+pub(crate) struct RetainEvent {
     pub key: String,
-    pub val: Point,
+    pub p: Point,
+}
+//
+impl RetainEvent {
+    ///
+    /// ### Returns `RetainEvent` new instance
+    pub fn new(key: String, p: Point) -> Self {
+        Self { key, p }
+    }
 }
 ///
 /// ### `RetainValue` | Storage wrapper for `Point` retain

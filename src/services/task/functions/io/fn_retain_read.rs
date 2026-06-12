@@ -1,11 +1,8 @@
 use function_name::named;
 use sal_core::error::Error;
-use sal_sync::services::{
-    entity::{Cot, Name, Point, PointHlr, PointTxId},
-    types::Bool,
-};
+use sal_sync::services::entity::{Name, Point, PointTxId};
 use std::{fs, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
-use crate::{domain::FnOutRef, err, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, functions::io::{RetainState, RetainValue}}};
+use crate::{domain::{FnOutRef, Sender}, err, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, RetainEvent}};
 ///
 /// ### Function | `FnRetainRead`
 /// 
@@ -41,10 +38,11 @@ use crate::{domain::FnOutRef, err, services::task::{FlowContext, FnFlow, FnKind,
 pub struct FnRetainRead {
     txid: usize,
     kind: FnKind,
+    key: String,
     every_cycle: bool,
     default: Option<FnOutRef>,
     cache: Option<Point>,
-    path: PathBuf,
+    send: Sender<RetainEvent>,
     id: String,
 }
 //
@@ -56,18 +54,16 @@ impl FnRetainRead {
     /// - `every_cycle`: Если true, чтение будет выполняться в каждом цикле вычислений, иначе только один раз
     /// - `default`: Узел, значение которого будет использовано, если файл отсутствует
     #[named]
-    pub fn new(parent: &Name, path: impl AsRef<Path>, every_cycle: bool, default: Option<FnOutRef>) -> Result<Self, Error> {
+    pub fn new(parent: &Name, send: Sender<RetainEvent>, key: impl Into<String>, every_cycle: bool, default: Option<FnOutRef>) -> Result<Self, Error> {
         let id = format!("{}/FnRetainRead{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
-        if !path.as_ref().is_file() {
-            return Err(err!(id, "Rerain path is not a file: {}", path.as_ref().display()));
-        }
         Ok(Self {
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
+            key: key.into(),
             every_cycle,
             default,
             cache: None,
-            path: path.as_ref().to_path_buf(),
+            send,
             id,
         })
     }
