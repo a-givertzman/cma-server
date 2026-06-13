@@ -1,3 +1,4 @@
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{
     ConfSubscribe, Service, ServiceCycle, Services, SubscriptionCriteria, entity::{Name, Object, Point, PointConf, PointTxId}
@@ -7,7 +8,7 @@ use std::{
 };
 use concat_string::concat_string;
 use crate::{
-    domain::RECV_TIMEOUT, services::task::{task_conf::TaskConf, task_nodes::TaskNodes}, sync::SendWrapper,
+    domain::RECV_TIMEOUT, err, err_pass, services::task::{TaskRetain, task_conf::TaskConf, task_nodes::TaskNodes}, sync::SendWrapper
 };
 ///
 /// Task implements entity, which provides cyclically (by event) executing calculations
@@ -139,7 +140,7 @@ impl Service for Task {
         }
     }
     //
-    //
+    #[named]
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         log::trace!("{}.run | Self tx_id: {}", self.dbg, PointTxId::from_str(&self.name.join()));
@@ -149,14 +150,18 @@ impl Service for Task {
         let conf = self.conf.clone();
         let conf_cycle = conf.cycle;
         let services = self.services.clone();
+        let txid = PointTxId::from_str(&self_name.join());
+        let retain = Arc::new(TaskRetain::new(&self_name, txid, conf.retain.clone(), &services, self.scheduler.clone())
+            .map_err(|err| err_pass!(dbg, err))?);
         let task_nodes = {
-            let mut task_nodes = TaskNodes::new(&dbg, PointTxId::from_str(&self_name.join()));
+            let mut task_nodes = TaskNodes::new(&dbg, txid, retain.clone());
             task_nodes.build_nodes(&self_name, &conf, services.clone())
                 .map_err(|err| Error::new(&dbg, "run").pass(err))?;
             SendWrapper::wrap(task_nodes)
         };
         let subscriptions = self.subscriptions_(&conf.subscribe, &services);
         let rx_recv = self.subscribe_(&subscriptions, &services);
+        retain.run().map_err(|err| err_pass!(dbg, err))?;
         let handle = self.scheduler.spawn({
             let dbg = dbg.clone();
             let (cyclic, cycle_interval, recv_timeout) = match conf_cycle {
@@ -219,6 +224,7 @@ impl Service for Task {
                     log::error!("{dbg}.run | Unsubscribe error: {:#?}", err);
                 }
             }
+            retain.exit();
             log::info!("{dbg}.run | Exit");
             Ok(())
         }});

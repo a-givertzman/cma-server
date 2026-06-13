@@ -1,8 +1,8 @@
 use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Name, Point, PointTxId};
-use std::{fs, path::{Path, PathBuf}, sync::atomic::{AtomicUsize, Ordering}};
-use crate::{domain::{FnOutRef, Sender}, err, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, RetainEvent}};
+use std::{sync::{Arc, atomic::{AtomicUsize, Ordering}}};
+use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, TaskRetain}};
 ///
 /// ### Function | `FnRetainRead`
 /// 
@@ -39,10 +39,10 @@ pub struct FnRetainRead {
     txid: usize,
     kind: FnKind,
     key: String,
+    retain: Arc<TaskRetain>,
     every_cycle: bool,
     default: Option<FnOutRef>,
     cache: Option<Point>,
-    send: Sender<RetainEvent>,
     id: String,
 }
 //
@@ -54,16 +54,16 @@ impl FnRetainRead {
     /// - `every_cycle`: Если true, чтение будет выполняться в каждом цикле вычислений, иначе только один раз
     /// - `default`: Узел, значение которого будет использовано, если файл отсутствует
     #[named]
-    pub fn new(parent: &Name, send: Sender<RetainEvent>, key: impl Into<String>, every_cycle: bool, default: Option<FnOutRef>) -> Result<Self, Error> {
+    pub fn new(parent: &Name, retain: Arc<TaskRetain>, key: impl Into<String>, every_cycle: bool, default: Option<FnOutRef>) -> Result<Self, Error> {
         let id = format!("{}/FnRetainRead{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
         Ok(Self {
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
             key: key.into(),
+            retain,
             every_cycle,
             default,
             cache: None,
-            send,
             id,
         })
     }
@@ -94,7 +94,7 @@ impl FnOut for FnRetainRead {
                 return flow.wrap_old(val.clone());
             }
         }
-        if let Some(val) = self.load() {
+        if let Some(val) = self.retain.get(&self.key) {
             if self.every_cycle {
                 if let Some(cached) = &self.cache {
                     if cached.value() == val.value() {
@@ -133,10 +133,12 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 /// Basic Tests
 #[cfg(test)]
 mod tests {
-    use sal_sync::services::entity::{Cot, Status};
+    use sal_sync::services::Service;
+use sal_sync::services::entity::{Cot, PointHlr, Status};
     use super::*;
     use std::cell::RefCell;
-    use std::rc::Rc;
+    use std::path::PathBuf;
+use std::rc::Rc;
     use std::io::Write;
     use std::env::temp_dir;
     #[derive(Debug)]
@@ -162,15 +164,20 @@ mod tests {
     }
     fn create_temp_json(name: &str, content: &str) -> PathBuf {
         let path = temp_dir().join(name);
-        let mut f = fs::File::create(&path).unwrap();
+        let mut f = std::fs::File::create(&path).unwrap();
         f.write_all(content.as_bytes()).unwrap();
         path
     }
     #[test]
     fn test_single_read_lazy_default() {
+        let dbg = "test_single_read_lazy_default";
         let path = create_temp_json("test_retain_1.json", r#"{"value": {"Int": 42}, "status": 0, "ts": "2026-06-11T09:06:45Z"}"#);
         let default_mock = Rc::new(RefCell::new(MockNode { flow: Ok(Some(FnFlow::New(mock_point_int("def", 10)))), inputs_called: 0 }));
-        let mut node = FnRetainRead::new(&Name::from("test"), &path, false, Some(default_mock.clone())).unwrap();
+        let retain = Arc::new(TaskRetain::mock(dbg, [
+            ("test_retain_1".into(), mock_point_int("test_retain_1", 0)),
+        ]));
+        retain.run().unwrap();
+        let mut node = FnRetainRead::new(&Name::from("test"), retain.clone(), "test_retain_1", false, Some(default_mock.clone())).unwrap();
         // Такт 1: Файл существует, читаем один раз
         let res1 = node.out().unwrap().unwrap();
         assert!(res1.is_new());
@@ -182,11 +189,16 @@ mod tests {
         // Убеждаемся, что default ни разу не опрашивался (Lazy Eval)
         assert_eq!(default_mock.borrow().inputs_called, 0);
         fs::remove_file(path).unwrap();
+        retain.exit();
+        retain.wait().unwrap();
     }
     #[test]
     fn test_every_cycle_spam_protection() {
         let path = create_temp_json("test_retain_2.json", r#"{"value": {"Int": 99}, "status": 0, "ts": "2026-06-11T09:06:45Z"}"#);
-        let mut node = FnRetainRead::new(&Name::from("test"), &path, true, None).unwrap();
+        let retain = Arc::new(TaskRetain::mock(dbg, [
+            ("test_retain_1".into(), mock_point_int("test_retain_1", 0)),
+        ]));
+        let mut node = FnRetainRead::new(&Name::from("test"), retain.clone(), "test_retain_1", true, None).unwrap();
         // Такт 1: Первое чтение файла -> New
         let res1 = node.out().unwrap().unwrap();
         assert!(res1.is_new());

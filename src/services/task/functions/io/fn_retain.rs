@@ -1,7 +1,6 @@
 use function_name::named;
 use sal_core::error::Error;
-use sal_sync::services::{Services, entity::{Name, Status, }, task::functions::FnConfig};
-use serde::{Deserialize, Serialize};
+use sal_sync::services::{Services, entity::Name , task::functions::FnConfig};
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 use crate::{domain::{FnOutRef}, err, err_pass, services::task::{FnBuilder, FnEnable, TaskNodes, functions::{FnRetainRead, FnRetainWrite}}};
 
@@ -10,14 +9,6 @@ use crate::{domain::{FnOutRef}, err, err_pass, services::task::{FnBuilder, FnEna
 /// 
 /// Билдер для создания узлов `FnRetainRead` или `FnRetainWrite`.
 /// 
-/// - **Формат данных на диске**
-/// ```json
-/// { "value": {"Bool": false}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"Int": 123}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"Real": 12.3}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"Double": 12.3}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"String": "String value"}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// ```
 /// - **`FnRetainRead`** (Если `input` отсутствует)
 ///     - Чтение значений с диска (по умолчанию читает с диска только в первый цикл, дальше возвращает закэшированное значение).
 ///     - `default` на случай, когда значений еще не записано.
@@ -58,13 +49,13 @@ impl FnRetain {
         std::fs::create_dir_all(&dir).map_err(|err| err_pass!(self_id, err, "Error creating dir: '{}'", dir.display()))?;
         let path = dir.join(key).with_extension("json");
         Ok(if input.is_none() {
-            let read = FnRetainRead::new(parent, path, every_cycle, default).map_err(|err| err_pass!(self_id, err))?;
+            let read = FnRetainRead::new(parent, nodes.retain(), key, every_cycle, default).map_err(|err| err_pass!(self_id, err))?;
             match enable {
                 Some(en) => Rc::new(RefCell::new(FnEnable::new(read, nodes.enable_mode(), en))),
                 None => Rc::new(RefCell::new(read)),
             }
         } else { 
-            let write = FnRetainWrite::new(parent, path, default, input).map_err(|err| err_pass!(self_id, err))?;
+            let write = FnRetainWrite::new(parent, nodes.retain().link(), key, default, input).map_err(|err| err_pass!(self_id, err))?;
             match enable {
                 Some(en) => Rc::new(RefCell::new(FnEnable::new(write, nodes.enable_mode(), en))),
                 None => Rc::new(RefCell::new(write)),

@@ -4,7 +4,7 @@ use sal_core::error::Error;
 use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
 use crate::{
     domain::{FnInOutRef, FnOutRef}, 
-    services::task::{EvalCycleRef, EvalCycle, FnEnableMode, FnEvalOnce, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
+    services::task::{EvalCycle, EvalCycleRef, FnEnableMode, FnEvalOnce, TaskRetain, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
 };
 use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
 ///
@@ -33,7 +33,8 @@ use super::{task_node_vars::TaskNodeVars, task_eval_node::TaskEvalNode};
 /// - **Ограничение**: Все вычисления, зависящие от `every`, должны сводиться к одному корню (или одному выходному узлу).
 #[derive(Debug)]
 pub struct TaskNodes {
-    dbg: String,
+    txid: usize,
+    retain: Arc<TaskRetain>,
     nodes: IndexMap<String, Rc<RefCell<TaskEvalNode>>>,
     vars: IndexMap<String, FnOutRef>,
     new_node_vars: Option<TaskNodeVars>,
@@ -41,33 +42,39 @@ pub struct TaskNodes {
     cycle: EvalCycleRef,
     /// Enable Strategy: Cold Standby / Warm Standby (TODO: read from config)
     enable_mode: FnEnableMode,
-    txid: usize,
+    dbg: String,
 }
 //
 // 
 impl TaskNodes {
     ///
     /// Creates new empty instance 
-    pub fn new(parent: impl Into<String>, txid: usize) ->Self {
+    pub fn new(parent: impl Into<String>, txid: usize, retain: Arc<TaskRetain>,) ->Self {
         Self {
-            dbg: format!("{}/TaskNodes", parent.into()),
+            txid,
+            retain,
             nodes: IndexMap::new(),
             vars: IndexMap::new(),
             new_node_vars: None,
             cycle: Rc::new(EvalCycle::new()),
             enable_mode: FnEnableMode::Cold,
-            txid,
+            dbg: format!("{}/TaskNodes", parent.into()),
         }
-    }
-    ///
-    /// Returns Enable Strategy: Cold Standby / Warm Standby
-    pub fn enable_mode(&self) -> FnEnableMode {
-        self.enable_mode
     }
     ///
     /// Returns `txid` of the parent `Task`
     pub fn txid(&self) -> usize {
         self.txid
+    }
+    ///
+    /// Returns `retain` service of the parent `Task`
+    pub fn retain(&self) -> Arc<TaskRetain> {
+        self.retain.clone()
+    }
+    ///
+    /// Returns Enable Strategy: Cold Standby / Warm Standby
+    pub fn enable_mode(&self) -> FnEnableMode {
+        self.enable_mode
     }
     ///
     /// ### Shared calculation cycle

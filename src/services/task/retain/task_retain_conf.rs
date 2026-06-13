@@ -3,8 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{conf::{ConfTree, ConfTreeGet}, entity::{Name, PointConf}};
 use serde::{Deserialize, Serialize};
 use std::{fs, time::Duration};
-
-use crate::{err, err_pass};
+use crate::{err, err_pass, domain::me};
 ///
 /// ### RetainMode
 /// 
@@ -17,9 +16,14 @@ pub enum RetainMode {
     #[serde(alias = "release")]
     Release,
 }
+impl Default for RetainMode {
+    fn default() -> Self {
+        Self::Release
+    }
+}
 ///
 /// ### Config for the two-stage journal writing strategy.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JournalConf {
     /// Settings for the continuous flushing of the append-log.
     pub flush: FlushConf,
@@ -33,7 +37,7 @@ pub struct JournalConf {
 ///
 /// ### Config for the append-log buffer flushing criteria.
 /// The flush is triggered by whichever limit is reached first.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FlushConf {
     /// Maximum size of unwritten data in the IO buffer before forcing a write to disk.
     /// 
@@ -61,13 +65,12 @@ pub struct FlushConf {
 ///     # fn Debug:
 ///     #     input: point any every
 ///                         ...
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TaskRetainConf {
     pub name: Name,
     /// Configuration for the two-stage journal writing strategy (append, compactation).
     pub journal: JournalConf,
     pub mode: RetainMode,
-    dbg: Dbg,
 }
 //
 // 
@@ -76,7 +79,7 @@ impl TaskRetainConf {
     /// Returns `TaskRetainConf` new instance
     #[named]
     pub fn new(parent: impl Into<String>, conf: ConfTree) -> Result<TaskRetainConf, Error> {
-        let me = "TaskRetain";
+        let me = me::<Self>();
         let parent = parent.into();
         let name = Name::new(&parent, me);
         let dbg = Dbg::new(parent, "TaskRetainConf");
@@ -95,7 +98,6 @@ impl TaskRetainConf {
                 compaction_limit_mb: 32 * 1024 * 1024,
             },
             mode,
-            dbg,
         })
     }
     ///
@@ -122,5 +124,21 @@ impl TaskRetainConf {
     /// Returns list of configurations of the defined points
     pub fn points(&self) -> Vec<PointConf> {
         vec![]
+    }
+}
+//
+impl Default for TaskRetainConf {
+    fn default() -> Self {
+        Self {
+            name: Name::new("", crate::domain::me::<Self>()),
+            journal: JournalConf {
+                flush: FlushConf {
+                    bytes_limit: 16 * 1024,
+                    interval: Duration::from_secs(16),
+                },
+                compaction_limit_mb: 32 * 1024 * 1024,
+            },
+            mode: RetainMode::Release
+        }
     }
 }
