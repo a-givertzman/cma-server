@@ -1,9 +1,8 @@
-use std::{fs::{File, OpenOptions}, io::{BufRead, BufReader, BufWriter, Read, Write}, path::{Path, PathBuf}, sync::Arc, time::{Duration, Instant}};
+use std::{io::Write, path::PathBuf, sync::Arc, time::{Duration, Instant}};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{kernel::state::ExitNotify, services::{Service, ServiceCycle, Services, entity::{Cot, Name, Object, Point, PointConf, PointHlr}, types::Bool}, sync::{Handles, Owner}, thread_pool::Scheduler};
-use serde::{Serialize, Serializer, ser::SerializeMap};
-use crate::{domain::{FxSccHashMap, RECV_TIMEOUT, Receiver, RecvTimeoutError, Sender, bounded, me}, err, err_pass, services::task::{RetainMode, TaskRetainConf, retain::{RetainEvent, RetainState, RetainValue}}};
+use sal_sync::{kernel::state::ExitNotify, services::{Service, Services, entity::{Name, Object, Point, PointConf}}, sync::{Handles, Owner}, thread_pool::Scheduler};
+use crate::{domain::{FxSccHashMap, RECV_TIMEOUT, Receiver, RecvTimeoutError, Sender, bounded}, err, err_pass, services::task::{AppendJournal, CompactateJournal, FlushJournal, InitialCtx, LoadJournal, MarkOldJournal, OpenJournal, TaskRetainConf, retain::{Eval, RetainEvent, RetainState}}};
 ///
 /// ### Локальный флаг завершения чтения из файла
 enum IoState {
@@ -51,8 +50,8 @@ impl TaskRetain {
     /// - `txid` - Идентификатор сервиса отправителя (в данном случае родительского `Task`).
     #[named]
     pub fn new(parent: &Name, txid: usize, conf: TaskRetainConf, services: &Arc<Services>, scheduler: Scheduler) -> Result<Self, Error> {
-        let name = Name::new(parent, me::<Self>());
-        let dbg = Dbg::new(parent, me::<Self>());
+        let name = Name::new(parent, crate::domain::me::<Self>());
+        let dbg = Dbg::new(parent, crate::domain::me::<Self>());
         let Some(retain_path) = services.retain().path else {
             return Err(err!(dbg, "Retain: path - missed in Application config"));
         };
@@ -79,7 +78,7 @@ impl TaskRetain {
     /// Returns `TaskRetain` test instance
     pub fn mock(parent: impl Into<String>, cache: impl IntoIterator<Item = (String, Point)>) -> Self {
         let name = Name::new(parent, crate::domain::me::<Self>());
-        let dbg = Dbg::new(name.parent(), me::<Self>());
+        let dbg = Dbg::new(name.parent(), crate::domain::me::<Self>());
         let (send, recv) = bounded(4096);
         Self {
             txid: 0,
@@ -104,157 +103,6 @@ impl TaskRetain {
     /// ### Returns Point for the specified `key`
     pub fn get(&self, key: &str) -> Option<Point> {
         self.cache.read_sync(key, |_, p| p.clone())
-    }
-    ///
-    /// ### Парсит одну запись из байтов `postcard` в `(String, RetainState)`
-    #[named]
-    fn decode_entry(dbg: &Dbg, reader: &mut BufReader<File>, len_buf: &mut [u8; 4], key_buf: &mut Vec<u8>, state_buf: &mut Vec<u8>) -> Result<IoState, Error> {
-        if reader.read_exact(len_buf).is_err() { return Ok(IoState::Done); }
-        let len = u32::from_le_bytes(*len_buf);
-        key_buf.resize(len as usize, 0u8);
-        reader.read_exact(key_buf).map_err(|err| err_pass!(dbg, err))?;
-        let key = std::str::from_utf8(key_buf).map_err(|err| err_pass!(dbg, err))?;
-        reader.read_exact(len_buf).map_err(|err| err_pass!(dbg, err))?;
-        let len = u32::from_le_bytes(*len_buf);
-        state_buf.resize(len as usize, 0u8);
-        reader.read_exact(state_buf).map_err(|err| err_pass!(dbg, err))?;
-        let state = postcard::from_bytes::<RetainState>(state_buf).map_err(|err| err_pass!(dbg, err))?;
-        Ok(IoState::Continue((key.to_owned(), state)))
-    }
-    ///
-    /// ### Создает `Point` из `RetainState`
-    fn point(state: &RetainState, txid: usize, name: impl Into<String>) -> Point {
-        match &state.value {
-            RetainValue::Bool(v) => Point::Bool(PointHlr::new(txid, name, Bool(*v), state.status, Cot::Inf, state.ts)),
-            RetainValue::Int(v) => Point::Int(PointHlr::new(txid, name, *v, state.status, Cot::Inf, state.ts)),
-            RetainValue::Real(v) => Point::Real(PointHlr::new(txid, name, *v, state.status, Cot::Inf, state.ts)),
-            RetainValue::Double(v) => Point::Double(PointHlr::new(txid, name, *v, state.status, Cot::Inf, state.ts)),
-            RetainValue::String(v) => Point::String(PointHlr::new(txid, name, v.clone(), state.status, Cot::Inf, state.ts)),
-            RetainValue::Bytes(v) => Point::Bytes(PointHlr::new(txid, name, v.clone(), state.status, Cot::Inf, state.ts)),
-        }
-    }
-    ///
-    /// ### Чтение с диска и парсинг `RetainState`
-    #[named]
-    fn load(&self) -> Result<(), Error> {
-        let json_path = self.path.with_extension("json");
-        let dat_path = self.path.with_extension("dat");
-        if dat_path.exists() {
-            let path = dat_path;
-            let file = File::open(&path).map_err(|err| err_pass!(self.dbg, err, "Can't open file '{}'", path.display()))?;
-            let mut reader = BufReader::new(file);
-            let mut len_buf = [0u8; 4];
-            let mut key_buf = Vec::with_capacity(1024);
-            let mut state_buf = Vec::with_capacity(4096);
-            loop {
-                match Self::decode_entry(&self.dbg, &mut reader, &mut len_buf, &mut key_buf, &mut state_buf) {
-                    Ok(IoState::Done) => break,
-                    Ok(IoState::Continue((key, state))) => {
-                        let val = Self::point(&state, self.txid, &key);
-                        if let Err(err) = self.cache.insert_sync(key, val) {
-                            log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
-                        }
-                    }
-                    Err(err) => log::warn!("{}.load | Can't parse entry in {}, error: {:?}", self.dbg, path.display(), err),
-                }
-            }
-            return Ok(());
-        }
-        if json_path.exists() {
-            let path = json_path;
-            let file = File::open(&path).map_err(|err| err_pass!(self.dbg, err, "Can't open file '{}'", path.display()))?;
-            let reader = BufReader::new(file);
-            let mut lines = reader.lines();
-            while let Some(line) = lines.next() {
-                match line {
-                    Ok(line) => {
-                        match serde_json::from_str(&line) {
-                            Ok(parsed) => {
-                                let (key, state): (String, RetainState) = parsed;
-                                let val = Self::point(&state, self.txid, &key);
-                                if let Err(err) = self.cache.insert_sync(key, val) {
-                                    log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
-                                }
-                            }
-                            Err(err) => log::warn!("{}.load | Can't parse entry in {}, error: {:?}", self.dbg, path.display(), err),
-                        }
-                    }
-                    Err(err) => log::warn!("{}.load | Can't read entry from {}, error: {:?}", self.dbg, path.display(), err),
-                }
-            }
-        }
-        Ok(())
-    }
-    // ///
-    // /// Serialise key-value into single Map entry
-    // fn serialize_entry(key: &str, data: impl Serialize) -> Result<>
-    ///
-    /// ### Пишет один пакет с кадрированием длины
-    #[named]
-    fn append<T: Serialize>(
-        dbg: &Dbg,
-        writer: &mut BufWriter<File>, 
-        mode: RetainMode, 
-        key: &String,
-        state: &T,
-    ) -> Result<(), Error> {
-        match mode {
-            RetainMode::Debug => {
-                let mut serializer = serde_json::Serializer::new(&mut *writer);
-                let mut map = serializer.serialize_map(Some(1)).map_err(|err| err_pass!(dbg, err))?;
-                map.serialize_entry(key, state).map_err(|err| err_pass!(dbg, err))?;
-                map.end().map_err(|err| err_pass!(dbg, err))?;
-                writer.write_all(b"\n").map_err(|err| err_pass!(dbg, err))?;                            
-            }
-            RetainMode::Release => {
-                writer.write_all(&(key.len() as u32).to_le_bytes()).map_err(|err| err_pass!(dbg, err))?;
-                writer.write_all(key.as_bytes()).map_err(|err| err_pass!(dbg, err))?;
-                let bytes = postcard::to_allocvec(state).map_err(|err| err_pass!(dbg, err))?;
-                writer.write_all(&(bytes.len() as u32).to_le_bytes()).map_err(|err| err_pass!(dbg, err))?;
-                writer.write_all(&bytes).map_err(|err| err_pass!(dbg, err))?;
-            }
-        }
-        Ok(())
-    }
-    ///
-    /// ### Физическая запись состояния на диск (Compactation)
-    /// 
-    /// `RetainState` пишется через атомарную подмену файлов
-    #[named]
-    fn store(dbg: &Dbg, path: &Path, mode: RetainMode, cache: &Arc<FxSccHashMap<String, Point>>, writer: BufWriter<File>) -> Result<BufWriter<File>, Error> {
-        writer.flush().map_err(|err| err_pass!(dbg, err, "Can't flush active {}", tmp_path.display()))?;
-        drop(writer);
-        let mut snapshot = Vec::with_capacity(cache.len());
-        cache.iter_sync(|key, point| {
-            snapshot.push((key.clone(), point.clone()));
-            true
-        });
-        let (tmp_path, path) = match mode {
-            RetainMode::Debug => (path.with_extension("json.tmp"), path.with_extension("json")),
-            RetainMode::Release => (path.with_extension("dat.tmp"), path.with_extension("dat")),
-        };
-        let file = File::create(&tmp_path)
-            .map_err(|err| err_pass!(dbg, err, "Can't open '{}'", tmp_path.display()))?;
-        let mut writer = BufWriter::new(file);
-        for (key, point) in snapshot {
-            if let Err(err) = Self::append(&dbg, &mut writer, mode, &key, &RetainState::from(&point)) {
-                log::warn!("{}.store | Can't store '{}' into '{}', error: {:?}", dbg, key, tmp_path.display(), err);
-            }
-        }
-        let file = writer.into_inner().map_err(|err| err_pass!(dbg, err, "Can't flush {}", tmp_path.display()))?;
-        file.sync_data().map_err(|err| err_pass!(dbg, err, "Can't Sync {}", tmp_path.display()))?;
-        std::fs::rename(&tmp_path, &path).map_err(|err| err_pass!(dbg, err, "Can't Rename '{}' -> '{}'", tmp_path.display(), path.display()))?;
-        let writer = BufWriter::new(file);
-        log::trace!("{}.store | Compactation done to '{}'", dbg, path.display());
-        Ok(writer)
-    }
-    ///
-    /// ### Открывает новый файл
-    #[inline]
-    fn open(path: impl AsRef<Path>) -> Result<BufWriter<File>, std::io::Error> {
-        Ok(BufWriter::new(
-            OpenOptions::new().append(true).create(true).open(&path)?
-        ))
     }
 }
 //
@@ -286,44 +134,43 @@ impl Service for TaskRetain {
         let exit = self.exit.clone();
         let conf = self.conf.clone();
         let rx_recv = self.recv.take().ok_or_else(|| err!(dbg, "Can't take recv"))?;
-        let path = match conf.mode {
-            RetainMode::Debug => self.path.with_extension("json"),
-            RetainMode::Release => self.path.with_extension("dat"),
-        };
-        let cache = self.cache.clone();
-        let cycle = Cycle::new(conf.journal.flush.interval);
-        let mut writer = Self::open(&path).map_err(|err| err_pass!(dbg, err))?;
+        let ctx = InitialCtx::new(&dbg, self.txid, &conf, &self.path,
+            LoadJournal::new(&dbg,
+                MarkOldJournal::new(&dbg, conf.mode),
+            ),
+        ).eval(self.cache.clone())?;
         match self.scheduler.as_ref() {
             Some(scheduler) => {
                 let handle = scheduler.spawn({
                     let dbg = dbg.clone();
+                    let retain = OpenJournal::new(&dbg, &conf.journal.flush, ctx,
+                        AppendJournal::new(&dbg, self.txid, conf.mode,
+                            FlushJournal::new(&dbg,
+                                CompactateJournal::new(&dbg, &conf),
+                            ),
+                        ),
+                    );
                     move || {
                     'main: while !exit.get() {
-                        if cycle.is_exceeded() {
-                            match Self::store(&dbg, &path, conf.mode, &cache, writer) {
-                                Ok(w) => writer = w,
-                                Err(err) => log::warn!("{dbg}.run | Store error: {:?}", err),
-                            }
-                        }
-                        match rx_recv.recv_timeout(RECV_TIMEOUT) {
+                        match rx_recv.recv_timeout(RECV_TIMEOUT) {  // 100ms
                             Ok(event) => {
                                 log::trace!("{dbg}.run | point '{}': {:?}", event.key, event.p);
-                                let state = RetainState::from(&event.p);
-                                if let Err(err) = Self::append(&dbg, &mut writer, conf.mode, &event.key, &state) {
-                                    log::warn!("{dbg}.run | Can't store retain '{}' to '{}', error: {:?}", event.key, path.display(), err);
+                                if let Err(err) = retain.eval(Some(event)).map_err(|err| err_pass!(dbg, err)) {
+                                    log::warn!("{err}");
                                 }
-                                cache.insert_sync(event.key, event.p);
                             }
-                            Err(err) => match err {
-                                RecvTimeoutError::Timeout => {},
-                                _ => {
-                                    log::error!("{dbg}.run | Receiv error: {:?}", err);
-                                    break 'main;
+                            Err(RecvTimeoutError::Timeout) => {
+                                if let Err(err) = retain.eval(None).map_err(|err| err_pass!(dbg, err)) {
+                                    log::warn!("{err}");
                                 }
+                            },
+                            Err(err) => {
+                                log::error!("{dbg}.run | Receiv error: {:?}", err);
+                                break 'main;
                             }
                         }
                     }
-                    let _ = writer.flush();
+                    retain.close();
                     log::info!("{dbg}.run | Exit");
                     Ok(())
                 }});
@@ -339,6 +186,7 @@ impl Service for TaskRetain {
             None => {
                 let handle = std::thread::spawn({
                     let dbg = dbg.clone();
+                    let cache = self.cache.clone();
                     move || {
                     'main: while !exit.get() {
                         match rx_recv.recv_timeout(RECV_TIMEOUT) {
@@ -386,22 +234,73 @@ impl Service for TaskRetain {
 }
 ///
 /// Cycle measuring
-struct Cycle {
+struct Trigger {
     interval: Duration,
+    bytes_limit: u64,
     t: std::cell::Cell<Instant>,
 }
 //
-impl Cycle {
+impl Trigger {
     pub fn new(interval: Duration) -> Self {
         Self {
             interval,
+            bytes_limit: 0,
             t: std::cell::Cell::new(Instant::now()),
+        }
+    }
+    ///
+    /// Maximum buffer length allowed before exceeded, MB.
+    pub fn with_mb_limit(self, mb: impl Into<u64>) -> Self {
+        Self {
+            interval: self.interval,
+            bytes_limit: mb.into() * 1024 * 1024,
+            t: self.t,
         }
     }
     pub fn start(&self) {
         self.t.replace(Instant::now());
     }
-    pub fn is_exceeded(&self) -> bool {
+    ///
+    /// ### Returns `true` if time interval or bytes limit is exceeded
+    /// - `bytes`: Current size in bytes
+    pub fn is_exceeded(&self, bytes: impl Into<u64>) -> bool {
+        if self.bytes_limit > 0 {
+            return self.t.get().elapsed() >= self.interval || bytes.into() >= self.bytes_limit;
+        }
         self.t.get().elapsed() >= self.interval
+    }
+}
+
+///
+/// 
+struct CountingWriter<W: Write> {
+    inner: W,
+    bytes_written: usize,
+}
+//
+impl<W: Write> CountingWriter<W> {
+    pub fn new(inner: W) -> Self {
+        Self { inner, bytes_written: 0 }
+    }
+    ///
+    /// Получить текущее значение счетчика
+    pub fn bytes_written(&self) -> usize {
+        self.bytes_written
+    }
+    pub fn into_inner(self) -> W {
+        self.inner
+    }
+}
+//
+impl<W: Write> Write for CountingWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let result = self.inner.write(buf);
+        if let Ok(bytes) = result {
+            self.bytes_written += bytes;
+        }
+        result
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
     }
 }

@@ -32,7 +32,7 @@ pub struct JournalConf {
     /// reaches this size.
     /// 
     /// Recomended: `32 ... 128 MB`.
-    pub compaction_limit_mb: usize,
+    pub compaction_limit_mb: u64,
 }
 ///
 /// ### Config for the append-log buffer flushing criteria.

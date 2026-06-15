@@ -17,7 +17,7 @@ macro_rules! err {
     };
     // Ветка 2: Если передали локальную переменную (например, id или self.dbg)
     ($ctx:expr, $($arg:tt)+) => {
-        $crate::Error::new(&$ctx, function_name!()).err(format!($($arg)+))
+        $crate::Error::new($ctx.to_string(), function_name!()).err(format!($($arg)+))
     };
 }
 ///

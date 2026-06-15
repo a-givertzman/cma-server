@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 ///
 /// ### Key for retation value
+#[derive(Clone)]
 pub(crate) struct RetainEvent {
     pub key: String,
     pub p: Point,
