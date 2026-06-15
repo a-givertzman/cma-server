@@ -33,7 +33,7 @@ fn points() {
     test_duration.run().unwrap();
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_points.yaml";
-    let config = TaskConf::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path).unwrap();
     log::trace!("config: {:?}", &config);
     println!(" config points: {:?}", config.points());
     let tp = ThreadPool::new(dbg, Some(8));

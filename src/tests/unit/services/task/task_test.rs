@@ -38,7 +38,7 @@ fn structure() {
     let iterations = 10;
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
-    let config = TaskConf::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
@@ -125,7 +125,7 @@ fn transfer() {
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
     // let path = "./src/tests/unit/task/task_test.yaml";
-    let config = TaskConf::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(

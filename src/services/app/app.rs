@@ -1,4 +1,5 @@
-use sal_core::dbg::Dbg;
+use function_name::named;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::Services, thread_pool::{Scheduler, ThreadPool}};
 use std::{path::Path, process::exit, sync::Arc, thread, time::Duration};
 use libc::{
@@ -7,7 +8,7 @@ use libc::{
 };
 use signal_hook::iterator::Signals;
 use crate::{
-    conf::app::app_config::AppConfig,services::ServicesFactory
+    conf::app::app_config::AppConfig, err_pass, services::ServicesFactory
     
 };
 
@@ -36,7 +37,8 @@ impl App {
     }
     ///
     /// Executes all services
-    pub fn run(self) -> Result<(), String>  {
+    #[named]
+    pub fn run(self) -> Result<(), Error>  {
         let dbg = self.dbg.clone();
         log::info!("{dbg}.run | Starting application...");
         let conf = self.conf.clone();
@@ -51,7 +53,8 @@ impl App {
             log::info!("{dbg}.run |         Configuring service: {}({})...", node_name, node_sufix);
             log::trace!("{dbg}.run |         Config: {:#?}", node_conf);
             services.insert(
-                services_factory.service(&node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler()),
+                services_factory.service(&node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler())
+                    .map_err(|err| err_pass!(dbg, err))?,
             );
             log::info!("{dbg}.run |         Configuring service: {}({}) - ok\n", node_name, node_sufix);
         }

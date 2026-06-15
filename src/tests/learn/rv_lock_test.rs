@@ -2,8 +2,7 @@
 //! Trying to estimate difference between accessing to the values stored in the HashMap / RwLock<HasMap> / Mutex<HasMap> or using match
 #[cfg(test)]
 mod tests {
-    use hashers::fx_hash::FxHasher;
-    use sal_sync::sync::channel;
+    use sal_sync::{collections::FxHashMap, sync::channel};
     use std::{collections::HashMap, hash::BuildHasherDefault, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
     use debugging::session::debug_session::{DebugSession, LogLevel};
@@ -40,7 +39,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let map = Arc::new(
-            RwLock::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
+            RwLock::new(FxHashMap::default())
         );
         let (send, recv) = channel::unbounded();
         for key in KEYS {
@@ -118,7 +117,7 @@ mod tests {
         let test_data = init_each(self_id);
 
         let test_data_len = test_data.len();
-        let mut map = HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
+        let mut map = FxHashMap::default();
         let (send, recv) = channel::unbounded();
         for key in KEYS {
             map.insert(key, send.clone());
@@ -196,7 +195,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let map = Arc::new(
-            Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
+            Mutex::new(FxHashMap::default())
         );
         let (send, recv) = channel::unbounded();
         for key in KEYS {
@@ -275,7 +274,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let map = Arc::new(
-            Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
+            Mutex::new(FxHashMap::default())
         );
         let (send, recv) = channel::unbounded();
         for key in KEYS {

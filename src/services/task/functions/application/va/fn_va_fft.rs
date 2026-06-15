@@ -162,7 +162,7 @@ impl FnVaFft {
                 &freq_name,
                 None,
                 Some(retain_input.clone()),
-            );
+            ).unwrap();
             let mut fn_retain_load = FnRetain::new(
                 &name,
                 "assets/testing/retain/",
@@ -173,7 +173,7 @@ impl FnVaFft {
                     FnConst::new(&name.join(), 0.0.to_point(txid, &name.join())),
                 ))),
                 None,
-            );
+            ).unwrap();
             let retained = match fn_retain_load.out() {
                 Ok(Some(val)) => Some(val.into_value().as_double().value),
                 Ok(None) => None,

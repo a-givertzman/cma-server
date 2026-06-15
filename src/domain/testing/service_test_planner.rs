@@ -1,8 +1,9 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
 use testing::entities::test_value::Value;
-use crate::{domain::{testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, RwLock}, services::ServicesFactory};
+use crate::{domain::{RwLock, testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}}, err_pass, services::ServicesFactory};
 
 ///
 /// Makes easier to orgenise test of Srvice
@@ -92,6 +93,7 @@ impl ServiceTestPlanner {
     ///
     /// Starts all service's to perform a test
     #[allow(unused)]
+    #[named]
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "run");
@@ -158,7 +160,7 @@ impl ServiceTestPlanner {
                                                     conf,
                                                     self.services.clone(),
                                                     self.tp.scheduler(),
-                                                );
+                                                ).map_err(|err| err_pass!(dbg, err))?;
                                                 log::info!("{dbg}.run | Configuring service: {} - ok\n", service.name());
                                                 self.services_order.write().push(service.name().join());
                                                 self.services.insert(service);

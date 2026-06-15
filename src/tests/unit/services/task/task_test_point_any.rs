@@ -47,7 +47,7 @@ fn point_any_structure() {
                     sql: "insert into {{table}} (id, value, timestamp) values ({{id}}, {{input1.value}}, {{input1.value}});"
                     input1: point any every
     "#, self_name)).unwrap();
-    let config = TaskConf::from_yaml(&self_name, &conf);
+    let config = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
