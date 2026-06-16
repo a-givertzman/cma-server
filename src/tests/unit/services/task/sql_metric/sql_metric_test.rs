@@ -4,7 +4,7 @@ use regex::RegexBuilder;
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point, ToPoint}, Services}, thread_pool::ThreadPool};
 use std::sync::{Once, Arc};
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::services::task::{FnResult, TaskConf, TaskNodes};
+use crate::services::task::{FlowContext, TaskConf, TaskNodes};
 ///
 ///
 static INIT: Once = Once::new();
@@ -30,9 +30,9 @@ fn int() {
     let self_name = Name::new("", dbg);
     log::debug!("\n{}", dbg);
     let path = "./src/tests/unit/services/task/sql_metric/sql_metric_int_test.yaml";
-    let conf = TaskConf::read(&self_name, path);
+    let conf = TaskConf::read(&self_name, path).unwrap();
     log::debug!("conf: {:?}", conf);
-    let mut nodes = TaskNodes::new(dbg);
+    let mut nodes = TaskNodes::without_retain(dbg, 0);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
@@ -58,6 +58,7 @@ fn int() {
         (8, "/path/Point.Name", 10),
         (9, "/path/Point.Name", 11),
     ];
+    let flow = FlowContext::new();
     for (value, name, target_value) in test_data {
         let point = value.to_point(0, name);
         let input_name = &point.name();
@@ -67,14 +68,14 @@ fn int() {
                 let eval_node_name = eval_node.borrow().name();
                 for eval_node_var in eval_node.borrow().get_vars() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node_name, eval_node_var.borrow().id());
-                    eval_node_var.borrow_mut().eval();
+                    eval_node_var.borrow_mut().out();
                     log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node_name, eval_node_var.borrow().id());
                 };
                 for eval_node_out in eval_node.borrow().get_outs() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node_name);
-                    let out = eval_node_out.borrow_mut().out();
+                    let out = flow.ignore(eval_node_out.borrow_mut().out());
                     match out {
-                        FnResult::Ok(out) => {
+                        Ok(Some(out)) => {
                             let out_value = match &out {
                                 Point::Bool(point) => point.value.to_string(),
                                 Point::Int(point) => point.value.to_string(),
@@ -90,8 +91,8 @@ fn int() {
                                 // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
                             );
                         }
-                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
-                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
+                        Ok(None) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
+                        Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
                     } 
                 }
             }
@@ -111,9 +112,9 @@ fn real() {
     let self_name = Name::new("", dbg);
     log::debug!("\n{}", dbg);
     let path = "./src/tests/unit/services/task/sql_metric/sql_metric_real_test.yaml";
-    let conf = TaskConf::read(&self_name, path);
+    let conf = TaskConf::read(&self_name, path).unwrap();
     log::debug!("conf: {:?}", conf);
-    let mut nodes = TaskNodes::new(dbg);
+    let mut nodes = TaskNodes::without_retain(dbg, 0);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
@@ -139,6 +140,7 @@ fn real() {
         (8.8f32, "/path/Point.Name", 11.0),
         (9.9f32, "/path/Point.Name", 12.1),
     ];
+    let flow = FlowContext::new();
     for (value, name, target_value) in test_data {
         let point = value.to_point(0, name);
         let input_name = &point.name();
@@ -148,14 +150,14 @@ fn real() {
                 let eval_node_name = eval_node.borrow().name();
                 for eval_node_var in eval_node.borrow().get_vars() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node_name, eval_node_var.borrow().id());
-                    eval_node_var.borrow_mut().eval();
+                    eval_node_var.borrow_mut().out();
                     log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node_name, eval_node_var.borrow().id());
                 };
                 for eval_node_out in eval_node.borrow().get_outs() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node_name);
-                    let out = eval_node_out.borrow_mut().out();
+                    let out = flow.ignore(eval_node_out.borrow_mut().out());
                     match out {
-                        FnResult::Ok(out) => {
+                        Ok(Some(out)) => {
                             let out_value = match &out {
                                 Point::Bool(point) => point.value.to_string(),
                                 Point::Int(point) => point.value.to_string(),
@@ -181,8 +183,8 @@ fn real() {
                                 // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
                             );
                         }
-                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
-                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
+                        Ok(None) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
+                        Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
                     }
                 }
             }
@@ -198,15 +200,15 @@ fn real() {
 fn double() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    let self_id = "test_real";
-    let self_name = Name::new("", self_id);
-    log::debug!("\n{}", self_id);
+    let dbg = "test_real";
+    let self_name = Name::new("", dbg);
+    log::debug!("\n{}", dbg);
     let path = "./src/tests/unit/services/task/sql_metric/sql_metric_double_test.yaml";
-    let conf = TaskConf::read(&self_name, path);
+    let conf = TaskConf::read(&self_name, path).unwrap();
     log::debug!("conf: {:?}", conf);
-    let mut nodes = TaskNodes::new(self_id);
-    let services = Arc::new(Services::new(self_id, ServicesConf::new(
-        self_id, 
+    let mut nodes = TaskNodes::without_retain(dbg, 0);
+    let services = Arc::new(Services::new(dbg, ServicesConf::new(
+        dbg, 
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
@@ -229,6 +231,7 @@ fn double() {
         (8.8f64, "/path/Point.Name", 11.0),
         (9.9f64, "/path/Point.Name", 12.1),
     ];
+    let flow = FlowContext::new();
     for (value, name, target_value) in test_data {
         let point = value.to_point(0, name);
         let input_name = &point.name();
@@ -238,14 +241,14 @@ fn double() {
                 let eval_node_name = eval_node.borrow().name();
                 for eval_node_var in eval_node.borrow().get_vars() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node_name, eval_node_var.borrow().id());
-                    eval_node_var.borrow_mut().eval();
+                    eval_node_var.borrow_mut().out();
                     log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node_name, eval_node_var.borrow().id());
                 };
                 for eval_node_out in eval_node.borrow().get_outs() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' out...", eval_node_name);
-                    let out = eval_node_out.borrow_mut().out();
+                    let out = flow.ignore(eval_node_out.borrow_mut().out());
                     match out {
-                        FnResult::Ok(out) => {
+                        Ok(Some(out)) => {
                             let out_value = match &out {
                                 Point::Bool(point) => point.value.to_string(),
                                 Point::Int(point) => point.value.to_string(),
@@ -271,8 +274,8 @@ fn double() {
                                 // format!("insert into SelectMetric_test_table_name values(id, value, timestamp) (SqlMetric,{:.3},{})", targetValue, point.timestamp())
                             );
                         }
-                        FnResult::None => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
-                        FnResult::Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
+                        Ok(None) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
+                        Err(err) => log::warn!("TaskEvalNode.eval | evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
                     };
                 }
             }

@@ -89,7 +89,7 @@ mod task_eval_node;
 mod task_test_receiver;
 mod task_test_producer;
 
-pub(self) use eval_cycle::*;
+pub(crate) use eval_cycle::*;
 pub(super) use fn_eval_once::*;
 pub use functions::*;
 pub use task_conf::*;

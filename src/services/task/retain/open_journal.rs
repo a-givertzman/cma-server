@@ -33,9 +33,11 @@ impl<Child> OpenJournal<Child> {
     #[named]
     pub fn close(&self) -> Result<(), Error> {
         if let Some(ctx) = self.ctx.borrow_mut().as_mut() {
-            if let Some(w) = &mut ctx.writer {
+            if let Some(mut w) = ctx.writer.take() {
                 w.flush().map_err(|err| err_pass!(self.dbg, err))?;
-                w.get_ref().sync_all().map_err(|err| err_pass!(self.dbg, err))?;
+                if let Ok(file) = w.into_inner() {
+                    file.sync_all().map_err(|err| err_pass!(self.dbg, err))?;
+                }
             }
         }
         Ok(())

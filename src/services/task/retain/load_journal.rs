@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufRead, BufReader, Read}, path::Path, sync::Arc};
+use std::{collections::HashMap, fs::File, io::{BufRead, BufReader, Read}, path::Path, sync::Arc};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{entity::{Cot, Point, PointHlr}, types::Bool};
@@ -70,56 +70,63 @@ impl<Child> LoadJournal<Child> {
     /// 
     /// Устойчив к повреждению хвоста файла. При обнаружении бинарного мусора
     /// или неожиданного конца файла чтение останавливается, а корректно загруженные данные сохраняются.
-    #[named]
     fn load(&self, path: &Path, txid: usize, cache: &Arc<FxSccHashMap<String, Point>>) -> Result<(), Error> {
-        let json_path = path.with_extension("json");
         let dat_path = path.with_extension("dat");
-        if dat_path.exists() {
-            let path = dat_path;
-            let file = File::open(&path).map_err(|err| err_pass!(self.dbg, err, "Can't open file '{}'", path.display()))?;
-            let mut reader = BufReader::new(file);
-            let mut len_buf = [0u8; 4];
-            let mut key_buf = Vec::with_capacity(1024);
-            let mut state_buf = Vec::with_capacity(4096);
-            loop {
-                match Self::decode_entry(&self.dbg, &mut reader, &mut len_buf, &mut key_buf, &mut state_buf) {
-                    Ok(IoState::Done) => break,
-                    Ok(IoState::Continue((name, state))) => {
-                        let val = Self::point(&state, txid, &name);
-                        if let Err(err) = cache.insert_sync(name, val) {
-                            log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
+        // let file = File::open(&dat_path).map_err(|err| err_pass!(self.dbg, err, "Can't open file '{}'", dat_path.display()))?;
+        match File::open(&dat_path) {
+            Ok(file) => {
+                let mut reader = BufReader::new(file);
+                let mut len_buf = [0u8; 4];
+                let mut key_buf = Vec::with_capacity(1024);
+                let mut state_buf = Vec::with_capacity(4096);
+                loop {
+                    match Self::decode_entry(&self.dbg, &mut reader, &mut len_buf, &mut key_buf, &mut state_buf) {
+                        Ok(IoState::Done) => break,
+                        Ok(IoState::Continue((name, state))) => {
+                            let val = Self::point(&state, txid, &name);
+                            if let Err(err) = cache.insert_sync(name, val) {
+                                log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
+                            }
+                        }
+                        Err(err) => {
+                            log::error!("{}.load | Retain файл журнала оборван или поврежден '{}'.\n\tОшибка: {:?}.\n\tТолько часть данных загружено: {:#?}.",
+                                self.dbg, dat_path.display(), err, cache);
+                            break;
                         }
                     }
-                    Err(err) => {
-                        log::error!("{}.load | Retain файл журнала оборван или поврежден '{}'.\n\tОшибка: {:?}.\n\tТолько часть данных загружено: {:#?}.",
-                            self.dbg, path.display(), err, cache);
-                        break;
+                }
+                return Ok(());
+            }
+            Err(err) => if err.kind() != std::io::ErrorKind::NotFound {
+                log::warn!("{}.load | Can't read cache '{}': {:?}", self.dbg, dat_path.display(), err);
+            }
+        }
+        let json_path = path.with_extension("json");
+        match File::open(&json_path) {
+            Ok(file) => {
+                let reader = BufReader::new(file);
+                let mut lines = reader.lines();
+                while let Some(line) = lines.next() {
+                    match line {
+                        Ok(line) => {
+                            match serde_json::from_str::<HashMap<String, RetainState>>(&line) {
+                                Ok(parsed) => {
+                                    if let Some((key, state)) = parsed.into_iter().next() {
+                                        let val = Self::point(&state, txid, &key);
+                                        if let Err(err) = cache.insert_sync(key, val) {
+                                            log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
+                                        }
+                                    }
+                                }
+                                Err(err) => log::warn!("{}.load | Can't parse entry in {}, error: {:?}", self.dbg, json_path.display(), err),
+                            }
+                        }
+                        Err(err) => log::warn!("{}.load | Can't read entry from {}, error: {:?}", self.dbg, json_path.display(), err),
                     }
                 }
             }
-            return Ok(());
-        }
-        if json_path.exists() {
-            let path = json_path;
-            let file = File::open(&path).map_err(|err| err_pass!(self.dbg, err, "Can't open file '{}'", path.display()))?;
-            let reader = BufReader::new(file);
-            let mut lines = reader.lines();
-            while let Some(line) = lines.next() {
-                match line {
-                    Ok(line) => {
-                        match serde_json::from_str(&line) {
-                            Ok(parsed) => {
-                                let (key, state): (String, RetainState) = parsed;
-                                let val = Self::point(&state, txid, &key);
-                                if let Err(err) = cache.insert_sync(key, val) {
-                                    log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
-                                }
-                            }
-                            Err(err) => log::warn!("{}.load | Can't parse entry in {}, error: {:?}", self.dbg, path.display(), err),
-                        }
-                    }
-                    Err(err) => log::warn!("{}.load | Can't read entry from {}, error: {:?}", self.dbg, path.display(), err),
-                }
+            Err(err) => if err.kind() != std::io::ErrorKind::NotFound {
+                log::warn!("{}.load | Can't read cache '{}': {:?}", self.dbg, json_path.display(), err);
             }
         }
         Ok(())

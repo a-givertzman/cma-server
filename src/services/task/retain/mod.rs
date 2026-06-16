@@ -16,9 +16,12 @@ pub(super) use open_journal::*;
 mod retain_state;
 pub use retain_state::*;
 mod task_retain_conf;
-pub(super) use task_retain_conf::*;
+pub(crate) use task_retain_conf::*;
 mod task_retain;
 pub use task_retain::*;
+
+use crate::err_pass;
+use function_name::named;
 
 pub(self) type EvalResult = Result<RetainCtx, sal_core::error::Error>;
 ///
@@ -28,15 +31,37 @@ pub(self) trait Eval<In, Out> {
 }
 ///
 /// Context provides tranfer data in the `TaskRetain` evaluation
-pub(self) struct RetainCtx {
-    txid: usize,
-    cache: std::sync::Arc<crate::domain::FxSccHashMap<String, sal_sync::services::entity::Point>>,
-    path: std::path::PathBuf,
-    writer: Option<std::io::BufWriter<std::fs::File>>,
-    file_size_bytes: u64,
-    compactation_trigger: compactate_journal::Trigger,
+pub(super) struct RetainCtx {
+    pub txid: usize,
+    pub cache: std::sync::Arc<crate::domain::FxSccHashMap<String, sal_sync::services::entity::Point>>,
+    pub path: std::path::PathBuf,
+    pub writer: Option<std::io::BufWriter<std::fs::File>>,
+    pub file_size_bytes: u64,
+    pub compactation_trigger: compactate_journal::Trigger,
     /// Весь retain cache только что был записан надиск, необходимо очистить буфер в `AppendJournal`
-    compacted: bool,
-    flush_trigger: compactate_journal::Trigger,
-    error: Option<sal_core::error::Error>,
+    pub compacted: bool,
+    pub flush_trigger: compactate_journal::Trigger,
+    pub error: Option<sal_core::error::Error>,
+}
+//
+impl RetainCtx {
+    /// Отмечаем что компактация успешно выполнена
+    pub fn compactation_done(&mut self) {
+        self.compacted = true;
+    }
+    /// Проверяем была ли компактация
+    pub fn compacted(&self) -> bool {
+        self.compacted
+    }
+    pub fn appended(&mut self) {
+        self.compacted = false;
+    }
+    #[named]
+    pub fn writer_close(&mut self) {
+        if let Some(w) = self.writer.take() {
+            if let Err(err) = w.into_inner().map_err(|err| err_pass!(Self, err, "Can't close writer")) {
+                log::warn!("{err}");
+            }
+        }
+    }
 }

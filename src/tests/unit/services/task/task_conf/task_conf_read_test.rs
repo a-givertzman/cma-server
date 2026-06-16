@@ -31,6 +31,7 @@ fn valid() {
     log::info!("{}", self_id);
     let target = TaskConf {
         name: Name::new(&self_name, "Task1"),
+        retain: Default::default(),
         cycle: Some(Duration::from_millis(100)),
         rx: format!("recv-queue"),
         rx_max_length: 10000,
@@ -100,7 +101,7 @@ fn valid() {
     };
     log::trace!("dir: {:?}", env::current_dir());
     let path = "src/tests/unit/services/task/task_conf/task_config_test.yaml";
-    let result = TaskConf::read(&self_name, path);
+    let result = TaskConf::read(&self_name, path).unwrap();
     log::trace!("fnConfig: {:?}", result);
     assert_eq!(result, target, "\nresult: {:?}, \ntarget: {:?}", result, target);
 }

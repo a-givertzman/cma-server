@@ -41,13 +41,6 @@ impl FnRetain {
         };
         let key = key.conf.as_str()
             .ok_or_else(|| err!(self_id, "Parameter 'key' must be a string in '{}'", conf.name))?;
-        let Some(retain_path) = services.retain().path else {
-            return Err(err!(self_id, "Retain: path - missed in Application config"));
-        };
-        let cw_dir = std::env::current_dir().map_err(|err| err_pass!(self_id, err))?;
-        let dir = cw_dir.join(retain_path).join(parent.join().trim_start_matches("/"));
-        std::fs::create_dir_all(&dir).map_err(|err| err_pass!(self_id, err, "Error creating dir: '{}'", dir.display()))?;
-        let path = dir.join(key).with_extension("json");
         Ok(if input.is_none() {
             let read = FnRetainRead::new(parent, nodes.retain(), key, every_cycle, default).map_err(|err| err_pass!(self_id, err))?;
             match enable {

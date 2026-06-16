@@ -95,7 +95,7 @@ impl TaskRetainConf {
                     bytes_limit: 16 * 1024,
                     interval: Duration::from_secs(16),
                 },
-                compaction_limit_mb: 32 * 1024 * 1024,
+                compaction_limit_mb: 32,
             },
             mode,
         })
@@ -136,7 +136,7 @@ impl Default for TaskRetainConf {
                     bytes_limit: 16 * 1024,
                     interval: Duration::from_secs(16),
                 },
-                compaction_limit_mb: 32 * 1024 * 1024,
+                compaction_limit_mb: 32,
             },
             mode: RetainMode::Release
         }

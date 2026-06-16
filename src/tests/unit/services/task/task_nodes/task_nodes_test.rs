@@ -38,7 +38,7 @@ fn manual_eval() {
     let dbg = "manual_eval";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg, 0);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -67,7 +67,7 @@ fn manual_eval() {
             fn Count:
                 input: point int  '/path/Point.Name1'
     "#).unwrap();
-    let conf = TaskConf::from_yaml(&self_name, &conf);
+    let conf = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("conf: {:?}", conf);
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
@@ -183,7 +183,7 @@ fn eval() {
     let dbg = "eval";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg, 0);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -212,7 +212,7 @@ fn eval() {
             fn Count:
                 input: point int  '/path/Point.Name1'
     "#).unwrap();
-    let conf = TaskConf::from_yaml(&self_name, &conf);
+    let conf = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("conf: {:?}", conf);
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
@@ -325,7 +325,7 @@ fn test_state_retention() {
     let dbg = "state_retention";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg, 0);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -343,7 +343,7 @@ fn test_state_retention() {
                 input1: VarA
                 input2: VarB
     "#).unwrap();
-    let conf = TaskConf::from_yaml(&self_name, &conf);
+    let conf = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("conf: {:?}", conf);
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
@@ -388,7 +388,7 @@ fn poisoned_data() {
     init_once();
     let dbg = "poisoned_data";
     let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::new_root(serde_yaml::from_str("retain:").unwrap())), None));
-    let mut task_nodes = TaskNodes::new(dbg, 0);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
             cycle: 1 us
@@ -401,7 +401,7 @@ fn poisoned_data() {
                 input fn PointId:
                     input point int every
     "#).unwrap();
-    let conf = TaskConf::from_yaml(dbg, &conf);
+    let conf = TaskConf::from_yaml(dbg, &conf).unwrap();
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
     // Подаем валидную A
     task_nodes.eval(10.to_point(0, "/path/Sensor.A"));
@@ -433,7 +433,7 @@ fn every_logic() {
     let dbg = "every_logic";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
-    let mut task_nodes = TaskNodes::new(dbg, 0);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
     let conf_yaml = serde_yaml::from_str(r#"
         service Task TaskEveryTest:
             cycle: 1 us
@@ -452,7 +452,7 @@ fn every_logic() {
             fn Acc Every:
                 input: point any every
     "#).unwrap();
-    let conf = TaskConf::from_yaml(&self_name, &conf_yaml);
+    let conf = TaskConf::from_yaml(&self_name, &conf_yaml).unwrap();
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
         ConfTree::new_root(serde_yaml::from_str("retain:").unwrap()),

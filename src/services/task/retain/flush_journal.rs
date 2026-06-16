@@ -5,6 +5,14 @@ use crate::err_pass;
 use super::{Eval, RetainCtx};
 
 ///
+/// Проверяет, является ли ошибка ввода-вывода временной и допускает ли она повторное выполнение операции.
+const fn is_retryable(kind: std::io::ErrorKind) -> bool {
+    matches!(
+        kind,
+        std::io::ErrorKind::Interrupted | std::io::ErrorKind::WouldBlock | std::io::ErrorKind::OutOfMemory | std::io::ErrorKind::TimedOut
+    )
+}
+///
 /// Выполняет сброс буфера, гарантируя, что накопленные данные будут переданы OS.
 /// Физическую запись на диск OS выполнит по своему усмотрению.
 pub struct FlushJournal<Child> {
@@ -33,6 +41,9 @@ where
             if let Some(writer) = &mut ctx.writer {
                 if let Err(err) = writer.flush() {
                     log::warn!("{}.run | Can't flush to '{:?}', error: {:?}", self.dbg, ctx.path.display(), err);
+                    if !is_retryable(err.kind()) {
+                        ctx.writer_close();
+                    }
                 }
             }
         }

@@ -212,21 +212,17 @@ impl Service for TaskRetain {
         }
     }
     //
-    //
     fn points(&self) -> Vec<PointConf> {
         self.conf.points()
     }
-    //
     //
     fn wait(&self) -> Result<(), Error> {
         self.handles.wait()
     }
     //
-    //
     fn is_finished(&self) -> bool {
         self.handles.is_finished()
     }
-    //
     //
     fn exit(&self) {
         self.exit.exit();

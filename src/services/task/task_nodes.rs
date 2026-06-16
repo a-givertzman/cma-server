@@ -48,7 +48,7 @@ pub struct TaskNodes {
 // 
 impl TaskNodes {
     ///
-    /// Creates new empty instance 
+    /// Returns `TaskNodes` new instance 
     pub fn new(parent: impl Into<String>, txid: usize, retain: Arc<TaskRetain>,) ->Self {
         Self {
             txid,
@@ -59,6 +59,21 @@ impl TaskNodes {
             cycle: Rc::new(EvalCycle::new()),
             enable_mode: FnEnableMode::Cold,
             dbg: format!("{}/TaskNodes", parent.into()),
+        }
+    }
+    ///
+    /// Returns `TaskNodes` new instance 
+    pub fn without_retain(parent: impl Into<String>, txid: usize) ->Self {
+        let dbg = format!("{}/TaskNodes", parent.into());
+        Self {
+            txid,
+            retain: TaskRetain::mock(&dbg, []).into(),
+            nodes: IndexMap::new(),
+            vars: IndexMap::new(),
+            new_node_vars: None,
+            cycle: Rc::new(EvalCycle::new()),
+            enable_mode: FnEnableMode::Cold,
+            dbg,
         }
     }
     ///
