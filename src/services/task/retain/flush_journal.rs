@@ -9,12 +9,14 @@ use super::{Eval, RetainCtx};
 const fn is_retryable(kind: std::io::ErrorKind) -> bool {
     matches!(
         kind,
-        std::io::ErrorKind::Interrupted | std::io::ErrorKind::WouldBlock | std::io::ErrorKind::OutOfMemory | std::io::ErrorKind::TimedOut
+        std::io::ErrorKind::Interrupted | std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
     )
 }
 ///
-/// Выполняет сброс буфера, гарантируя, что накопленные данные будут переданы OS.
-/// Физическую запись на диск OS выполнит по своему усмотрению.
+/// ### Выполняет сброс буфера
+/// - При жестком отключении питания остатки буфера будут потеряны.
+/// - Гарантируя, что накопленные данные будут переданы OS.
+/// - Физическую запись на диск OS выполнит по своему усмотрению.
 pub struct FlushJournal<Child> {
     child: Child,
     dbg: Dbg,

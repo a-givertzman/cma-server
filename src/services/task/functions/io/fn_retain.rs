@@ -41,17 +41,20 @@ impl FnRetain {
         };
         let key = key.conf.as_str()
             .ok_or_else(|| err!(self_id, "Parameter 'key' must be a string in '{}'", conf.name))?;
-        Ok(if input.is_none() {
-            let read = FnRetainRead::new(parent, nodes.retain(), key, every_cycle, default).map_err(|err| err_pass!(self_id, err))?;
-            match enable {
-                Some(en) => Rc::new(RefCell::new(FnEnable::new(read, nodes.enable_mode(), en))),
-                None => Rc::new(RefCell::new(read)),
+        Ok(match input {
+            None => {
+                let read = FnRetainRead::new(parent, nodes.retain(), key, every_cycle, default).map_err(|err| err_pass!(self_id, err))?;
+                match enable {
+                    Some(en) => Rc::new(RefCell::new(FnEnable::new(read, nodes.enable_mode(), en))),
+                    None => Rc::new(RefCell::new(read)),
+                }
             }
-        } else { 
-            let write = FnRetainWrite::new(parent, nodes.retain().link(), key, default, input).map_err(|err| err_pass!(self_id, err))?;
-            match enable {
-                Some(en) => Rc::new(RefCell::new(FnEnable::new(write, nodes.enable_mode(), en))),
-                None => Rc::new(RefCell::new(write)),
+            Some(input) => { 
+                let write = FnRetainWrite::new(parent, nodes.retain().link(), key, default, input).map_err(|err| err_pass!(self_id, err))?;
+                match enable {
+                    Some(en) => Rc::new(RefCell::new(FnEnable::new(write, nodes.enable_mode(), en))),
+                    None => Rc::new(RefCell::new(write)),
+                }
             }
         })
     }

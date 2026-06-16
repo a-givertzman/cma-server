@@ -36,7 +36,7 @@ impl std::fmt::Debug for IoState {
 const fn is_retryable(kind: std::io::ErrorKind) -> bool {
     matches!(
         kind,
-        std::io::ErrorKind::Interrupted | std::io::ErrorKind::WouldBlock | std::io::ErrorKind::OutOfMemory | std::io::ErrorKind::TimedOut
+        std::io::ErrorKind::Interrupted | std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
     )
 }
 ///

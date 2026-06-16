@@ -1,4 +1,3 @@
-use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Name, Point, PointTxId};
 use std::{sync::{Arc, atomic::{AtomicUsize, Ordering}}};
@@ -6,23 +5,14 @@ use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOu
 ///
 /// ### Function | `FnRetainRead`
 /// 
-/// Чтение значения `Point` с диска.
-/// По умолчанию читает с диска только в первый цикл,
-/// дальше возвращает закэшированное значение.
+/// Чтение значения `Point` из журнала на диске.
+/// По умолчанию читает данные только в первый цикл вычислений,
+/// далее возвращает закэшированное значение.
 /// 
 /// **Особенности работы:**
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
-/// - `default`: Запасной источник данных (вычисляется лениво), если файл на диске отсутствует.
-/// - `every-cycle`: При `true` файл будет читаться с диска на каждом такте вычислений.
-/// 
-/// **Формат данных на диске:**
-/// ```json
-/// { "value": {"Bool": false}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"Int": 123}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"Real": 12.3}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"Double": 12.3}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// { "value": {"String": "String value"}, "status": 0, "ts": "2026-06-11T09:06:45.123456789Z" }
-/// ```
+/// - `default`: Запасной источник данных, если файл на диске отсутствует.
+/// - `every-cycle`: При `true` читает актуальные данные из журнала на каждом такте вычислений.
 /// 
 /// **Пример:**
 /// ```yaml
@@ -49,11 +39,11 @@ pub struct FnRetainRead {
 impl FnRetainRead {
     ///
     /// ### Returns `FnRetainRead` new instance
-    /// - `parent`: Идентификатор родительского узла
-    /// - `path`: Путь к retain файлу для значения (`assets/retain/App/RecorderTask/retain_value.json`)
-    /// - `every_cycle`: Если true, чтение будет выполняться в каждом цикле вычислений, иначе только один раз
-    /// - `default`: Узел, значение которого будет использовано, если файл отсутствует
-    #[named]
+    /// - `parent`: Идентификатор родительского узла.
+    /// - `retain`: `TaskRetain`, разделяемый контекст доступа к дисковому журналу.
+    /// - `key`: Уникальный ключ переменной в журнале.
+    /// - `every_cycle`: Если true, чтение будет выполняться непрерывно, иначе — единоразово при старте.
+    /// - `default`: Резервный узел. Будет использован, если ключа в журнале нет.
     pub fn new(parent: &Name, retain: Arc<TaskRetain>, key: impl Into<String>, every_cycle: bool, default: Option<FnOutRef>) -> Result<Self, Error> {
         let id = format!("{}/FnRetainRead{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
         Ok(Self {
@@ -97,7 +87,7 @@ impl FnOut for FnRetainRead {
         if let Some(val) = self.retain.get(&self.key) {
             if self.every_cycle {
                 if let Some(cached) = &self.cache {
-                    if cached.value() == val.value() {
+                    if cached.value() == val.value() && cached.status() == val.status() {
                         return flow.wrap_old(val);
                     }
                 }
@@ -134,11 +124,11 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 #[cfg(test)]
 mod tests {
     use sal_sync::services::Service;
-use sal_sync::services::entity::{Cot, PointHlr, Status};
+    use sal_sync::services::entity::{Cot, PointHlr, Status};
     use super::*;
     use std::cell::RefCell;
     use std::path::PathBuf;
-use std::rc::Rc;
+    use std::rc::Rc;
     use std::io::Write;
     use std::env::temp_dir;
     #[derive(Debug)]
@@ -161,5 +151,78 @@ use std::rc::Rc;
     }
     fn mock_point_int(id: &str, val: i64) -> Point {
         Point::Int(PointHlr::new(0, id, val, Status::Ok, Cot::Inf, chrono::Utc::now()))
+    }
+}
+#[cfg(test)]
+mod testsы {
+    use sal_core::dbg::Dbg;
+use sal_sync::services::entity::{Cot, PointHlr, Status};
+    use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use crate::services::task::TaskRetainConf;
+    #[derive(Debug)]
+    struct MockNode {
+        flow: FnResult<FnFlow, String>,
+        inputs_called: usize,
+    }
+    impl FnOut for MockNode {
+        fn id(&self) -> String { "mock".to_string() }
+        fn kind(&self) -> FnKind { FnKind::Fn }
+        fn inputs(&self) -> Vec<String> { vec!["mock_point".to_string()] }
+        fn out(&mut self) -> FnResult<FnFlow, String> {
+            self.inputs_called += 1;
+            self.flow.clone()
+        }
+        fn reset(&mut self) {}
+    }
+    fn create_mock(flow: FnFlow) -> Rc<RefCell<MockNode>> {
+        Rc::new(RefCell::new(MockNode { flow: Ok(Some(flow)), inputs_called: 0 }))
+    }
+    fn mock_point_int(id: &str, val: i64) -> Point {
+        Point::Int(PointHlr::new(0, id, val, Status::Ok, Cot::Inf, chrono::Utc::now()))
+    }
+    fn dummy_retain(dbg: impl Into<String>) -> Arc<TaskRetain> {
+        Arc::new(TaskRetain::mock(dbg, []))
+    }
+    #[test]
+    fn test_retain_read() {
+        let parent = "FnRetainRead";
+        let name = Name::new(parent, "test_retain_read");
+        let dbg = Dbg::new(parent, name.me());
+        let retain = dummy_retain(&dbg); // Пустой кэш
+        let point = mock_point_int("test", 42);
+        let default_node = create_mock(FnFlow::New(point.clone()));
+        let mut node = FnRetainRead::new(&name, retain, "key", false, Some(default_node.clone())).unwrap();
+        // Такт 1: Читаем из default (так как кэш пуст), сохраняем в self.cache
+        let flow1 = node.out().unwrap().unwrap();
+        assert!(flow1.is_new());
+        assert_eq!(flow1.value().as_int().value, 42);
+        // Такт 2: every_cycle = false, возвращаем Old из кэша (к default больше не обращаемся)
+        let flow2 = node.out().unwrap().unwrap();
+        assert!(!flow2.is_new());
+        assert_eq!(flow2.value().as_int().value, 42);
+        // Проверяем ленивое вычисление: default_node был опрошен ровно 1 раз
+        assert_eq!(default_node.borrow().inputs_called, 1);
+    }
+    #[test]
+    fn test_retain_read_every_cycle_true() {
+        let parent = "FnRetainRead";
+        let name = Name::new(parent, "test_retain_read_every_cycle");
+        let dbg = Dbg::new(parent, name.me());
+        let retain = dummy_retain(&dbg); // Пустой кэш
+        let point = mock_point_int("test", 100);
+        let default_node = create_mock(FnFlow::New(point.clone()));
+        let mut node = FnRetainRead::new(&name, retain, "key", true, Some(default_node.clone())).unwrap();
+        // Такт 1: Читаем из default (flow.map)
+        let flow1 = node.out().unwrap().unwrap();
+        assert!(flow1.is_new());
+        // Такт 2: Меняем состояние default на Old
+        default_node.borrow_mut().flow = Ok(Some(FnFlow::Old(point.clone())));
+        let flow2 = node.out().unwrap().unwrap();
+        // Поскольку every_cycle = true, узел честно транслирует Old от default
+        assert!(!flow2.is_new());
+        // default_node был опрошен 2 раза
+        assert_eq!(default_node.borrow().inputs_called, 2);
     }
 }

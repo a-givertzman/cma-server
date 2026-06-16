@@ -3,12 +3,7 @@ use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{Service, Services, entity::{Name, Object, Point, PointConf}}, sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{domain::{FxSccHashMap, RECV_TIMEOUT, Receiver, RecvTimeoutError, Sender, bounded}, err, err_pass, services::task::{AppendJournal, CompactateJournal, FlushJournal, InitialCtx, LoadJournal, MarkOldJournal, OpenJournal, TaskRetainConf, retain::{Eval, RetainEvent, RetainState}}};
-///
-/// ### Локальный флаг завершения чтения из файла
-enum IoState {
-    Continue((String, RetainState)),
-    Done,
-}
+
 ///
 /// ### Retained values for the `Task`
 /// 
@@ -44,6 +39,7 @@ pub struct TaskRetain {
 }
 //
 impl TaskRetain {
+    const BUFFER_SIZE: usize = 16 * 1024;
     ///
     /// Returns `TaskRetain` new instance
     /// - `parent` - Родительский сервис `Task`.
@@ -59,7 +55,7 @@ impl TaskRetain {
         let dir = cw_dir.join(retain_path).join(parent.join().trim_start_matches('/'));
         std::fs::create_dir_all(&dir).map_err(|err| err_pass!(dbg, err, "Error creating dir: '{}'", dir.display()))?;
         let path = dir.join("retain").with_extension("json");
-        let (send, recv) = bounded(4096);
+        let (send, recv) = bounded(Self::BUFFER_SIZE);
         Ok(Self {
             txid,
             name,
@@ -79,7 +75,7 @@ impl TaskRetain {
     pub fn mock(parent: impl Into<String>, cache: impl IntoIterator<Item = (String, Point)>) -> Self {
         let name = Name::new(parent, crate::domain::me::<Self>());
         let dbg = Dbg::new(name.parent(), crate::domain::me::<Self>());
-        let (send, recv) = bounded(4096);
+        let (send, recv) = bounded(Self::BUFFER_SIZE);
         Self {
             txid: 0,
             name,
@@ -163,7 +159,7 @@ impl Service for TaskRetain {
                                 if let Err(err) = retain.eval(None).map_err(|err| err_pass!(dbg, err)) {
                                     log::warn!("{err}");
                                 }
-                            },
+                            }
                             Err(err) => {
                                 log::error!("{dbg}.run | Receiv error: {:?}", err);
                                 break 'main;
@@ -194,12 +190,10 @@ impl Service for TaskRetain {
                                 log::trace!("{dbg}.run | point '{}': {:?}", event.key, event.p);
                                 cache.insert_sync(event.key, event.p);
                             }
-                            Err(err) => match err {
-                                RecvTimeoutError::Timeout => {},
-                                _ => {
-                                    log::error!("{dbg}.run | Receiv error: {:?}", err);
-                                    break 'main;
-                                }
+                            Err(RecvTimeoutError::Timeout) => {}
+                            Err(err) => {
+                                log::error!("{dbg}.run | Receiv error: {:?}", err);
+                                break 'main;
                             }
                         };
                     }
@@ -260,15 +254,17 @@ impl Trigger {
     /// ### Returns `true` if time interval or bytes limit is exceeded
     /// - `bytes`: Current size in bytes
     pub fn is_exceeded(&self, bytes: impl Into<u64>) -> bool {
-        if self.bytes_limit > 0 {
-            return self.t.get().elapsed() >= self.interval || bytes.into() >= self.bytes_limit;
+        if self.t.get().elapsed() >= self.interval {
+            return true;
         }
-        self.t.get().elapsed() >= self.interval
+        if self.bytes_limit > 0 {
+            return bytes.into() >= self.bytes_limit;
+        }
+        false
     }
 }
-
 ///
-/// 
+/// Wraps a writer and counts the total number of bytes written.
 struct CountingWriter<W: Write> {
     inner: W,
     bytes_written: usize,
@@ -290,11 +286,13 @@ impl<W: Write> CountingWriter<W> {
 //
 impl<W: Write> Write for CountingWriter<W> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let result = self.inner.write(buf);
-        if let Ok(bytes) = result {
-            self.bytes_written += bytes;
+        match self.inner.write(buf) {
+            Ok(bytes) => {
+                self.bytes_written += bytes;
+                Ok(bytes)
+            }
+            Err(err) => Err(err),
         }
-        result
     }
     fn flush(&mut self) -> std::io::Result<()> {
         self.inner.flush()

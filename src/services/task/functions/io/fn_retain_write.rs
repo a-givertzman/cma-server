@@ -1,4 +1,3 @@
-use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Name, {Point, PointTxId}};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -6,14 +5,14 @@ use crate::{domain::{FnOutRef, Sender}, services::task::{FlowContext, FnFlow, Fn
 ///
 /// ### Function | `FnRetainWrite`
 /// 
-/// Запись значения `Point` на диск.
-/// Пишет по изменению значения, статуса или метки времени.
+/// Запись значения `Point` на диск через фоновый процесс `TaskRetain`.
+/// Пишет строго по изменению значения, статуса или метки времени.
 /// Для вычислений прозрачна, не вносит изменений в поток.
 /// 
 /// **Особенности работы:**
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
-/// - `default`: Запасной источник данных (вычисляется лениво),
-///    если входа нет или он молчит (`Ok(None)`), то узел попытается вернуть и записать на диск `default`.
+/// - `default`: Запасной источник данных, если вход молчит (`Ok(None)`),
+///    то узел попытается вернуть и записать на диск `default`.
 ///
 /// **Пример:**
 /// ```yaml
@@ -25,14 +24,13 @@ use crate::{domain::{FnOutRef, Sender}, services::task::{FlowContext, FnFlow, Fn
 ///             key: 'OperatingCycleId'
 ///         input: opCycleIsDone
 /// ```
-
 #[derive(Debug)]
 pub struct FnRetainWrite {
     txid: usize,
     kind: FnKind,
     key: String,
     default: Option<FnOutRef>,
-    input: Option<FnOutRef>,
+    input: FnOutRef,
     cache: Option<Point>,
     send: Sender<RetainEvent>,
     id: String,
@@ -42,12 +40,11 @@ impl FnRetainWrite {
     ///
     /// ### Returns `FnRetainWrite` new instance
     /// - `parent`: Идентификатор родительского узла
-    /// - `path` Путь к retain файлу для значения (`assets/retain/App/RecorderTask/retain_value.json`)
-    /// - `default`: Запасной источник данных (вычисляется лениво),
-    ///    если входа нет или он молчит (`Ok(None)`), то узел попытается вернуть и записать на диск `default`.
-    /// - `inputs`: Входной сигнал
-    #[named]
-    pub fn new(parent: &Name, send: Sender<RetainEvent>, key: impl Into<String>, default: Option<FnOutRef>, input: Option<FnOutRef>) -> Result<Self, Error> {
+    /// - `send`: Канал для отправки событий записи в TaskRetain
+    /// - `key`: Уникальный ключ переменной для сохранения
+    /// - `default`: Запасной источник данных
+    /// - `input`: Входной сигнал
+    pub fn new(parent: &Name, send: Sender<RetainEvent>, key: impl Into<String>, default: Option<FnOutRef>, input: FnOutRef) -> Result<Self, Error> {
         let id = format!("{}/FnRetainWrite{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
         Ok(Self {
             txid: PointTxId::from_str(&id),
@@ -73,50 +70,109 @@ impl FnOut for FnRetainWrite {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
+        let mut inputs = self.input.borrow().inputs();
         if let Some(default) = &self.default {
             inputs.append(&mut default.borrow().inputs());
-        }
-        if let Some(input) = &self.input {
-            inputs.append(&mut input.borrow().inputs());
         }
         inputs
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
+        let input = self.input.borrow_mut().out();
+        let default = self.default.as_ref().map(|d| d.borrow_mut().out());
         let mut flow = FlowContext::new();
-        let input = self.input.as_ref().map(|f| f.borrow_mut().out());
-        if let Some(input) = input {
-            if let Some(input) = flow.map(input)? {
-                let name = input.name();
-                if let Err(err) = self.send.send(RetainEvent::new(self.key.clone(), input.clone())) {
-                    log::error!("{}.out | Can't store value '{}': {:?}", self.id, name, err);
-                }
-                return flow.wrap(input);
+        let point = if let Some(input) = flow.map(input)? {
+            Some(input)
+        } else if let Some(default) = default {
+            flow.ignore(default)?
+        } else {
+            None
+        };
+        let Some(point) = point else {
+            return Ok(None);
+        };
+        let is_changed = match self.cache.as_ref() {
+            Some(cache) => cache.value() != point.value() || cache.status() != point.status() || cache.timestamp() != point.timestamp(),
+            None => true,
+        };
+        if is_changed {
+            self.cache = Some(point.clone());
+            if let Err(err) = self.send.send(RetainEvent::new(self.key.clone(), point.clone())) {
+                log::error!("{}.out | Can't store value '{}': {:?}", self.id, point.name(), err);
             }
         }
-        if let Some(default) = self.default.as_ref() {
-            if let Some(default) = flow.map(default.borrow_mut().out())? {
-                let name = default.name();
-                if let Err(err) = self.send.send(RetainEvent::new(self.key.clone(), default.clone())) {
-                    log::error!("{}.out | Can't store value '{}': {:?}", self.id, name, err);
-                }
-                return flow.wrap(default);
-            }
-        }
-        Ok(None)
+        flow.wrap(point)
     }
     //
     fn reset(&mut self) {
         if let Some(default) = &self.default {
             default.borrow_mut().reset();
         }
-        if let Some(input) = &self.input {
-            input.borrow_mut().reset();
-        }
+        self.input.borrow_mut().reset();
         self.cache = None;
     }
 }
 ///
 /// Global static counter of FnRetainWrite instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
+/// Baisic Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::services::task::FnFlow;
+    use sal_sync::services::entity::{Point, PointHlr, Cot, Status};
+    use std::{cell::RefCell, rc::Rc};
+    #[derive(Debug)]
+    struct MockNode {
+        id: String,
+        flow: Option<FnFlow>,
+        called: usize,
+    }
+    impl MockNode {
+        fn new(id: &str, flow: Option<FnFlow>) -> Self {
+            Self { id: id.to_string(), flow, called: 0 }
+        }
+    }
+    impl FnOut for MockNode {
+        fn id(&self) -> String { self.id.clone() }
+        fn kind(&self) -> FnKind { FnKind::Fn }
+        fn inputs(&self) -> Vec<String> { vec![] }
+        fn out(&mut self) -> FnResult<FnFlow, String> {
+            self.called += 1;
+            Ok(self.flow.clone())
+        }
+        fn reset(&mut self) {}
+    }
+    fn mock_point(val: i64) -> Point {
+        Point::Int(PointHlr::new(1, "test", val, Status::Ok, Cot::Inf, chrono::Utc::now()))
+    }
+    #[test]
+    fn test_eager_evaluation_and_deduplication() {
+        let (tx, rx) = crate::domain::unbounded();
+        let input = Rc::new(RefCell::new(MockNode::new("in", Some(FnFlow::New(mock_point(10))))));
+        let default = Rc::new(RefCell::new(MockNode::new("def", Some(FnFlow::New(mock_point(5))))));
+        let mut retain = FnRetainWrite::new(&Name::from("test"), tx, "key", Some(default.clone()), input.clone()).unwrap();
+        // Такт 1: Идут новые данные
+        let res = retain.out().unwrap().unwrap();
+        assert!(matches!(res, FnFlow::New(_)));
+        assert_eq!(rx.len(), 1);
+        assert_eq!(input.borrow().called, 1);
+        assert_eq!(default.borrow().called, 1, "Запасной вход обязан быть опрошен!");
+        // Такт 2: Данные не изменились (дубликат в потоке)
+        input.borrow_mut().flow = Some(FnFlow::New(mock_point(10)));
+        let res2 = retain.out().unwrap().unwrap();
+        assert!(matches!(res2, FnFlow::New(_)));
+        assert_eq!(rx.len(), 1, "Диск должен быть защищен от записи дубликатов");
+    }
+    #[test]
+    fn test_default_fallback_ignores_flow() {
+        let (tx, rx) = crate::domain::unbounded();
+        let input = Rc::new(RefCell::new(MockNode::new("in", None))); // Основной вход обрывается
+        let default = Rc::new(RefCell::new(MockNode::new("def", Some(FnFlow::New(mock_point(42))))));
+        let mut retain = FnRetainWrite::new(&Name::from("test"), tx, "key", Some(default.clone()), input.clone()).unwrap();
+        let res = retain.out().unwrap().unwrap();
+        assert!(matches!(res, FnFlow::Old(_)), "Резервное значение должно быть завернуто в Old");
+        assert_eq!(res.value().as_int().value, 42);
+    }
+}
