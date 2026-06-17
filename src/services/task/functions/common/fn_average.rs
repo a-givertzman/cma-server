@@ -49,7 +49,7 @@ impl FnAverage {
     /// Возвращает `Point` с обновленными `name` и `value`
     #[inline]
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
-        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts())
     }
 }
 //
@@ -94,9 +94,9 @@ impl FnOut for FnAverage {
             return flow.wrap_old(average.clone());
         }
         // trace!("{}.out | input: {:?}", self.id, input);
-        let value = match input.type_() {
+        let value = match input.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         self.sum += value;
         self.count += 1;
@@ -108,11 +108,11 @@ impl FnOut for FnAverage {
         log::trace!("{}.out | sum: {:?}", self.id, self.sum);
         log::trace!("{}.out | count: {:?}", self.id, self.count);
         log::trace!("{}.out | average: {:?}", self.id, average);
-        let average = match input.type_() {
+        let average = match input.typ() {
             PointType::Int => Point::Int(Self::point_with(&input, &self.id, average.round() as i64)),
             PointType::Real => Point::Real(Self::point_with(&input, &self.id, average as f32)),
             PointType::Double => Point::Double(Self::point_with(&input, &self.id, average)),
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         self.average = Some(average.clone());
         flow.wrap_new(average)

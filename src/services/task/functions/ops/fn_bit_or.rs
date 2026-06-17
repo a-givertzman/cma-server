@@ -86,7 +86,7 @@ impl FnOut for FnBitOr {
         //                     log::trace!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
         //                     value = match &value {
         //                         Point::Bool(val) => {
-        //                             let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+        //                             let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.typ(), input.name(), input.typ()));
         //                             Point::Bool(
         //                                 PointHlr::new(
         //                                     tx_id,
@@ -99,7 +99,7 @@ impl FnOut for FnBitOr {
         //                             )
         //                         }
         //                         Point::Int(val) => {
-        //                             let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+        //                             let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.typ(), input.name(), input.typ()));
         //                             Point::Int(
         //                                 PointHlr::new(
         //                                     tx_id,

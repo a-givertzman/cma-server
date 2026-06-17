@@ -39,19 +39,19 @@ impl FnPiecewiseLineApprox {
     /// Возвращает `PointHlr` с обновленными `name` и `value`
     #[inline]
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
-        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts())
     }
     ///
     /// Возвращает `Point` с обновленными `name` и `value` сохраняя тип
     #[inline]
     fn point(id: &str, input: &Point, val: f64) -> Result<Point, String> {
-        match input.type_() {
+        match input.typ() {
             PointType::Bool => Ok(Point::Bool(Self::point_with(input, id, Bool(val != 0.0)))),
             PointType::Int => Ok(Point::Int(Self::point_with(input, id, val.round() as i64))),
             PointType::Real => Ok(Point::Real(Self::point_with(input, id, val as f32))),
             PointType::Double => Ok(Point::Double(Self::point_with(input, id, val))),
             PointType::String => Ok(Point::String(Self::point_with(input, id, val.to_string()))),
-            _ => Err(concat_string!(id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => Err(concat_string!(id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         }
     }
 }
@@ -81,7 +81,7 @@ impl FnOut for FnPiecewiseLineApprox {
                 val.value.parse()
                     .map_err(|_| concat_string!(self.id, ".out | Invalid input '", val.value, "'"))?
             }
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         if value.is_nan() {
             return Err(concat_string!(self.id, ".out | Math error: Received NaN value instead of valid number"));

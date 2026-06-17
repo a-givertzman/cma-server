@@ -1,7 +1,7 @@
 use sal_core::error::Error;
 
 ///
-/// Helper `Value` для операций с числами
+/// ### Вспомогательный слой для операций с числами
 /// - Обеспечивает строгую типизацию, перекрестное приведение типов при вычислениях
 /// - Защищает от переполнений и распространения `NaN` в математическом ядре графа.
 #[derive(Debug, Clone, Copy)]
@@ -27,7 +27,7 @@ impl TryFrom<&sal_sync::services::entity::Point> for Value {
             sal_sync::services::entity::Point::Int(p) => Ok(Self::Int(p.value)),
             sal_sync::services::entity::Point::Real(p) => Ok(Self::Real(p.value)),
             sal_sync::services::entity::Point::Double(p) => Ok(Self::Double(p.value)),
-            _ => return Err(Self::Error::new("Value", "try_from").err(concat_string::concat_string!("Invalid type '", p.type_().to_string(), "'"))),
+            _ => return Err(Self::Error::new("Value", "try_from").err(concat_string::concat_string!("Invalid type '", p.typ().to_string(), "'"))),
         }
     }
 }

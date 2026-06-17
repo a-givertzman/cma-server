@@ -106,7 +106,7 @@ impl FnOut for FnMul {
                     has_double = true;
                     f64_value *= p.value;
                 }
-                Point::String(_) | Point::Bytes(_) => return Err(format!("{}.out | Invalid input type '{:?}', expected bool or number", self.id, input.type_())),
+                Point::String(_) | Point::Bytes(_) => return Err(format!("{}.out | Invalid input type '{:?}', expected bool or number", self.id, input.typ())),
             }
         }
         if has_double {

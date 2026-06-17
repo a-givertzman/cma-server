@@ -1,13 +1,13 @@
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{LinkName, Services, conf::ConfDuration, entity::{Name, Point, ToPoint}, task::functions::{FnConfKind, FnConfPointType, FnConfig}};
 use std::{cell::RefCell, rc::Rc, str::FromStr, sync::Arc};
 use indexmap::IndexMap;
 use crate::{
-    domain::FnOutRef,
-    services::task::{
-        functions::{*, functions::Functions},
+    domain::FnOutRef, err_pass, services::task::{
+        functions::{functions::Functions, *},
         task_nodes::TaskNodes
-    },
+    }
 };
 ///
 /// Creates nested functions tree from it config
@@ -30,6 +30,7 @@ impl FnBuilder {
     }
     ///
     ///
+    #[named]
     fn function(parent: &Name, input_name: &str, conf: &FnConfKind, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<FnOutRef, Error> {
         let dbg = Dbg::new(parent, "FnBuilder");
         let error = Error::new(&dbg, "function");
@@ -151,7 +152,7 @@ impl FnBuilder {
                         let send_queue = services.get_link(&link_name)
                             .map_err(|err| error.pass_with(format!("FnToApiQueue | Can't get link '{link_name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnToApiQueue::new(parent, input, send_queue)
+                            FnToApiQueue::new(parent, nodes.txid(), input, send_queue)
                         )))
                     }
                     //
@@ -227,10 +228,10 @@ impl FnBuilder {
                         )))
                     }
                     //
-                    Functions::SqlMetric => {
+                    Functions::Sql | Functions::SqlMetric => {
                         Ok(Rc::new(RefCell::new(
-                            SqlMetric::new(parent, conf, nodes, services)
-                                .map_err(|err| error.pass_with(format!("Can't build SqlMetric"), err))?
+                            FnSql::new(parent, conf, nodes, services)
+                                .map_err(|err| err_pass!(dbg, err, "Can't build Sql"))?
                         )))
                     }
                     //
@@ -257,7 +258,7 @@ impl FnBuilder {
                         for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnDebug | Can't get '{name}'"), err))?;
-                            inputs.push(input);
+                            inputs.push((name.to_string(), input));
                         }
                         Ok(Rc::new(RefCell::new(
                             FnDebug::new(parent, inputs)
@@ -281,16 +282,18 @@ impl FnBuilder {
                         let mut inputs = IndexMap::new();
                         let mut conf_inputs: IndexMap<String, FnConfKind> = conf.inputs
                             .iter()
-                            .filter(|(name, _)| ! ["enable", "x"].contains(&(name.as_str())))
+                            .filter(|(name, _)| ! ["enable", "x", "legend"].contains(&(name.as_str())))
                             .map(|(n, c)| (n.to_owned(), c.clone())).collect();
                         for (name, input_conf) in &mut conf_inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
                                 .map_err(|err| error.pass_with(format!("FnPlot | Can't get '{name}'"), err))?;
                             inputs.insert(name.to_owned(), input);
                         }
-                        Ok(Rc::new(RefCell::new(
-                            FnPlot::new(parent, enable, x, inputs)
-                        )))
+                        Ok(match enable {
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(
+                                FnPlot::new(parent, x, inputs), nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnPlot::new(parent, x, inputs))),
+                        })
 
                     }
                     //
@@ -300,7 +303,7 @@ impl FnBuilder {
                         let input = Self::function(parent, name, input_conf, nodes, services.clone())
                             .map_err(|err| error.pass_with(format!("FnToBool | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnToBool::new(parent, input)
+                            FnToBool::new(parent, input).map_err(|err| err_pass!(dbg, err))?
                         )))
                     }
                     //
@@ -320,7 +323,7 @@ impl FnBuilder {
                         let input = Self::function(parent, name, input_conf, nodes, services.clone())
                             .map_err(|err| error.pass_with(format!("FnToReal | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnToReal::new(parent, input)
+                            FnToReal::new(parent, input).map_err(|err| err_pass!(dbg, err))?
                         )))
                     }
                     //
@@ -330,7 +333,7 @@ impl FnBuilder {
                         let input = Self::function(parent, name, input_conf, nodes, services.clone())
                             .map_err(|err| error.pass_with(format!("FnToDouble | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnToDouble::new(parent, input)
+                            FnToDouble::new(parent, input).map_err(|err| err_pass!(dbg, err))?
                         )))
                     }
                     //
@@ -367,8 +370,9 @@ impl FnBuilder {
                             },
                         };
                         Ok(match enable {
-                            Some(en) => Rc::new(RefCell::new(FnEnable::new(FnExport::new(parent, point_conf, input, send_queue), nodes.enable_mode(), en))),
-                            None => Rc::new(RefCell::new(FnExport::new(parent, point_conf, input, send_queue))),
+                            Some(en) => Rc::new(RefCell::new(FnEnable::new(
+                                FnExport::new(parent, nodes.txid(), point_conf, input, send_queue), nodes.enable_mode(), en))),
+                            None => Rc::new(RefCell::new(FnExport::new(parent, nodes.txid(), point_conf, input, send_queue))),
                         })
                     }
                     //
@@ -558,7 +562,7 @@ impl FnBuilder {
                         let input = Self::function(parent, name, input_conf, nodes, services)
                             .map_err(|err| error.pass_with(format!("FnSmooth | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnSmooth::new(parent, factor, input)
+                            FnSmooth::new(parent, factor, input).map_err(|err| err_pass!(dbg, err))?
                         )))
                     }
                     //
@@ -712,7 +716,7 @@ impl FnBuilder {
                             .and_then(|v| v.ok_or_else(|| error.err(format!("FnToString | 'input' - is missed"))))
                             .map_err(|err| error.pass_with(format!("FnToString | Can't get 'input'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnToString::new(parent, input)
+                            FnToString::new(parent, input).map_err(|err| err_pass!(dbg, err))?
                         )))
                     }
                     //
@@ -805,7 +809,8 @@ impl FnBuilder {
                     None => None,
                 };
                 Ok(Rc::new(RefCell::new(
-                    FnPoint::new(parent, conf.conf.clone(), enable, changes_only, input, send_to),
+                    FnPoint::new(parent, conf.conf.clone(), enable, changes_only, input, send_to)
+                        .map_err(|err| err_pass!(dbg, err))?,
                 )))
             }
             FnConfKind::Param(conf) => {

@@ -1,5 +1,4 @@
 //!
 //! `Task` Service functions intended for the API/SQL purposes
-mod sql_metric;
-
-pub use sql_metric::*;
+mod fn_sql;
+pub use fn_sql::*;

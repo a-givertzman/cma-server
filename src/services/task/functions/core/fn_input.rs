@@ -90,7 +90,7 @@ impl FnIn for FnInput {
                     Point::Real(p) => Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
                     Point::Double(p) => Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
                     Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.type_(), self.typ);
+                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
                         return;
                     }
                 }
@@ -100,7 +100,7 @@ impl FnIn for FnInput {
                     Point::Bool(p) => Point::Int(PointHlr::new(p.txid, &p.name, if p.value.0 {1} else {0}, p.status, p.cot, p.timestamp)),
                     Point::Int(p) => Point::Int(PointHlr::new(p.txid, &p.name, p.value, p.status, p.cot, p.timestamp)),
                     Point::Real(_) | Point::Double(_) | Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.type_(), self.typ);
+                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
                         return;
                     }
                 }
@@ -111,7 +111,7 @@ impl FnIn for FnInput {
                     Point::Int(p) => Point::Real(PointHlr::new(p.txid, &p.name, p.value as f32, p.status, p.cot, p.timestamp)),
                     Point::Real(_) => point.clone(),
                     Point::Double(_) | Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.type_(), self.typ);
+                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
                         return;
                     }
                 }
@@ -123,7 +123,7 @@ impl FnIn for FnInput {
                     Point::Real(p) => Point::Double(PointHlr::new(p.txid, &p.name, p.value as f64, p.status, p.cot, p.timestamp)),
                     Point::Double(_) => point.clone(),
                     Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.type_(), self.typ);
+                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
                         return;
                     }
                 }
@@ -136,7 +136,7 @@ impl FnIn for FnInput {
                     Point::Double(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
                     Point::String(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.clone(), p.status, p.cot, p.timestamp)),
                     Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.type_(), self.typ);
+                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
                         return;
                     }
                 }

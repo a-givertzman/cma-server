@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{
-    Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status,
+    Cot, Point, PointConf, PointConfAddress, PointType, PointHlr, Status,
 };
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::modbus_tcp::modbus::ParsePoint};
 ///
@@ -8,7 +8,7 @@ use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::modbus_tcp:
 #[derive(Debug)]
 pub struct ModbusParseInt {
     id: String,
-    pub type_: PointConfType,
+    pub type_: PointType,
     pub txid: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = i64> + Send>,
@@ -105,7 +105,7 @@ impl ModbusParseInt {
 impl ParsePoint for ModbusParseInt {
     //
     //
-    fn type_(&self) -> PointConfType {
+    fn type_(&self) -> PointType {
         self.type_.clone()
     }
     //
@@ -146,7 +146,7 @@ impl ParsePoint for ModbusParseInt {
                 }
             }
             Err(_) => {
-                let message = format!("{}.write | Point of type 'Int' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
+                let message = format!("{}.write | Point of type 'Int' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.typ(), self.name);
                 log::warn!("{}", message);
                 Err(message)
             }

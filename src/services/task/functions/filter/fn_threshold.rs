@@ -41,7 +41,7 @@ pub struct FnThreshold {
 //
 impl FnThreshold {
     ///
-    /// ### Creates new instance of the `FnThreshold`
+    /// ### Creates `FnThreshold` new instance
     /// * `parent` - Идентификатор родительского узла.
     /// * `threshold` - Узел, задающий порог срабатывания.
     /// * `factor` - Узел весового коэффициента (опционально, для интегрального режима).
@@ -61,18 +61,18 @@ impl FnThreshold {
     /// Возвращает `PointHlr` с обновленными `name` и `value`
     #[inline]
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
-        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts())
     }
     ///
     /// Возвращает `Point` с обновленными `name` и `value` сохраняя тип
     #[inline]
     fn point(id: &str, input: &Point, val: f64) -> Result<Point, String> {
-        match input.type_() {
+        match input.typ() {
             PointType::Bool => Ok(Point::Bool(Self::point_with(input, id, Bool(val != 0.0)))),
             PointType::Int => Ok(Point::Int(Self::point_with(input, id, val.round() as i64))),
             PointType::Real => Ok(Point::Real(Self::point_with(input, id, val as f32))),
             PointType::Double => Ok(Point::Double(Self::point_with(input, id, val))),
-            _ => Err(concat_string!(id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => Err(concat_string!(id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         }
     }
 }
@@ -104,34 +104,34 @@ impl FnOut for FnThreshold {
         let Some(input) = flow.map(input)? else { return Ok(None) };
         let Some(threshold) = flow.ignore(threshold)? else { return Ok(None) };
         log::trace!("{}.out | threshold: {:?}", self.id, threshold);
-        let threshold = match threshold.type_() {
+        let threshold = match threshold.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => threshold.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid threshold type '", threshold.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid threshold type '", threshold.typ().to_string(), "'")),
         };
         self.filter = self.filter.with_threshold(threshold);
         if let Some(factor) = factor {
             let Some(factor) = flow.ignore(factor)? else { return Ok(None) };
             log::trace!("{}.out | factor: {:?}", self.id, factor);
-            let factor = match factor.type_() {
+            let factor = match factor.typ() {
                 PointType::Bool | PointType::Int | PointType::Real | PointType::Double => factor.to_double().as_double().value,
-                _ => return Err(concat_string!(self.id, ".out | Invalid factor type '", factor.type_().to_string(), "'")),
+                _ => return Err(concat_string!(self.id, ".out | Invalid factor type '", factor.typ().to_string(), "'")),
             };
             self.filter = self.filter.with_factor(factor);
         }
         if flow.is_old() {
             let value = match self.filter.last() {
                 Some(val) => val,
-                None => match input.type_() {
+                None => match input.typ() {
                     PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-                    _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+                    _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
                 },
             };
             let value = Self::point(&self.id, &input, value)?;
             return flow.wrap_old(value);
         }
-        let value = match input.type_() {
+        let value = match input.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         log::trace!("{}.out | input: {:?}", self.id, value);
         match self.filter.add(value) {

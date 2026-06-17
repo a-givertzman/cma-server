@@ -47,18 +47,18 @@ impl FnMax {
     /// Возвращает `PointHlr` с обновленными `name` и `value`
     #[inline]
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
-        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts())
     }
     ///
     /// Возвращает `Point` с обновленными `name` и `value` сохраняя тип
     #[inline]
     fn point(id: &str, input: &Point, val: f64) -> Result<Point, String> {
-        match input.type_() {
+        match input.typ() {
             PointType::Bool => Ok(Point::Bool(Self::point_with(input, id, Bool(val != 0.0)))),
             PointType::Int => Ok(Point::Int(Self::point_with(input, id, val.round() as i64))),
             PointType::Real => Ok(Point::Real(Self::point_with(input, id, val as f32))),
             PointType::Double => Ok(Point::Double(Self::point_with(input, id, val))),
-            _ => Err(concat_string!(id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => Err(concat_string!(id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         }
     }
 }
@@ -100,9 +100,9 @@ impl FnOut for FnMax {
             let Some(max) = self.max else { return Ok(None) };
             return flow.wrap_old(Self::point(&self.id, &input, max)?);
         }
-        let value = match input.type_() {
+        let value = match input.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         let was_none = self.max.is_none();
         let max = *self.max.get_or_insert(value);

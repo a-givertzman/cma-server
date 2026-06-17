@@ -1,22 +1,24 @@
-use sal_sync::{services::{entity::{Point, PointConf, PointConfType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
+use function_name::named;
+use sal_core::error::Error;
+use sal_sync::{services::{entity::{Point, PointConf, PointType, PointHlr}, types::Bool}, sync::channel::Sender};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{
-    domain::FnOutRef, 
-    services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
+    domain::{FnOutRef, TryTo}, err, err_pass, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}
 };
 ///
-/// ### Function | Used to export Point from Task service to another service
+/// ### Function | FnExport
 ///  
-/// - Point will be sent to the queue only if:
-///     - the incoming data flow is explicitly `New`
-///     - `enable` (handled via `FnEnable` decorator)
-///         - if specified and is true (or `enable` > 0)
-///         - if not specified - default is true
-///     - `send-to` is specified
-/// - If point conf is not specified - input Point will be sent as is.
-/// - Returns the input Point wrapped in `FnFlow`.
+/// Узел экспорта сигнала `Point` другому сервису
 /// 
-/// Example
+/// - Сигнал отправляется в очередь только при выполнении условий:
+///     - Входящий поток имеет статус `New` (изменение значения).
+///     - Разрешающий сигнал `enable` активен (через `FnEnable`).
+///     - Указан маршрут `send-to`.
+/// - Если указан `conf`, то сигнал будет конвертирован в указанный тип и отправлен с указанным именем
+/// 
+/// - Функция абсолютно прозрачна, не разрывает граф, всегда возвращает оригинал со входа.
+/// 
+/// **Example**
 /// 
 /// ```yaml
 /// fn Export:
@@ -28,121 +30,67 @@ use crate::{
 /// ```
 #[derive(Debug)]
 pub struct FnExport {
-    id: String,
     txid: usize,
     kind: FnKind,
     conf: Option<PointConf>,
     input: FnOutRef,
     tx_send: Option<Sender<Point>>,
+    id: String,
 }
 //
 impl FnExport {
     ///
     /// Creates new instance of FnExport
-    /// - `parent` - the name of the parent entity
-    /// - `conf` - the configuration of the Point to be produced. If None, input Point is sent
-    /// - `input` - the incoming eval reference
-    /// - `send` - the destination queue sender
-    pub fn new(parent: impl Into<String>, conf: Option<PointConf>, input: FnOutRef, send: Option<Sender<Point>>) -> Self {
-        let self_id = format!("{}/FnExport{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+    /// - `parent` - Name of the parent node
+    /// - `txid`: Идентификатор сервиса отправителя (родительский `Task` в данном случае)
+    /// - `conf` - Configuration of the Point to be produced. If None, input Point is sent
+    /// - `input`: Incoming input events
+    /// - `send`: Link of the destination service
+    pub fn new(parent: impl Into<String>, txid: usize, conf: Option<PointConf>, input: FnOutRef, send: Option<Sender<Point>>) -> Self {
+        let id = format!("{}/FnExport{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self {
-            id: self_id.clone(),
-            txid: PointTxId::from_str(&self_id),
+            txid,
             kind: FnKind::Fn,
             conf,
             input,
             tx_send: send,
+            id,
         }
     }
     ///
-    /// Sends Point to the external service if 'send-to' specified
-    /// - `point` will be renamed into `self.conf.name`
+    /// Конвертирует оригинальный сигнал в целевой тип с обновлением txid и имени
+    #[named]
+    fn convert_to(&self, name: &str, p: &Point, target: &PointType) -> Result<Point, Error> {
+        match target {
+            PointType::Bool => Ok(Point::Bool(PointHlr::new(self.txid, name, Bool(p.try_to()?), p.status(), p.cot(), p.ts()))),
+            PointType::Int => Ok(Point::Int(PointHlr::new(self.txid, name, p.try_to()?, p.status(), p.cot(), p.ts()))),
+            PointType::Real => Ok(Point::Real(PointHlr::new(self.txid, name, p.try_to()?, p.status(), p.cot(), p.ts()))),
+            PointType::Double => Ok(Point::Double(PointHlr::new(self.txid, name, p.try_to()?, p.status(), p.cot(), p.ts()))),
+            PointType::String => Ok(p.to_string().with_txid(self.txid).with_name(name)),
+            PointType::Bytes => match p {
+                Point::Bytes(hlr) => Ok(Point::Bytes(hlr.clone()).with_txid(self.txid).with_name(name)),
+                _ => Err(err!(self.id, "Invalid input type {:?} for converting into 'Bytes'", p.typ())),
+            },
+            PointType::Json => match p {
+                Point::Bytes(hlr) => Ok(Point::Bytes(hlr.clone()).with_txid(self.txid).with_name(name)),
+                _ => Err(err!(self.id, "Invalid input type {:?} for converting into 'Json'", p.typ())),
+            },
+        }
+    }
+    ///
+    /// Выполняет отправку точки в канал целевого сервиса
     fn send(&self, point: Point) {
-        if let Some(tx_send) = &self.tx_send {
-            let (type_, name) = match &self.conf {
-                Some(conf) => (conf.type_.clone(), conf.name.clone()),
-                None => (point.type_(), point.name()),
-            };
-            let point = match type_ {
-                PointConfType::Bool => {
-                    Point::Bool(PointHlr::new(
-                        self.txid, 
-                        &name, 
-                        Bool(point.as_bool().value.0), 
-                        point.status(), 
-                        point.cot(), 
-                        point.timestamp(),
-                    ))
+        if let Some(tx) = &self.tx_send {
+            if log::max_level() >= log::LevelFilter::Trace {
+                match tx.send(point.clone()) {
+                    Ok(_) => log::trace!("{}.out | Point sent: {:#?}", self.id, point),
+                    Err(err) => log::error!("{}.out | Send error: {:?}", self.id, err),
+                };
+            } else {
+                if let Err(err) = tx.send(point) {
+                    log::error!("{}.out | Send error: {:#?}", self.id, err);
                 }
-                PointConfType::Int => {
-                    Point::Int(PointHlr::new(
-                        self.txid, 
-                        &name, 
-                        point.as_int().value, 
-                        point.status(), 
-                        point.cot(), 
-                        point.timestamp(),
-                    ))
-                }
-                PointConfType::Real => {
-                    Point::Real(PointHlr::new(
-                        self.txid, 
-                        &name, 
-                        point.as_real().value, 
-                        point.status(), 
-                        point.cot(), 
-                        point.timestamp(),
-                    ))
-                }
-                PointConfType::Double => {
-                    Point::Double(PointHlr::new(
-                        self.txid, 
-                        &name, 
-                        point.as_double().value, 
-                        point.status(), 
-                        point.cot(), 
-                        point.timestamp(),
-                    ))
-                }
-                PointConfType::String => {
-                    Point::String(PointHlr::new(
-                        self.txid, 
-                        &name, 
-                        point.as_string().value, 
-                        point.status(), 
-                        point.cot(), 
-                        point.timestamp(),
-                    ))
-                }
-                PointConfType::Bytes => {
-                    Point::Bytes(PointHlr::new(
-                        self.txid, 
-                        &name, 
-                        point.as_bytes().value, 
-                        point.status(), 
-                        point.cot(), 
-                        point.timestamp(),
-                    ))
-                }
-                PointConfType::Json => {
-                    Point::String(PointHlr::new(
-                        self.txid, 
-                        &name, 
-                        point.as_string().value, 
-                        point.status(), 
-                        point.cot(), 
-                        point.timestamp(),
-                    ))
-                }
-            };
-            match tx_send.send(point.clone()) {
-                Ok(_) => {
-                    log::trace!("{}.out | Point sent: {:#?}", self.id, point);
-                }
-                Err(err) => {
-                    log::error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
-                }
-            };
+            }
         }
     }
 }
@@ -161,14 +109,20 @@ impl FnOut for FnExport {
         self.input.borrow().inputs()
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let Some(val) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
-        log::trace!("{}.out | input: {:?}", self.id, val);
+        let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
+        log::trace!("{}.out | input: {:?}", self.id, input);
         if flow.is_new() {
-            self.send(val.clone());
+            let point = match &self.conf {
+                Some(conf) => self.convert_to(&conf.name, &input, &conf.type_)
+                    .map_err(|err| err_pass!(self.id, err).to_string())?,
+                None => input.clone().with_txid(self.txid),
+            };
+            self.send(point);
         }
-        flow.wrap(val)
+        flow.wrap(input)
     }
     //
     fn reset(&mut self) {
@@ -178,3 +132,62 @@ impl FnOut for FnExport {
 ///
 /// Global static counter of FnExport instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
+/// Basic Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::unbounded;
+    use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
+    use std::{cell::RefCell, rc::Rc};
+    // Простой Mock-источник данных
+    #[derive(Debug)]
+    struct MockNode {
+        flow: Option<FnFlow>,
+        inputs: Vec<String>,
+    }
+    impl FnOut for MockNode {
+        fn id(&self) -> String { "MockNode".to_string() }
+        fn kind(&self) -> FnKind { FnKind::Fn }
+        fn inputs(&self) -> Vec<String> { self.inputs.clone() }
+        fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.flow.clone()) }
+        fn reset(&mut self) {}
+    }
+    fn mock_int_point(val: i64) -> Point {
+        Point::Int(PointHlr::new(0, "SourcePoint", val, Status::Ok, Cot::Inf, chrono::Utc::now()))
+    }
+    #[test]
+    fn test_export_sends_only_on_new() {
+        let (tx, rx) = unbounded();
+        let source_point = mock_int_point(42);
+        let input = Rc::new(RefCell::new(MockNode { 
+            flow: Some(FnFlow::New(source_point.clone())), 
+            inputs: vec![] 
+        }));
+        let mut export_node = FnExport::new("Test", 99, None, input.clone(), Some(tx));
+        // Такт 1: Статус New -> Должны отправить
+        let res1 = export_node.out().unwrap().unwrap();
+        assert!(matches!(res1, FnFlow::New(_)));
+        let sent_point = rx.try_recv().expect("Point must be sent on New flow").unwrap();
+        assert_eq!(sent_point.txid(), 99, "TxId должен быть перезаписан для защиты от петель");
+        // Такт 2: Статус Old -> Отправки быть не должно
+        input.borrow_mut().flow = Some(FnFlow::Old(source_point));
+        let res2 = export_node.out().unwrap().unwrap();
+        assert!(matches!(res2, FnFlow::Old(_)));
+        assert!(rx.try_recv().is_err(), "Point MUST NOT be sent on Old flow");
+    }
+    #[test]
+    fn test_export_transparent_tap() {
+        let source_point = mock_int_point(100);
+        let input = Rc::new(RefCell::new(MockNode { 
+            flow: Some(FnFlow::New(source_point)), 
+            inputs: vec![] 
+        }));
+        // Создаем ноду без канала отправки (нет send-to)
+        let mut export_node = FnExport::new("Test", 99, None, input, None);
+        let res = export_node.out().unwrap().unwrap();
+        // Убеждаемся, что исходные данные и статус потока не повреждены
+        assert!(matches!(res, FnFlow::New(_)));
+        assert_eq!(res.value().as_int().value, 100);
+    }
+}

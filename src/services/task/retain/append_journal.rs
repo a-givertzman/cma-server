@@ -8,7 +8,7 @@ use super::{Eval, RetainCtx};
 
 ///
 /// Current state of IO
-enum IoState {
+pub(super) enum IoState {
     /// Continue using IO
     Err(Error),
     /// IO is corrupted, must be closed
@@ -148,7 +148,7 @@ where
 ///
 /// ### Сериализует и пишет один пакет в буфер, возвращая количество записанных байт
 #[named]
-pub fn append<T: Serialize>(
+pub(super) fn append<T: Serialize>(
     dbg: &Dbg,
     writer: &mut BufWriter<File>, 
     mode: &RetainMode,

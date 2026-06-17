@@ -83,9 +83,9 @@ impl FnOut for FnRecOpCycleMetric {
             }
         }
         let Some(op_cycle_point) = flow.map(op_cycle)? else { return Ok(None) };
-        let op_cycle = match op_cycle_point.type_() {
+        let op_cycle = match op_cycle_point.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => op_cycle_point.to_bool().as_bool().value.0,
-            _ => return Err(format!("{}.out | Invalid op_cycle type '{:?}', expected bool or number", self.id, op_cycle_point.type_())),
+            _ => return Err(format!("{}.out | Invalid op_cycle type '{:?}', expected bool or number", self.id, op_cycle_point.typ())),
         };
         match self.state.add(op_cycle) {
             Cycle::None => {}
@@ -94,12 +94,12 @@ impl FnOut for FnRecOpCycleMetric {
                 for (input_name, input) in inputs {
                     if let Some(val_flow) = input? {
                         let value = val_flow.into_value();
-                        if value.type_() == PointType::String {
+                        if value.typ() == PointType::String {
                             // log::debug!("{}.out | '{}': {:?}", self.id, input_name, p.value);
                             // p.name = input_name.to_owned();
                             self.values.insert(input_name.to_owned(), value);
                         } else {
-                            log::warn!("{}.out | Input '{}': unexpected type {:?}, string sql requared", self.id, input_name, value.type_());
+                            log::warn!("{}.out | Input '{}': unexpected type {:?}, string sql requared", self.id, input_name, value.typ());
                         }
                     }
                 }

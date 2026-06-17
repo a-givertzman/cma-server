@@ -17,7 +17,7 @@ use crate::{
 pub struct FnDebug {
     id: String,
     kind: FnKind,
-    inputs: Vec<FnOutRef>,
+    inputs: Vec<(String, FnOutRef)>,
 }
 //
 // 
@@ -27,11 +27,11 @@ impl FnDebug {
     /// - `parent` - Идентификатор родительского узла
     /// - `inputs` - Список ссылок на зависимости (`FnOutRef`), значения которых требуется отслеживать.
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, inputs: impl IntoIterator<Item = (String, FnOutRef)>) -> Self {
         Self { 
             id: format!("{}/FnDebug{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            inputs,
+            inputs: inputs.into_iter().collect(),
         }
     }    
 }
@@ -49,26 +49,31 @@ impl FnOut for FnDebug {
     //
     fn inputs(&self) -> Vec<String> {
         self.inputs.iter()
-            .flat_map(|input| input.borrow().inputs())
+            .flat_map(|(_, input)| input.borrow().inputs())
             .collect()
     }
     //
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
-        for input in &self.inputs {
-            let Some(v) = flow.map(input.borrow_mut().out())? else { return Ok(None) };
-            log::debug!(
-                "{}.out | Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
-                self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.timestamp().format("%H:%M:%S%.3f")
-            );
+        let flow = FlowContext::new();
+        for (name, input) in &self.inputs {
+            match flow.ignore(input.borrow_mut().out()) {
+                Ok(Some(v)) => {
+                    log::debug!(
+                        "{}.out | Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
+                        self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.ts().format("%H:%M:%S%.3f")
+                    );
+                }
+                Ok(None) => log::error!("{}.out | None on input '{}'", self.id, name),
+                Err(err) => log::error!("{}.out | Error on input '{}': {:?}", self.id, name, err),
+            }
         }
         Ok(None)
     }
     //
     //
     fn reset(&mut self) {
-        for input in &self.inputs {
+        for (_, input) in &self.inputs {
             input.borrow_mut().reset();
         }
     }

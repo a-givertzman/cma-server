@@ -87,7 +87,7 @@ impl FnOut for FnBitXor {
         //                     log::debug!("{}.out | input '{}': {:?}", self.id, input.name(), input.value());
         //                     value = match &value {
         //                         Point::Bool(val) => {
-        //                             let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+        //                             let input_val = input.try_as_bool().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.typ(), input.name(), input.typ()));
         //                             Point::Bool(
         //                                 PointHlr::new(
         //                                     txid,
@@ -100,7 +100,7 @@ impl FnOut for FnBitXor {
         //                             )
         //                         }
         //                         Point::Int(val) => {
-        //                             let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.type_(), input.name(), input.type_()));
+        //                             let input_val = input.try_as_int().unwrap_or_else(|_| panic!("{}.out | Incopatable types, expected '{:?}', but input '{}' has type '{:?}'", self.id, value.typ(), input.name(), input.typ()));
         //                             Point::Int(
         //                                 PointHlr::new(
         //                                     txid,

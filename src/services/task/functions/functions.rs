@@ -37,6 +37,7 @@ pub enum Functions {
     ///
     ToApiQueue,
     ToMultiQueue,
+    Sql,
     SqlMetric,
     PointId,
     Export,
@@ -90,6 +91,7 @@ impl Functions {
     const TIMER_OFF_DELAY               : &'static str = "TimerOffDelay";
     const TO_API_QUEUE                  : &'static str = "ToApiQueue";
     const TO_MULTI_QUEUE                : &'static str = "ToMultiQueue";
+    const SQL                           : &'static str = "Sql";
     const SQL_METRIC                    : &'static str = "SqlMetric";
     const POINT_ID                      : &'static str = "PointId";
     const TO_BOOL                       : &'static str = "ToBool";
@@ -144,6 +146,7 @@ impl Functions {
             Self::Var                   => Self::VAR,
             Self::ToApiQueue            => Self::TO_API_QUEUE,
             Self::ToMultiQueue          => Self::TO_MULTI_QUEUE,
+            Self::Sql                   => Self::SQL,
             Self::SqlMetric             => Self::SQL_METRIC,
             Self::PointId               => Self::POINT_ID,
             Self::Debug                 => Self::DEBUG,
@@ -200,6 +203,7 @@ impl Functions {
             Self::VAR                       => Ok( Self::Var ),
             Self::TO_API_QUEUE              => Ok( Self::ToApiQueue ),
             Self::TO_MULTI_QUEUE            => Ok( Self::ToMultiQueue ),
+            Self::SQL                       => Ok( Self::Sql ),
             Self::SQL_METRIC                => Ok( Self::SqlMetric ),
             Self::POINT_ID                  => Ok( Self::PointId ),
             Self::DEBUG                     => Ok( Self::Debug ),

@@ -2360,7 +2360,7 @@ service Task HistoryTask:
     #     input: point any every
     fn ToApiQueue:
         queue: /App/ApiClient.in-queue
-        input fn SqlMetric:
+        input fn Sql:
             sql: "insert into public.event (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
             input1 fn ToInt:
                 input: point any every      # point: every point of any type

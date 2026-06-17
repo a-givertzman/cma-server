@@ -86,7 +86,7 @@ impl FnOut for FnPow {
             Point::Int(p) => Value::Int(p.value),
             Point::Real(p) => Value::Real(p.value),
             Point::Double(p) => Value::Double(p.value),
-            _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
         let Some(input) = flow.map(input2)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
@@ -95,7 +95,7 @@ impl FnOut for FnPow {
             Point::Int(p) => Value::Int(p.value),
             Point::Real(p) => Value::Real(p.value),
             Point::Double(p) => Value::Double(p.value),
-            _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
         let value = v1.pow(v2).map_err(|_| format!("{}.out | Can't pow {:?} ^ {:?}", self.id, v1, v2))?;
         match value {

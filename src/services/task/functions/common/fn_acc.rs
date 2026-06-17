@@ -33,7 +33,7 @@ impl FnAcc {
     /// Возвращает `Point` с обновленными `name` и `value`  
     #[inline]
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
-        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts())
     }
 }
 // 
@@ -69,11 +69,11 @@ impl FnOut for FnAcc {
                     let Some(initial) = initial? else { return Ok(None) };
                     initial.into_value()
                 } else {
-                    match input.type_() {
+                    match input.typ() {
                         PointType::Bool | PointType::Int => Point::Int(Self::point_with(&input, input.name(), 0)),
                         PointType::Real => Point::Real(Self::point_with(&input, input.name(), 0.0)),
                         PointType::Double => Point::Double(Self::point_with(&input, input.name(), 0.0)),
-                        _ => return Err(format!("{}.out | Invalid input type '{:?}', expected number", self.id, input.type_())),
+                        _ => return Err(format!("{}.out | Invalid input type '{:?}', expected number", self.id, input.typ())),
                     }
                 };
                 self.acc = Some(acc.clone());

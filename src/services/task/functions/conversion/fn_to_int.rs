@@ -1,4 +1,4 @@
-use sal_sync::services::{entity::{Point, PointHlr, PointType}, types::DebugTypeOf};
+use sal_sync::services::entity::{Point, PointHlr};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
@@ -58,7 +58,7 @@ impl FnOut for FnToInt {
                 val.value.parse()
                     .map_err(|_| concat_string!(self.id, ".out | Invalid input '", val.value, "'"))?
             }
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         flow.wrap(Point::Int(PointHlr::new(
             input.txid(),
@@ -66,7 +66,7 @@ impl FnOut for FnToInt {
             value,
             input.status(),
             input.cot(),
-            input.timestamp(),
+            input.ts(),
         )))
     }
     //

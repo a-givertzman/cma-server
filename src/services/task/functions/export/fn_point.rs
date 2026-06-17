@@ -1,7 +1,8 @@
-use sal_sync::{services::{entity::{Point, PointConf, PointConfType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
+use sal_core::error::Error;
+use sal_sync::{services::{entity::{Point, PointConf, PointType, PointHlr, PointTxId}, types::Bool}, sync::channel::Sender};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{
-    domain::FnOutRef, services::task::{FnOut, FnKind, FnResult},
+    domain::FnOutRef, services::task::{FnFlow, FnKind, FnOut, FnResult},
 };
 ///
 /// Function | Used for export Point from Task service to another service
@@ -28,7 +29,6 @@ use crate::{
 /// ```
 #[derive(Debug)]
 pub struct FnPoint {
-    id: String,
     txid: usize,
     kind: FnKind,
     conf: PointConf,
@@ -37,6 +37,7 @@ pub struct FnPoint {
     input: Option<FnOutRef>,
     send_to: Option<Sender<Point>>,
     state: Option<Point>,
+    id: String,
 }
 //
 //
@@ -46,11 +47,11 @@ impl FnPoint {
     /// - id - just for proper debugging
     /// - input - incoming points
     /// - if [changes-only] is specified and true - changes only will be sent, default false (sending all points)
-    pub fn new(parent: impl Into<String>, conf: PointConf, enable: Option<FnOutRef>, changes_only: Option<FnOutRef>, input: Option<FnOutRef>, send_to: Option<Sender<Point>>) -> Self {
-        let self_id = format!("{}/FnPoint{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
-        Self {
-            id: self_id.clone(),
-            txid: PointTxId::from_str(&self_id),
+    pub fn new(parent: impl Into<String>, conf: PointConf, enable: Option<FnOutRef>, changes_only: Option<FnOutRef>, input: Option<FnOutRef>, send_to: Option<Sender<Point>>) -> Result<Self, Error> {
+        let id = format!("{}/FnPoint{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+        return Err(Error::new(&id, "new").err("Isn't implemented yet"));
+        Ok(Self {
+            txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
             conf,
             enable,
@@ -58,81 +59,82 @@ impl FnPoint {
             input,
             send_to,
             state: None,
-        }
+            id,
+        })
     }
     ///
     /// 
     fn send(&self, point: &Point) {
         if let Some(tx_send) = &self.send_to {
             let point = match self.conf.type_ {
-                PointConfType::Bool => {
+                PointType::Bool => {
                     Point::Bool(PointHlr::new(
                         self.txid, 
                         &self.conf.name, 
                         Bool(point.as_bool().value.0), 
                         point.status(), 
                         point.cot(), 
-                        point.timestamp(),
+                        point.ts(),
                     ))
                 }
-                PointConfType::Int => {
+                PointType::Int => {
                     Point::Int(PointHlr::new(
                         self.txid, 
                         &self.conf.name, 
                         point.as_int().value, 
                         point.status(), 
                         point.cot(), 
-                        point.timestamp(),
+                        point.ts(),
                     ))
                 }
-                PointConfType::Real => {
+                PointType::Real => {
                     Point::Real(PointHlr::new(
                         self.txid, 
                         &self.conf.name, 
                         point.as_real().value, 
                         point.status(), 
                         point.cot(), 
-                        point.timestamp(),
+                        point.ts(),
                     ))
                 }
-                PointConfType::Double => {
+                PointType::Double => {
                     Point::Double(PointHlr::new(
                         self.txid, 
                         &self.conf.name, 
                         point.as_double().value, 
                         point.status(), 
                         point.cot(), 
-                        point.timestamp(),
+                        point.ts(),
                     ))
                 }
-                PointConfType::String => {
+                PointType::String => {
                     Point::String(PointHlr::new(
                         self.txid, 
                         &self.conf.name, 
                         point.as_string().value, 
                         point.status(), 
                         point.cot(), 
-                        point.timestamp(),
+                        point.ts(),
                     ))
                 }
-                PointConfType::Bytes => {
+                PointType::Bytes => {
                     Point::Bytes(PointHlr::new(
                         self.txid, 
                         &self.conf.name, 
                         point.as_bytes().value, 
                         point.status(), 
                         point.cot(), 
-                        point.timestamp(),
+                        point.ts(),
                     ))
                 }
-                PointConfType::Json => {
+                PointType::Json => {
                     Point::String(PointHlr::new(
                         self.txid, 
                         &self.conf.name, 
                         point.as_string().value, 
                         point.status(), 
                         point.cot(), 
-                        point.timestamp(),
+                        point.ts(),
                     ))
                 }
             };
@@ -171,60 +173,61 @@ impl FnOut for FnPoint {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
-        match &self.input {
-            Some(input) => {
-                let enable = match &self.enable {
-                    Some(enable) => match enable.borrow_mut().out() {
-                        FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
-                        FnResult::None => return FnResult::None,
-                        FnResult::Err(err) => return FnResult::Err(err),
-                    },
-                    None => true,
-                };
-                let changes_only = match &self.changes_only {
-                    Some(changes_only) => match changes_only.borrow_mut().out() {
-                        FnResult::Ok(changes_only) => changes_only.to_bool().as_bool().value.0,
-                        FnResult::None => return FnResult::None,
-                        FnResult::Err(err) => return FnResult::Err(err),
-                    }
-                    None => false,
-                };
-                let input = input.borrow_mut().out();
-                log::trace!("{}.out | input: {:?}", self.id, input);
-                match input {
-                    FnResult::Ok(point) => {
-                        match &self.state {
-                            Some(state) => {
-                                if changes_only {
-                                    if !point.cmp_value(state) {
-                                        self.state = Some(point.clone());
-                                        if enable {
-                                            self.send(&point);
-                                        }
-                                    }
-                                } else {
-                                    self.state = Some(point.clone());
-                                    if enable {
-                                        self.send(&point);
-                                    }
-                                }
-                            }
-                            None => {
-                                self.state = Some(point.clone());
-                                if enable {
-                                    self.send(&point);
-                                }
-                            }
-                        }
-                        FnResult::Ok(point)
-                    }
-                    FnResult::None => FnResult::None,
-                    FnResult::Err(err) => FnResult::Err(err),
-                }
-            }
-            None => panic!("{}.out | Input is not configured for the Point '{}'", self.id, self.conf.name),
-        }
+        unimplemented!()
+        // let mut flow = FlowContext::new();
+        // match &self.input {
+        //     Some(input) => {
+        //         let enable = match &self.enable {
+        //             Some(enable) => match enable.borrow_mut().out() {
+        //                 FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
+        //                 FnResult::None => return FnResult::None,
+        //                 FnResult::Err(err) => return FnResult::Err(err),
+        //             },
+        //             None => true,
+        //         };
+        //         let changes_only = match &self.changes_only {
+        //             Some(changes_only) => match changes_only.borrow_mut().out() {
+        //                 FnResult::Ok(changes_only) => changes_only.to_bool().as_bool().value.0,
+        //                 FnResult::None => return FnResult::None,
+        //                 FnResult::Err(err) => return FnResult::Err(err),
+        //             }
+        //             None => false,
+        //         };
+        //         let input = input.borrow_mut().out();
+        //         log::trace!("{}.out | input: {:?}", self.id, input);
+        //         match input {
+        //             FnResult::Ok(point) => {
+        //                 match &self.state {
+        //                     Some(state) => {
+        //                         if changes_only {
+        //                             if !point.cmp_value(state) {
+        //                                 self.state = Some(point.clone());
+        //                                 if enable {
+        //                                     self.send(&point);
+        //                                 }
+        //                             }
+        //                         } else {
+        //                             self.state = Some(point.clone());
+        //                             if enable {
+        //                                 self.send(&point);
+        //                             }
+        //                         }
+        //                     }
+        //                     None => {
+        //                         self.state = Some(point.clone());
+        //                         if enable {
+        //                             self.send(&point);
+        //                         }
+        //                     }
+        //                 }
+        //                 FnResult::Ok(point)
+        //             }
+        //             FnResult::None => FnResult::None,
+        //             FnResult::Err(err) => FnResult::Err(err),
+        //         }
+        //     }
+        //     None => panic!("{}.out | Input is not configured for the Point '{}'", self.id, self.conf.name),
+        // }
     }
     //
     fn reset(&mut self) {

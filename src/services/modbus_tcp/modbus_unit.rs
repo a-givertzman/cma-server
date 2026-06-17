@@ -2,7 +2,7 @@ use std::{fs, io::{BufReader, Read, Write}, net::TcpStream};
 use chrono::Utc;
 use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{collections::FxIndexMap, services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
+use sal_sync::{collections::FxIndexMap, services::entity::{Name, Point, PointConf, PointConfFilter, PointType, Status}, sync::channel::Sender};
 use crate::{
     domain::{
         filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
@@ -91,10 +91,10 @@ impl ModbusUnit {
             let registers = codes.entry(*code).or_insert(FxIndexMap::default());
             for point in points {
                 match point.type_ {
-                    PointConfType::Bool => _ = registers.insert(point.name.clone(), Self::box_bool(txid, point.name.clone(), point)),
-                    PointConfType::Int => _ = registers.insert(point.name.clone(), Self::box_int(txid, point.name.clone(), point)),
-                    PointConfType::Real => _ = registers.insert(point.name.clone(), Self::box_real(txid, point.name.clone(), point)),
-                    PointConfType::Double => _ = registers.insert(point.name.clone(), Self::box_real(txid, point.name.clone(), point)),
+                    PointType::Bool => _ = registers.insert(point.name.clone(), Self::box_bool(txid, point.name.clone(), point)),
+                    PointType::Int => _ = registers.insert(point.name.clone(), Self::box_int(txid, point.name.clone(), point)),
+                    PointType::Real => _ = registers.insert(point.name.clone(), Self::box_real(txid, point.name.clone(), point)),
+                    PointType::Double => _ = registers.insert(point.name.clone(), Self::box_real(txid, point.name.clone(), point)),
                     _ => panic!("{}.configure_points | Unit '{}', Function code '{}': unknown point type '{:?}'", dbg, conf.unit, code.0, point.type_),
                 }
             }
@@ -216,9 +216,9 @@ impl ModbusUnit {
             Some((FunctionCode(code), parse_point)) => {
                 match parse_point.address().offset {
                     Some(register) => {
-                        let bytes = match point.type_() {
-                            PointConfType::Int => Ok(self.modbus_message.write(self.unit, *code, register as u16, point.to_int().as_int().value as u16)),
-                            _ => Err(error.err(format!("Unit '{}', Function code '{code}', Point '{}': Write '{:?}' to modbus is not supported", self.unit, point.name(), point.type_()))),
+                        let bytes = match point.typ() {
+                            PointType::Int => Ok(self.modbus_message.write(self.unit, *code, register as u16, point.to_int().as_int().value as u16)),
+                            _ => Err(error.err(format!("Unit '{}', Function code '{code}', Point '{}': Write '{:?}' to modbus is not supported", self.unit, point.name(), point.typ()))),
                         };
                         match bytes {
                             Ok(bytes) => {

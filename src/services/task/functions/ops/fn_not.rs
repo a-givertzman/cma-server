@@ -1,5 +1,5 @@
 use concat_string::concat_string;
-use sal_sync::services::{entity::{Point, PointHlr, PointType}, types::Bool};
+use sal_sync::services::entity::{Point, PointHlr, PointType};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     domain::FnOutRef,
@@ -62,9 +62,9 @@ impl FnOut for FnNot {
         let mut flow = FlowContext::new();
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
         log::trace!("{}.out | input: {:#?}", self.id, input);
-        let value = match input.type_() {
+        let value = match input.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_bool().as_bool().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         flow.wrap(Point::Bool(PointHlr::new(
             input.txid(),
@@ -72,7 +72,7 @@ impl FnOut for FnNot {
             !value,
             input.status(),
             input.cot(),
-            input.timestamp(),
+            input.ts(),
         )))
     }
     //
@@ -90,6 +90,7 @@ mod tests {
     use super::*;
     use crate::services::task::{FnFlow, FnKind, FnOut};
     use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
+use sal_sync::services::types::Bool;
     use std::cell::RefCell;
     use std::rc::Rc;
     #[derive(Debug)]
@@ -115,7 +116,7 @@ mod tests {
         let res = fn_not.out().unwrap().unwrap();
         assert!(res.is_new(), "Статус New должен сохраняться");
         assert_eq!(res.value().as_bool().value.0, false, "Логика должна инвертироваться");
-        assert_eq!(res.value().timestamp(), ts, "Таймстемп должен сохраняться");
+        assert_eq!(res.value().ts(), ts, "Таймстемп должен сохраняться");
         // 3. Инверсия Old(false) -> Old(true) (Проверка гигиены FlowContext)
         mock.borrow_mut().flow = Some(FnFlow::Old(Point::Bool(PointHlr::new(2, "src", Bool(false), Status::Ok, Cot::Inf, ts))));
         let res = fn_not.out().unwrap().unwrap();

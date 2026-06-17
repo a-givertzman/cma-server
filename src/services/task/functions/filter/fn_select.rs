@@ -69,9 +69,9 @@ impl FnOut for FnSelect {
         let Some(select) = select? else { return Ok(None) };
         let select = select.into_value();
         log::trace!("{}.out | select: {:?}", self.id, select);
-        let is_selected = match select.type_() {
+        let is_selected = match select.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => select.to_bool().as_bool().value.0,
-            _ => return Err(concat_string!(self.id, ".out | Invalid select type '", select.type_().to_string(), "'")),
+            _ => return Err(concat_string!(self.id, ".out | Invalid select type '", select.typ().to_string(), "'")),
         };
         if is_selected {
             let Some(input) = input? else { return Ok(None) };
