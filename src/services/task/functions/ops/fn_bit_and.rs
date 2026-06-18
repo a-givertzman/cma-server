@@ -2,7 +2,7 @@ use sal_core::error::Error;
 use sal_sync::services::{entity::{Point, PointHlr, PointTxId}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::{FnOutRef, PointMeta, Value},
+    domain::{FnOutRef, PointMeta, NumValue},
     services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
@@ -55,12 +55,12 @@ impl FnBitAnd {
     /// - `name`: Имя формируемого сигнала.
     /// - `value`: Значение формируемого сигнала.
     #[inline]
-    fn point_with(txid: usize, meta: &PointMeta, name: impl Into<String>, value: Value) -> Point {
+    fn point_with(txid: usize, meta: &PointMeta, name: impl Into<String>, value: NumValue) -> Point {
         match value {
-            Value::Bool(value) => Point::Bool(PointHlr::new(txid, name, Bool(value), meta.status, meta.cot, meta.ts)),
-            Value::Int(value) => Point::Int(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
-            Value::Real(value) => Point::Real(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
-            Value::Double(value) => Point::Double(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
+            NumValue::Bool(value) => Point::Bool(PointHlr::new(txid, name, Bool(value), meta.status, meta.cot, meta.ts)),
+            NumValue::Int(value) => Point::Int(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
+            NumValue::Real(value) => Point::Real(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
+            NumValue::Double(value) => Point::Double(PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)),
         }
     }
 }
@@ -89,13 +89,13 @@ impl FnOut for FnBitAnd {
             input.borrow_mut().out()
         }).collect();
         let mut flow = FlowContext::new();
-        let mut value = Value::Bool(true);
+        let mut value = NumValue::Bool(true);
         let mut meta = PointMeta::default();
         for input in inputs {
             let Some(input) = flow.map(input)? else { return Ok(None) };
             meta = meta.update_latest(&input).update_status(&input);
-            let val: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
-            value = Value::Bool(value .and(&val).map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?);
+            let val: NumValue = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
+            value = NumValue::Bool(value .and(&val).map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?);
         }
         flow.wrap(Self::point_with(self.txid, &meta, &self.id, value))
     }

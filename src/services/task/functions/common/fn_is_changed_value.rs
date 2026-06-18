@@ -3,11 +3,12 @@ use sal_sync::{
     services::{entity::{Point, PointHlr, PointTxId},
     types::Bool,
 }};
+use testing::entities::test_value::Value;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use crate::{domain::{EdgeDetector, FnOutRef, PointMeta}, services::task::{FlowContext, FnFlow}};
+use crate::{domain::{FnOutRef, PointMeta}, services::task::{FlowContext, FnFlow}};
 use crate::services::task::{FnOut, FnKind, FnResult};
 ///
-/// ### Function | FnIsChangedValue
+/// ### Function | `FnIsChangedValue`
 /// 
 /// - Returns true if at least one input is changed from prev value
 /// - Status changes will not be registered.
@@ -15,7 +16,7 @@ use crate::services::task::{FnOut, FnKind, FnResult};
 /// 
 /// **Example**
 /// ```yaml
-/// fn FnIsChangedValue:
+/// fn IsChangedValue:
 ///     input1: point real '/App/Service/Point.Name1'
 ///     input2: point int '/App/Service/Point.Name2'
 /// ```
@@ -25,8 +26,8 @@ pub struct FnIsChangedValue {
     txid: usize,
     kind: FnKind,
     inputs: Vec<FnOutRef>,
-    state: FxHashMap<String, Point>,
-    edge: EdgeDetector,
+    state: FxHashMap<String, Value>,
+    prev: Option<bool>,
 }
 // 
 impl FnIsChangedValue {
@@ -44,7 +45,7 @@ impl FnIsChangedValue {
             kind: FnKind::Fn,
             inputs,
             state: FxHashMap::default(),
-            edge: EdgeDetector::new(),
+            prev: None,
         }
     }
 }
@@ -82,20 +83,22 @@ impl FnOut for FnIsChangedValue {
                 let key = point.name();
                 log::trace!("{}.out | input '{}': {:?}", self.id, key, point);
                 if let Some(state) = self.state.get_mut(&key) {
-                    if !point.cmp_value(state) {
-                        log::trace!("{}.out | changed: {}  |  state '{:?}', value: {:?}", self.id, key, state.value(), point.value());
+                    let value = point.value();
+                    if value != *state {
+                        log::trace!("{}.out | changed: {}  |  state '{:?}', value: {:?}", self.id, key, state, value);
                         meta = Some(meta.unwrap_or_default().update_latest(&point));
-                        *state = point;
+                        *state = value;
                         val = true;
                     }
                 } else {
                     meta = Some(meta.unwrap_or_default().update_latest(&point));
-                    self.state.insert(key, point);
+                    self.state.insert(key, point.value());
                     val = true;
                 }
             }
         }
         if !has_active {
+            self.prev = None;
             return Ok(None);
         }
         let meta = meta.unwrap_or(fb_meta);
@@ -107,8 +110,9 @@ impl FnOut for FnIsChangedValue {
             meta.cot,
             meta.ts,
         ));
-        _ = self.edge.add(val);
-        if self.edge.is_rising() || self.edge.is_falling() {
+        let is_changed = self.prev.map_or(true, |prev| val != prev);
+        self.prev = Some(val);
+        if is_changed {
             log::trace!("{}.out | value {:?} | {:?}", self.id, flow, value);
             return flow.wrap_new(value);
         }
@@ -121,7 +125,7 @@ impl FnOut for FnIsChangedValue {
             input.borrow_mut().reset();
         }
         self.state.clear();
-        self.edge.reset();
+        self.prev = None;
     }
 }
 ///

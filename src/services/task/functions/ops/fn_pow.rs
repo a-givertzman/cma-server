@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointTxId};
 use crate::{
-    domain::{FnOutRef, PointMeta, Value},
+    domain::{FnOutRef, PointMeta, NumValue},
     services::task::{
         FlowContext, FnFlow, FnKind, FnOut, FnResult
     },
@@ -82,32 +82,32 @@ impl FnOut for FnPow {
         let Some(input) = flow.map(input1)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
         let v1 = match input {
-            Point::Bool(p) => Value::Bool(p.value.0),
-            Point::Int(p) => Value::Int(p.value),
-            Point::Real(p) => Value::Real(p.value),
-            Point::Double(p) => Value::Double(p.value),
+            Point::Bool(p) => NumValue::Bool(p.value.0),
+            Point::Int(p) => NumValue::Int(p.value),
+            Point::Real(p) => NumValue::Real(p.value),
+            Point::Double(p) => NumValue::Double(p.value),
             _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
         let Some(input) = flow.map(input2)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
         let v2 = match input {
-            Point::Bool(p) => Value::Bool(p.value.0),
-            Point::Int(p) => Value::Int(p.value),
-            Point::Real(p) => Value::Real(p.value),
-            Point::Double(p) => Value::Double(p.value),
+            Point::Bool(p) => NumValue::Bool(p.value.0),
+            Point::Int(p) => NumValue::Int(p.value),
+            Point::Real(p) => NumValue::Real(p.value),
+            Point::Double(p) => NumValue::Double(p.value),
             _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
         let value = v1.pow(v2).map_err(|_| format!("{}.out | Can't pow {:?} ^ {:?}", self.id, v1, v2))?;
         match value {
-            Value::Bool(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value as i64))),
-            Value::Int(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value))),
-            Value::Real(value) => {
+            NumValue::Bool(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value as i64))),
+            NumValue::Int(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value))),
+            NumValue::Real(value) => {
                 if value.is_nan() || value.is_infinite() {
                     return Err(format!("{}.out | Math error: NaN or Infinite result", self.id));
                 }
                 flow.wrap(Point::Real(Self::point_with(self.txid, &meta, &self.id, value)))
             }
-            Value::Double(value) => {
+            NumValue::Double(value) => {
                 if value.is_nan() || value.is_infinite() {
                     return Err(format!("{}.out | Math error: NaN or Infinite result", self.id));
                 }
@@ -167,13 +167,13 @@ mod tests {
     fn mock_point_real(val: f32) -> Point {
         Point::Real(PointHlr::new(0, "test", val, Status::Ok, Cot::Inf, chrono::Utc::now()))
     }
-    fn extract_value(flow: FnResult<FnFlow, String>) -> Value {
+    fn extract_value(flow: FnResult<FnFlow, String>) -> NumValue {
         match flow.unwrap().unwrap() {
             FnFlow::New(p) | FnFlow::Old(p) => match p {
-                Point::Int(hlr) => Value::Int(hlr.value),
-                Point::Real(hlr) => Value::Real(hlr.value),
-                Point::Double(hlr) => Value::Double(hlr.value),
-                Point::Bool(hlr) => Value::Bool(hlr.value.0),
+                Point::Int(hlr) => NumValue::Int(hlr.value),
+                Point::Real(hlr) => NumValue::Real(hlr.value),
+                Point::Double(hlr) => NumValue::Double(hlr.value),
+                Point::Bool(hlr) => NumValue::Bool(hlr.value.0),
                 _ => panic!("Unexpected point type"),
             },
         }
@@ -185,7 +185,7 @@ mod tests {
         let mut pow_node = FnPow::new("parent", vec![base, exp]).unwrap();
         let res = pow_node.out();
         assert!(matches!(res, Ok(Some(FnFlow::New(_)))));
-        assert_eq!(extract_value(res), Value::Int(8));
+        assert_eq!(extract_value(res), NumValue::Int(8));
     }
     #[test]
     fn test_pow_flow_old() {
@@ -194,7 +194,7 @@ mod tests {
         let mut pow_node = FnPow::new("parent", vec![base, exp]).unwrap();
         let res = pow_node.out();
         assert!(matches!(res, Ok(Some(FnFlow::Old(_)))));
-        assert_eq!(extract_value(res), Value::Int(8));
+        assert_eq!(extract_value(res), NumValue::Int(8));
     }
     #[test]
     fn test_pow_nan_protection() {

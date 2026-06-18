@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointTxId};
 use crate::{
-    domain::{FnOutRef, PointMeta, Value},
+    domain::{FnOutRef, PointMeta, NumValue},
     services::task::{
         FlowContext, FnFlow, FnKind, FnOut, FnResult
     },
@@ -89,27 +89,27 @@ impl FnOut for FnSub {
         let Some(input) = flow.map(input1)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
         let v1 = match input {
-            Point::Bool(p) => Value::Bool(p.value.0),
-            Point::Int(p) => Value::Int(p.value),
-            Point::Real(p) => Value::Real(p.value),
-            Point::Double(p) => Value::Double(p.value),
+            Point::Bool(p) => NumValue::Bool(p.value.0),
+            Point::Int(p) => NumValue::Int(p.value),
+            Point::Real(p) => NumValue::Real(p.value),
+            Point::Double(p) => NumValue::Double(p.value),
             _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
         let Some(input) = flow.map(input2)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
         let v2 = match input {
-            Point::Bool(p) => Value::Bool(p.value.0),
-            Point::Int(p) => Value::Int(p.value),
-            Point::Real(p) => Value::Real(p.value),
-            Point::Double(p) => Value::Double(p.value),
+            Point::Bool(p) => NumValue::Bool(p.value.0),
+            Point::Int(p) => NumValue::Int(p.value),
+            Point::Real(p) => NumValue::Real(p.value),
+            Point::Double(p) => NumValue::Double(p.value),
             _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
         let value = (v1 - v2).map_err(|_| format!("{}.out | Can't sub {:?} - {:?}", self.id, v1, v2))?;
         match value {
-            Value::Bool(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value as i64))),
-            Value::Int(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value))),
-            Value::Real(value) => flow.wrap(Point::Real(Self::point_with(self.txid, &meta, &self.id, value))),
-            Value::Double(value) => flow.wrap(Point::Double(Self::point_with(self.txid, &meta, &self.id, value))),
+            NumValue::Bool(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value as i64))),
+            NumValue::Int(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value))),
+            NumValue::Real(value) => flow.wrap(Point::Real(Self::point_with(self.txid, &meta, &self.id, value))),
+            NumValue::Double(value) => flow.wrap(Point::Double(Self::point_with(self.txid, &meta, &self.id, value))),
         }
     }
     //

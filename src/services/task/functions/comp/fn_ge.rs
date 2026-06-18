@@ -2,7 +2,7 @@ use sal_core::error::Error;
 use sal_sync::services::{entity::{Point, PointHlr, PointTxId}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::{FnOutRef, PointMeta, Value},
+    domain::{FnOutRef, PointMeta, NumValue},
     services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
@@ -80,10 +80,10 @@ impl FnOut for FnGe {
         let (input1, input2) = (inputs.remove(0), inputs.remove(0));
         let Some(input) = flow.map(input1)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
-        let v1: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
+        let v1: NumValue = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
         let Some(input) = flow.map(input2)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
-        let v2: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
+        let v2: NumValue = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
         let value = v1 >= v2;
         flow.wrap(Point::Bool(Self::point_with(self.txid, &meta, &self.id, Bool(value))))
     }
