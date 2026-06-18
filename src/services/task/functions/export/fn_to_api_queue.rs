@@ -160,6 +160,7 @@ mod tests {
         assert_eq!(prepare_for_sql("  world  "), "world");
         assert_eq!(prepare_for_sql("O'Connor"), "O''Connor");
         assert_eq!(prepare_for_sql("'; DROP TABLE users; --"), "''; DROP TABLE users; --");
+        assert_eq!(prepare_for_sql("''; DROP TABLE users; --"), "''''; DROP TABLE users; --");
         assert_eq!(prepare_for_sql("bad\0data"), "baddata");
         assert_eq!(prepare_for_sql("   "), "");
     }
