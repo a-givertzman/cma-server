@@ -3,6 +3,7 @@ use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}};
 ///
 /// ### Function | `FnToApiQueue`
+/// 
 /// Экспортирует данные (SQL-запросы) из вычислительного графа в очередь API.
 /// - Отправляет данные только при наличии статуса `New` в потоке.
 /// - Автоматически экранирует кавычки и удаляет мусорные символы перед отправкой.
@@ -11,13 +12,13 @@ use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOu
 /// **Example**
 /// ```yaml
 /// fn ToApiQueue:
-/// queue: /App/ApiClient.in-queue
-/// input fn Sql:
-///     sql: "insert into public.event (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
-///     input1 fn ToInt:
-///         input: point any every      # point: every point of any type
-///     input2 fn PointId:
-///         input: point any every
+///     queue: /App/ApiClient.in-queue
+///     input fn Sql:
+///         sql: "insert into public.event (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
+///         input1 fn ToInt:
+///             input: point any every      # point: every point of any type
+///         input2 fn PointId:
+///             input: point any every
 /// ```
 #[derive(Debug)]
 pub struct FnToApiQueue {
@@ -158,7 +159,7 @@ mod tests {
         assert_eq!(prepare_for_sql("hello"), "hello");
         assert_eq!(prepare_for_sql("  world  "), "world");
         assert_eq!(prepare_for_sql("O'Connor"), "O''Connor");
-        assert_eq!(prepare_for_sql("'; DROP TABLE users; --"), "''''; DROP TABLE users; --");
+        assert_eq!(prepare_for_sql("'; DROP TABLE users; --"), "''; DROP TABLE users; --");
         assert_eq!(prepare_for_sql("bad\0data"), "baddata");
         assert_eq!(prepare_for_sql("   "), "");
     }
@@ -182,7 +183,7 @@ mod tests {
         let mut node = FnToApiQueue::new("test", 1, input.clone(), tx);
         let res = node.out().unwrap().unwrap();
         assert!(matches!(res, FnFlow::Old(_)));
-        assert!(rx.try_recv().is_err(), "Old flow should not be sent");
+        assert!(matches!(rx.try_recv(), Ok(None)), "Old flow should not be sent");
     }
     #[test]
     fn test_fntoapiqueue_ignores_empty_sql() {
@@ -192,6 +193,6 @@ mod tests {
         let mut node = FnToApiQueue::new("test", 1, input.clone(), tx);
         let res = node.out().unwrap().unwrap();
         assert!(matches!(res, FnFlow::New(_)));
-        assert!(rx.try_recv().is_err(), "Empty SQL should not be sent");
+        assert!(matches!(rx.try_recv(), Ok(None)), "Empty SQL should not be sent");
     }
 }
