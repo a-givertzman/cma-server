@@ -84,7 +84,7 @@ impl FnOut for FnNe {
         let Some(input) = flow.map(input2)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
         let v2: Value = input.try_into().map_err(|err: Error| concat_string::concat_string!(self.id, ".out | ", err.to_string()))?;
-        let value = v1 == v2;
+        let value = v1 != v2;
         flow.wrap(Point::Bool(Self::point_with(self.txid, &meta, &self.id, Bool(value))))
     }
     //

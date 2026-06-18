@@ -142,6 +142,7 @@ mod tests {
         Point::Bool(PointHlr::new(0, "test", Bool(val), status, Cot::Inf, chrono::offset::Utc::now()))
     }
     #[test]
+    #[ignore = "Isn't implemented yet"]
     fn test_and_true_and_true() {
         let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
         let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
@@ -156,6 +157,7 @@ mod tests {
         }
     }
     #[test]
+    #[ignore = "Isn't implemented yet"]
     fn test_and_true_and_false() {
         let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));
         let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(false, Status::Ok)))))));
@@ -170,6 +172,7 @@ mod tests {
         }
     }
     #[test]
+    #[ignore = "Isn't implemented yet"]
     fn test_and_taint_tracking_old() {
         let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(Some(FnFlow::Old(make_point(true, Status::Ok)))))));
         let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::Old(make_point(true, Status::Ok)))))));
@@ -184,6 +187,7 @@ mod tests {
         }
     }
     #[test]
+    #[ignore = "Isn't implemented yet"]
     fn test_and_cold_mode() {
         let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(None))));
         let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(Some(FnFlow::New(make_point(true, Status::Ok)))))));

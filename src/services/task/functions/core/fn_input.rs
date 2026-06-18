@@ -27,27 +27,27 @@ pub struct FnInput {
 // 
 impl FnInput {
     // pub fn new(parent: &str, name: impl Into<String>, initial: Option<PointType>, type_: FnConfPointType) -> Self {
-    pub fn new(parent: impl Into<String>, tx_id: usize, conf: &FnConfig, cycle: &EvalCycleRef) -> Self {
+    pub fn new(parent: impl Into<String>, txid: usize, conf: &FnConfig, cycle: &EvalCycleRef) -> Self {
         let dbg = format!("{}/FnInput{}", parent.into(), COUNT.fetch_add(1, Ordering::AcqRel));
         let (typ, initial) = match conf.type_.clone() {
             FnConfPointType::Bool => (PointType_::Bool, conf.options.default.as_ref().map_or(None, |d| match d.parse::<bool>() {
-                Ok(d) => Some(d.to_point(tx_id, &conf.name)),
+                Ok(d) => Some(d.to_point(txid, &conf.name)),
                 Err(_) => panic!("{}.function | Error parsing Point default as Bool in: {:?}", dbg, conf),
             })),
             FnConfPointType::Int => (PointType_::Int, conf.options.default.as_ref().map_or(None, |d| match d.parse::<i64>() {
-                Ok(d) => Some(d.to_point(tx_id, &conf.name)),
+                Ok(d) => Some(d.to_point(txid, &conf.name)),
                 Err(_) => panic!("{}.function | Error parsing Point default as Int in: {:?}", dbg, conf),
             })),
             FnConfPointType::Real => (PointType_::Real, conf.options.default.as_ref().map_or(None, |d| match d.parse::<f32>() {
-                Ok(d) => Some(d.to_point(tx_id, &conf.name)),
+                Ok(d) => Some(d.to_point(txid, &conf.name)),
                 Err(_) => panic!("{}.function | Error parsing Point default as Real in: {:?}", dbg, conf),
             })),
             FnConfPointType::Double => (PointType_::Double, conf.options.default.as_ref().map_or(None, |d| match d.parse::<f64>() {
-                Ok(d) => Some(d.to_point(tx_id, &conf.name)),
+                Ok(d) => Some(d.to_point(txid, &conf.name)),
                 Err(_) => panic!("{}.function | Error parsing Point default as Double in: {:?}", dbg, conf),
             })),
-            FnConfPointType::String => (PointType_::String, conf.options.default.as_ref().map(|d| d.to_point(tx_id, &conf.name))),
-            FnConfPointType::Any => (PointType_::Any, Some(false.to_point(tx_id, &conf.name))),
+            FnConfPointType::String => (PointType_::String, conf.options.default.as_ref().map(|d| d.to_point(txid, &conf.name))),
+            FnConfPointType::Any => (PointType_::Any, Some(false.to_point(txid, &conf.name))),
             FnConfPointType::Unknown => panic!("{}.function | Point type required", dbg),
         };
         log::trace!("{}.function | Input initial: {:?}", dbg, initial);
@@ -172,11 +172,11 @@ impl FnOut for FnInput {
         log::trace!("{}.out | value: {:?}", self.dbg, &self.point);
         match self.point.as_ref() {
             Some(point) => if self.is_new() {
-                FnResult::Ok(Some(FnFlow::New(point.clone())))
+                Ok(Some(FnFlow::New(point.clone())))
             } else {
-                FnResult::Ok(Some(FnFlow::Old(point.clone())))
+                Ok(Some(FnFlow::Old(point.clone())))
             },
-            None => FnResult::Err(concat_string!(self.dbg, ".out | Not initialized")),
+            None => Ok(None),   //FnResult::Err(concat_string!(self.dbg, ".out | Not initialized")),
         }
     }
     //

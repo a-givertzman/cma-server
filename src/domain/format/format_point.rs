@@ -8,7 +8,7 @@ use sal_sync::{collections::FxHashMap, services::entity::Point};
 #[derive(Debug, Clone)]
 enum Token {
     Static(String),
-    Dynamic { full_name: String, name: String, suffix: Sufix },
+    Dynamic { name: String, prefix: String, suffix: Sufix, precision: Option<usize> },
 }
 ///
 /// Варианты суфикса маркера
@@ -43,6 +43,10 @@ impl FromStr for Sufix {
 ///     - {input.timestamp}
 ///     - {input.status}
 /// ```
+/// **Поддержка форматирования (округление):**
+/// - `{input:.2}` округлит вещественное число до двух знаков после запятой
+/// - `{input.value:.4}` округлит до четырех знаков
+
 ///
 /// **Example 1**
 /// ```ignore
@@ -83,15 +87,32 @@ impl FormatPoint {
             if mat.start() > last_idx {
                 tokens.push(Token::Static(input[last_idx..mat.start()].to_string()));
             }
-            let full_name = cap.get(1).unwrap().as_str().to_string();
-            let mut parts = full_name.split('.').map(|part| part.into());
-            let name: String = parts.next().unwrap();
-            let suffix = match parts.next() {
+            let marker = cap.get(1).unwrap().as_str().to_string();
+            println!("FormatPoint.new | marker: {marker}");
+            let mut parts_colon = marker.split(':');
+            let name = parts_colon.next().unwrap().to_string();
+            println!("FormatPoint.new | name: {name}");
+            let format_spec = parts_colon.next();
+            let mut precision = None;
+            if let Some(fmt) = format_spec {
+                if fmt.starts_with('.') {
+                    if let Ok(p) = fmt[1..].parse::<usize>() {
+                        precision = Some(p);
+                    } else {
+                        return Err(Error::new("FormatPoint", "new").err(format!("Invalid precision format '{}' in marker '{}'", fmt, marker)));
+                    }
+                } else {
+                    return Err(Error::new("FormatPoint", "new").err(format!("Unsupported format specifier '{}' in marker '{}'", fmt, marker)));
+                }
+            }
+            let mut parts_dot = name.split('.');
+            let prefix: String = parts_dot.next().unwrap().into();
+            let suffix = match parts_dot.next() {
                 Some(sufix) => Sufix::from_str(&sufix).map_err(|err| Error::new("FormatPoint", "new").pass(err))?,
                 None => Sufix::None,
             };
-            names.insert(full_name.clone(), (name.clone(), suffix.clone()));
-            tokens.push(Token::Dynamic { full_name, name, suffix });
+            names.insert(name.clone(), (prefix.clone(), suffix.clone()));
+            tokens.push(Token::Dynamic { name, prefix, suffix, precision });
             last_idx = mat.end();
         }
         if last_idx < input.len() {
@@ -101,7 +122,7 @@ impl FormatPoint {
     }
     ///
     /// Вносит актуальное значение `Point` для подстановки в шаблон.
-    /// - `key`: Полное имя маркера (например, "input1.value")
+    /// - `key`: Полное имя маркера (например, "input1.value" или "input1")
     pub fn insert(&mut self, key: &str, value: Point) {
         self.values.insert(key.into(), value);
     }
@@ -112,18 +133,28 @@ impl FormatPoint {
         for token in &self.tokens {
             match token {
                 Token::Static(s) => out.push_str(s),
-                Token::Dynamic { full_name, name, suffix } => {
-                    if let Some(point) = self.values.get(full_name) {
+                Token::Dynamic { name, prefix: _, suffix, precision } => {
+                    if let Some(point) = self.values.get(name) {
                         let value = match suffix {
                             Sufix::Name => point.name(),
-                            Sufix::Value | Sufix::None => point.value().to_string(),
-                            Sufix::Ts => point.timestamp().to_string(),
+                            Sufix::Value | Sufix::None => {
+                                if let Some(prec) = precision {
+                                    match point {
+                                        Point::Real(p) => format!("{:.*}", prec, p.value),
+                                        Point::Double(p) => format!("{:.*}", prec, p.value),
+                                        _ => point.value().to_string(),
+                                    }
+                                } else {
+                                    point.value().to_string()
+                                }
+                            }
+                            Sufix::Ts => point.ts().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
                             Sufix::Status => point.status().to_string(),
                         };
                         out.push_str(&value);
                     } else {
                         out.push_str("{");
-                        out.push_str(full_name);
+                        out.push_str(name);
                         out.push_str("}");
                     }
                 }
@@ -132,7 +163,7 @@ impl FormatPoint {
         out
     }
     ///
-    /// Returns List of al names & sufixes in the following format:
+    /// Returns List of all names & sufixes in the following format:
     /// ```ignore
     /// Map<fullName, (name, sufix)>
     /// 
@@ -202,6 +233,32 @@ mod tests {
         assert_eq!(formatter.out(), "SELECT * FROM table WHERE value = 42;");
     }
     #[test]
+    fn test_format_precision_floats() {
+        let template = "VALUES ({input1:.2}, {input2.value:.4})";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point1 = Point::Double(PointHlr::new(0, "P1", 3.14159265, Status::Ok, Cot::Inf, Utc::now()));
+        let point2 = Point::Real(PointHlr::new(0, "P2", 2.71828, Status::Ok, Cot::Inf, Utc::now()));
+        formatter.insert("input1", point1);
+        formatter.insert("input2.value", point2);
+        assert_eq!(formatter.out(), "VALUES (3.14, 2.7183)");
+    }
+    #[test]
+    fn test_format_precision_fallback_for_int() {
+        let template = "VALUES ({input:.2})";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("P1", 42, Status::Ok);
+        formatter.insert("input", point);
+        assert_eq!(formatter.out(), "VALUES (42)"); // Безопасное проглатывание формата для Int
+    }
+    #[test]
+    fn test_format_duplication_use() {
+        let template = "VALUES ({input:.2}) [{input}]";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("P1", 43, Status::Ok);
+        formatter.insert("input", point);
+        assert_eq!(formatter.out(), "VALUES (43) [43]"); // Безопасное проглатывание формата для Int
+    }
+    #[test]
     fn test_format_missing_value_leaves_placeholder() {
         let template = "SELECT {missing.value} FROM table WHERE id = {present.value};";
         let mut formatter = FormatPoint::new(template).unwrap();
@@ -231,13 +288,10 @@ mod tests {
         assert_eq!(formatter.out(), expected);
     }
     #[test]
-    #[should_panic(expected = "Unknown suffix in tag")]
     fn test_format_unknown_suffix_panics() {
         let template = "SELECT * FROM table WHERE val = {input.corrupted_property};";
-        let mut formatter = FormatPoint::new(template).unwrap();
-        let point = create_test_point("Sensor_E", 100, Status::Ok);
-        formatter.insert("input.corrupted_property", point);
-        let _ = formatter.out();
+        let formatter = FormatPoint::new(template);
+        assert!(matches!(formatter, Err(_)));
     }
     #[test]
     fn test_format_display_and_debug_traits() {
@@ -252,9 +306,10 @@ mod tests {
     }
     #[test]
     fn test_format_names_extraction() {
-        let template = "SELECT * FROM {table} WHERE val = {input.value} AND status = {input.status};";
+        let template = "SELECT * FROM {table} WHERE val = {input.value:.3} AND status = {input.status};";
         let formatter = FormatPoint::new(template).unwrap();
         let names = formatter.markers();
+        // println!("FormatPoint.test_format_names_extraction | names: {:?}", names);
         assert_eq!(names.len(), 3);
         assert!(names.contains_key("table"));
         assert!(names.contains_key("input.value"));

@@ -18,8 +18,8 @@ impl EdgeDetector {
     }
     /// 
     /// Создает `EdgeDetection` с заданным исходным состоянием
-    pub fn with(init: Option<impl IsZero>) -> Self {
-        let init = init.map(|v| v.is_zero());
+    pub fn with(init: Option<impl ToBool>) -> Self {
+        let init = init.map(|v| v.to_bool());
         Self {
             init,
             prev: init,
@@ -29,8 +29,8 @@ impl EdgeDetector {
     }
     ///
     /// Добавляет новое значение, обновляет состояние и возвращает зафиксированный фронт.
-    pub fn add(&mut self, val: impl IsZero) -> Option<Edge> {
-        let val = !val.is_zero();
+    pub fn add(&mut self, val: impl ToBool) -> Option<Edge> {
+        let val = val.to_bool();
         self.edge = match (self.prev, val) {
             (Some(false), true) => Some(Edge::Rising),
             (Some(true), false) => Some(Edge::Falling),
@@ -97,24 +97,24 @@ impl Edge {
         *self == Edge::Falling
     }
 }
-pub trait IsZero {
-    fn is_zero(&self) -> bool;
+pub trait ToBool {
+    fn to_bool(&self) -> bool;
 }
-impl IsZero for bool { fn is_zero(&self) -> bool { *self == false } }
-impl IsZero for i8 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for i16 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for i32 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for i64 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for i128 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for isize { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for u8 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for u16 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for u32 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for u64 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for u128 { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for usize { fn is_zero(&self) -> bool { *self == 0 } }
-impl IsZero for f32 { fn is_zero(&self) -> bool { *self == 0.0 } }
-impl IsZero for f64 { fn is_zero(&self) -> bool { *self == 0.0 } }
+impl ToBool for bool { fn to_bool(&self) -> bool { *self } }
+impl ToBool for i8 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for i16 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for i32 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for i64 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for i128 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for isize { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for u8 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for u16 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for u32 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for u64 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for u128 { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for usize { fn to_bool(&self) -> bool { *self != 0 } }
+impl ToBool for f32 { fn to_bool(&self) -> bool { self.is_finite() && *self != 0.0 } }
+impl ToBool for f64 { fn to_bool(&self) -> bool { self.is_finite() && *self != 0.0 } }
 ///
 /// Basic tests
 #[cfg(test)]

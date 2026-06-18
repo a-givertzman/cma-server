@@ -2,7 +2,7 @@ use std::{io::Write, path::PathBuf, sync::Arc, time::{Duration, Instant}};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{Service, Services, entity::{Name, Object, Point, PointConf}}, sync::{Handles, Owner}, thread_pool::Scheduler};
-use crate::{domain::{FxSccHashMap, RECV_TIMEOUT, Receiver, RecvTimeoutError, Sender, bounded}, err, err_pass, services::task::{AppendJournal, CompactateJournal, FlushJournal, InitialCtx, LoadJournal, MarkOldJournal, OpenJournal, TaskRetainConf, retain::{Eval, RetainEvent, RetainState}}};
+use crate::{domain::{FxSccHashMap, RECV_TIMEOUT, Receiver, RecvTimeoutError, Sender, bounded}, err, err_pass, services::task::{AppendJournal, CompactateJournal, FlushJournal, InitialCtx, LoadJournal, MarkOldJournal, OpenJournal, TaskRetainConf, retain::{Eval, RetainEvent}}};
 
 ///
 /// ### Retained values for the `Task`
@@ -38,6 +38,7 @@ pub struct TaskRetain {
     dbg: Dbg,
 }
 //
+#[allow(unused)]
 impl TaskRetain {
     const BUFFER_SIZE: usize = 16 * 1024;
     ///
@@ -166,7 +167,9 @@ impl Service for TaskRetain {
                             }
                         }
                     }
-                    retain.close();
+                    if let Err(err) = retain.close() {
+                        log::error!("{dbg}.run | Can't close retain journal: {:?}", err);
+                    }
                     log::info!("{dbg}.run | Exit");
                     Ok(())
                 }});
@@ -188,7 +191,9 @@ impl Service for TaskRetain {
                         match rx_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(event) => {
                                 log::trace!("{dbg}.run | point '{}': {:?}", event.key, event.p);
-                                cache.insert_sync(event.key, event.p);
+                                if let Err(err) = cache.insert_sync(event.key, event.p) {
+                                    log::error!("{dbg}.run | Can't update retain cache: {:?}", err);
+                                }
                             }
                             Err(RecvTimeoutError::Timeout) => {}
                             Err(err) => {
@@ -224,12 +229,14 @@ impl Service for TaskRetain {
 }
 ///
 /// Cycle measuring
+#[allow(unused)]
 struct Trigger {
     interval: Duration,
     bytes_limit: u64,
     t: std::cell::Cell<Instant>,
 }
 //
+#[allow(unused)]
 impl Trigger {
     pub fn new(interval: Duration) -> Self {
         Self {
@@ -265,11 +272,13 @@ impl Trigger {
 }
 ///
 /// Wraps a writer and counts the total number of bytes written.
+#[allow(unused)]
 struct CountingWriter<W: Write> {
     inner: W,
     bytes_written: usize,
 }
 //
+#[allow(unused)]
 impl<W: Write> CountingWriter<W> {
     pub fn new(inner: W) -> Self {
         Self { inner, bytes_written: 0 }

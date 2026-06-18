@@ -28,8 +28,8 @@ impl ProfinetDbConf {
         log::debug!("{}.new | number: {:?}", dbg, number);
         let offset = conf.get("offset").unwrap();
         log::debug!("{}.new | offset: {:?}", dbg, offset);
-        // let size = conf.get("size").unwrap();
-        // log::debug!("{}.new | size: {:?}", dbg, size);
+        let size: Option<u64> = conf.get("size");
+        log::debug!("{}.new | size: {:?}", dbg, size);
         let mut points: Vec<PointConf> = vec![];
         for key in conf.keys(&["description", "number", "offset", "size"]) {
             let keyword = FnConfKeywd::from_str(&key).unwrap();
@@ -44,8 +44,8 @@ impl ProfinetDbConf {
                 log::debug!("{}.new | Device expected, but found {:?}", dbg, keyword);
             }
         }
-        let size = Self::validate_addresses(&points)
-            .map_err(|err| Error::new(&dbg, "new").pass(err.to_string())).unwrap() as u64;
+        let size = size.unwrap_or_else(|| Self::validate_addresses(&points)
+            .map_err(|err| Error::new(&dbg, "new").pass(err.to_string())).unwrap() as u64);
         Self {
             name,
             description,

@@ -118,3 +118,10 @@ opt-level = 3          # Максимальная оптимизация ско�
 lto = true             # Включает Link-Time Optimization (оптимизация между крэйтами)
 codegen-units = 1      # Уменьшает параллельные блоки компиляции ради лучшей оптимизации
 panic = "abort"        # Убирает раскрутку стека при панике (уменьшает бинарник и ускоряет код)
+
+[profile.fast-test]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 16
+panic = "unwind"

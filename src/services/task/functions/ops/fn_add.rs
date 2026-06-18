@@ -1,9 +1,9 @@
+use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointTxId};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
-    domain::{FnOutRef, PointMeta},
-    services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult},
+    domain::{FnOutRef, PointMeta}, err, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}
 };
 ///
 /// ### Function | `FnAdd`
@@ -17,9 +17,9 @@ use crate::{
 ///     input1: point int '/App/Service/Point.Name1'
 ///     input2: point int '/App/Service/Point.Name2'
 /// fn Add:
-///     in1: point bool '/App/Service/Point.Name1'
-///     in2: point bool '/App/Service/Point.Name2'
-///     in3: point bool '/App/Service/Point.Name3'
+///     in1: point real '/App/Service/Point.Name1'
+///     in2: point real '/App/Service/Point.Name2'
+///     in3: point real '/App/Service/Point.Name3'
 /// ```
 #[derive(Debug)]
 pub struct FnAdd {
@@ -74,6 +74,7 @@ impl FnOut for FnAdd {
         inputs
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let inputs: Vec<FnResult<FnFlow, String>> = self.inputs.iter().map(|input| {
             input.borrow_mut().out()
@@ -89,8 +90,8 @@ impl FnOut for FnAdd {
             let Some(input) = flow.map(input)? else { return Ok(None) };
             meta = meta.update_latest(&input).update_status(&input);
             match input {
-                Point::Bool(p) => i64_value += p.value.0 as i64,
-                Point::Int(p) => i64_value += p.value,
+                Point::Int(p) => i64_value = i64::checked_add(i64_value, p.value)
+                    .ok_or_else(|| err!(self.id, "Overflow: `{:?} + {:?}`", i64_value, p.value).to_string())?,
                 Point::Real(p) => {
                     if p.value.is_nan() {
                         return Err(format!("{}.out | Invalid input '{}': NAN, expected bool or number", self.id, p.name));
@@ -105,7 +106,7 @@ impl FnOut for FnAdd {
                     has_double = true;
                     f64_value += p.value;
                 }
-                Point::String(_) | Point::Bytes(_) => return Err(format!("{}.out | Invalid input type '{:?}', expected bool or number", self.id, input.typ())),
+                Point::Bool(_) | Point::String(_) | Point::Bytes(_) => return Err(format!("{}.out | Invalid input type '{:?}', expected number", self.id, input.typ())),
             }
         }
         if has_double {

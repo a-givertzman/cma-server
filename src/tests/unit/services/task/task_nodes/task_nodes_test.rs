@@ -141,7 +141,7 @@ fn manual_eval() {
                 log::trace!("evalNode outs: {:?}", eval_node.borrow().get_outs());
                 for eval_node_var in eval_node.borrow().get_vars() {
                     log::trace!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluating...", eval_node.borrow().name(), eval_node_var.borrow().id());
-                    eval_node_var.borrow_mut().out();
+                    _ = eval_node_var.borrow_mut().out();
                     log::debug!("TaskEvalNode.eval | evalNode '{}' - var '{}' evaluated", eval_node.borrow().name(), eval_node_var.borrow().id());
                 };
                 for eval_node_out in eval_node.borrow().get_outs() {
