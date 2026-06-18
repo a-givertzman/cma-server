@@ -1,6 +1,6 @@
 use concat_string::concat_string;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{Point, PointHlr}, types::Bool};
+use sal_sync::services::{entity::{Point, PointHlr, Status}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     domain::{Edge, EdgeDetector, FnOutRef, TryTo},
@@ -9,7 +9,7 @@ use crate::{
 ///
 /// ### Function | `FnFallingEdge`
 /// 
-/// Детектор отричательного (заднего) фронта
+/// Детектор отрицательного (заднего) фронта
 /// 
 /// - `input`: Последовательность `true -> false` - активирует выход на один такт
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub struct FnFallingEdge {
     kind: FnKind,
     input: FnChange,
     edge: EdgeDetector,
-    value: EdgeDetector,
+    prev: Option<(bool, Status)>,
 }
 //
 impl FnFallingEdge {
@@ -32,14 +32,14 @@ impl FnFallingEdge {
             kind: FnKind::Fn,
             input: FnChange::new(input),
             edge: EdgeDetector::new(),
-            value: EdgeDetector::new(),
+            prev: None,
         }
     }    
     ///
     /// Возвращает `PointHlr` с обновленными `name` и `value`
     #[inline]
     fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
-        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp())
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts())
     }
 }
 //
@@ -63,6 +63,7 @@ impl FnOut for FnFallingEdge {
         let flow = FlowContext::new();
         let Some(input) = flow.ignore(input)? else {
             self.edge.reset();
+            self.prev = None;
             return Ok(None);
         };
         let val: bool = (&input).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid input ", err.to_string()))?;
@@ -70,7 +71,12 @@ impl FnOut for FnFallingEdge {
             Some(Edge::Falling) => true,
             _ => false,
         };
-        let is_changed = self.value.add(value).is_some();
+        let status = input.status();
+        let is_changed = self.prev.map_or(
+            true,
+            |(prev_value, prev_status)| prev_value != value || prev_status != status
+        );
+        self.prev = Some((value, status));
         let point = Point::Bool(Self::point_with(&input, &self.id, Bool(value)));
         // log::trace!("{}.out | value: {:#?}", self.id, point);
         if is_changed {
@@ -82,7 +88,7 @@ impl FnOut for FnFallingEdge {
     //
     fn reset(&mut self) {
         self.edge.reset();
-        self.value.reset();
+        self.prev = None;
         self.input.reset();
     }
 }
@@ -121,6 +127,10 @@ mod tests {
                 FnFlow::Old(point)
             });
         }
+        /// Устанавливает кастомный поинт для проверки статусов и ошибок
+        fn set_custom_flow(&mut self, point: Point, is_new: bool) {
+            self.flow = Some(if is_new { FnFlow::New(point) } else { FnFlow::Old(point) });
+        }
     }
     impl FnOut for MockInput {
         fn id(&self) -> String { self.id.clone() }
@@ -143,7 +153,7 @@ mod tests {
         // Такт 1: Инициализация значением false
         mock.borrow_mut().set_flow(false, true);
         let out = edge_node.out().unwrap().unwrap();
-        assert!(matches!(out, FnFlow::New(_)), "Первое значение должно быть New");
+        assert!(matches!(out, FnFlow::New(_)), "Первое значение должно быть New \nresult: {:?} \ntarget: FnFlow::New(_)", out);
         assert_eq!(extract_bool(&out), false);
         // Такт 2: Переход в true (передний фронт) -> импульса быть не должно
         mock.borrow_mut().set_flow(true, true);
@@ -190,5 +200,30 @@ mod tests {
         mock.borrow_mut().set_flow(false, true);
         let out = edge_node.out().unwrap().unwrap();
         assert_eq!(extract_bool(&out), false, "После reset задний фронт не должен детектироваться");
+    }
+    #[test]
+    fn test_status_change_forces_new() {
+        let mock = Rc::new(RefCell::new(MockInput::new("in1")));
+        let mut edge_node = FnFallingEdge::new("parent", mock.clone());
+        mock.borrow_mut().set_flow(false, true);
+        let _ = edge_node.out().unwrap();
+        let invalid_point = Point::Bool(PointHlr::new(0, "in1", Bool(false), Status::Invalid, Cot::Inf, chrono::Utc::now()));
+        mock.borrow_mut().set_custom_flow(invalid_point, true);
+        let out = edge_node.out().unwrap().unwrap();
+        assert!(matches!(out, FnFlow::New(_)), "Изменение статуса на Invalid должно генерировать New");
+        match out {
+            FnFlow::New(p) => assert_eq!(p.status(), Status::Invalid),
+            _ => unreachable!(),
+        }
+    }
+    #[test]
+    fn test_cascades_error_on_invalid_type() {
+        let mock = Rc::new(RefCell::new(MockInput::new("in1")));
+        let mut edge_node = FnFallingEdge::new("parent", mock.clone());
+        let int_point = Point::String(PointHlr::new(0, "in1", "42".into(), Status::Ok, Cot::Inf, chrono::Utc::now()));
+        mock.borrow_mut().set_custom_flow(int_point, true);
+        let err = edge_node.out();
+        assert!(matches!(err, Err(_)), "Ожидается ошибка типа \nresult: {:?} \ntarget: Err(_)", err);
+        assert!(err.unwrap_err().contains("Invalid input"), "Ожидается ошибка типа");
     }
 }
