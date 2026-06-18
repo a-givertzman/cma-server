@@ -110,13 +110,15 @@ impl FnOut for FnIsChangedValue {
             meta.cot,
             meta.ts,
         ));
-        let is_changed = self.prev.map_or(true, |prev| val != prev);
+        // Если значение изменилось (val == true) -> это 100% свежий New(true).
+        // Если значение не изменилось (val == false), но на прошлом такте было true -> мы обязаны опустить флаг через New(false).
+        let is_changed = val || self.prev == Some(true);
         self.prev = Some(val);
         if is_changed {
-            log::trace!("{}.out | value {:?} | {:?}", self.id, flow, value);
+            log::trace!("{}.out | FlowNew | value {:?} | {:?}", self.id, flow, value);
             return flow.wrap_new(value);
         }
-        log::trace!("{}.out | value {:?} | {:?}", self.id, flow, value);
+        log::trace!("{}.out | FlowOld | value {:?} | {:?}", self.id, flow, value);
         flow.wrap_old(value)
     }
     //
@@ -216,5 +218,25 @@ mod tests {
         } else {
             panic!("Ожидался тип Bool");
         }
+    }
+    #[test]
+    fn test_consecutive_changes() {
+        let input = Rc::new(RefCell::new(FakeInput::new()));
+        let mut fn_node = FnIsChangedValue::new("TestNs", vec![input.clone() as FnOutRef]);
+        // Такт 1: Первое изменение
+        input.borrow_mut().set(10, true);
+        let res1 = fn_node.out().unwrap().unwrap();
+        assert!(res1.is_new());
+        assert_eq!(res1.value().to_bool().as_bool().value.0, true);
+        // Такт 2: СРАЗУ ЖЕ второе изменение (импульс не должен потеряться)
+        input.borrow_mut().set(20, true);
+        let res2 = fn_node.out().unwrap().unwrap();
+        assert!(res2.is_new(), "T2: Ожидается New, так как значение физически изменилось!");
+        assert_eq!(res2.value().to_bool().as_bool().value.0, true);
+        // Такт 3: Успокоились
+        input.borrow_mut().set(20, false);
+        let res3 = fn_node.out().unwrap().unwrap();
+        assert!(res3.is_new(), "T3: Ожидается New(false) для снятия импульса");
+        assert_eq!(res3.value().to_bool().as_bool().value.0, false);
     }
 }
