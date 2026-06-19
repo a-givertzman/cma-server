@@ -91,7 +91,7 @@ impl FnBuilder {
                         })
                     }
                     //
-                    Functions::TimerOnDelay => {
+                    Functions::Ton => {
                         let enable = Self::get_input_config(parent, "enable", conf, nodes, &services)
                             .map_err(|err| error.pass_with(format!("FnTimerOnDelay | Can't get 'enable'"), err))?;
                         let reset = Self::get_input_config(parent, "reset", conf, nodes, &services)
@@ -115,7 +115,7 @@ impl FnBuilder {
                         })
                     }
                     //
-                    Functions::TimerOffDelay => {
+                    Functions::Tof => {
                         let enable = Self::get_input_config(parent, "enable", conf, nodes, &services)
                             .map_err(|err| error.pass_with(format!("FnTimerOffDelay | Can't get 'enable'"), err))?;
                         let reset = Self::get_input_config(parent, "reset", conf, nodes, &services)

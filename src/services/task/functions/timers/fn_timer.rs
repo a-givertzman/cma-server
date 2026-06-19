@@ -121,15 +121,6 @@ impl FnOut for FnTimer {
                 self.active_t = Some(Instant::now());
                 self.total_t
             }
-            None => {
-                if let Some(t) = self.active_t {
-                    is_changed = true;
-                    self.ts = chrono::Utc::now();
-                    self.total_t + t.elapsed().as_secs_f64()
-                } else {
-                    self.total_t
-                }
-            }
             Some(Edge::Falling) => {
                 if let Some(t) = self.active_t {
                     self.total_t = self.total_t + t.elapsed().as_secs_f64();
@@ -138,6 +129,15 @@ impl FnOut for FnTimer {
                 is_changed = true;
                 self.active_t = None;
                 self.total_t
+            }
+            _ => {
+                if let Some(t) = self.active_t {
+                    is_changed = true;
+                    self.ts = chrono::Utc::now();
+                    self.total_t + t.elapsed().as_secs_f64()
+                } else {
+                    self.total_t
+                }
             }
         };
         log::trace!("{}.out | elapsed: {:?}", self.id, self.total_t);

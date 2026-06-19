@@ -1,4 +1,25 @@
 ///
+/// ### Фронт сигнала
+/// - `Rising`: Передний фронт (переход 0 -> 1).
+/// - `Falling`: Задний фронт (переход 1 -> 0).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Edge {
+    Rising,
+    Falling,
+}
+impl Edge {
+    ///
+    /// Возвращает `true`, если последним зафиксирован передний фронт.
+    pub fn is_rising(&self) -> bool {
+        *self == Edge::Rising
+    }
+    ///
+    /// Возвращает `true`, если последним зафиксирован задний фронт.
+    pub fn is_falling(&self) -> bool {
+        *self == Edge::Falling
+    }
+}
+///
 /// ### Детектор фронтов (Edge Detector)
 /// - Накапливает значения `bool` или числовые типы.
 /// - Фиксирует переход 0 -> 1 как передний фронт (Rising).
@@ -77,26 +98,7 @@ impl EdgeDetector {
     }
 }
 ///
-/// ### Фронт сигнала
-/// - `Rising`: Передний фронт (переход 0 -> 1).
-/// - `Falling`: Задний фронт (переход 1 -> 0).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Edge {
-    Rising,
-    Falling,
-}
-impl Edge {
-    ///
-    /// Возвращает `true`, если последним зафиксирован передний фронт.
-    pub fn is_rising(&self) -> bool {
-        *self == Edge::Rising
-    }
-    ///
-    /// Возвращает `true`, если последним зафиксирован задний фронт.
-    pub fn is_falling(&self) -> bool {
-        *self == Edge::Falling
-    }
-}
+/// ### Приведение числовых типов к `bool`
 pub trait ToBool {
     fn to_bool(&self) -> bool;
 }
