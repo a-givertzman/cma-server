@@ -99,7 +99,10 @@ impl FnOut for FnTimerOffDelay {
         let is_active: bool = (&input).try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid input").to_string())? && !reset;
         log::trace!("{} | Input: {}", self.id, is_active);
         let value = match (self.trigg, is_active) {
-            (_, true) => true,
+            (_, true) => {
+                self.active_t = None;
+                true
+            }
             (None, false) => false,
             (Some(true), false) => {
                 if self.delay.is_zero() {

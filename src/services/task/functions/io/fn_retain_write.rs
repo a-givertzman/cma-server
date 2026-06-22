@@ -1,5 +1,5 @@
 use sal_core::error::Error;
-use sal_sync::services::entity::{Name, {Point, PointTxId}};
+use sal_sync::services::entity::{Name, Point};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{domain::{FnOutRef, Sender}, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, RetainEvent}};
 ///
@@ -26,7 +26,6 @@ use crate::{domain::{FnOutRef, Sender}, services::task::{FlowContext, FnFlow, Fn
 /// ```
 #[derive(Debug)]
 pub struct FnRetainWrite {
-    txid: usize,
     kind: FnKind,
     key: String,
     default: Option<FnOutRef>,
@@ -47,7 +46,6 @@ impl FnRetainWrite {
     pub fn new(parent: &Name, send: Sender<RetainEvent>, key: impl Into<String>, default: Option<FnOutRef>, input: FnOutRef) -> Result<Self, Error> {
         let id = format!("{}/FnRetainWrite{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
         Ok(Self {
-            txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
             key: key.into(),
             default,
@@ -92,7 +90,7 @@ impl FnOut for FnRetainWrite {
             return Ok(None);
         };
         let is_changed = match self.cache.as_ref() {
-            Some(cache) => cache.value() != point.value() || cache.status() != point.status() || cache.timestamp() != point.timestamp(),
+            Some(cache) => cache.value() != point.value() || cache.status() != point.status() || cache.ts() != point.ts(),
             None => true,
         };
         if is_changed {
@@ -150,7 +148,8 @@ mod tests {
     #[test]
     fn test_eager_evaluation_and_deduplication() {
         let (tx, rx) = crate::domain::unbounded();
-        let input = Rc::new(RefCell::new(MockNode::new("in", Some(FnFlow::New(mock_point(10))))));
+        let value = FnFlow::New(mock_point(10));
+        let input = Rc::new(RefCell::new(MockNode::new("in", Some(value.clone()))));
         let default = Rc::new(RefCell::new(MockNode::new("def", Some(FnFlow::New(mock_point(5))))));
         let mut retain = FnRetainWrite::new(&Name::from("test"), tx, "key", Some(default.clone()), input.clone()).unwrap();
         // Такт 1: Идут новые данные
@@ -160,7 +159,7 @@ mod tests {
         assert_eq!(input.borrow().called, 1);
         assert_eq!(default.borrow().called, 1, "Запасной вход обязан быть опрошен!");
         // Такт 2: Данные не изменились (дубликат в потоке)
-        input.borrow_mut().flow = Some(FnFlow::New(mock_point(10)));
+        input.borrow_mut().flow = Some(value);
         let res2 = retain.out().unwrap().unwrap();
         assert!(matches!(res2, FnFlow::New(_)));
         assert_eq!(rx.len(), 1, "Диск должен быть защищен от записи дубликатов");

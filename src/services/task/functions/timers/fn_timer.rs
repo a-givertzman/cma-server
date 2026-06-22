@@ -4,16 +4,16 @@ use concat_string::concat_string;
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
 use crate::{domain::{Edge, EdgeDetector, FnOutRef, TryTo}, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult}};
 ///
-/// Function | FnTimer
+/// ### Function | `FnTimer`
 /// 
 /// Интегратор времени (накопительный секундомер / моточасы).
 /// Считает время в секундах, пока на входе `true` (> 0).
 /// 
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
 /// - `initial`: Начальное значение. Применяется строго один раз при первом успешном чтении.
-/// - `reset`: Сбрасывает накопленную сумму и счетчик по переднему фронту сигнала (переход 0 -> 1).
+/// - `reset`: Сбрасывает накопленную сумму и счетчик если `> 0`.
 /// - `input`: `true` - секундомер тикает (отдает `FnFlow::New`),
-/// `false` - замирает и хранит значение, отдает его в Flow::Old,
+/// `false` - замирает и хранит значение, отдает его в `Flow::Old`,
 /// снова `true` - счет продолжается с точки остановки.
 #[derive(Debug)]
 pub struct FnTimer {
@@ -23,7 +23,6 @@ pub struct FnTimer {
     reset: Option<FnChange>,
     input: FnChange,
     edge: EdgeDetector,
-    reset_edge: EdgeDetector,
     first: bool,
     total_t: f64,
     active_t: Option<Instant>,
@@ -41,7 +40,6 @@ impl FnTimer {
             reset: reset.map(FnChange::new),
             input: FnChange::new(input),
             edge: EdgeDetector::new(),
-            reset_edge: EdgeDetector::new(),
             first,
             total_t: 0.0,
             active_t: None,
@@ -83,18 +81,19 @@ impl FnOut for FnTimer {
         let input = self.input.out();
         let flow = FlowContext::new();
         let mut is_changed = false;
-        if let Some(reset) = reset {
+        let reset = if let Some(reset) = reset {
             if let Some(reset) = flow.ignore(reset)? {
                 let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
-                if let Some(Edge::Rising) = self.reset_edge.add(reset) {
+                if reset {
                     self.edge.reset();
+                    if self.total_t != 0.0 { is_changed = true; }
                     self.total_t = 0.0;
                     self.ts = chrono::Utc::now();
                     self.active_t = None;
-                    is_changed = true;
                 }
-            };
-        }
+                reset
+            } else { false }
+        } else { false };
         let Some(input) = flow.ignore(input)? else {
             if let Some(t) = self.active_t {
                 self.total_t = self.total_t + t.elapsed().as_secs_f64();
@@ -109,13 +108,13 @@ impl FnOut for FnTimer {
                 if let Some(initial) = flow.ignore(initial)? {
                     let initial: f64 = (&initial).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid initial ", err.to_string()))?;
                     self.total_t += initial;
-                    is_changed = true;
+                    is_changed = initial != 0.0;
                     self.first = false;
                 }
             }
         }
         // trace!("{}.out | input: {:?}", self.id, self.input.print());
-        let is_active: bool = (&input).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid input ", err.to_string()))?;
+        let is_active: bool = (&input).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid input ", err.to_string()))? && !reset;
         let elapsed = match self.edge.add(is_active) {
             Some(Edge::Rising) => {
                 self.active_t = Some(Instant::now());
@@ -151,7 +150,6 @@ impl FnOut for FnTimer {
     //
     fn reset(&mut self) {
         self.edge.reset();
-        self.reset_edge.reset();
         self.first = true;
         self.total_t = 0.0;
         self.ts = chrono::Utc::now();

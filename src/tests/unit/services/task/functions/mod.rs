@@ -16,9 +16,9 @@
 // mod fn_is_changed_value_test;
 // mod fn_to_bool_test;
 
-// mod comp;
+mod comp;
 // mod fft;
 mod fn_sql;
 mod ops;
-// mod timers;
+mod timers;
 // mod va;

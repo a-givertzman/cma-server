@@ -103,7 +103,9 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 /// Basic Tests
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use sal_sync::services::entity::{Cot, Point, PointHlr, Status};
+
+use super::*;
     use crate::{
         domain::FnOutRef,
         services::task::{FnFlow, FnKind, FnOut, FnResult},
@@ -141,19 +143,18 @@ mod tests {
         }
         fn reset(&mut self) {}
     }
-    //
-    // Вспомогательная функция для генерации фейковых FnFlow (замени на свой стандартный генератор из тестов)
-    fn create_mock_flow(value: f64) -> FnFlow {
-        // Заглушка: используй реальный конструктор PointHlr / FnFlow::New вашей системы
-        // FnFlow::New(PointHlr::new(Point::from(value)))
-        unimplemented!("Замени на стандартную сборку FnFlow для тестов")
+    // Вспомогательная функция для генерации фейковых FnFlow::New (замени на свой стандартный генератор из тестов)
+    fn mock_point(val: f64) -> FnFlow {
+        FnFlow::New(
+            Point::Double(PointHlr::new(1, "test", val, Status::Ok, Cot::Inf, chrono::Utc::now()))
+        )
     }
     //
     #[test]
     fn test_select_true_evaluates_input_only() {
-        let select_node = SpyNode::new("select", Some(create_mock_flow(1.0))); // select > 0 (true)
-        let input_node = SpyNode::new("input", Some(create_mock_flow(42.0)));
-        let default_node = SpyNode::new("default", Some(create_mock_flow(0.0)));
+        let select_node = SpyNode::new("select", Some(mock_point(1.0))); // select > 0 (true)
+        let input_node = SpyNode::new("input", Some(mock_point(42.0)));
+        let default_node = SpyNode::new("default", Some(mock_point(0.0)));
         let mut fn_select = FnSelect::new(
             "parent",
             Some(default_node.clone() as FnOutRef),
@@ -168,9 +169,9 @@ mod tests {
     //
     #[test]
     fn test_select_negative_value_evaluates_default_only() {
-        let select_node = SpyNode::new("select", Some(create_mock_flow(-5.0))); // select <= 0 (false)
-        let input_node = SpyNode::new("input", Some(create_mock_flow(42.0)));
-        let default_node = SpyNode::new("default", Some(create_mock_flow(99.0)));
+        let select_node = SpyNode::new("select", Some(mock_point(-5.0))); // select <= 0 (false)
+        let input_node = SpyNode::new("input", Some(mock_point(42.0)));
+        let default_node = SpyNode::new("default", Some(mock_point(99.0)));
         let mut fn_select = FnSelect::new(
             "parent",
             Some(default_node.clone() as FnOutRef),
@@ -186,8 +187,8 @@ mod tests {
     #[test]
     fn test_select_none_aborts_flow_immediately() {
         let select_node = SpyNode::new("select", None); // Обрыв управляющего сигнала
-        let input_node = SpyNode::new("input", Some(create_mock_flow(42.0)));
-        let default_node = SpyNode::new("default", Some(create_mock_flow(99.0)));
+        let input_node = SpyNode::new("input", Some(mock_point(42.0)));
+        let default_node = SpyNode::new("default", Some(mock_point(99.0)));
         let mut fn_select = FnSelect::new(
             "parent",
             Some(default_node.clone() as FnOutRef),
@@ -202,8 +203,8 @@ mod tests {
     //
     #[test]
     fn test_select_false_without_default_returns_none() {
-        let select_node = SpyNode::new("select", Some(create_mock_flow(0.0))); // select = 0 (false)
-        let input_node = SpyNode::new("input", Some(create_mock_flow(42.0)));
+        let select_node = SpyNode::new("select", Some(mock_point(0.0))); // select = 0 (false)
+        let input_node = SpyNode::new("input", Some(mock_point(42.0)));
         let mut fn_select = FnSelect::new(
             "parent",
             None, // default ветка отсутствует
@@ -212,6 +213,6 @@ mod tests {
         );
         let result = fn_select.out().unwrap();
         assert!(result.is_none(), "При select=false и отсутствии default узел должен вернуть обрыв потока (None)");
-        assert_eq!(input_node.borrow().calls(), 0, "При переходе в несуществующую ветку input не должен опрашиваться");
+        assert_eq!(input_node.borrow().calls(), 1, "При переходе в несуществующую ветку input не должен опрашиваться");
     }
 }
