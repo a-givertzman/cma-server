@@ -26,8 +26,6 @@ use crate::{
 pub struct FnSub {
     txid: usize,
     kind: FnKind,
-    input1: FnOutRef,
-    input2: FnOutRef,
     inputs: [FnOutRef; 2],
     id: String,
 }
@@ -46,8 +44,6 @@ impl FnSub {
         Ok(Self { 
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
-            input1: inputs[0].clone(),
-            input2: inputs[1].clone(),
             inputs,
             id,
         })
