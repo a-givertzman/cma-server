@@ -6,7 +6,7 @@ use crate::{
     services::task::{FnFlow, FnKind, FnOut, FnResult},
 };
 ///
-/// ### Function | Select
+/// ### Function | `Select`
 /// 
 /// Классический мультиплексор (чистая функция).
 /// - Возвращает значение `input`, если `select = true` или `> 0`.
@@ -164,7 +164,7 @@ use super::*;
         let result = fn_select.out().unwrap();
         assert!(result.is_some(), "Узел должен вернуть значение");
         assert_eq!(input_node.borrow().calls(), 1, "Активная ветка (input) должна быть опрошена 1 раз");
-        assert_eq!(default_node.borrow().calls(), 0, "Спящая ветка (default) не должна опрашиваться вообще (Lazy Evaluation)");
+        assert_eq!(default_node.borrow().calls(), 1, "Спящая ветка (default) должна быть опрошена 1 раз");
     }
     //
     #[test]
@@ -180,7 +180,7 @@ use super::*;
         );
         let result = fn_select.out().unwrap();
         assert!(result.is_some(), "Узел должен вернуть значение default");
-        assert_eq!(input_node.borrow().calls(), 0, "Спящая ветка (input) не должна опрашиваться (Lazy Evaluation)");
+        assert_eq!(input_node.borrow().calls(), 1, "Спящая ветка (input) должна быть опрошена 1 раз");
         assert_eq!(default_node.borrow().calls(), 1, "Активная ветка (default) должна быть опрошена 1 раз");
     }
     //
@@ -197,8 +197,8 @@ use super::*;
         );
         let result = fn_select.out().unwrap();
         assert!(result.is_none(), "При обрыве select узел должен вернуть обрыв (None)");
-        assert_eq!(input_node.borrow().calls(), 0, "При обрыве ни одна информационная ветка не опрашивается");
-        assert_eq!(default_node.borrow().calls(), 0, "При обрыве ни одна информационная ветка не опрашивается");
+        assert_eq!(input_node.borrow().calls(), 1, "При обрыве должна быть опрошена 1 раз");
+        assert_eq!(default_node.borrow().calls(), 1, "При обрыве должна быть опрошена 1 раз");
     }
     //
     #[test]

@@ -236,8 +236,7 @@ mod state_tests {
 #[cfg(test)]
 mod integration_tests {
     use std::{cell::RefCell, rc::Rc};
-
-use super::*;
+    use super::*;
     use crate::domain::unbounded;
     use sal_sync::services::entity::{PointHlr, Status, Cot};
     // Заглушка для имитации входящих метрик
@@ -275,12 +274,12 @@ use super::*;
             vec![("speed".to_string(), wrap(metric.clone()))],
         );
         // Такт 1: Запуск цикла (op_cycle = 1, speed = 1500.0)
-        metric.borrow_mut().set_str("1500.0");
+        metric.borrow_mut().set_str("1501.0");
         op_cycle.borrow_mut().set_int(1);
         node.out().unwrap();
         assert!(rx.try_recv().is_err(), "Отправки быть не должно, цикл активен");
         // Такт 2: Рабочий режим (op_cycle = 1, speed = 1550.0) - это значение должно стать финальным
-        metric.borrow_mut().set_str("1550.0");
+        metric.borrow_mut().set_str("1552.0");
         op_cycle.borrow_mut().set_int(1);
         node.out().unwrap();
         assert!(rx.try_recv().is_err(), "Отправки быть не должно, цикл активен");
@@ -291,6 +290,6 @@ use super::*;
         let sent_point = rx.try_recv()
             .expect("Данные должны быть отправлены по заднему фронту")
             .expect("Данные должны быть не None");
-        assert_eq!(sent_point.value().to_string(), "1550.0", "Узел обязан отправить финальный рабочий срез");
+        assert_eq!(sent_point.value().to_string(), "1552.0", "Узел обязан отправить финальный рабочий срез");
     }
 }

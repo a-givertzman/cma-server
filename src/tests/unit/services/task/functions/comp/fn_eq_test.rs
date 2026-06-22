@@ -1,10 +1,10 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
-use std::{cell::{Cell, RefCell}, rc::Rc, sync::Once};
+use std::{cell::RefCell, rc::Rc, sync::Once};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
-    services::task::{EvalCycleRef, FnEq, FnInput, FnOut},
+    services::task::{EvalCycle, EvalCycleRef, FnEq, FnInput, FnOut},
 };
 ///
 ///
@@ -34,14 +34,13 @@ fn test_bool() {
     let self_id = "test_bool";
     log::info!("{}", self_id);
     let mut target: bool;
-    let cycle = Rc::new(Cell::new(0));
+    let cycle = Rc::new(EvalCycle::new());
     let input1 = init_each("false", FnConfPointType::Bool, &cycle);
     let input2 = init_each("false", FnConfPointType::Bool, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
-        input1.clone(),
-        input2.clone(),
-    );
+        vec![input1.clone(), input2.clone()],
+    ).unwrap();
     let test_data = vec![
         (00, false, false),
         (01, false, true),
@@ -49,7 +48,7 @@ fn test_bool() {
         (03, true,  true),
     ];
     for (step, value1, value2) in test_data {
-        cycle.update(|c| c + 1);
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
@@ -69,14 +68,13 @@ fn test_int() {
     let self_id = "test_int";
     log::info!("{}", self_id);
     let mut target: bool;
-    let cycle = Rc::new(Cell::new(0));
+    let cycle = Rc::new(EvalCycle::new());
     let input1 = init_each("0", FnConfPointType::Int, &cycle);
     let input2 = init_each("0", FnConfPointType::Int, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
-        input1.clone(),
-        input2.clone(),
-    );
+        vec![input1.clone(), input2.clone()],
+    ).unwrap();
     let test_data = vec![
         (00, 1, 5),
         (01, 5, 1),
@@ -91,7 +89,7 @@ fn test_int() {
         (10, 0,  -4),
     ];
     for (step, value1, value2) in test_data {
-        cycle.update(|c| c + 1);
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
@@ -111,14 +109,13 @@ fn test_real() {
     let self_id = "test_real";
     log::info!("{}", self_id);
     let mut target: bool;
-    let cycle = Rc::new(Cell::new(0));
+    let cycle = Rc::new(EvalCycle::new());
     let input1 = init_each("0.0", FnConfPointType::Real, &cycle);
     let input2 = init_each("0.0", FnConfPointType::Real, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
-        input1.clone(),
-        input2.clone(),
-    );
+        vec![input1.clone(), input2.clone()],
+    ).unwrap();
     let test_data = vec![
         (01, 0.1, 0.1),
         (02, 0.2, 0.2),
@@ -142,7 +139,7 @@ fn test_real() {
         (20, 1.0, f32::MAX),
     ];
     for (step, value1, value2) in test_data {
-        cycle.update(|c| c + 1);
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
@@ -162,14 +159,13 @@ fn test_double() {
     let self_id = "test_double";
     log::info!("{}", self_id);
     let mut target: bool;
-    let cycle = Rc::new(Cell::new(0));
+    let cycle = Rc::new(EvalCycle::new());
     let input1 = init_each("0.0", FnConfPointType::Double, &cycle);
     let input2 = init_each("0.0", FnConfPointType::Double, &cycle);
     let mut fn_eq = FnEq::new(
         self_id,
-        input1.clone(),
-        input2.clone(),
-    );
+        vec![input1.clone(), input2.clone()],
+    ).unwrap();
     let test_data = vec![
         (01, 0.1, 0.1),
         (02, 0.2, 0.2),
@@ -193,7 +189,7 @@ fn test_double() {
         (20, 1.0, f64::MAX),
     ];
     for (step, value1, value2) in test_data {
-        cycle.update(|c| c + 1);
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
