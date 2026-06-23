@@ -2,6 +2,7 @@ use std::{
     fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}},
     thread::{self}, time::Duration,
 };
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ChangeNotify,
@@ -13,12 +14,10 @@ use sal_sync::{
     sync::{channel::{RecvTimeoutError, Sender}, Handles}, thread_pool::Scheduler,
 };
 use crate::{
-    conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf,
-    domain::{FxDashMap, RECV_TIMEOUT},
-    services::{
+    conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf, domain::{FxDashMap, RECV_TIMEOUT}, err_pass, services::{
         diagnosis::diag_point::DiagPoint,
         profinet_client::{profinet_db::ProfinetDb, s7::s7_client::S7Client},
-    },
+    }, sync::SendWrapper
 };
 ///
 /// 
@@ -97,6 +96,7 @@ impl ProfinetClient {
     }
     ///
     /// Reads data slice from the S7 device,
+    #[named]
     fn read(&self, tx_send: Sender<Point>, connection_notify: ConnectionNotify) -> Result<(), Error> {
         log::info!("{}.read | starting...", self.dbg);
         let dbg = self.dbg.clone();
@@ -105,21 +105,24 @@ impl ProfinetClient {
         let conf = self.conf.clone();
         let diagnosis = self.diagnosis.clone();
         log::info!("{}.read | Preparing thread...", dbg);
+        let mut dbs = FxIndexMap::default();
+        for (db_name, db_conf) in conf.dbs {
+            log::info!("{}.read | configuring DB: {:?}...", dbg, db_name);
+            let db = ProfinetDb::new(&dbg, txid, &db_conf)
+                .map_err(|err| err_pass!(dbg, err))?;
+            dbs.insert(db_name.clone(), db);
+            log::info!("{}.read | configuring DB: {:?} - ok", dbg, db_name);
+        }
+        let dbs = SendWrapper::wrap(dbs);
         let handle = self.scheduler.spawn(move || {
             let log_connected = ChangeNotify::builder(&dbg, Status::Invalid)
                 .on(Status::Ok,  |message| log::info!("{message}"))
                 .on(Status::Invalid, |message| log::warn!("{message}"))
                 .build();
-            let mut dbs = FxIndexMap::default();
-            for (db_name, db_conf) in conf.dbs {
-                log::info!("{}.read | configuring DB: {:?}...", dbg, db_name);
-                let db = ProfinetDb::new(&dbg, txid, &db_conf);
-                dbs.insert(db_name.clone(), db);
-                log::info!("{}.read | configuring DB: {:?} - ok", dbg, db_name);
-            }
+            let mut dbs = dbs.extract();
             let mut cycle = ServiceCycle::new(&dbg, conf.cycle);
             let mut client = S7Client::new(dbg.clone(), conf.ip.clone());
-            'main: while !exit.load(Ordering::Acquire) {
+            while !exit.load(Ordering::Acquire) {
                 match client.connect() {
                     Ok(_) => {
                         log_connected.add(Status::Ok, format!("{dbg}.read | Connection established"));
@@ -189,6 +192,7 @@ impl ProfinetClient {
     }
     ///
     /// Writes Point to the protocol (PROFINET device) specific address
+    #[named]
     fn write(&self, tx_send: Sender<Point>, connection_notify: ConnectionNotify) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let self_name = self.name.clone();
@@ -198,20 +202,23 @@ impl ProfinetClient {
         let services = self.services.clone();
         let diagnosis = self.diagnosis.clone();
         log::info!("{}.write | Preparing thread...", dbg);
+        let mut dbs = FxIndexMap::default();
+        let mut points: Vec<PointConf> = vec![];
+        for (db_name, db_conf) in conf.dbs {
+            log::info!("{}.write | configuring ProfinetDb: {:?}...", dbg, db_name);
+            let db = ProfinetDb::new(&dbg, txid, &db_conf)
+                .map_err(|err| err_pass!(dbg, err))?;
+            dbs.insert(db_name.clone(), db);
+            log::info!("{}.write | configuring ProfinetDb: {:?} - ok", dbg, db_name);
+            points.extend(db_conf.points());
+        }
+        let dbs = SendWrapper::wrap(dbs);
         let handle = self.scheduler.spawn(move || {
             let log_connected = ChangeNotify::builder(&dbg, false)
                 .on(true,  |message| log::info!("{}", message))
                 .on(false, |message| log::warn!("{}", message))
                 .build();
-            let mut dbs = FxIndexMap::default();
-            let mut points: Vec<PointConf> = vec![];
-            for (db_name, db_conf) in conf.dbs {
-                log::info!("{}.write | configuring ProfinetDb: {:?}...", dbg, db_name);
-                let db = ProfinetDb::new(&dbg, txid, &db_conf);
-                dbs.insert(db_name.clone(), db);
-                log::info!("{}.write | configuring ProfinetDb: {:?} - ok", dbg, db_name);
-                points.extend(db_conf.points());
-            }
+            let mut dbs = dbs.extract();
             let points = points.iter().map(|point_conf| {
                 SubscriptionCriteria::new(&point_conf.name, Cot::Act)
             }).collect::<Vec<SubscriptionCriteria>>();

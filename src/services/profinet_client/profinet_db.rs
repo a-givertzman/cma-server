@@ -1,13 +1,12 @@
 use std::{fs, io::Write};
 use chrono::Utc;
 use concat_string::concat_string;
+use function_name::named;
 use indexmap::IndexMap;
 use sal_core::error::{Error, ErrorLimit};
-use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
+use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointType, Status}, sync::channel::Sender};
 use crate::{
-    conf::profinet_client_conf::profinet_db_conf::ProfinetDbConf,
-    domain::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
-    services::profinet_client::{
+    conf::profinet_client_conf::profinet_db_conf::ProfinetDbConf, domain::filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold}, err_pass, services::profinet_client::{
         parse_point::ParsePoint,
         s7::{
             s7_client::S7Client,
@@ -37,18 +36,19 @@ impl ProfinetDb {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [ProfinetDB]
-    pub fn new(parent_id: impl Into<String>, txid: usize, conf: &ProfinetDbConf) -> Self {
+    #[named]
+    pub fn new(parent_id: impl Into<String>, txid: usize, conf: &ProfinetDbConf) -> Result<Self, Error> {
         let dbg = format!("{}/ProfinetDb({})", parent_id.into(), conf.name);
-        Self {
+        Ok(Self {
             // name: conf.name.clone(),
             // description: conf.description.clone(),
             number: conf.number as u32,
             offset: conf.offset as u32,
             size: conf.size as u32,
-            points: Self::configure_parse_points(&dbg, txid, conf),
+            points: Self::configure_parse_points(&dbg, txid, conf).map_err(|err| err_pass!(dbg, err))?,
             errors: ErrorLimit::new(3),
             dbg,
-        }
+        })
     }
     ///
     /// Writes Point's to the log file
@@ -222,29 +222,33 @@ impl ProfinetDb {
     }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(dbg: &str, txid: usize, conf: &ProfinetDbConf) -> IndexMap<String, Box<dyn ParsePoint>> {
-        conf.points.iter().map(|point_conf| {
-            match point_conf.type_ {
-                PointConfType::Bool => {
-                    (point_conf.name.clone(), Self::box_bool(txid, point_conf.name.clone(), point_conf))
+    #[named]
+    fn configure_parse_points(dbg: &str, txid: usize, conf: &ProfinetDbConf) -> Result<IndexMap<String, Box<dyn ParsePoint>>, Error> {
+        let mut parse_points = IndexMap::with_capacity(conf.points.len());
+        for point_conf in conf.points.iter() {
+            let (name, point) = match point_conf.type_ {
+                PointType::Bool => {
+                    (point_conf.name.clone(), Self::box_bool(dbg, txid, point_conf.name.clone(), point_conf).map_err(|err| err_pass!(dbg, err))?)
                 }
-                PointConfType::Int => {
+                PointType::Int => {
                     (point_conf.name.clone(), Self::box_int(txid, point_conf.name.clone(), point_conf))
                 }
-                PointConfType::Real => {
+                PointType::Real => {
                     (point_conf.name.clone(), Self::box_real(txid, point_conf.name.clone(), point_conf))
                 }
-                PointConfType::Double => {
+                PointType::Double => {
                     (point_conf.name.clone(), Self::box_real(txid, point_conf.name.clone(), point_conf))
                 }
                 _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for S7 Device", dbg, point_conf.type_)
-            }
-        }).collect()
+            };
+            parse_points.insert(name, point);
+        }
+        Ok(parse_points)
     }
     ///
     ///
-    fn box_bool(txid: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
-        Box::new(S7ParseBool::new(txid, name, config))
+    fn box_bool(parent: impl Into<String>, txid: usize, name: String, config: &PointConf) -> Result<Box<dyn ParsePoint>, Error> {
+        Ok(Box::new(S7ParseBool::new(parent, txid, name, config)?))
     }
     ///
     ///

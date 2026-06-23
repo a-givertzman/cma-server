@@ -1,10 +1,7 @@
-use sal_sync::services::entity::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     domain::FnOutRef,
-    services::task::{
-        EvalCycleRef, EvalCycle, FnFlow, FnKind, FnOut, FnResult
-    },
+    services::task::{CycleIndex, EvalCycleRef, FnFlow, FnKind, FnOut, FnResult},
 };
 ///
 /// ### Function | Evaluates Once per coaclulation cycle & Transparent for calculations
@@ -19,7 +16,7 @@ use crate::{
 pub struct FnEvalOnce {
     id: String,
     /// Локальное значение отработанного вычислительного цикла
-    cycle: usize,
+    cycle: CycleIndex,
     /// Значение текущего вычислительного цикла из `TaskNodes`
     eval_cycle: EvalCycleRef,
     /// Вычисления
@@ -36,7 +33,7 @@ impl FnEvalOnce {
     pub fn new(parent: impl Into<String>, eval_cycle: EvalCycleRef, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnEvalOnce{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
-            cycle: EvalCycle::START,
+            cycle: CycleIndex::new(),
             eval_cycle,
             input,
             state: Ok(None),
@@ -60,11 +57,9 @@ impl FnOut for FnEvalOnce {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let eval_cycle = self.eval_cycle.get();
-        if eval_cycle == self.cycle {
+        if !self.cycle.update(&self.eval_cycle.get()) {
             return self.state.clone();
         }
-        self.cycle = eval_cycle;
         match self.input.borrow_mut().out() {
             Ok(Some(v)) => {
                 self.state = FnResult::Ok(Some(v.clone()));

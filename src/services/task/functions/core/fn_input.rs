@@ -1,7 +1,6 @@
-use concat_string::concat_string;
 use sal_sync::services::{entity::{Point, PointHlr, Status, ToPoint}, task::functions::{FnConfPointType, FnConfig}, types::Bool};
 use std::{fmt::Debug, sync::atomic::{AtomicUsize, Ordering}};
-use crate::services::task::{EvalCycleRef, FnFlow, FnInOut};
+use crate::services::task::{CycleIndex, EvalCycleRef, FnFlow, FnInOut};
 
 use super::{FnIn, FnOut, FnKind, FnResult};
 ///
@@ -19,9 +18,9 @@ pub struct FnInput {
     status: Option<Status>,
     options_hash: String,
     /// Текущий номер вычислительного цикла, инкремнтируется в `TaskNodes` с каждым входом в `self.eval`
-    cycle: EvalCycleRef,
+    eval_cycle: EvalCycleRef,
     /// Локальное значение вычислительного цикла в котором было оновление
-    updated_at: usize,
+    cycle: CycleIndex,
 }
 //
 // 
@@ -60,14 +59,14 @@ impl FnInput {
             initial,
             status: conf.options.status,
             options_hash: conf.options.hash(),
-            cycle: cycle.clone(),
-            updated_at: usize::MAX,
+            eval_cycle: cycle.clone(),
+            cycle: CycleIndex::new(),
         }
     }
     ///
     /// ### Returns true if has new value
     fn is_new(&self) -> bool {
-        self.updated_at == self.cycle.get()
+        self.cycle == self.eval_cycle.get()
     } 
 }
 //
@@ -143,7 +142,7 @@ impl FnIn for FnInput {
             }
             PointType_::Any => point.clone(),
         };
-        self.updated_at = self.cycle.get();
+        self.cycle = self.eval_cycle.get();
         self.point = Some(point)
     }
     ///

@@ -1,11 +1,11 @@
+use function_name::named;
 use sal_core::error::Error;
 use sal_sync::{collections::FxIndexMap, services::{Services, entity::{Name, Point, PointHlr}, task::functions::FnConfig}};
 use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
     domain::{
         FnOutRef, PointMeta, format::{FormatPoint, Sufix}
-    },
-    services::task::{
+    }, err, err_pass, services::task::{
         FlowContext, FnFlow, functions::{FnBuilder, FnKind, FnOut, FnResult}, task_nodes::TaskNodes
     }
 };
@@ -48,27 +48,28 @@ impl FnSql {
     /// - `inputs`: Вектор входных сигналов, должен содержать не менее одного входа
     /// - `nodes`: Граф `TaskNodes`
     /// - `services`: Ссылка на контейнер всех сервисов
+    #[named]
     pub fn new(parent: impl Into<String>, conf: &FnConfig, nodes: &mut TaskNodes, services: Arc<Services>) -> Result<FnSql, Error> {
         let self_name = Name::new(parent, format!("FnSql{}", COUNT.fetch_add(1, Ordering::Relaxed)));
         let id = self_name.join();
-        let error = Error::new(&id, "new");
         let txid = nodes.txid();
         let sql = conf.param("sql")
-            .ok_or_else(|| error.err(format!("Can't find 'sql'")))?
+            .ok_or_else(|| err!(id, "Can't find 'sql'"))?
             .as_param();
         let sql = sql.conf.as_str()
-            .ok_or_else(|| error.err(format!("Wrong conf in 'sql': {:?}", sql.conf)))?;
-        let sql = FormatPoint::new(sql).map_err(|err| error.pass(err))?;
+            .ok_or_else(|| err!(id, "Wrong conf in 'sql': {:?}", sql.conf))?;
+        let sql = FormatPoint::new(sql).map_err(|err| err_pass!(id, err))?;
         let markers = sql.markers();
         let mut inputs = FxIndexMap::default();
         for (marker, (name, sufix)) in markers {
             log::trace!("{}.new | input name: {:?}", id, name);
-            let input_conf = conf.input_conf(&name).unwrap();
+            let input_conf = conf.input_conf(&name)
+                .map_err(|err| err_pass!(id, err, "Can't get input '{name}' conf"))?;
             inputs.insert(
                 marker, 
                 (
                     FnBuilder::new(&self_name, input_conf, nodes, services.clone())
-                        .map_err(|err| error.pass_with(format!("Can't build input '{name}'"), err))?,
+                        .map_err(|err| err_pass!(id, err, "Can't build input '{name}'"))?,
                     name,
                     sufix,
                 )
