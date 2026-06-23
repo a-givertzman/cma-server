@@ -294,12 +294,12 @@ mod s7_parse_bool_test {
     ///
     #[test]
     fn add_raw() {
-        fn to_be_bytes(bit: u8, v: bool) -> [u8; 1] {
-            let mut x: u8 = 0;
+        fn to_be_bytes(offset: usize, bit: u8, v: bool) -> Vec<u8> {
+            let mut buf = vec![0; offset + 1];
             if v {
-                x |= 1 << bit; // Установить в true (1)
+                buf[offset] |= 1 << bit; // Установить в true (1)
             }
-            x.to_be_bytes()
+            buf
         }
         DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
@@ -313,6 +313,7 @@ mod s7_parse_bool_test {
         // Таблица тестов
         // ----------------------------------------------------------------
         // Бит в котом режит наш bool
+        let offset = 2;
         let bit = 3;
         let test_data = [
             // ------------------------------------------------------------
@@ -320,31 +321,32 @@ mod s7_parse_bool_test {
             // ------------------------------------------------------------
             (
                 0,
-                &[][..],
+                vec![],
                 None,
                 "first packet broken -> no event",
-            ),            (
+            ),
+            (
                 1,
-                &to_be_bytes(bit, false)[..],
+                to_be_bytes(offset, bit, false),
                 Some((false, Status::Ok)),
                 "first value",
             ),
             (
                 2,
-                &to_be_bytes(bit, false)[..],
+                to_be_bytes(offset, bit, false),
                 None,
                 "value not changed",
             ),
             (
                 3,
-                &to_be_bytes(bit, true)[..],
+                to_be_bytes(offset, bit, true),
                 Some((true, Status::Ok)),
                 "value changed",
             ),
             (
                 4,
-                &to_be_bytes(bit, false)[..],
-                Some(( false, Status::Ok)),
+                to_be_bytes(offset, bit, false),
+                Some((false, Status::Ok)),
                 "value changed",
             ),
             // ------------------------------------------------------------
@@ -352,20 +354,20 @@ mod s7_parse_bool_test {
             // ------------------------------------------------------------
             (
                 8,
-                &[],
-                Some(( false, Status::Invalid)),
+                vec![0x00, 0x00], // Неполный пакет, не достает до offset = 2
+                Some((false, Status::Invalid)),
                 "slice too short -> Invalid",
             ),
             (
                 9,
-                &to_be_bytes(bit, false)[..],
-                Some(( false, Status::Ok)),
-                "normal value ->  false",
+                to_be_bytes(offset, bit, false),
+                Some((false, Status::Ok)),
+                "normal value -> false",
             ),
             (
                 10,
-                &[],
-                Some(( false, Status::Invalid)),
+                vec![],
+                Some((false, Status::Invalid)),
                 "empty slice -> error",
             ),
         ];
@@ -380,7 +382,7 @@ mod s7_parse_bool_test {
                 history: Default::default(),
                 alarm: Default::default(),
                 address: Some(PointConfAddress {
-                    offset: Some(0),
+                    offset: Some(offset as u32),
                     bit: Some(bit),
                 }),
                 filters: None,
@@ -391,7 +393,7 @@ mod s7_parse_bool_test {
         for (step, bytes, target, description) in test_data {
             log::debug!("{dbg} | step {step} | {description} | bytes: {:?}", bytes);
             let t = Instant::now();
-            let result = parse.add_raw(bytes, ts);
+            let result = parse.add_raw(&bytes, ts);
             log::debug!("{dbg} | step {step} | elapsed {:?}", t.elapsed());
             match (&result, &target) {
                 (None, None) => {}
