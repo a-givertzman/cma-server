@@ -80,7 +80,7 @@ impl S7ParseReal {
     /// | Some(v)     | Yes           | No             | Yes               | v            | last status   | Point  |
     /// | Some(v)     | Yes           | Yes            | Yes               | v            | new           | Point  |
     /// ```
-    fn to_point(&mut self, value: Option<f32>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
+    fn to_point(&mut self, value: Option<f32>, status: Status, ts: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
         // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.dbg, value_changed, status_changed);
@@ -100,18 +100,18 @@ impl S7ParseReal {
             value,
             status,
             Cot::Inf,
-            timestamp,
+            ts,
         )))
     }
     //
     //
-    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
+    fn add_raw(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
         let result = self.convert(bytes, self.offset.unwrap() as usize, 0);
         match result {
-            Ok(value) => self.to_point(Some(value), Status::Ok, timestamp),
+            Ok(value) => self.to_point(Some(value), Status::Ok, ts),
             Err(e) => {
                 log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
-                self.to_point(None, Status::Invalid, timestamp)
+                self.to_point(None, Status::Invalid, ts)
             }
         }
     }
@@ -120,12 +120,12 @@ impl S7ParseReal {
 //
 impl ParsePoint for S7ParseReal {
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp)
+    fn next(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, ts)
     }
     //
-    fn next_status(&mut self, status: Status) -> Option<Point> {
-        self.to_point(None, status, Utc::now())
+    fn next_status(&mut self, status: Status, ts: DateTime<Utc>) -> Option<Point> {
+        self.to_point(None, status, ts)
     }
     //
     fn address(&self) -> PointConfAddress {
