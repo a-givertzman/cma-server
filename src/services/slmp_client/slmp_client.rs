@@ -1,4 +1,5 @@
 use std::{fmt::Debug, net::TcpStream, sync::{atomic::{AtomicBool, AtomicU32, Ordering}, Arc}, thread::{self}, time::Duration};
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, kernel::state::ExitNotify, services::{
@@ -8,13 +9,10 @@ use sal_sync::{
     }, sync::{channel::Sender, Handles}, thread_pool::Scheduler
 };
 use crate::{
-    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
-    domain::{RECV_TIMEOUT, Mutex},
-    services::{
+    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf, domain::{Mutex, RECV_TIMEOUT}, err_pass, services::{
         diagnosis::diag_point::DiagPoint,
         slmp_client::{slmp_read::SlmpRead, slmp_write::SlmpWrite},
-    },
-    tcp::tcp_client_connect::TcpClientConnect,
+    }, tcp::tcp_client_connect::TcpClientConnect
      
 };
 ///
@@ -121,7 +119,7 @@ impl Debug for SlmpClient {
 //
 impl Service for SlmpClient {
     //
-    //
+    #[named]
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
@@ -142,31 +140,31 @@ impl Service for SlmpClient {
             Some(self.exit.clone()),
         );
         log::info!("{}.run | Preparing thread...", dbg);
+        let mut slmp_read = SlmpRead::new(
+            &dbg,
+            tx_id,
+            // self.name.clone(),
+            conf.clone(),
+            tx_send.clone(),
+            // diagnosis.clone(),
+            status.clone(),
+            scheduler.clone(),
+            exit.clone(),
+        ).map_err(|err| err_pass!(dbg, err))?;
+        let mut slmp_write = SlmpWrite::new(
+            &dbg,
+            tx_id,
+            // self.name.clone(),
+            conf.clone(),
+            tx_send.clone(),
+            // diagnosis.clone(),
+            services.clone(),
+            status,
+            scheduler.clone(),
+            exit.clone(),
+        ).map_err(|err| err_pass!(dbg, err))?;
         let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
-            let mut slmp_read = SlmpRead::new(
-                &dbg,
-                tx_id,
-                // self.name.clone(),
-                conf.clone(),
-                tx_send.clone(),
-                // diagnosis.clone(),
-                status.clone(),
-                scheduler.clone(),
-                exit.clone(),
-            );
-            let mut slmp_write = SlmpWrite::new(
-                &dbg,
-                tx_id,
-                // self.name.clone(),
-                conf.clone(),
-                tx_send.clone(),
-                // diagnosis.clone(),
-                services.clone(),
-                status,
-                scheduler.clone(),
-                exit.clone(),
-            );
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Ok, &tx_send);
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
             loop {

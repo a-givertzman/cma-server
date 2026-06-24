@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use sal_core::error::Error;
 use sal_sync::services::entity::{
-    Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status,
+    Cot, Point, PointConf, PointConfAddress, PointType, PointHlr, Status,
 };
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client::slmp::ParsePoint};
 ///
@@ -9,7 +9,7 @@ use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client
 #[derive(Debug)]
 pub struct SlmpParseReal {
     id: String,
-    type_: PointConfType,
+    typ: PointType,
     txid: usize,
     name: String,
     value: Box<dyn Filter<Item = f32> + Send>,
@@ -18,7 +18,6 @@ pub struct SlmpParseReal {
     // history: PointConfHistory,
     // alarm: Option<u8>,
     // comment: Option<String>,
-    timestamp: DateTime<Utc>,
 }
 //
 //
@@ -36,7 +35,7 @@ impl SlmpParseReal {
     ) -> SlmpParseReal {
         SlmpParseReal {
             id: format!("SlmpParseReal"),
-            type_: config.type_.clone(),
+            typ: config.type_.clone(),
             txid,
             value: filter,
             status: Box::new(FilterEmpty::<Status>::new(Some(Status::Invalid))),
@@ -45,7 +44,6 @@ impl SlmpParseReal {
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
-            timestamp: Utc::now(),
         }
     }
     //
@@ -88,7 +86,7 @@ impl SlmpParseReal {
     /// | Some(v)     | Yes           | No             | Yes               | v            | last status   | Point  |
     /// | Some(v)     | Yes           | Yes            | Yes               | v            | new           | Point  |
     /// ```
-    fn to_point(&mut self, value: Option<f32>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
+    fn to_point(&mut self, value: Option<f32>, status: Status, ts: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
         // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.dbg, value_changed, status_changed);
@@ -108,18 +106,18 @@ impl SlmpParseReal {
             value,
             status,
             Cot::Inf,
-            timestamp,
+            ts,
         )))
     }
     //
     //
-    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
+    fn add_raw(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
         let result = self.convert(bytes, self.offset.unwrap() as usize, 0);
         match result {
-            Ok(value) => self.to_point(Some(value), Status::Ok, timestamp),
+            Ok(value) => self.to_point(Some(value), Status::Ok, ts),
             Err(e) => {
                 log::warn!("SlmpParseReal.add_raw | convertion error: {:?}", e);
-                self.to_point(None, Status::Invalid, timestamp)
+                self.to_point(None, Status::Invalid, ts)
             }
         }
     }
@@ -129,18 +127,18 @@ impl SlmpParseReal {
 impl ParsePoint for SlmpParseReal {
     // //
     // //
-    // fn type_(&self) -> PointConfType {
+    // fn type_(&self) -> PointType {
     //     self.type_.clone()
     // }
     //
     //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp)
+    fn next(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, ts)
     }
     //
     //
-    fn next_status(&mut self, status: Status) -> Option<Point> {
-        self.to_point(None, status, Utc::now())
+    fn next_status(&mut self, status: Status, ts: DateTime<Utc>) -> Option<Point> {
+        self.to_point(None, status, ts)
     }
     //
     //
@@ -332,19 +330,19 @@ mod slmp_parse_real_test {
                 "first packet broken -> no event",
             ),            (
                 1,
-                &f32::to_be_bytes(0.0)[..],
+                &f32::to_le_bytes(0.0)[..],
                 Some((0.0, Status::Ok)),
                 "first value",
             ),
             (
                 2,
-                &f32::to_be_bytes(0.0)[..],
+                &f32::to_le_bytes(0.0)[..],
                 None,
                 "value not changed",
             ),
             (
                 3,
-                &f32::to_be_bytes(1.5)[..],
+                &f32::to_le_bytes(1.5)[..],
                 Some((1.5, Status::Ok)),
                 "value changed",
             ),
@@ -353,25 +351,25 @@ mod slmp_parse_real_test {
             // ------------------------------------------------------------
             (
                 4,
-                &f32::to_be_bytes(f32::MAX)[..],
+                &f32::to_le_bytes(f32::MAX)[..],
                 Some((f32::MAX, Status::Ok)),
                 "f32 MAX",
             ),
             (
                 5,
-                &f32::to_be_bytes(f32::MIN)[..],
+                &f32::to_le_bytes(f32::MIN)[..],
                 Some((f32::MIN, Status::Ok)),
                 "f32 MIN",
             ),
             (
                 6,
-                &f32::to_be_bytes(f32::INFINITY)[..],
+                &f32::to_le_bytes(f32::INFINITY)[..],
                 Some((f32::INFINITY, Status::Ok)),
                 "f32 INF",
             ),
             (
                 7,
-                &f32::to_be_bytes(f32::NEG_INFINITY)[..],
+                &f32::to_le_bytes(f32::NEG_INFINITY)[..],
                 Some((f32::NEG_INFINITY, Status::Ok)),
                 "f32 NEG_INF",
             ),
@@ -386,7 +384,7 @@ mod slmp_parse_real_test {
             ),
             (
                 9,
-                &f32::to_be_bytes(f32::NEG_INFINITY)[..],
+                &f32::to_le_bytes(f32::NEG_INFINITY)[..],
                 Some((f32::NEG_INFINITY, Status::Ok)),
                 "normal value -> f32::NEG_INFINITY",
             ),
@@ -398,7 +396,7 @@ mod slmp_parse_real_test {
             ),
             (
                 11,
-                &f32::to_be_bytes(f32::NAN)[..],
+                &f32::to_le_bytes(f32::NAN)[..],
                 None,
                 // Some((f32::NEG_INFINITY, Status::Ok)),
                 "NaN value",

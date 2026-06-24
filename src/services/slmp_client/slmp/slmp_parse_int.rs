@@ -1,20 +1,21 @@
 use chrono::{DateTime, Utc};
-use sal_core::error::Error;
+use function_name::named;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::entity::{
-    Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status,
+    Cot, Point, PointConf, PointConfAddress, PointType, PointHlr, Status,
 };
-use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client::slmp::ParsePoint};
+use crate::{domain::filter::filter::{Filter, FilterEmpty}, err, services::slmp_client::slmp::ParsePoint};
 ///
 /// Used for parsing configured point from slice of bytes read from device
 #[derive(Debug)]
 pub struct SlmpParseInt {
     id: String,
-    type_: PointConfType,
+    typ: PointType,
     txid: usize,
     name: String,
     value: Box<dyn Filter<Item = i64> + Send>,
     status: Box<dyn Filter<Item = Status> + Send>,
-    offset: Option<u32>,
+    offset: u32,
     // history: PointConfHistory,
     // alarm: Option<u8>,
     // comment: Option<String>,
@@ -26,25 +27,35 @@ impl SlmpParseInt {
     /// Size in the bytes in the Device address area
     const SIZE: usize = 2;
     ///
-    ///
+    /// ### Creates `SlmpParseInt` new instance
+    /// - `parent` - Идентификатор родительского сервиса (для отладки)
+    /// - `txid` - Идентификатор сервиса-отправителя сигнала (например родительский ProfinetClient)
+    /// - `name` - Ниаменование сигнала
+    /// - `conf` - Конфигурация сигнала
+    /// - `filter` - Фильтр значения сигнала
+    #[named]
     pub fn new(
+        parent: impl Into<String>,
         tx_id: usize,
         name: String,
-        config: &PointConf,
+        conf: &PointConf,
         filter: Box<dyn Filter<Item = i64> + Send>,
-    ) -> SlmpParseInt {
-        SlmpParseInt {
+    ) -> Result<SlmpParseInt, Error> {
+        let dbg = Dbg::new(parent, crate::domain::me::<Self>());
+        let addr = conf.address.clone().ok_or_else(|| err!(dbg, "Address is empty in '{name}'"))?;
+        let offset = addr.offset.ok_or_else(|| err!(dbg, "Address offset is empty in '{name}'"))?;
+        Ok(SlmpParseInt {
             id: format!("SlmpParseInt({})", name),
-            type_: config.type_.clone(),
+            typ: conf.type_.clone(),
             txid: tx_id,
             name,
             value: filter,
             status: Box::new(FilterEmpty::<Status>::new(Some(Status::Invalid))),
-            offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
+            offset,
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
-        }
+        })
     }
     //
     //
@@ -52,7 +63,6 @@ impl SlmpParseInt {
         &self,
         bytes: &[u8],
         start: usize,
-        _bit: usize,
     ) -> Result<i16, Error> {
         let value = bytes.get(start..(start + Self::SIZE))
             .and_then(|bytes| bytes.try_into().ok())
@@ -83,7 +93,7 @@ impl SlmpParseInt {
     /// | Some(v)     | Yes           | No             | Yes               | v            | last status   | Point  |
     /// | Some(v)     | Yes           | Yes            | Yes               | v            | new           | Point  |
     /// ```
-    fn to_point(&mut self, value: Option<i64>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
+    fn to_point(&mut self, value: Option<i64>, status: Status, ts: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
         // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.dbg, value_changed, status_changed);
@@ -103,18 +113,18 @@ impl SlmpParseInt {
             value,
             status,
             Cot::Inf,
-            timestamp,
+            ts,
         )))
     }
     //
     //
-    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        let result = self.convert(bytes, self.offset.unwrap() as usize, 0);
+    fn add_raw(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
+        let result = self.convert(bytes, self.offset as usize);
         match result {
-            Ok(value) => self.to_point(Some(value as i64), Status::Ok, timestamp),
+            Ok(value) => self.to_point(Some(value as i64), Status::Ok, ts),
             Err(e) => {
                 log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
-                self.to_point(None, Status::Invalid, timestamp)
+                self.to_point(None, Status::Invalid, ts)
             }
         }
     }
@@ -122,32 +132,22 @@ impl SlmpParseInt {
 //
 //
 impl ParsePoint for SlmpParseInt {
-    // //
-    // //
-    // fn type_(&self) -> PointConfType {
-    //     self.type_.clone()
-    // }
     //
-    //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp)
+    fn next(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, ts)
     }
     //
-    //
-    fn next_status(&mut self, status: Status) -> Option<Point> {
-        self.to_point(None, status, Utc::now())
+    fn next_status(&mut self, status: Status, ts: DateTime<Utc>) -> Option<Point> {
+        self.to_point(None, status, ts)
     }
-    //
     //
     fn address(&self) -> PointConfAddress {
-        PointConfAddress { offset: self.offset, bit: None }
+        PointConfAddress { offset: Some(self.offset), bit: None }
     }
-    //
     //
     fn size(&self) -> usize {
         Self::SIZE
     }
-    //
     //
     fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, Error> {
         match point.try_as_int() {
@@ -267,7 +267,7 @@ mod slmp_parse_int_test {
             // ------------------------------------------------------------
             (15, Some(-i64::MAX), ok, None),
         ];
-        let mut parse = SlmpParseInt::new(0, Name::new(&dbg, "SlmpParseInt").join(),
+        let mut parse = SlmpParseInt::new(&dbg, 0, Name::new(&dbg, "SlmpParseInt").join(),
             &PointConf {
                 id: 0,
                 name: Name::new(&dbg, "SlmpParseInt").join(),
@@ -277,7 +277,7 @@ mod slmp_parse_int_test {
                 filters: None, comment: None,
             },
             Box::new(FilterEmpty::<i64>::new(None)),
-        );
+        ).unwrap();
         let ts = Utc::now();
         for (step, input_value, input_status, target) in test_data {
             log::debug!("{dbg} | step {step} | input: {:?} {:?}", input_value, input_status);
@@ -336,19 +336,19 @@ mod slmp_parse_int_test {
                 "first packet broken -> no event",
             ),            (
                 1,
-                & i16::to_be_bytes(0)[..],
+                & i16::to_le_bytes(0)[..],
                 Some((0, Status::Ok)),
                 "first value",
             ),
             (
                 2,
-                & i16::to_be_bytes(0)[..],
+                & i16::to_le_bytes(0)[..],
                 None,
                 "value not changed",
             ),
             (
                 3,
-                & i16::to_be_bytes(2)[..],
+                & i16::to_le_bytes(2)[..],
                 Some((2, Status::Ok)),
                 "value changed",
             ),
@@ -357,25 +357,25 @@ mod slmp_parse_int_test {
             // ------------------------------------------------------------
             (
                 4,
-                & i16::to_be_bytes( i16::MAX)[..],
+                & i16::to_le_bytes( i16::MAX)[..],
                 Some(( i16::MAX, Status::Ok)),
                 " i16 MAX",
             ),
             (
                 5,
-                & i16::to_be_bytes( i16::MIN)[..],
+                & i16::to_le_bytes( i16::MIN)[..],
                 Some(( i16::MIN, Status::Ok)),
                 " i16 MIN",
             ),
             (
                 6,
-                & i16::to_be_bytes( i16::MAX)[..],
+                & i16::to_le_bytes( i16::MAX)[..],
                 Some(( i16::MAX, Status::Ok)),
                 " i16 INF",
             ),
             (
                 7,
-                & i16::to_be_bytes( i16::MIN)[..],
+                & i16::to_le_bytes( i16::MIN)[..],
                 Some(( i16::MIN, Status::Ok)),
                 " i16 NEG_INF",
             ),
@@ -390,7 +390,7 @@ mod slmp_parse_int_test {
             ),
             (
                 9,
-                & i16::to_be_bytes( i16::MIN)[..],
+                & i16::to_le_bytes( i16::MIN)[..],
                 Some(( i16::MIN, Status::Ok)),
                 "normal value ->  i16::MIN",
             ),
@@ -402,6 +402,7 @@ mod slmp_parse_int_test {
             ),
         ];
         let mut parse = SlmpParseInt::new(
+            &dbg,
             0,
             Name::new(&dbg, "SlmpParseInt").join(),
             &PointConf {
@@ -418,7 +419,7 @@ mod slmp_parse_int_test {
                 comment: None,
             },
             Box::new(FilterEmpty::<i64>::new(None)),
-        );
+        ).unwrap();
         let ts = Utc::now();
         for (step, bytes, target, description) in test_data {
             log::debug!("{dbg} | step {step} | {description} | bytes: {:?}", bytes);
@@ -441,13 +442,7 @@ mod slmp_parse_int_test {
                         target_status
                     );
                 }
-                _ => {
-                    panic!(
-                        "{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}",
-                        result,
-                        target
-                    );
-                }
+                _ => panic!("{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}", result, target),
             }
         }
         test_duration.exit();
