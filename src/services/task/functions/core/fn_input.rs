@@ -11,7 +11,7 @@ pub struct FnInput {
     kind: FnKind,
     name: String,
     typ: PointType_,
-    point: Option<Point>,
+    point: Result<Option<Point>, String>,
     #[allow(unused)]
     initial: Option<Point>,
     /// Фильтр входных евентов по статусу (из конфига), если задан, берем только евенты с указанным статусом, остальное игнорим
@@ -55,7 +55,7 @@ impl FnInput {
             kind: FnKind::Input,
             name: conf.name.clone(),
             typ,
-            point: initial.clone(), 
+            point: Ok(initial.clone()), 
             initial,
             status: conf.options.status,
             options_hash: conf.options.hash(),
@@ -81,69 +81,64 @@ impl FnIn for FnInput {
                 return
             }
         }
-        let point = match self.typ {
+        let point: Result<Point, String> = match self.typ {
             PointType_::Bool => {
                 match point {
-                    Point::Bool(_) => point.clone(),
-                    Point::Int(p) => Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0), p.status, p.cot, p.timestamp)),
-                    Point::Real(p) => Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
-                    Point::Double(p) => Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp)),
+                    Point::Bool(_) => Ok(point.clone()),
+                    Point::Int(p) => Ok(Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0), p.status, p.cot, p.timestamp))),
+                    Point::Real(p) => Ok(Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp))),
+                    Point::Double(p) => Ok(Point::Bool(PointHlr::new(p.txid, &p.name, Bool(p.value > 0.0), p.status, p.cot, p.timestamp))),
                     Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
-                        return;
+                        Err(format!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ))
                     }
                 }
             }
             PointType_::Int => {
                 match point {
-                    Point::Bool(p) => Point::Int(PointHlr::new(p.txid, &p.name, if p.value.0 {1} else {0}, p.status, p.cot, p.timestamp)),
-                    Point::Int(p) => Point::Int(PointHlr::new(p.txid, &p.name, p.value, p.status, p.cot, p.timestamp)),
+                    Point::Bool(p) => Ok(Point::Int(PointHlr::new(p.txid, &p.name, if p.value.0 {1} else {0}, p.status, p.cot, p.timestamp))),
+                    Point::Int(p) => Ok(Point::Int(PointHlr::new(p.txid, &p.name, p.value, p.status, p.cot, p.timestamp))),
                     Point::Real(_) | Point::Double(_) | Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
-                        return;
+                        Err(format!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ))
                     }
                 }
             }
             PointType_::Real => {
                 match point {
-                    Point::Bool(p) => Point::Real(PointHlr::new(p.txid, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp)),
-                    Point::Int(p) => Point::Real(PointHlr::new(p.txid, &p.name, p.value as f32, p.status, p.cot, p.timestamp)),
-                    Point::Real(_) => point.clone(),
+                    Point::Bool(p) => Ok(Point::Real(PointHlr::new(p.txid, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp))),
+                    Point::Int(p) => Ok(Point::Real(PointHlr::new(p.txid, &p.name, p.value as f32, p.status, p.cot, p.timestamp))),
+                    Point::Real(_) => Ok(point.clone()),
                     Point::Double(_) | Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
-                        return;
+                        Err(format!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ))
                     }
                 }
             }
             PointType_::Double => {
                 match point {
-                    Point::Bool(p) => Point::Double(PointHlr::new(p.txid, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp)),
-                    Point::Int(p) => Point::Double(PointHlr::new(p.txid, &p.name, p.value as f64, p.status, p.cot, p.timestamp)),
-                    Point::Real(p) => Point::Double(PointHlr::new(p.txid, &p.name, p.value as f64, p.status, p.cot, p.timestamp)),
-                    Point::Double(_) => point.clone(),
+                    Point::Bool(p) => Ok(Point::Double(PointHlr::new(p.txid, &p.name, if p.value.0 {1.0} else {0.0}, p.status, p.cot, p.timestamp))),
+                    Point::Int(p) => Ok(Point::Double(PointHlr::new(p.txid, &p.name, p.value as f64, p.status, p.cot, p.timestamp))),
+                    Point::Real(p) => Ok(Point::Double(PointHlr::new(p.txid, &p.name, p.value as f64, p.status, p.cot, p.timestamp))),
+                    Point::Double(_) => Ok(point.clone()),
                     Point::String(_) | Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
-                        return;
+                        Err(format!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ))
                     }
                 }
             }
             PointType_::String => {
                 match point {
-                    Point::Bool(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
-                    Point::Int(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
-                    Point::Real(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
-                    Point::Double(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp)),
-                    Point::String(p) => Point::String(PointHlr::new(p.txid, &p.name, p.value.clone(), p.status, p.cot, p.timestamp)),
+                    Point::Bool(p) => Ok(Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))),
+                    Point::Int(p) => Ok(Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))),
+                    Point::Real(p) => Ok(Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))),
+                    Point::Double(p) => Ok(Point::String(PointHlr::new(p.txid, &p.name, p.value.to_string(), p.status, p.cot, p.timestamp))),
+                    Point::String(p) => Ok(Point::String(PointHlr::new(p.txid, &p.name, p.value.clone(), p.status, p.cot, p.timestamp))),
                     Point::Bytes(_) => {
-                        log::error!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ);
-                        return;
+                        Err(format!("{}.add | Error. Incompatible Type '{:?}', '{:?}' expected", self.dbg, point.typ(), self.typ))
                     }
                 }
             }
-            PointType_::Any => point.clone(),
+            PointType_::Any => Ok(point.clone()),
         };
         self.cycle = self.eval_cycle.get();
-        self.point = Some(point)
+        self.point = point.map(|p| Some(p));
     }
     ///
     /// Returns a hash of the `FnInput`
@@ -170,17 +165,18 @@ impl FnOut for FnInput {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         log::trace!("{}.out | value: {:?}", self.dbg, &self.point);
         match self.point.as_ref() {
-            Some(point) => if self.is_new() {
+            Ok(Some(point)) => if self.is_new() {
                 Ok(Some(FnFlow::New(point.clone())))
             } else {
                 Ok(Some(FnFlow::Old(point.clone())))
             },
-            None => Ok(None),   //FnResult::Err(concat_string!(self.dbg, ".out | Not initialized")),
+            Ok(None) => Ok(None),   //FnResult::Err(concat_string!(self.dbg, ".out | Not initialized")),
+            Err(err) => Err(err.clone()),
         }
     }
     //
     fn reset(&mut self) {
-        self.point = self.initial.clone();
+        self.point = Ok(self.initial.clone());
     }
 }
 //

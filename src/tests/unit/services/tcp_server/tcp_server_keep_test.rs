@@ -58,7 +58,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let conf = format!(r#"
             service TcpServer:
                 cycle: 10 ms
@@ -153,7 +153,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let tcp_port = TestSession::free_tcp_port_str();
         let tcp_addr = format!("127.0.0.1:{}", tcp_port);
         let conf = format!(r#"

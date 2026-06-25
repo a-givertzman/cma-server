@@ -43,7 +43,7 @@ fn reply() {
         ConfTree::empty()//new_root(serde_yaml::from_str(r#"
         // retain:
         // "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     let mq_conf = serde_yaml::from_str(&format!(r#"
         service MultiQueue:
             wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time

@@ -1,3 +1,4 @@
+use sal_sync::services::{PointRegistry, PointRegistryConf, RegistryConf, entity::{PointConf, PointConfHistory, PointType}};
 #[cfg(test)]
 
 use sal_sync::{services::{
@@ -43,10 +44,16 @@ fn structure() {
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-            retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
+        ConfTree::empty(),
+    ), Some(tp.scheduler()))
+        .unwrap()
+        .with_point_registry(PointRegistry::new(dbg, RegistryConf::default(), Some(tp.scheduler())).unwrap()
+        .with_registry([("/path/Point.Name".into(), vec![PointConf {
+            id: 123,
+            name: "/path/Point.Name".into(),
+            type_: PointType::Bool, history: PointConfHistory::None,
+            alarm: None, address: None, filters: None, comment: None,
+        }])])));
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
@@ -130,10 +137,10 @@ fn transfer() {
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-            retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
+        ConfTree::empty(),
+    ), Some(tp.scheduler()))
+        .unwrap()
+        .with_point_registry(PointRegistry::new(dbg, RegistryConf::default(), Some(tp.scheduler())).unwrap()));
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",

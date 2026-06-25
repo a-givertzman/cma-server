@@ -50,7 +50,7 @@ impl ServiceTestPlanner {
         each_sent: Vec<impl Fn(&Point) + Send + Sync + 'static>,
         each_received: Vec<impl Fn(&Vec<Point>) + Send + Sync + 'static>,
         all_received: impl Fn(Vec<Vec<Point>>) + Send + Sync + 'static,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let parent = parent.into();
         let name = Name::new(&parent, "ServiceTestPlanner");
         let dbg = Dbg::new(&parent, name.me());
@@ -58,13 +58,14 @@ impl ServiceTestPlanner {
         let tp = ThreadPool::new(&parent, tread_pool);
         let services = conf.get("services").expect(&format!("{dbg}.run | `services` not foind in the config or has wrong value"));
         let services = ServicesConf::new(&parent, services);
-        let services = Arc::new(Services::new(&parent, services, Some(tp.scheduler())));
+        let services = Arc::new(Services::new(&parent, services, Some(tp.scheduler()))
+            .map_err(|err| Error::new(&dbg, "new").pass(err))?);
         let events: Vec<Vec<(String, Value)>> = events
             .into_iter()
             .map(|events| {
                 events.into_iter().rev().map(|(name, value)| (name.into(), value)).collect()
             }).collect();
-        Self {
+        Ok(Self {
             name,
             conf,
             tp,
@@ -82,7 +83,7 @@ impl ServiceTestPlanner {
             }).collect(),
             inspect_all_received: Arc::new(Box::new(all_received)),
             dbg,
-        }
+        })
     }
     ///
     /// Returns [Scheduler] from internal [ThreadPool]

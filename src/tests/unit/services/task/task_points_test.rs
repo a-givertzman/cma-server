@@ -42,7 +42,7 @@ fn points() {
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
     services.insert(task.clone());
     let target  = 3;

@@ -5,7 +5,7 @@ use sal_sync::{services::{Service, Services, conf::{ConfTree, ServicesConf}, ent
 use testing::entities::test_value::Value;
 use std::{cell::RefCell, collections::HashMap, fmt::{Debug, Display}, rc::Rc, sync::{Arc, Once, atomic::{AtomicBool, AtomicUsize, Ordering}}, thread::{self}};
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::services::task::{FlowContext, FnKind, FnResult, TaskConf, TaskEvalNode, TaskNodes};
+use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, services::task::{FlowContext, FnKind, FnResult, TaskConf, TaskEvalNode, TaskNodes}};
 ///
 ///
 static INIT: Once = Once::new();
@@ -50,7 +50,7 @@ fn manual_eval() {
             let Var3:
                 input: point int '/path/Point.Name3'
             fn Debug:
-                input fn SqlMetric:
+                input fn Sql:
                     initial: 0.123      # начальное значение
                     table: table_name
                     sql: "{input.value}, {input1.value}, {input2.value}, {input3.value}"
@@ -74,7 +74,7 @@ fn manual_eval() {
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
-    ), None));
+    ), None).unwrap());
     let mock_service = Arc::new(MockService::new(dbg, "queue"));
     services.insert(mock_service.clone());
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
@@ -82,31 +82,31 @@ fn manual_eval() {
         (
             "/path/Point.Name1", 101,
             [
-                ("SqlMetric", "101, 1102, 0, 0"),
-                ("FnCount", "1"),
+                ("Sql", "101, 1102, 0, 0"),
+                ("FnCount", "0"),
                 ("FnGe", "---"),
             ]
         ),
         (
             "/path/Point.Name1", 201,
             [
-                ("SqlMetric", "201, 1202, 0, 0"),
-                ("FnCount", "1"),
+                ("Sql", "201, 1202, 0, 0"),
+                ("FnCount", "0"),
                 ("FnGe", "---"),
             ]
         ),
         (
             "/path/Point.Name1", 301,
             [
-                ("SqlMetric", "301, 1302, 0, 0"),
-                ("FnCount", "1"),
+                ("Sql", "301, 1302, 0, 0"),
+                ("FnCount", "0"),
                 ("FnGe", "---"),
             ]
         ),
         (
             "/path/Point.Name2", 202,
             [
-                ("SqlMetric", "301, 1302, 202, 0"),
+                ("Sql", "301, 1302, 202, 0"),
                 ("FnCount", "---"),
                 ("FnGe", "true"),
             ]
@@ -114,7 +114,7 @@ fn manual_eval() {
         (
             "/path/Point.Name3", 303,
             [
-                ("SqlMetric", "301, 1302, 202, 303"),
+                ("Sql", "301, 1302, 202, 303"),
                 ("FnCount", "---"),
                 ("FnGe", "false"),
             ]
@@ -122,7 +122,7 @@ fn manual_eval() {
         (
             "/path/Point.Name3", 304,
             [
-                ("SqlMetric", "301, 1302, 202, 304"),
+                ("Sql", "301, 1302, 202, 304"),
                 ("FnCount", "---"),
                 ("FnGe", "false"),
             ]
@@ -155,7 +155,7 @@ fn manual_eval() {
                                 let out_name = out.name();
                                 log::debug!("TaskEvalNode.eval | out.name: '{}'", out_name);
                                 let target = match out_name {
-                                    x if x.contains("SqlMetric") => target_value[0].1,
+                                    x if x.contains("Sql") => target_value[0].1,
                                     x if x.contains("FnCount") => target_value[1].1,
                                     x if x.contains("FnGe") => target_value[2].1,
                                     _ => panic!("TaskEvalNode.eval | unexpected function {out_name}")
@@ -180,7 +180,7 @@ fn eval() {
     DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
-    let dbg = "eval";
+    let dbg = "TaskNodes-test-eval";
     log::debug!("{dbg}");
     let self_name = Name::new("", dbg);
     let mut task_nodes = TaskNodes::without_retain(dbg, 0);
@@ -195,9 +195,7 @@ fn eval() {
             let Var3:
                 input: point int '/path/Point.Name3'
             fn Debug:
-                input fn SqlMetric:
-                    initial: 0.123      # начальное значение
-                    table: table_name
+                input fn Sql:
                     sql: "{input.value}, {input1.value}, {input2.value}, {input3.value}"
                     input let Var1:
                         input: point int '/path/Point.Name1'
@@ -219,63 +217,70 @@ fn eval() {
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
-    ), None));
+    ), None).unwrap());
     let mock_service = Arc::new(MockService::new(dbg, "queue"));
     services.insert(mock_service.clone());
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
     let test_data = vec![
         (
+            00,
             "/path/Point.Name1", 101,
             [
-                ("SqlMetric", "101, 1102, 0, 0"),
-                ("FnCount", "1"),
+                ("Sql", "101, 1102, 0, 0"),
+                ("FnCount", "0"),
                 ("FnGe", "---"),
             ]
         ),
         (
+            01,
             "/path/Point.Name1", 201,
             [
-                ("SqlMetric", "201, 1202, 0, 0"),
-                ("FnCount", "1"),
+                ("Sql", "201, 1202, 0, 0"),
+                ("FnCount", "0"),
                 ("FnGe", "---"),
             ]
         ),
         (
+            02,
             "/path/Point.Name1", 301,
             [
-                ("SqlMetric", "301, 1302, 0, 0"),
-                ("FnCount", "1"),
+                ("Sql", "301, 1302, 0, 0"),
+                ("FnCount", "0"),
                 ("FnGe", "---"),
             ]
         ),
         (
+            03,
             "/path/Point.Name2", 202,
             [
-                ("SqlMetric", "301, 1302, 202, 0"),
+                ("Sql", "301, 1302, 202, 0"),
                 ("FnCount", "---"),
                 ("FnGe", "true"),
             ]
         ),
         (
+            04,
             "/path/Point.Name3", 303,
             [
-                ("SqlMetric", "301, 1302, 202, 303"),
+                ("Sql", "301, 1302, 202, 303"),
                 ("FnCount", "---"),
                 ("FnGe", "false"),
             ]
         ),
         (
+            05,
             "/path/Point.Name3", 304,
             [
-                ("SqlMetric", "301, 1302, 202, 304"),
+                ("Sql", "301, 1302, 202, 304"),
                 ("FnCount", "---"),
                 ("FnGe", "false"),
             ]
         ),
         (
+            06,
             "/path/Point.Unknown", 1111,
             [
-                ("SqlMetric", "301, 1302, 202, 304"),
+                ("Sql", "301, 1302, 202, 304"),
                 ("FnCount", "---"),
                 ("FnGe", "false"),
             ]
@@ -283,34 +288,39 @@ fn eval() {
     ];
     mock_service.run().unwrap();
     let flow = FlowContext::new();
-    for (name, value, target_value) in test_data {
+    for (step, name, value, target_value) in test_data {
         let point = value.to_point(0, name);
         // let inputName = &point.name();
-        log::debug!("input point name: {:?}  value: {:?}", name, value);
+        log::debug!("{dbg} | step {step}: '{name}': {:?}", value);
         task_nodes.eval(point);
         // Теперь заглядываем под капот только для снятия показаний
         match task_nodes.get_eval_node(&name) {
             Some(eval_node) => {
                 for eval_node_out in eval_node.borrow().get_outs() {
                     let out = flow.ignore(eval_node_out.borrow_mut().out());
-                    if let Ok(Some(out)) = out {
-                        let out_value = out.value().to_string();
-                        let out_name = out.name();
-                        if eval_node_out.borrow().kind() != FnKind::Var {
-                            let target = match out_name {
-                                x if x.contains("SqlMetric") => target_value[0].1,
-                                x if x.contains("FnCount") => target_value[1].1,
-                                x if x.contains("FnGe") => target_value[2].1,
-                                _ => panic!("TaskEvalNode.eval | unexpected function {out_name}")
-                            };
-                            assert!(out_value == target, "\n   outValue: {} \ntargetValue: {}", out_value, target);
+                    match out {
+                        Ok(Some(out)) => {
+                            let out_value = out.value().to_string();
+                            let out_name = out.name();
+                            log::debug!("{dbg} | step {step}: Node '{}': out_value: {:?}", out_name, out_value);
+                            if eval_node_out.borrow().kind() != FnKind::Var {
+                                let target = match &out_name {
+                                    x if x.contains("Sql") => target_value[0].1,
+                                    x if x.contains("FnCount") => target_value[1].1,
+                                    x if x.contains("FnGe") => target_value[2].1,
+                                    _ => panic!("{dbg} | step {step}: unexpected function {out_name}")
+                                };
+                                assert!(out_value == target, "{dbg} | step {step}: Node '{}':\n   outValue: {} \ntargetValue: {}", out_name, out_value, target);
+                            }
                         }
+                        Ok(None) => log::warn!("{dbg} | step {step}: '{name}':  {:?}, out_value: None", value),
+                        Err(err) => log::warn!("{dbg} | step {step}: '{name}':  {:?}, out_value: {:?}", value, err),
                     }
                 }
             }
             None => {
                 if !["/path/Point.Unknown"].contains(&name) {
-                    panic!("Входной сигнал '{name}' не найден в конфиге, но пришел на вход вычислений. Проверьте имя или добавьте в конфиг или уберите из входящих");
+                    panic!("{dbg} | step {step}: Входной сигнал '{name}' не найден в конфиге, но пришел на вход вычислений. Проверьте имя или добавьте в конфиг или уберите из входящих");
                 }
             }
         }
@@ -350,7 +360,7 @@ fn test_state_retention() {
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
-    ), None));
+    ), None).unwrap());
     let mock_service = Arc::new(MockService::new(dbg, "queue"));
     services.insert(mock_service.clone());
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
@@ -387,7 +397,10 @@ fn poisoned_data() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let dbg = "poisoned_data";
-    let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::new_root(serde_yaml::from_str("retain:").unwrap())), None));
+    let services = Arc::new(Services::new(
+        dbg,
+        ServicesConf::new(dbg, ConfTree::new_root(serde_yaml::from_str("retain:").unwrap())),
+        None).unwrap());
     let mut task_nodes = TaskNodes::without_retain(dbg, 0);
     let conf = serde_yaml::from_str(r#"
         service Task Task1:
@@ -416,10 +429,10 @@ fn poisoned_data() {
     for out in node.borrow().get_outs() {
         let result = flow.ignore(out.borrow_mut().out());
         // Движок должен честно сказать, что математика не сошлась, но остаться в живых
-        assert!(matches!(result, FnResult::Ok(Some(_))), "Узел должен вернуть FnResult(Point {{Status::Invalid}}) при мусорных входных данных: \nresult: {:?} \ntarget: FnResult::Ok(_)", result);
-        let result = result.unwrap().unwrap().status();
-        let target = Status::Invalid;
-        assert!(result == result, "Узел должен вернуть FnResult(Point {{Status::Invalid}}) при мусорных входных данных: \nresult: {:?} \ntarget: {:?}", result, target);
+        assert!(matches!(result, Err(_)), "Узел должен вернуть Err(error message) при мусорных входных данных: \nresult: {:?} \ntarget: Err(_)", result);
+        // let result = result.unwrap().unwrap().status();
+        // let target = Status::Invalid;
+        // assert!(result == target, "Узел должен вернуть FnResult(Point {{Status::Invalid}}) при мусорных входных данных: \nresult: {:?} \ntarget: {:?}", result, target);
     }
 }
 ///
@@ -456,7 +469,7 @@ fn every_logic() {
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
         ConfTree::new_root(serde_yaml::from_str("retain:").unwrap()),
-    ), None));
+    ), None).unwrap());
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
     // Сценарий проверки
     // 1. Отправляем /path/Point.A
@@ -480,7 +493,7 @@ fn every_logic() {
 
     let spec_node = task_nodes.get_eval_node("/path/Point.A").unwrap();
     let spec_out = get_first_out_value(dbg, spec_node);
-    assert_eq!(spec_out, Some(Value::Int(20)), "Специфичный узел НЕ должен реагировать на Point.B");
+    assert_eq!(spec_out, Some(Value::Int(10)), "Специфичный узел НЕ должен реагировать на Point.B");
     let spec_node = task_nodes.get_eval_node("/path/Point.B").unwrap();
     let spec_out = get_first_out_value(dbg, spec_node);
     assert_eq!(spec_out, Some(Value::Int(20)), "Специфичный узел должен реагировать на Point.B");
@@ -569,12 +582,14 @@ impl Service for MockService {
         let rx_recv = self.rx_recv.take().unwrap();
         let handle = thread::Builder::new().name(format!("{}.run", self_id)).spawn(move || {
             loop {
-                match rx_recv.recv() {
+                match rx_recv.recv_timeout(RECV_TIMEOUT) {
                     Ok(point) => {
                         log::debug!("{}.run | received: {:?}", self_id, point);
                     }
+                    Err(RecvTimeoutError::Timeout) => {}
                     Err(err) => {
                         log::warn!("{}.run | error: {:?}", self_id, err);
+                        break;
                     }
                 }
                 if exit.load(Ordering::SeqCst) {

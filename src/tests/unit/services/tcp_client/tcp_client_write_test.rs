@@ -87,7 +87,7 @@ mod tcp_client {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let multi_queue = Arc::new(MockMultiQueue::new(dbg, "", None));
         let tcp_client = Arc::new(TcpClient::new(conf, services.clone(), tp.scheduler()));
         let tcp_client_service_id = tcp_client.name().join();

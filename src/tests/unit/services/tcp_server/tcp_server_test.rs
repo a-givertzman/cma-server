@@ -54,7 +54,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -154,7 +154,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms

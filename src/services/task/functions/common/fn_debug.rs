@@ -60,12 +60,12 @@ impl FnOut for FnDebug {
             match flow.ignore(input.borrow_mut().out()) {
                 Ok(Some(v)) => {
                     log::debug!(
-                        "{}.out | Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
+                        "{}.out | {name}: Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
                         self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.ts().format("%H:%M:%S%.3f")
                     );
                 }
-                Ok(None) => log::error!("{}.out | None on input '{}'", self.id, name),
-                Err(err) => log::error!("{}.out | Error on input '{}': {:?}", self.id, name, err),
+                Ok(None) => log::warn!("{}.out | '{name}': None", self.id),
+                Err(err) => log::error!("{}.out | '{name}': {:?}", self.id, err),
             }
         }
         Ok(None)

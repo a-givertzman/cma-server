@@ -149,7 +149,7 @@ fn reject() {
                 point:
                     path: point/id.json
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     //
     // Configuring Receiver
     let conf = serde_yaml::from_str(&format!(r#"
@@ -261,7 +261,7 @@ fn request_auth_secret() {
                 point:
                     path: point/id.json
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     //
     // Configuring Receiver
     let conf = serde_yaml::from_str(&format!(r#"
@@ -426,7 +426,7 @@ fn request_points() {
                 point:
                     path: point/id.json
         "#).unwrap()),
-    ),Some(tp.scheduler())));
+    ),Some(tp.scheduler())).unwrap());
     //
     // Configuring Receiver
     let recv_limit = test_items_count * 2;
@@ -642,7 +642,7 @@ fn request_subscribe() {
                 point:
                     path: point/id.json
         "#).unwrap()),
-    ),Some(tp.scheduler())));
+    ),Some(tp.scheduler())).unwrap());
     //
     // Configuring Receiver
     let recv_limit = test_items_count * 2;
@@ -772,7 +772,7 @@ fn auth_ssh() {
                 point:
                     path: point/id.json
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     let conf = serde_yaml::from_str(&format!(r#"
         service MultiQueue:
             in queue in-queue:

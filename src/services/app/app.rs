@@ -44,7 +44,10 @@ impl App {
         let conf = self.conf.clone();
         let self_name = conf.name.clone();
         let thread_pool = ThreadPool::new(&dbg, conf.tread_pool);
-        let services = Arc::new(Services::new(&dbg, conf.services.clone(), Some(thread_pool.scheduler())));
+        let services = Arc::new(
+            Services::new(&dbg, conf.services.clone(), Some(thread_pool.scheduler()))
+                .map_err(|err| err_pass!(dbg, err))?
+        );
         log::info!("{dbg}.run |     Configuring services...");
         let services_factory = ServicesFactory::new(&self_name);
         for (node_keywd, node_conf) in conf.nodes {

@@ -76,9 +76,10 @@ impl FnOut for FnAdd {
     //
     #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let inputs: Vec<FnResult<FnFlow, String>> = self.inputs.iter().map(|input| {
-            input.borrow_mut().out()
-        }).collect();
+        let mut inputs = Vec::with_capacity(self.inputs.len());
+        for input in self.inputs.iter() {
+            inputs.push(input.borrow_mut().out());
+        }
         let mut flow = FlowContext::new();
         let mut has_real = false;
         let mut has_double = false;

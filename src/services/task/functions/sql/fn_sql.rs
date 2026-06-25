@@ -110,12 +110,16 @@ impl FnOut for FnSql {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let inputs: FxIndexMap<&String, (FnResult<FnFlow, String>, &String, &Sufix)> = self.inputs.iter().map(|(marker, (input, name, sufix))| {
-            (marker, (input.borrow_mut().out(), name, sufix))
-        }).collect();
+        let mut inputs = Vec::with_capacity(self.inputs.len());
+        for (marker, (input, name, _sufix)) in &self.inputs {
+            inputs.push((marker, (input.borrow_mut().out(), name)));
+        }
+        // let inputs: FxIndexMap<&String, (FnResult<FnFlow, String>, &String, &Sufix)> = self.inputs.iter().map(|(marker, (input, name, sufix))| {
+        //     (marker, (input.borrow_mut().out(), name, sufix))
+        // }).collect();
         let mut flow = FlowContext::new();
         let mut meta = PointMeta::default();
-        for (marker, (input, name, _sufix)) in inputs {
+        for (marker, (input, name)) in inputs {
             // log::trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
             log::trace!("{}.out | input: {:?} - found", self.id, name);
             let Some(input) = flow.map(input)? else { return Ok(None) };

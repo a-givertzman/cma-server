@@ -53,7 +53,7 @@ fn int() {
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     nodes.build_nodes(&self_name, &conf, services).unwrap();
     // log::debug!("taskNodes: {:?}", nodes);
     let test_data = vec![
@@ -134,7 +134,7 @@ fn real() {
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     nodes.build_nodes(&self_name, &conf, services).unwrap();
     // log::debug!("taskNodes: {:?}", nodes);
     let test_data = vec![
@@ -224,7 +224,7 @@ fn double() {
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
-    ), None));
+    ), None).unwrap());
     nodes.build_nodes(&self_name, &conf, services).unwrap();
     // log::trace!("taskNodes: {:?}", nodes);
     let test_data = vec![

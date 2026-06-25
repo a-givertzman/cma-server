@@ -61,7 +61,7 @@ fn random_i16() {
                 point:
                     path: point/id.json
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     let path = "./src/tests/unit/services/udp_client/udp-client.yaml";
     let conf = UdpClientConf::read(dbg, path);
     let udp_client = Arc::new(UdpClient::new(conf, services.clone(), tp.scheduler()));
