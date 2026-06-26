@@ -3549,6 +3549,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
+name = "oneshot"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe21416a02c693fb9f980befcb230ecc70b0b3d1cc4abf88b9675c4c1457f0c"
+
+[[package]]
 name = "option-ext"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4470,7 +4476,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.2"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.2#a726a889fbbfb046f84df62bd2b34a5732b22ab4"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.2#6d5c60340afed05c904b1bfcf9a6537fd6e5593d"
 dependencies = [
  "api-tools",
  "arc-swap",
@@ -4488,6 +4494,7 @@ dependencies = [
  "kanal",
  "lexical",
  "log",
+ "oneshot",
  "parking_lot",
  "rand 0.9.4",
  "regex",
