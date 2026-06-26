@@ -34,7 +34,7 @@ fn exiting() {
         for i in 0..10 {
             log::info!("thread | iteration: {}", i);
         }
-        std::thread::sleep(Duration::from_secs(3));
+        std::thread::sleep(Duration::from_millis(100));
         drop(send);
         log::info!("thread | Finished");
     });
@@ -51,7 +51,7 @@ fn exiting() {
         }
     }
     log::info!("{dbg} | loop | exited");
-    std::thread::sleep(Duration::from_millis(3000));
+    std::thread::sleep(Duration::from_millis(100));
     handler.join().unwrap();
     // assert!(result == target, "\nresult: {:?}\ntarget: {:?}", result, target);
 }

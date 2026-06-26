@@ -209,7 +209,7 @@ fn reject() {
     mq_service.run().unwrap();
     tcp_server.run().unwrap();
     println!("{} | All services - are executed", dbg);
-    thread::sleep(Duration::from_millis(1000));
+    thread::sleep(Duration::from_millis(300));
     //
     // Sending tcp test events / receiver must not receive anything before subscription activated
     println!("{} | Sending tcp test events - to be rejected (not authenticated)", dbg);
@@ -219,7 +219,7 @@ fn reject() {
         request.push(JDS_END_OF_TRANSMISSION);
         tcp_stream.write_all(&request).unwrap();
     }
-    thread::sleep(Duration::from_millis(2000));
+    thread::sleep(Duration::from_millis(500));
     receiver.exit();
     receiver.wait().unwrap();
     let received = receiver.received();
@@ -322,7 +322,7 @@ fn request_auth_secret() {
     mq_service.run().unwrap();
     tcp_server.run().unwrap();
     println!("{} | All services - are executed", dbg);
-    thread::sleep(Duration::from_millis(1000));
+    thread::sleep(Duration::from_millis(300));
     //
     // Sending tcp test events / receiver must not receive anything before subscription activated
     println!("{} | Sending tcp test events - to be rejected (not authenticated)", dbg);
@@ -485,7 +485,7 @@ fn request_points() {
     mq_service.run().unwrap();
     tcp_server.run().unwrap();
     println!("{} | All services - are executed", dbg);
-    thread::sleep(Duration::from_millis(1000));
+    thread::sleep(Duration::from_millis(300));
     //
     // Authenticating
     println!("{} | Sending tcp test events - to be rejected (not authenticated)", dbg);
@@ -706,7 +706,7 @@ fn request_subscribe() {
         while !exit_.load(Ordering::Acquire) {
             for (key, _) in &all {
                 _ = services_.get(key);
-                std::thread::sleep(Duration::from_millis(1));
+                std::thread::yield_now();
             }
         }
     });

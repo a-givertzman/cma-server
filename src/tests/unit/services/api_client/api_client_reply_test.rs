@@ -244,7 +244,7 @@ fn reply() {
         send.send(point.clone()).unwrap();
         sent.push(point.as_string().value);
         println!("sent: {:?}", point);
-        std::thread::sleep(Duration::from_millis(100));
+        std::thread::sleep(Duration::from_millis(10));
     }
     receiver_handle.join().unwrap();
     api_client.exit();
