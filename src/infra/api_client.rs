@@ -127,7 +127,6 @@ impl Service for ApiClient {
             }
             is_started.store(false, Ordering::Release);
             log::info!("{dbg}.run | Exit");
-            Ok(())
         });
         match handle {
             Ok(handle) => {

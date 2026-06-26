@@ -277,7 +277,6 @@ impl Service for JdsConnection {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {

@@ -157,7 +157,6 @@ impl SlmpWrite {
                 }
             }
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         log::info!("{}.run | Started", self.dbg);
         handle.map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))

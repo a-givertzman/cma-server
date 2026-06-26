@@ -125,7 +125,6 @@ impl Service for RecvService {
                     }
                 }
             }
-            Ok(())
         });
         match handle {
             Ok(handle) => {

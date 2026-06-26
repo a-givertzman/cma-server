@@ -226,7 +226,6 @@ fn reply() {
                 panic!("{dbg} | Preparing test TCP server - error: {:?}", err);
             }
         };
-        Ok(())
     }}).unwrap();
     log::debug!("{dbg} | Starting Services...");
     services.run().unwrap();

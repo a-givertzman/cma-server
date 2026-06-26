@@ -171,7 +171,6 @@ impl Service for TaskRetain {
                         log::error!("{dbg}.run | Can't close retain journal: {:?}", err);
                     }
                     log::info!("{dbg}.run | Exit");
-                    Ok(())
                 }});
                 match handle {
                     Ok(handle) => {

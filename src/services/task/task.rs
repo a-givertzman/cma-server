@@ -226,7 +226,6 @@ impl Service for Task {
             }
             retain.exit();
             log::info!("{dbg}.run | Exit");
-            Ok(())
         }});
         match handle {
             Ok(handle) => {

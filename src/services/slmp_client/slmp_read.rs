@@ -138,7 +138,6 @@ impl SlmpRead {
                 Self::yield_status(&dbg, Status::Invalid, &mut dbs, &dest);
             }
             log::info!("{}.read | Exit", dbg);
-            Ok(())
         });
         log::info!("{}.read | Started", self.dbg);
         handle.map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))

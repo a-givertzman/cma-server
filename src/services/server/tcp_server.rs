@@ -222,7 +222,6 @@ impl Service for TcpServer {
             log::info!("{}.run | Exit...", dbg);
             connections.wait();
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {

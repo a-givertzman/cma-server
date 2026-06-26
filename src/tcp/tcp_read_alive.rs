@@ -116,7 +116,6 @@ impl TcpReadAlive {
             Some(scheduler) => {
                 let handle = scheduler.spawn(move || {
                     Self::run_(dbg, cycle, tcp_stream, send, stream_read, exit, exit_pair);
-                    Ok(())
                 })?;
                 self.handles.push(handle);
 

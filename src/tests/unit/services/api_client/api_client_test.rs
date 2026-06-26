@@ -216,7 +216,6 @@ fn basic() {
                 panic!("{dbg} | Preparing test TCP server - error: {:?}", err);
             }
         };
-        Ok(())
     }).unwrap();
     api_client.run().unwrap();
     let send = api_client.get_link("api-link");

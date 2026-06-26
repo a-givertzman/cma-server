@@ -141,11 +141,9 @@ impl App {
                                 _ => log::warn!("{}.run Received unknown signal {:?}", dbg, signal)
                             }
                         }
-                        Ok(())
                     }).unwrap();
                     handle.join().unwrap();
                     signals_handle.close();
-                    Ok(())
                 }).unwrap();
             }
             Err(err) => {

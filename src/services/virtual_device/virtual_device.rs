@@ -330,7 +330,6 @@ impl Service for VirtualDevice {
             log::info!("{dbg}.run | Cleaning - Ok");
             api_client.exit();
             log::info!("{dbg}.run | Exit");
-            Ok(())
         });
         match handle {
             Ok(handle) => {

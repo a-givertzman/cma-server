@@ -179,7 +179,6 @@ impl ProfinetClient {
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
             // Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Connection, Status::Invalid, &tx_send);
             log::info!("{}.read | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {
@@ -309,7 +308,6 @@ impl ProfinetClient {
             connection_notify.add(Status::Invalid, dbg.clone());
             Self::yield_diagnosis(&dbg, &diagnosis, &DiagKeywd::Status, Status::Invalid, &tx_send);
             log::info!("{}.write | Exit", dbg);
-            Ok(())
         });
         log::info!("{}.write | Started", self.dbg);
         match handle {

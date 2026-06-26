@@ -216,7 +216,6 @@ impl Service for SlmpClient {
                 log::warn!("{}.run | TcpClient connection failed - trying to reconnect...", dbg);
             }
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {
