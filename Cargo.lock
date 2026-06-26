@@ -4476,7 +4476,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.2"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.2#6d5c60340afed05c904b1bfcf9a6537fd6e5593d"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.2#9ae860fe3177c78e662b34c22f1c3cd3fe960bc8"
 dependencies = [
  "api-tools",
  "arc-swap",
