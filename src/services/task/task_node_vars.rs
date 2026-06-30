@@ -40,4 +40,9 @@ impl TaskNodeVars {
     pub fn get_vars(&self) -> Vec<String> {
         self.vars.clone()
     }
+    ///
+    /// Returns len of the collection
+    pub fn len(&self) -> usize {
+        self.vars.len()
+    }
 }

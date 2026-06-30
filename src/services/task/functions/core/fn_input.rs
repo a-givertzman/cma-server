@@ -75,9 +75,10 @@ impl FnIn for FnInput {
     /// 
     /// Adds new value to the FnInput
     fn add(&mut self, point: &Point) {
-        log::trace!("{}.add | value: {:?}", self.dbg, self.point);
+        // log::debug!("{}.add | value: {:?}", self.dbg, point);
         if let Some(status) = self.status {
             if point.status() != status {
+                // log::debug!("{}.add | Ignored value: {:?}", self.dbg, point);
                 return
             }
         }
@@ -138,6 +139,7 @@ impl FnIn for FnInput {
             PointType_::Any => Ok(point.clone()),
         };
         self.cycle = self.eval_cycle.get();
+        // log::debug!("{}.add | Added value: {:?}", self.dbg, point);
         self.point = point.map(|p| Some(p));
     }
     ///
@@ -163,7 +165,7 @@ impl FnOut for FnInput {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        log::trace!("{}.out | value: {:?}", self.dbg, &self.point);
+        // log::debug!("{}.out | value: {:?}", self.dbg, &self.point);
         match self.point.as_ref() {
             Ok(Some(point)) => if self.is_new() {
                 Ok(Some(FnFlow::New(point.clone())))

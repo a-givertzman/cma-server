@@ -3357,9 +3357,10 @@ impl FnIn for FnInput {
     ///
     /// Adds new value to the FnInput
     fn add(&mut self, point: &Point) {
-        log::trace!("{}.add | value: {:?}", self.dbg, self.point);
+        // log::debug!("{}.add | value: {:?}", self.dbg, point);
         if let Some(status) = self.status {
             if point.status() != status {
+                // log::debug!("{}.add | Ignored value: {:?}", self.dbg, point);
                 return
             }
         }
@@ -3420,6 +3421,7 @@ impl FnIn for FnInput {
             PointType_::Any => Ok(point.clone()),
         };
         self.cycle = self.eval_cycle.get();
+        // log::debug!("{}.add | Added value: {:?}", self.dbg, point);
         self.point = point.map(|p| Some(p));
     }
     ///
@@ -3445,7 +3447,7 @@ impl FnOut for FnInput {
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        log::trace!("{}.out | value: {:?}", self.dbg, &self.point);
+        // log::debug!("{}.out | value: {:?}", self.dbg, &self.point);
         match self.point.as_ref() {
             Ok(Some(point)) => if self.is_new() {
                 Ok(Some(FnFlow::New(point.clone())))
@@ -6137,8 +6139,6 @@ use crate::{
 pub struct FnDiv {
     txid: usize,
     kind: FnKind,
-    input1: FnOutRef,
-    input2: FnOutRef,
     inputs: [FnOutRef; 2],
     id: String,
 }
@@ -6157,8 +6157,6 @@ impl FnDiv {
         Ok(Self {
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
-            input1: inputs[0].clone(),
-            input2: inputs[1].clone(),
             inputs,
             id,
         })
@@ -6196,7 +6194,6 @@ impl FnOut for FnDiv {
         }).collect();
         let mut meta = PointMeta::default();
         let mut flow = FlowContext::new();
-        // TODO Div overflow check
         let (input1, input2) = (inputs.remove(0), inputs.remove(0));
         let Some(input) = flow.map(input1)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);
@@ -6942,11 +6939,10 @@ use crate::{
     }
 };
 ///
-/// ### Function | FnSql
+/// ### Function | `FnSql`
 ///
 /// Строит SQL-запрос, подставляя актуальные значения входов вместо маркеров {xyz}.
-///
-/// Является чистой функцией (Stateless), не хранит внутренний кэш и пересобирает строку при каждом такте.
+/// Кэширует результат на случай отсутствия изменений на входах.
 ///
 /// **Example 1**
 /// - `input1.value = 'Valid'`
@@ -6969,6 +6965,7 @@ pub struct FnSql {
     /// `Map<marker, (input, name, sufix)>`
     inputs: FxIndexMap<String, (FnOutRef, String, Sufix)>,
     sql: FormatPoint,
+    cache: Option<Point>,
     id: String,
 }
 //
@@ -7012,6 +7009,7 @@ impl FnSql {
             kind: FnKind::Fn,
             inputs,
             sql,
+            cache: None,
             id,
         })
     }
@@ -7046,24 +7044,33 @@ impl FnOut for FnSql {
         for (marker, (input, name, _sufix)) in &self.inputs {
             inputs.push((marker, (input.borrow_mut().out(), name)));
         }
-        // let inputs: FxIndexMap<&String, (FnResult<FnFlow, String>, &String, &Sufix)> = self.inputs.iter().map(|(marker, (input, name, sufix))| {
-        //     (marker, (input.borrow_mut().out(), name, sufix))
-        // }).collect();
         let mut flow = FlowContext::new();
         let mut meta = PointMeta::default();
+        let mut points = Vec::with_capacity(self.inputs.len());
         for (marker, (input, name)) in inputs {
-            // log::trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
-            log::trace!("{}.out | input: {:?} - found", self.id, name);
             let Some(input) = flow.map(input)? else { return Ok(None) };
             meta = meta.update_latest(&input).update_status(&input);
+            points.push((marker, (input, name)));
+        }
+        if flow.is_old() {
+            if let Some(point) = self.cache.as_ref() {
+                // log::trace!("{}.out | sql: {:?}", self.id, point.try_as_string().map(|p| p.value).unwrap_or("Not initialised".into()));
+                return flow.wrap_old(point.clone());
+            }
+        }
+        for (marker, (input, _name)) in points {
+            // log::trace!("{}.out | input: {:?} - found", self.id, _name);
             self.sql.insert(marker, input);
         }
         let value = self.sql.out();
-        log::trace!("{}.out | sql: {:?}", self.id, self.sql.out());
-        flow.wrap(Point::String(Self::point_with(self.txid, &meta, &self.id, value)))
+        log::trace!("{}.out | sql: {:?}", self.id, value);
+        let point = Point::String(Self::point_with(self.txid, &meta, &self.id, value));
+        self.cache = Some(point.clone());
+        flow.wrap(point)
     }
     //
     fn reset(&mut self) {
+        self.cache = None;
         for (_, (input, _, _)) in &self.inputs {
             input.borrow_mut().reset();
         }
@@ -10242,10 +10249,10 @@ impl Service for Task {
 }
 }
 mod task_nodes {
-use std::{cell::{Cell, RefCell}, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 use indexmap::IndexMap;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
+use sal_sync::services::{entity::{Name, Point}, Services, task::functions::FnConfKind};
 use crate::{
     domain::{FnInOutRef, FnOutRef},
     services::task::{EvalCycle, EvalCycleRef, FnEnableMode, FnEvalOnce, TaskRetain, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
@@ -10306,7 +10313,8 @@ impl TaskNodes {
         }
     }
     ///
-    /// Returns `TaskNodes` new instance
+    /// Returns `TaskNodes` new instance with moked `TaskRetain`
+    #[allow(unused)]
     pub fn without_retain(parent: impl Into<String>, txid: usize) ->Self {
         let dbg = format!("{}/TaskNodes", parent.into());
         Self {
@@ -10344,6 +10352,7 @@ impl TaskNodes {
     }
     ///
     /// Returns all configured inputs
+    #[allow(unused)]
     pub fn get_inputs(&self) -> Vec<String> {
         self.nodes.keys().map(|k| k.to_string()).collect()
     }
@@ -10430,14 +10439,10 @@ impl TaskNodes {
     fn finish_new_node(&mut self, out: FnOutRef) -> Result<(), Error> {
         match self.new_node_vars.as_mut() {
             Some(new_node_vars) => {
-                let mut vars: Vec<FnOutRef> = vec![];
+                let mut vars: Vec<FnOutRef> = Vec::with_capacity(new_node_vars.len());
                 for var_name in new_node_vars.get_vars() {
                     match self.vars.get(&var_name) {
-                        Some(var) => {
-                            vars.push(
-                                var.clone()
-                            );
-                        }
+                        Some(var) => vars.push(var.clone()),
                         None => {
                             return Err(Error::new(&self.dbg, "finish_new_node").err(&format!("{}.finish_new_node | Variable {:?} - not found", self.dbg, var_name)))
                         }
@@ -10476,7 +10481,6 @@ impl TaskNodes {
     pub fn build_nodes(&mut self, parent: &Name, conf: &TaskConf, services: Arc<Services>) -> Result<(), Error>{
         // TODO: Добавить проверку на ацикличность направленного графа (DAG). Например, алгоритм поиска в глубину (DFS) по связям inputs, проверяющий, не возвращаемся ли мы в уже посещенный узел.
         let error = Error::new(&self.dbg, "build_nodes");
-        let tx_id = PointTxId::from_str(&parent.join());
         let conf_nodes = conf.nodes.clone();
         for (idx, (_node_name, mut node_conf)) in conf_nodes.into_iter().enumerate() {
             let node_name = node_conf.name();
@@ -10511,15 +10515,8 @@ impl TaskNodes {
             self.finish_new_node(out)
                 .map_err(|err| error.pass_with(format!("Can't finish node {node_name}"), err))?;
         }
-        // if let Some(eval_node) = self.get_eval_node("every") {
-        //     let eval_node_name = eval_node.name();
-        //     for (_name, input) in &self.nodes {
-        //         let len = input.get_outs().len();
-        //         if len > 1 {
-        //             return Err(error.err(format!("evalNode '{}' - contains {} Out's, but single Out allowed when 'point [type] every' was used", eval_node_name, len)));
-        //         }
-        //     }
-        // }
+        // log::debug!("{} | Vars: {:#?}", self.dbg, self.vars.iter().map(|(name, _)| name).collect::<Vec<&String>>());
+        // log::debug!("{} | Nodes: {:#?}", self.dbg, self.nodes.iter().map(|(name, _)| name).collect::<Vec<&String>>());
         Ok(())
     }
     ///
@@ -10539,10 +10536,6 @@ impl TaskNodes {
             log::trace!("{dbg}.eval | evalNode '{}' - adding point...", eval_node.borrow().name());
             eval_node.borrow().add(&point);
             eval_node
-            // Some(eval_node) => {
-            // }
-            // None => {}
-                // log::warn!("{dbg}.eval | evalNode '{}' - not fount, input point ignored", point_name);
         });
         if let Some(node) = node_every {
             log::trace!("{dbg}.eval | evalNode '{}' - evaluating...", node.borrow().name());
@@ -10596,12 +10589,17 @@ impl TaskNodeVars {
     pub fn get_vars(&self) -> Vec<String> {
         self.vars.clone()
     }
+    ///
+    /// Returns len of the collection
+    pub fn len(&self) -> usize {
+        self.vars.len()
+    }
 }
 }
 mod task_eval_node {
 use sal_core::dbg::Dbg;
 use sal_sync::services::entity::Point;
-use crate::{domain::{FnInOutRef, FnOutRef}, services::task::FnResult};
+use crate::domain::{FnInOutRef, FnOutRef};
 ///
 /// Holds Task input and all dipendent variables & outputs
 #[derive(Debug)]
@@ -10630,6 +10628,7 @@ impl TaskEvalNode {
     }
     ///
     /// Adds input if it's has different 'Options hash'
+    /// Returns added new or found existing input
     pub fn add_input(&mut self, input: FnInOutRef) -> FnInOutRef {
         let input_hash = input.borrow().hash();
         for input in &self.input {
@@ -10642,6 +10641,8 @@ impl TaskEvalNode {
         log::trace!("TaskEvalNode.add_input | eval_node '{}' - input '{}' added", self.dbg, input.borrow().hash());
         input
     }
+    ///
+    ///
     fn contains_var(&self, var: &FnOutRef) -> bool {
         let var_id = var.borrow().id();
         for self_var in &self.vars {
@@ -10651,6 +10652,8 @@ impl TaskEvalNode {
         }
         false
     }
+    ///
+    ///
     fn contains_out(&self, out: &FnOutRef) -> bool {
         let out_id = out.borrow().id();
         for self_out in &self.outs {
@@ -10660,6 +10663,8 @@ impl TaskEvalNode {
         }
         false
     }
+    ///
+    ///
     pub fn add_vars(&mut self, vars: &Vec<FnOutRef>) {
         for var in vars {
             if !self.contains_var(var) {
@@ -10667,43 +10672,71 @@ impl TaskEvalNode {
             }
         }
     }
+    ///
+    ///
     pub fn add_out(&mut self, out: FnOutRef) {
         if !self.contains_out(&out) {
             self.outs.push(out);
         }
     }
+    ///
+    /// Returns self name
     pub fn name(&self) -> String {
         self.name.clone()
     }
+    // ///
+    // ///
+    // pub fn get_input(&self) -> Vec<FnInOutRef> {
+    //     self.input.clone()
+    // }
+    ///
+    ///
     #[allow(unused)]
     pub fn get_vars(&self) -> &Vec<FnOutRef> {
         &self.vars
     }
+    ///
+    ///
+    #[allow(unused)]
     pub fn get_outs(&self) -> &Vec<FnOutRef> {
         &self.outs
     }
+    ///
+    /// Adds new point to the holding input reference
     pub fn add(&self, point: &Point) {
         for input in &self.input {
             input.borrow_mut().add(point);
         }
     }
+    ///
+    /// Evaluates node:
+    ///  - eval all conaining vars
+    ///  - eval all conaining outs
     pub fn eval(&mut self) {
+        for eval_node_var in &self.vars {
+            log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluating...", self.dbg, eval_node_var.borrow_mut().id());
+            _ = eval_node_var.borrow_mut().out();
+            log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluated", self.dbg, eval_node_var.borrow_mut().id());
+        };
         for eval_node_out in &self.outs {
             log::trace!("TaskEvalNode.eval | node '{}' out...", self.dbg);
             match eval_node_out.borrow_mut().out() {
                 Ok(Some(_)) => {
+                    // log::debug!("TaskEvalNode.eval | node '{}' out: {:?}", self.id, out);
                 }
-                Ok(None) => {
+                Ok(None) => if log::max_level() >= log::LevelFilter::Trace {
                     log::warn!("TaskEvalNode.eval | node '{}' out: 'None'", self.dbg);
-                }
-                Err(err) => {
+                },
+                Err(err) => if log::max_level() >= log::LevelFilter::Trace {
                     log::warn!("TaskEvalNode.eval | node '{}' out: {}", self.dbg, err);
-                }
+                },
             }
         };
     }
 }
 }
+// mod task_test_receiver; (Excluded)
+// mod task_test_producer; (Excluded)
 pub(crate) use eval_cycle::*;
 pub(super) use fn_eval_once::*;
 pub use functions::*;

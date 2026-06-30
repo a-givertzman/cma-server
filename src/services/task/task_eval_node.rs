@@ -1,6 +1,6 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::entity::Point;
-use crate::{domain::{FnInOutRef, FnOutRef}, services::task::FnResult};
+use crate::domain::{FnInOutRef, FnOutRef};
 ///
 /// Holds Task input and all dipendent variables & outputs
 #[derive(Debug)]
@@ -98,6 +98,7 @@ impl TaskEvalNode {
     }
     ///
     /// 
+    #[allow(unused)]
     pub fn get_outs(&self) -> &Vec<FnOutRef> {
         &self.outs
     }
@@ -113,23 +114,23 @@ impl TaskEvalNode {
     ///  - eval all conaining vars
     ///  - eval all conaining outs
     pub fn eval(&mut self) {
-        // for eval_node_var in &self.vars {
-        //     log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluating...", self.dbg, eval_node_var.borrow_mut().id());
-        //     eval_node_var.borrow_mut().out();
-        //     log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluated", self.dbg, eval_node_var.borrow_mut().id());
-        // };
+        for eval_node_var in &self.vars {
+            log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluating...", self.dbg, eval_node_var.borrow_mut().id());
+            _ = eval_node_var.borrow_mut().out();
+            log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluated", self.dbg, eval_node_var.borrow_mut().id());
+        };
         for eval_node_out in &self.outs {
             log::trace!("TaskEvalNode.eval | node '{}' out...", self.dbg);
             match eval_node_out.borrow_mut().out() {
                 Ok(Some(_)) => {
                     // log::debug!("TaskEvalNode.eval | node '{}' out: {:?}", self.id, out);
                 }
-                Ok(None) => {
+                Ok(None) => if log::max_level() >= log::LevelFilter::Trace {
                     log::warn!("TaskEvalNode.eval | node '{}' out: 'None'", self.dbg);
-                }
-                Err(err) => {
+                },
+                Err(err) => if log::max_level() >= log::LevelFilter::Trace {
                     log::warn!("TaskEvalNode.eval | node '{}' out: {}", self.dbg, err);
-                }
+                },
             }
         };
     }

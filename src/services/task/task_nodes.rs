@@ -101,6 +101,7 @@ impl TaskNodes {
     }
     ///
     /// Returns all configured inputs
+    #[allow(unused)]
     pub fn get_inputs(&self) -> Vec<String> {
         self.nodes.keys().map(|k| k.to_string()).collect()
     }
@@ -187,14 +188,10 @@ impl TaskNodes {
     fn finish_new_node(&mut self, out: FnOutRef) -> Result<(), Error> {
         match self.new_node_vars.as_mut() {
             Some(new_node_vars) => {
-                let mut vars: Vec<FnOutRef> = vec![];
+                let mut vars: Vec<FnOutRef> = Vec::with_capacity(new_node_vars.len());
                 for var_name in new_node_vars.get_vars() {
                     match self.vars.get(&var_name) {
-                        Some(var) => {
-                            vars.push(
-                                var.clone()
-                            );
-                        }
+                        Some(var) => vars.push(var.clone()),
                         None => {
                             return Err(Error::new(&self.dbg, "finish_new_node").err(&format!("{}.finish_new_node | Variable {:?} - not found", self.dbg, var_name)))
                         }
@@ -267,17 +264,8 @@ impl TaskNodes {
             self.finish_new_node(out)
                 .map_err(|err| error.pass_with(format!("Can't finish node {node_name}"), err))?;
         }
-        log::debug!("{} | Vars: {:#?}", self.dbg, self.vars.iter().map(|(name, _)| name).collect::<Vec<&String>>());
-        log::debug!("{} | Nodes: {:#?}", self.dbg, self.nodes.iter().map(|(name, _)| name).collect::<Vec<&String>>());
-        // if let Some(eval_node) = self.get_eval_node("every") {
-        //     let eval_node_name = eval_node.name();
-        //     for (_name, input) in &self.nodes {
-        //         let len = input.get_outs().len();
-        //         if len > 1 {
-        //             return Err(error.err(format!("evalNode '{}' - contains {} Out's, but single Out allowed when 'point [type] every' was used", eval_node_name, len)));
-        //         }
-        //     }
-        // }
+        // log::debug!("{} | Vars: {:#?}", self.dbg, self.vars.iter().map(|(name, _)| name).collect::<Vec<&String>>());
+        // log::debug!("{} | Nodes: {:#?}", self.dbg, self.nodes.iter().map(|(name, _)| name).collect::<Vec<&String>>());
         Ok(())
     }
     ///

@@ -88,10 +88,10 @@ impl FormatPoint {
                 tokens.push(Token::Static(input[last_idx..mat.start()].to_string()));
             }
             let marker = cap.get(1).unwrap().as_str().to_string();
-            println!("FormatPoint.new | marker: {marker}");
+            log::trace!("FormatPoint.new | marker: {marker}");
             let mut parts_colon = marker.split(':');
             let name = parts_colon.next().unwrap().to_string();
-            println!("FormatPoint.new | name: {name}");
+            log::trace!("FormatPoint.new | name: {name}");
             let format_spec = parts_colon.next();
             let mut precision = None;
             if let Some(fmt) = format_spec {
