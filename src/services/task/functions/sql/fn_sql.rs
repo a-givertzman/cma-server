@@ -10,11 +10,10 @@ use crate::{
     }
 };
 ///
-/// ### Function | FnSql
+/// ### Function | `FnSql`
 /// 
 /// Строит SQL-запрос, подставляя актуальные значения входов вместо маркеров {xyz}.
-///
-/// Является чистой функцией (Stateless), не хранит внутренний кэш и пересобирает строку при каждом такте.
+/// Кэширует результат на случай отсутствия изменений на входах.
 /// 
 /// **Example 1**
 /// - `input1.value = 'Valid'`
@@ -37,6 +36,7 @@ pub struct FnSql {
     /// `Map<marker, (input, name, sufix)>`
     inputs: FxIndexMap<String, (FnOutRef, String, Sufix)>,
     sql: FormatPoint,
+    cache: Option<Point>,
     id: String,
 }
 //
@@ -80,6 +80,7 @@ impl FnSql {
             kind: FnKind::Fn,
             inputs,
             sql,
+            cache: None,
             id,
         })
     }
@@ -114,24 +115,33 @@ impl FnOut for FnSql {
         for (marker, (input, name, _sufix)) in &self.inputs {
             inputs.push((marker, (input.borrow_mut().out(), name)));
         }
-        // let inputs: FxIndexMap<&String, (FnResult<FnFlow, String>, &String, &Sufix)> = self.inputs.iter().map(|(marker, (input, name, sufix))| {
-        //     (marker, (input.borrow_mut().out(), name, sufix))
-        // }).collect();
         let mut flow = FlowContext::new();
         let mut meta = PointMeta::default();
+        let mut points = Vec::with_capacity(self.inputs.len());
         for (marker, (input, name)) in inputs {
-            // log::trace!("{}.out | name: {:?}, sufix: {:?}", self_id, name, sufix);
-            log::trace!("{}.out | input: {:?} - found", self.id, name);
             let Some(input) = flow.map(input)? else { return Ok(None) };
             meta = meta.update_latest(&input).update_status(&input);
+            points.push((marker, (input, name)));
+        }
+        if flow.is_old() {
+            if let Some(point) = self.cache.as_ref() {
+                // log::trace!("{}.out | sql: {:?}", self.id, point.try_as_string().map(|p| p.value).unwrap_or("Not initialised".into()));
+                return flow.wrap_old(point.clone());
+            }
+        }
+        for (marker, (input, _name)) in points {
+            // log::trace!("{}.out | input: {:?} - found", self.id, _name);
             self.sql.insert(marker, input);
         }
         let value = self.sql.out();
-        log::trace!("{}.out | sql: {:?}", self.id, self.sql.out());
-        flow.wrap(Point::String(Self::point_with(self.txid, &meta, &self.id, value)))
+        log::trace!("{}.out | sql: {:?}", self.id, value);
+        let point = Point::String(Self::point_with(self.txid, &meta, &self.id, value));
+        self.cache = Some(point.clone());
+        flow.wrap(point)
     }
     //
     fn reset(&mut self) {
+        self.cache = None;
         for (_, (input, _, _)) in &self.inputs {
             input.borrow_mut().reset();
         }
@@ -186,6 +196,7 @@ mod tests {
             kind: FnKind::Fn,
             inputs,
             sql,
+            cache: None,
             id: "parent/SqlMetric_test".to_string(),
         };
         let res = metric.out().unwrap().unwrap();
@@ -204,6 +215,7 @@ mod tests {
             kind: FnKind::Fn,
             inputs,
             sql,
+            cache: None,
             id: "parent/SqlMetric_test".to_string(),
         };
         let res = metric.out().unwrap().unwrap();
@@ -222,6 +234,7 @@ mod tests {
             kind: FnKind::Fn,
             inputs,
             sql,
+            cache: None,
             id: "parent/SqlMetric_test".to_string(),
         };
         let res = metric.out().unwrap();
