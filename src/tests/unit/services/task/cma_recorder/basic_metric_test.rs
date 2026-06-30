@@ -55,7 +55,7 @@ mod cma_recorder {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let mut tasks = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/basic-metric.yaml";
         match fs::read_to_string(path) {
@@ -66,7 +66,7 @@ mod cma_recorder {
                         for (key, config) in config.as_mapping().unwrap() {
                             let mut conf = serde_yaml::Mapping::new();
                             conf.insert(key.clone(), config.clone());
-                            let config = TaskConf::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
+                            let config = TaskConf::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf)).unwrap();
                             let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
                             services.insert(task.clone());
                             tasks.push(task);

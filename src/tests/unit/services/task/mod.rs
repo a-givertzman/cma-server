@@ -1,4 +1,4 @@
-// mod cma_recorder;
+mod cma_recorder;
 mod functions;
 mod task_conf;
 mod task_nodes;

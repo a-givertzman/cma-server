@@ -1,7 +1,7 @@
-use std::{cell::{Cell, RefCell}, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 use indexmap::IndexMap;
 use sal_core::error::Error;
-use sal_sync::services::{entity::{Name, Point, PointTxId}, Services, task::functions::FnConfKind};
+use sal_sync::services::{entity::{Name, Point}, Services, task::functions::FnConfKind};
 use crate::{
     domain::{FnInOutRef, FnOutRef}, 
     services::task::{EvalCycle, EvalCycleRef, FnEnableMode, FnEvalOnce, TaskRetain, functions::{FnBuilder, FnKind}, task_conf::TaskConf},
@@ -62,7 +62,8 @@ impl TaskNodes {
         }
     }
     ///
-    /// Returns `TaskNodes` new instance 
+    /// Returns `TaskNodes` new instance with moked `TaskRetain`
+    #[allow(unused)]
     pub fn without_retain(parent: impl Into<String>, txid: usize) ->Self {
         let dbg = format!("{}/TaskNodes", parent.into());
         Self {
@@ -232,7 +233,6 @@ impl TaskNodes {
     pub fn build_nodes(&mut self, parent: &Name, conf: &TaskConf, services: Arc<Services>) -> Result<(), Error>{
         // TODO: Добавить проверку на ацикличность направленного графа (DAG). Например, алгоритм поиска в глубину (DFS) по связям inputs, проверяющий, не возвращаемся ли мы в уже посещенный узел.
         let error = Error::new(&self.dbg, "build_nodes");
-        let tx_id = PointTxId::from_str(&parent.join());
         let conf_nodes = conf.nodes.clone();
         for (idx, (_node_name, mut node_conf)) in conf_nodes.into_iter().enumerate() {
             let node_name = node_conf.name();
@@ -267,6 +267,8 @@ impl TaskNodes {
             self.finish_new_node(out)
                 .map_err(|err| error.pass_with(format!("Can't finish node {node_name}"), err))?;
         }
+        log::debug!("{} | Vars: {:#?}", self.dbg, self.vars.iter().map(|(name, _)| name).collect::<Vec<&String>>());
+        log::debug!("{} | Nodes: {:#?}", self.dbg, self.nodes.iter().map(|(name, _)| name).collect::<Vec<&String>>());
         // if let Some(eval_node) = self.get_eval_node("every") {
         //     let eval_node_name = eval_node.name();
         //     for (_name, input) in &self.nodes {
