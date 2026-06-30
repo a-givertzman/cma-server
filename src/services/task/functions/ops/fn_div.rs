@@ -28,8 +28,6 @@ use crate::{
 pub struct FnDiv {
     txid: usize,
     kind: FnKind,
-    input1: FnOutRef,
-    input2: FnOutRef,
     inputs: [FnOutRef; 2],
     id: String,
 }
@@ -48,8 +46,6 @@ impl FnDiv {
         Ok(Self { 
             txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
-            input1: inputs[0].clone(),
-            input2: inputs[1].clone(),
             inputs,
             id,
         })
@@ -87,7 +83,6 @@ impl FnOut for FnDiv {
         }).collect();
         let mut meta = PointMeta::default();
         let mut flow = FlowContext::new();
-        // TODO Div overflow check
         let (input1, input2) = (inputs.remove(0), inputs.remove(0));
         let Some(input) = flow.map(input1)? else { return Ok(None) };
         meta = meta.update_latest(&input).update_status(&input);

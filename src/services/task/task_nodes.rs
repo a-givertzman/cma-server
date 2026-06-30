@@ -297,10 +297,6 @@ impl TaskNodes {
             log::trace!("{dbg}.eval | evalNode '{}' - adding point...", eval_node.borrow().name());
             eval_node.borrow().add(&point);
             eval_node
-            // Some(eval_node) => {
-            // }
-            // None => {}
-                // log::warn!("{dbg}.eval | evalNode '{}' - not fount, input point ignored", point_name);
         });
         if let Some(node) = node_every {
             log::trace!("{dbg}.eval | evalNode '{}' - evaluating...", node.borrow().name());
