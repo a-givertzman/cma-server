@@ -148,19 +148,26 @@ impl FnOut for FnTimer {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         self.edge.reset();
         self.first = true;
         self.total_t = 0.0;
         self.ts = chrono::Utc::now();
         self.active_t = None;
         if let Some(initial) = &mut self.initial {
-            initial.reset();
+            initial.hard_reset();
         }
         if let Some(reset) = &mut self.reset {
-            reset.reset();
+            reset.hard_reset();
         }
-        self.input.reset();
+        self.input.hard_reset();
+    }
+    //
+    fn reset(&mut self) {
+        self.edge.reset();
+        self.total_t = 0.0;
+        self.ts = chrono::Utc::now();
+        self.active_t = None;
     }
 }
 ///
@@ -207,6 +214,7 @@ mod tests {
         fn out(&mut self) -> FnResult<FnFlow, String> {
             Ok(self.flow.clone())
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn extract_val(flow: &FnFlow) -> f64 {

@@ -139,7 +139,7 @@ impl FnIn for FnInput {
             PointType_::Any => Ok(point.clone()),
         };
         self.cycle = self.eval_cycle.get();
-        // log::debug!("{}.add | Added value: {:?}", self.dbg, point);
+        // log::debug!("{}.add | Cycle {:?} | Added value: {:?}", self.dbg, self.cycle, point);
         self.point = point.map(|p| Some(p));
     }
     ///
@@ -175,6 +175,10 @@ impl FnOut for FnInput {
             Ok(None) => Ok(None),   //FnResult::Err(concat_string!(self.dbg, ".out | Not initialized")),
             Err(err) => Err(err.clone()),
         }
+    }
+    //
+    fn hard_reset(&mut self) {
+        self.point = Ok(self.initial.clone());
     }
     //
     fn reset(&mut self) {

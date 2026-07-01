@@ -111,11 +111,13 @@ impl FnOut for FnDiv {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnDiv instances
@@ -151,6 +153,7 @@ mod tests {
             self.called += 1;
             self.flow.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_point_bool(id: &str, val: bool) -> Point {

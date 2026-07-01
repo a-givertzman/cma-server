@@ -98,11 +98,13 @@ impl FnOut for FnAnd {
         flow.wrap(Self::point_with(self.txid, &meta, &self.id, value))
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnAnd instances
@@ -134,7 +136,8 @@ mod tests {
             self.was_called = true;
             self.current_flow.clone()
         }
-        fn reset(&mut self) { self.resets_count += 1; }
+        fn hard_reset(&mut self) { self.resets_count += 1; }
+        fn reset(&mut self) {}
     }
     fn make_point(val: bool, status: Status) -> Point {
         Point::Bool(PointHlr::new(0, "test", Bool(val), status, Cot::Inf, chrono::offset::Utc::now()))

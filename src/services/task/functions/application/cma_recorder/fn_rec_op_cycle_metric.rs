@@ -125,16 +125,21 @@ impl FnOut for FnRecOpCycleMetric {
         flow.wrap(op_cycle_point)
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         self.state.reset();
         if let Some(reset) = &mut self.reset {
-            reset.reset();
+            reset.hard_reset();
         }
         self.reset_edge.reset();
-        self.op_cycle.reset();
+        self.op_cycle.hard_reset();
         for (_, input) in &mut self.inputs {
-            input.reset();
+            input.hard_reset();
         }
+    }
+    //
+    fn reset(&mut self) {
+        self.state.reset();
+        self.reset_edge.reset();
     }
 }
 ///
@@ -260,6 +265,7 @@ mod integration_tests {
         fn kind(&self) -> FnKind { FnKind::Var }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.value.clone()) }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     #[test]

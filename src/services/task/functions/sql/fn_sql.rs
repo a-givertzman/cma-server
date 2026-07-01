@@ -40,7 +40,6 @@ pub struct FnSql {
     id: String,
 }
 //
-// 
 impl FnSql {
     ///
     /// Returns `FnSql` new instance
@@ -140,11 +139,15 @@ impl FnOut for FnSql {
         flow.wrap(point)
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         self.cache = None;
         for (_, (input, _, _)) in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
+    }
+    //
+    fn reset(&mut self) {
+        self.cache = None;
     }
 }
 ///
@@ -172,6 +175,7 @@ mod tests {
         fn kind(&self) -> FnKind { FnKind::Var }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { self.flow.clone() }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_point_int(name: &str, val: i64) -> Point {

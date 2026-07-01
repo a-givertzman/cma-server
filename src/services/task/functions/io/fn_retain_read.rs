@@ -109,10 +109,14 @@ impl FnOut for FnRetainRead {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         if let Some(default) = &self.default {
-            default.borrow_mut().reset();
+            default.borrow_mut().hard_reset();
         }
+        self.cache = None;
+    }
+    //
+    fn reset(&mut self) {
         self.cache = None;
     }
 }
@@ -123,14 +127,10 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 /// Basic Tests
 #[cfg(test)]
 mod tests {
-    use sal_sync::services::Service;
     use sal_sync::services::entity::{Cot, PointHlr, Status};
     use super::*;
     use std::cell::RefCell;
-    use std::path::PathBuf;
     use std::rc::Rc;
-    use std::io::Write;
-    use std::env::temp_dir;
     #[derive(Debug)]
     struct MockNode {
         flow: FnResult<FnFlow, String>,
@@ -144,6 +144,7 @@ mod tests {
             self.inputs_called += 1;
             self.flow.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn create_mock(flow: FnFlow) -> FnOutRef {
@@ -160,7 +161,6 @@ use sal_sync::services::entity::{Cot, PointHlr, Status};
     use super::*;
     use std::cell::RefCell;
     use std::rc::Rc;
-    use crate::services::task::TaskRetainConf;
     #[derive(Debug)]
     struct MockNode {
         flow: FnResult<FnFlow, String>,
@@ -174,6 +174,7 @@ use sal_sync::services::entity::{Cot, PointHlr, Status};
             self.inputs_called += 1;
             self.flow.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn create_mock(flow: FnFlow) -> Rc<RefCell<MockNode>> {

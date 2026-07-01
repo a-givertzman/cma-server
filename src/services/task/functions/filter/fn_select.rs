@@ -21,7 +21,6 @@ pub struct FnSelect {
     select: FnOutRef,
 }
 //
-//
 impl FnSelect {
     ///
     /// ### Creates new instance of the FnSelect
@@ -40,7 +39,6 @@ impl FnSelect {
         }
     }
 }
-//
 //
 impl FnOut for FnSelect {
     //
@@ -88,13 +86,15 @@ impl FnOut for FnSelect {
         }        
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         if let Some(default) = &self.default {
-            default.borrow_mut().reset();
+            default.borrow_mut().hard_reset();
         }
-        self.input.borrow_mut().reset();
-        self.select.borrow_mut().reset();
+        self.input.borrow_mut().hard_reset();
+        self.select.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnSelect instances
@@ -141,6 +141,7 @@ use super::*;
             self.call_count += 1;
             Ok(self.mock_flow.take()) // Забираем закэшированный флоу
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     // Вспомогательная функция для генерации фейковых FnFlow::New (замени на свой стандартный генератор из тестов)

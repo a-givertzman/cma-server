@@ -48,9 +48,14 @@ impl FnOut for FnChange {
             other => Ok(other),
         }
     }
+    //
+    fn hard_reset(&mut self) {
+        self.last_val = None;
+        self.input.borrow_mut().hard_reset();
+    }
+    //
     fn reset(&mut self) {
         self.last_val = None;
-        self.input.borrow_mut().reset();
     }
 }
 ///
@@ -65,11 +70,12 @@ use super::*;
     #[derive(Debug)]
     struct FakeOrigin {
         next_flow: Option<FnFlow>,
+        hard_resets: usize,
         resets: usize,
     }
     impl FakeOrigin {
         fn new() -> Self {
-            Self { next_flow: None, resets: 0 }
+            Self { next_flow: None, hard_resets: 0, resets: 0 }
         }
         fn push_new(&mut self, point: Point) {
             self.next_flow = Some(FnFlow::New(point));
@@ -81,6 +87,9 @@ use super::*;
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> {
             Ok(self.next_flow.clone())
+        }
+        fn hard_reset(&mut self) {
+            self.hard_resets += 1;
         }
         fn reset(&mut self) {
             self.resets += 1;
@@ -124,8 +133,8 @@ use super::*;
         // Прогоняем значение, оно кэшируется
         let _ = filter.out().unwrap();
         // Аппаратный сброс графа
-        filter.reset();
-        assert_eq!(origin.borrow_mut().resets, 1, "Сброс должен пробрасываться во внутренний узел");
+        filter.hard_reset();
+        assert_eq!(origin.borrow_mut().hard_resets, 1, "Сброс должен пробрасываться во внутренний узел");
         // Подаем то же самое значение после сброса
         origin.borrow_mut().push_new(mock_point(10.0, Status::Ok));
         let res = filter.out().unwrap().unwrap();

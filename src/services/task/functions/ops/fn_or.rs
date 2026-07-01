@@ -94,11 +94,13 @@ impl FnOut for FnOr {
         flow.wrap(Self::point_with(self.txid, &meta, &self.id, value))
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnOr instances
@@ -115,11 +117,12 @@ mod tests {
         id: String,
         current_flow: FnResult<FnFlow, String>,
         was_called: bool,
-        resets_count: usize,
+        hard_resets: usize,
+        resets: usize,
     }
     impl MockOrigin {
         fn new(id: &str, flow: FnResult<FnFlow, String>) -> Self {
-            Self { id: id.to_string(), current_flow: flow, was_called: false, resets_count: 0 }
+            Self { id: id.to_string(), current_flow: flow, was_called: false, hard_resets: 0, resets: 0 }
         }
     }
     impl FnOut for MockOrigin {
@@ -130,7 +133,8 @@ mod tests {
             self.was_called = true;
             self.current_flow.clone()
         }
-        fn reset(&mut self) { self.resets_count += 1; }
+        fn hard_reset(&mut self) { self.hard_resets += 1; }
+        fn reset(&mut self) { self.resets += 1; }
     }
     fn make_point(val: bool, status: Status) -> Point {
         Point::Bool(PointHlr::new(0, "test", Bool(val), status, Cot::Inf, chrono::offset::Utc::now()))
@@ -172,8 +176,8 @@ mod tests {
         let in1 = Rc::new(RefCell::new(MockOrigin::new("in1", Ok(None))));
         let in2 = Rc::new(RefCell::new(MockOrigin::new("in2", Ok(None))));
         let mut node = FnOr::new("node", vec![in1.clone(), in2.clone()]).unwrap();
-        node.reset();
-        assert_eq!(in1.borrow().resets_count, 1);
-        assert_eq!(in2.borrow().resets_count, 1);
+        node.hard_reset();
+        assert_eq!(in1.borrow().hard_resets, 1);
+        assert_eq!(in2.borrow().hard_resets, 1);
     }
 }

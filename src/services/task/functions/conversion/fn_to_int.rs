@@ -70,9 +70,11 @@ impl FnOut for FnToInt {
         )))
     }
     //
-    fn reset(&mut self) {
-        self.input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnToInt instances
@@ -98,6 +100,7 @@ mod tests {
         fn kind(&self) -> FnKind { FnKind::Input }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(Some(self.flow.clone())) }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn setup_node(input: Point) -> (FnToInt, Rc<RefCell<MockInput>>) {

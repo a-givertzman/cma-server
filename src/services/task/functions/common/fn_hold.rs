@@ -64,9 +64,13 @@ impl FnOut for FnHold {
         Ok(None)
     }
     //
+    fn hard_reset(&mut self) {
+        self.state = None;
+        self.input.hard_reset();
+    }
+    //
     fn reset(&mut self) {
         self.state = None;
-        self.input.reset();
     }
 }
 ///
@@ -83,11 +87,12 @@ mod tests {
     #[derive(Debug)]
     struct FakeOrigin {
         next_flow: FnResult<FnFlow, String>,
+        hard_resets: usize,
         resets: usize,
     }
     impl FakeOrigin {
         fn new() -> Self {
-            Self { next_flow: Ok(None), resets: 0 }
+            Self { next_flow: Ok(None), hard_resets: 0, resets: 0 }
         }
         fn set_flow(&mut self, flow: FnResult<FnFlow, String>) {
             self.next_flow = flow;
@@ -99,6 +104,9 @@ mod tests {
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> {
             self.next_flow.clone()
+        }
+        fn hard_reset(&mut self) {
+            self.hard_resets += 1;
         }
         fn reset(&mut self) {
             self.resets += 1;
@@ -136,8 +144,8 @@ mod tests {
         assert!(res.is_none(), "Если кэш пуст и на входе None, отдаем None");
         origin.borrow_mut().set_flow(Ok(Some(FnFlow::New(mock_point(55.0)))));
         let _ = hold.out().unwrap();
-        hold.reset();
-        assert_eq!(origin.borrow().resets, 1, "Сброс должен пробрасываться внутрь");
+        hold.hard_reset();
+        assert_eq!(origin.borrow().hard_resets, 1, "Сброс должен пробрасываться внутрь");
         origin.borrow_mut().set_flow(Ok(None));
         let res_after_reset = hold.out().unwrap();
         assert!(res_after_reset.is_none(), "После сброса кэш очищен, при None должны вернуть None");

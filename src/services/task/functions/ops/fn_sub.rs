@@ -109,11 +109,13 @@ impl FnOut for FnSub {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnSub instances
@@ -135,6 +137,7 @@ mod tests {
         fn kind(&self) -> FnKind { FnKind::Var }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { self.output.clone() }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn make_point_int(val: i64) -> Point {

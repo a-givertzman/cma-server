@@ -95,9 +95,11 @@ impl FnOut for FnPiecewiseLineApprox {
         flow.wrap(out)
     }
     //
-    fn reset(&mut self) {
-        self.input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnPiecewiseLineApprox instances

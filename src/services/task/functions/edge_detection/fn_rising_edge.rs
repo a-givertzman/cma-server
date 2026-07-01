@@ -85,10 +85,15 @@ impl FnOut for FnRisingEdge {
         }
     }
     //
+    fn hard_reset(&mut self) {
+        self.edge.reset();
+        self.prev = None;
+        self.input.hard_reset();
+    }
+    //
     fn reset(&mut self) {
         self.edge.reset();
         self.prev = None;
-        self.input.reset();
     }
 }
 ///
@@ -124,6 +129,9 @@ mod tests {
             } else {
                 self.queue.remove(0)
             }
+        }
+        fn hard_reset(&mut self) {
+            self.queue.clear();
         }
         fn reset(&mut self) {
             self.queue.clear();

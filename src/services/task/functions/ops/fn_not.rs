@@ -76,9 +76,11 @@ impl FnOut for FnNot {
         )))
     }
     //
-    fn reset(&mut self) {
-        self.input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnNot instances
@@ -90,7 +92,7 @@ mod tests {
     use super::*;
     use crate::services::task::{FnFlow, FnKind, FnOut};
     use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
-use sal_sync::services::types::Bool;
+    use sal_sync::services::types::Bool;
     use std::cell::RefCell;
     use std::rc::Rc;
     #[derive(Debug)]
@@ -102,6 +104,7 @@ use sal_sync::services::types::Bool;
         fn kind(&self) -> FnKind { FnKind::Input }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.flow.clone()) }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     #[test]

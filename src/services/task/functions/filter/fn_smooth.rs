@@ -92,9 +92,13 @@ impl FnOut for FnSmooth {
     }
     //
     //
+    fn hard_reset(&mut self) {
+        self.factor.borrow_mut().hard_reset();
+        self.input.borrow_mut().hard_reset();
+        self.value = Point::new(0, "", 0.0);
+    }
+    //
     fn reset(&mut self) {
-        self.factor.borrow_mut().reset();
-        self.input.borrow_mut().reset();
         self.value = Point::new(0, "", 0.0);
     }
 }

@@ -88,11 +88,13 @@ impl FnOut for FnNe {
         flow.wrap(Point::Bool(Self::point_with(self.txid, &meta, &self.id, Bool(value))))
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnNe instances
@@ -119,6 +121,7 @@ use super::*;
             self.inputs_called += 1;
             self.result.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn create_mock(flow: FnFlow) -> FnOutRef {

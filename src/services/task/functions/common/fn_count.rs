@@ -39,7 +39,7 @@ impl FnCount {
     ///
     /// Возвращает `Point` `p` с обновленными `name` и `value`  
     fn point_with(p: &Point, name: impl Into<String>, value: i64) -> Point {
-        Point::Int(PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.timestamp()))
+        Point::Int(PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts()))
     }
 }
 // 
@@ -61,7 +61,7 @@ impl FnOut for FnCount {
         }
         inputs
     }
-    ///
+    //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
@@ -95,11 +95,17 @@ impl FnOut for FnCount {
             flow.wrap_old(Self::point_with(&input, &self.id, count))
         }
     }
+    //
+    fn hard_reset(&mut self) {
+        self.count = None;
+        self.edge.reset();
+        if let Some(initial) = &self.initial { initial.borrow_mut().hard_reset(); };
+        self.input.borrow_mut().hard_reset();
+    }
+    //
     fn reset(&mut self) {
         self.count = None;
         self.edge.reset();
-        if let Some(initial) = &self.initial { initial.borrow_mut().reset(); };
-        self.input.borrow_mut().reset();
     }
 }
 ///
@@ -144,6 +150,7 @@ mod tests {
                 Ok(None)
             }
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     #[test]

@@ -25,7 +25,6 @@ pub struct FnEvalOnce {
     state: FnResult<FnFlow, String>,
 }
 //
-// 
 impl FnEvalOnce {
     ///
     /// Creates new instance of the FnEvalOnce
@@ -41,7 +40,6 @@ impl FnEvalOnce {
     }
 }
 //
-// 
 impl FnOut for FnEvalOnce {
     //
     fn id(&self) -> String {
@@ -77,9 +75,11 @@ impl FnOut for FnEvalOnce {
         }
     }
     //
-    fn reset(&mut self) {
-        self.input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 //
 // 

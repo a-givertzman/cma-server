@@ -22,7 +22,6 @@ pub struct FnDebug {
     inputs: Vec<(String, FnOutRef)>,
 }
 //
-// 
 impl FnDebug {
     ///
     /// ### Creates new instance of the `FnDebug`
@@ -38,7 +37,6 @@ impl FnDebug {
     }    
 }
 //
-// 
 impl FnOut for FnDebug { 
     //
     fn id(&self) -> String {
@@ -83,11 +81,13 @@ impl FnOut for FnDebug {
         Ok(None)
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for (_, input) in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnDebug instances

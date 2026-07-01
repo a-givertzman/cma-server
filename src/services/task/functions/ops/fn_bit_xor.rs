@@ -32,7 +32,6 @@ pub struct FnBitXor {
     inputs: Vec<FnOutRef>,
 }
 //
-// 
 impl FnBitXor {
     ///
     /// Creates new instance of the FnBitXor
@@ -48,7 +47,6 @@ impl FnBitXor {
     }
 }
 //
-// 
 impl FnOut for FnBitXor {
     //
     fn id(&self) -> String {
@@ -137,11 +135,12 @@ impl FnOut for FnBitXor {
         // FnResult::Ok(value)
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnBitXor instances

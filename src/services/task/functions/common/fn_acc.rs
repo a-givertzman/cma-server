@@ -55,7 +55,7 @@ impl FnOut for FnAcc {
         inputs.append(&mut self.input.inputs());
         inputs
     }
-    ///
+    //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let input = self.input.out();
@@ -91,12 +91,17 @@ impl FnOut for FnAcc {
         self.acc = Some(acc.clone());
         flow.wrap(acc)
     }
-    fn reset(&mut self) {
+    //
+    fn hard_reset(&mut self) {
         if let Some(initial) = &mut self.initial {
-            initial.reset();
+            initial.hard_reset();
         }
         self.acc = None;
-        self.input.reset();
+        self.input.hard_reset();
+    }
+    //
+    fn reset(&mut self) {
+        self.acc = None;
     }
 }
 ///
@@ -114,10 +119,11 @@ mod tests {
     #[derive(Debug)]
     struct FakeOrigin {
         next_flow: Option<FnFlow>,
+        hard_resets: usize,
         resets: usize,
     }
     impl FakeOrigin {
-        fn new() -> Self { Self { next_flow: None, resets: 0 } }
+        fn new() -> Self { Self { next_flow: None, hard_resets: 0, resets: 0 } }
         fn push(&mut self, flow: FnFlow) { self.next_flow = Some(flow); }
     }
     impl FnOut for FakeOrigin {
@@ -125,6 +131,7 @@ mod tests {
         fn kind(&self) -> FnKind { FnKind::Var }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.next_flow.clone()) }
+        fn hard_reset(&mut self) { self.hard_resets += 1; }
         fn reset(&mut self) { self.resets += 1; }
     }
     /// Хелпер для генерации тестовых точек
@@ -171,9 +178,9 @@ mod tests {
         input.borrow_mut().push(FnFlow::New(mock_point(10.0)));
         let _ = acc_node.out().unwrap(); 
         // Аппаратный сброс
-        acc_node.reset();
-        assert_eq!(initial.borrow().resets, 1, "Сброс должен дойти до initial");
-        assert_eq!(input.borrow().resets, 1, "Сброс должен дойти до input");
+        acc_node.hard_reset();
+        assert_eq!(initial.borrow().hard_resets, 1, "Сброс должен дойти до initial");
+        assert_eq!(input.borrow().hard_resets, 1, "Сброс должен дойти до input");
         // После сброса подаем новое значение. Узел обязан заново прочитать initial (50.0)
         input.borrow_mut().push(FnFlow::New(mock_point(5.0)));
         let res = acc_node.out().unwrap().unwrap();

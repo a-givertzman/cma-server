@@ -43,7 +43,7 @@ impl CycleIndex {
     ///
     /// Returns initial state for the cycle
     pub(crate) fn new() -> Self {
-        Self(0)
+        Self(1)
     }
     ///
     /// Updates current Cycle Index

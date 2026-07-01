@@ -47,6 +47,7 @@ impl FnOut for FnConst {
         Ok(Some(FnFlow::Old(self.point.clone())))
     }
     //
+    fn hard_reset(&mut self) {}
     fn reset(&mut self) {}
 }
 ///

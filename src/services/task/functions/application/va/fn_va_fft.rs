@@ -415,7 +415,6 @@ impl FnVaFft {
     }
 }
 //
-//
 impl FnOut for FnVaFft {
     //
     fn id(&self) -> String {
@@ -430,7 +429,6 @@ impl FnOut for FnVaFft {
         self.input.borrow().inputs()
     }
     //
-    //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let input = flow.map(self.input.borrow_mut().out());
@@ -443,9 +441,12 @@ impl FnOut for FnVaFft {
         Ok(None)
     }
     //
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
+        self.fft_buf.reset();
+    }
     //
     fn reset(&mut self) {
-        self.input.borrow_mut().reset();
         self.fft_buf.reset();
     }
 }

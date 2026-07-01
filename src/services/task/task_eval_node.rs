@@ -114,11 +114,12 @@ impl TaskEvalNode {
     ///  - eval all conaining vars
     ///  - eval all conaining outs
     pub fn eval(&mut self) {
-        for eval_node_var in &self.vars {
-            log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluating...", self.dbg, eval_node_var.borrow_mut().id());
-            _ = eval_node_var.borrow_mut().out();
-            log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluated", self.dbg, eval_node_var.borrow_mut().id());
-        };
+        // Commented by AL. Looks like it's olready done by the calculation branch
+        // for eval_node_var in &self.vars {
+        //     log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluating...", self.dbg, eval_node_var.borrow_mut().id());
+        //     _ = eval_node_var.borrow_mut().out();
+        //     log::trace!("TaskEvalNode.eval | node '{}' - var '{}' evaluated", self.dbg, eval_node_var.borrow_mut().id());
+        // };
         for eval_node_out in &self.outs {
             log::trace!("TaskEvalNode.eval | node '{}' out...", self.dbg);
             match eval_node_out.borrow_mut().out() {

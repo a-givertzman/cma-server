@@ -137,14 +137,19 @@ impl FnOut for FnTimerOnDelay {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         self.active_t = None;
         self.trigg.reset();
         self.state = None;
         if let Some(reset) = &mut self.reset {
-            reset.reset();
+            reset.hard_reset();
         }
-        self.input.reset();
+        self.input.hard_reset();
+    }
+    //
+    fn reset(&mut self) {
+        self.active_t = None;
+        self.trigg.reset();
     }
 }
 ///
@@ -184,6 +189,7 @@ mod tests {
         fn kind(&self) -> FnKind { FnKind::Var }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.next_flow.clone()) }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     #[test]

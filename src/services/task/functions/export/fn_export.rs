@@ -125,9 +125,11 @@ impl FnOut for FnExport {
         flow.wrap(input)
     }
     //
-    fn reset(&mut self) {
-        self.input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnExport instances
@@ -139,7 +141,7 @@ mod tests {
     use super::*;
     use crate::domain::unbounded;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
+    use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
     use std::{cell::RefCell, rc::Rc};
     // Простой Mock-источник данных
     #[derive(Debug)]
@@ -152,6 +154,7 @@ use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
         fn kind(&self) -> FnKind { FnKind::Fn }
         fn inputs(&self) -> Vec<String> { self.inputs.clone() }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.flow.clone()) }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_int_point(val: i64) -> Point {

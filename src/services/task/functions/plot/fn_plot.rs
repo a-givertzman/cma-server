@@ -66,7 +66,6 @@ impl FnOut for FnPlot {
         inputs
     }
     //
-    //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let flow = FlowContext::new();
         let inputs: Vec<(&String, Result<Option<FnFlow>, String>)> = self.inputs.iter()
@@ -92,15 +91,16 @@ impl FnOut for FnPlot {
         Ok(None)
     }
     //
-    //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         if let Some(x) = &self.x {
-            x.borrow_mut().reset();
+            x.borrow_mut().hard_reset();
         }
         for (_, input) in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnPlot instances

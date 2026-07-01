@@ -1,8 +1,9 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
+use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointType};
 use sal_sync::services::types::Bool;
-use crate::domain::{Edge, EdgeDetector, FnOutRef};
+use crate::domain::{EdgeDetector, FnOutRef, TryTo};
 use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult};
 ///
 /// ### Function | Max
@@ -63,7 +64,6 @@ impl FnMax {
     }
 }
 //
-// 
 impl FnOut for FnMax {
     //
     fn id(&self) -> String {
@@ -88,8 +88,9 @@ impl FnOut for FnMax {
         let input = self.input.out();
         let reset = self.reset.as_mut().map(|f| f.out());
         if let Some(reset) = reset {
-            if let Some(reset) = reset? {
-                if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
+            if let Some(reset) = flow.ignore(reset)? {
+                let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
+                if reset {
                     self.max = None;
                     force_recalc = true;
                 }
@@ -122,12 +123,17 @@ impl FnOut for FnMax {
         }
     }
     //
+    fn hard_reset(&mut self) {
+        self.max = None;
+        self.input.hard_reset();
+        if let Some(reset) = &mut self.reset {
+            reset.hard_reset();
+        }
+        self.reset_edge.reset();
+    }
+    //
     fn reset(&mut self) {
         self.max = None;
-        self.input.reset();
-        if let Some(reset) = &mut self.reset {
-            reset.reset();
-        }
         self.reset_edge.reset();
     }
 }
@@ -150,6 +156,7 @@ mod tests {
         fn kind(&self) -> FnKind { FnKind::Var }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.flow.clone()) }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_double(v: f64) -> Point {

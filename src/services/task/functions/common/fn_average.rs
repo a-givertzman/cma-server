@@ -1,7 +1,8 @@
+use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointType};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
-use crate::domain::{Edge, EdgeDetector, FnOutRef};
+use crate::domain::{EdgeDetector, FnOutRef, TryTo};
 use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult};
 
 /// ### Function | Average
@@ -19,7 +20,7 @@ pub struct FnAverage {
     id: String,
     kind: FnKind,
     reset: Option<FnChange>,
-    input: FnChange,
+    input: FnOutRef,
     count: i64,
     sum: f64,
     average: Option<Point>,
@@ -38,7 +39,7 @@ impl FnAverage {
             id: format!("{}/FnAverage{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
             reset: reset.map(FnChange::new),
-            input: FnChange::new(input),
+            input: input,
             count: 0,
             sum: 0.0,
             average: None,
@@ -65,7 +66,7 @@ impl FnOut for FnAverage {
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = self.input.inputs();
+        let mut inputs = self.input.borrow().inputs();
         if let Some(reset) = self.reset.as_ref() {
             inputs.append(&mut reset.inputs());
         }
@@ -75,27 +76,30 @@ impl FnOut for FnAverage {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let mut force_recalc = false;
-        let input = self.input.out();
+        let input = self.input.borrow_mut().out();
         let reset = self.reset.as_mut().map(|f| f.out());
         if let Some(reset) = reset {
-            if let Some(reset) = reset? {
-                if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
+            if let Some(reset) = flow.ignore(reset)? {
+                let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
+                if reset {
                     self.count = 0;
                     self.sum = 0.0;
                     self.average = None;
                     force_recalc = true;
+                    return Ok(None);
                 }
             }
         }
         let Some(input) = flow.map(input)? else { return Ok(None) };
         // Возвращаем предыдущее значение, если нет новых данных на входе и не было сброса
+        // log::debug!("{}.out | flow: {:?}", self.id, flow);
         if !flow.is_new() && !force_recalc {
             let Some(average) = self.average.as_ref() else { return Ok(None) };
             return flow.wrap_old(average.clone());
         }
         // trace!("{}.out | input: {:?}", self.id, input);
         let value = match input.typ() {
-            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
+            PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         self.sum += value;
@@ -108,14 +112,33 @@ impl FnOut for FnAverage {
         log::trace!("{}.out | sum: {:?}", self.id, self.sum);
         log::trace!("{}.out | count: {:?}", self.id, self.count);
         log::trace!("{}.out | average: {:?}", self.id, average);
+        let is_changed = if let Some(av) = self.average.as_ref() {
+            average != av.to_double().as_double().value
+        } else {
+            true
+        };
         let average = match input.typ() {
             PointType::Int => Point::Int(Self::point_with(&input, &self.id, average.round() as i64)),
             PointType::Real => Point::Real(Self::point_with(&input, &self.id, average as f32)),
             PointType::Double => Point::Double(Self::point_with(&input, &self.id, average)),
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
-        self.average = Some(average.clone());
-        flow.wrap_new(average)
+        if is_changed {
+            flow.wrap_new(average)
+        } else {
+            flow.wrap_old(average)
+        }
+    }
+    //
+    fn hard_reset(&mut self) {
+        self.count = 0;
+        self.sum = 0.0;
+        self.average = None;
+        self.reset_edge.reset();
+        if let Some(reset) = &mut self.reset {
+            reset.hard_reset();
+        }
+        self.input.borrow_mut().hard_reset();
     }
     //
     fn reset(&mut self) {
@@ -123,10 +146,6 @@ impl FnOut for FnAverage {
         self.sum = 0.0;
         self.average = None;
         self.reset_edge.reset();
-        if let Some(reset) = &mut self.reset {
-            reset.reset();
-        }
-        self.input.reset();
     }
 }
 ///

@@ -29,7 +29,6 @@ pub struct FnAdd {
     inputs: Vec<FnOutRef>,
 }
 //
-// 
 impl FnAdd {
     ///
     /// Returns `FnAdd` new instance
@@ -119,11 +118,13 @@ impl FnOut for FnAdd {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnAdd instances
@@ -156,7 +157,9 @@ mod tests {
             self.called += 1;
             self.flow.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
+
     }
     fn mock_point_int(val: i64) -> Point {
         Point::Int(PointHlr::new(0, "test", val, Status::Ok, Cot::Inf, chrono::Utc::now()))

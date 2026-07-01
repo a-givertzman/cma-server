@@ -230,15 +230,17 @@ impl FnOut for FnPoint {
         // }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         self.state = None;
         if let Some(input) = &self.input {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
         if let Some(changes_only) = &self.changes_only {
-            changes_only.borrow_mut().reset();
+            changes_only.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnPoint instances

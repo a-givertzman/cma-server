@@ -122,10 +122,15 @@ impl FnOut for FnIsChangedValue {
         flow.wrap_old(value)
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
+        self.state.clear();
+        self.prev = None;
+    }
+    //
+    fn reset(&mut self) {
         self.state.clear();
         self.prev = None;
     }
@@ -176,6 +181,7 @@ mod tests {
                 Ok(Some(FnFlow::Old(p)))
             }
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     #[test]

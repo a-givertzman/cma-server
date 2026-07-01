@@ -102,11 +102,14 @@ impl FnOut for FnRetainWrite {
         flow.wrap(point)
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         if let Some(default) = &self.default {
-            default.borrow_mut().reset();
+            default.borrow_mut().hard_reset();
         }
-        self.input.borrow_mut().reset();
+        self.input.borrow_mut().hard_reset();
+        self.cache = None;
+    }
+    fn reset(&mut self) {
         self.cache = None;
     }
 }
@@ -140,6 +143,7 @@ mod tests {
             self.called += 1;
             Ok(self.flow.clone())
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_point(val: i64) -> Point {

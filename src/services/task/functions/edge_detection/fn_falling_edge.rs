@@ -43,7 +43,6 @@ impl FnFallingEdge {
     }
 }
 //
-// 
 impl FnOut for FnFallingEdge { 
     //
     fn id(&self) -> String {
@@ -86,10 +85,15 @@ impl FnOut for FnFallingEdge {
         }
     }
     //
+    fn hard_reset(&mut self) {
+        self.edge.reset();
+        self.prev = None;
+        self.input.hard_reset();
+    }
+    //
     fn reset(&mut self) {
         self.edge.reset();
         self.prev = None;
-        self.input.reset();
     }
 }
 ///
@@ -137,6 +141,7 @@ mod tests {
         fn kind(&self) -> FnKind { FnKind::Fn }
         fn inputs(&self) -> Vec<String> { vec![] }
         fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.flow.clone()) }
+        fn hard_reset(&mut self) { self.flow = None; }
         fn reset(&mut self) { self.flow = None; }
     }
     // Хелпер для быстрого извлечения значения из FnFlow
@@ -194,7 +199,7 @@ mod tests {
         mock.borrow_mut().set_flow(true, true);
         let _ = edge_node.out().unwrap();
         // Сбрасываем узел
-        edge_node.reset();
+        edge_node.hard_reset();
         // Подаем false. Так как состояние было сброшено, узел не должен воспринять 
         // это как спад с true на false. Он воспримет это как инициализацию false.
         mock.borrow_mut().set_flow(false, true);

@@ -97,9 +97,11 @@ impl FnOut for FnToApiQueue {
         flow.wrap(input)
     }
     //
-    fn reset(&mut self) {
-        self.input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnToApiQueue instances
@@ -149,6 +151,7 @@ mod tests {
             self.called += 1;
             self.flow.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_point_string(name: &str, val: &str) -> Point {

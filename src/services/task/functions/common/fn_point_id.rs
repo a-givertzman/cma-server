@@ -46,7 +46,7 @@ impl FnPointId {
     /// Возвращает `PointHlr` с обновленными `txid`, `name` и `value`
     #[inline]
     fn point_with<T>(txid: usize, name: impl Into<String>, p: &Point, value: T) -> PointHlr<T> {
-        PointHlr::new(txid, name, value, p.status(), p.cot(), p.timestamp())
+        PointHlr::new(txid, name, value, p.status(), p.cot(), p.ts())
     }
 }
 // 
@@ -75,9 +75,11 @@ impl FnOut for FnPointId {
         flow.wrap(Point::Int(Self::point_with(self.txid, &self.id, &input, *id as i64)))
     }
     //
-    fn reset(&mut self) {
-        self.input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        self.input.borrow_mut().hard_reset();
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnOut instances
@@ -102,6 +104,7 @@ mod tests {
         fn out(&mut self) -> FnResult<FnFlow, String> {
             self.next_value.clone().unwrap_or(Ok(None))
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn create_env(point_name: &str, setup_flow: FnFlow) -> (FnPointId, Rc<RefCell<MockOut>>) {

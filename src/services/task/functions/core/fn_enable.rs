@@ -27,7 +27,6 @@ pub struct FnEnable<T: FnOut> {
     last_val: Option<Point>,
 }
 //
-//
 impl<T: FnOut> FnEnable<T> {
     ///
     /// Creates a new instance of the FnEnable decorator
@@ -114,11 +113,16 @@ impl<T: FnOut> FnOut for FnEnable<T> {
         }
     }
     //
+    fn hard_reset(&mut self) {
+        self.prev_en = false;
+        self.last_val = None;
+        self.enable.borrow_mut().hard_reset();
+        self.origin.hard_reset();
+    }
+    //
     fn reset(&mut self) {
         self.prev_en = false;
         self.last_val = None;
-        self.enable.borrow_mut().reset();
-        self.origin.reset();
     }
 }
 ///
@@ -141,6 +145,7 @@ mod tests {
     struct MockFn {
         id: String,
         calls: usize,
+        hard_resets: usize,
         resets: usize,
         flow_to_return: FnFlow,
     }
@@ -149,6 +154,7 @@ mod tests {
             Self {
                 id: "MockFn".to_string(),
                 calls: 0,
+                hard_resets: 0,
                 resets: 0,
                 flow_to_return: flow,
             }
@@ -162,6 +168,7 @@ mod tests {
             self.calls += 1;
             Ok(Some(self.flow_to_return.clone()))
         }
+        fn hard_reset(&mut self) { self.hard_resets += 1; }
         fn reset(&mut self) { self.resets += 1; }
     }
     fn bool_point(val: bool) -> Point {
@@ -180,6 +187,7 @@ mod tests {
         enable_mock.borrow_mut().flow_to_return = FnFlow::New(bool_point(true));
         let out = fn_enable.out().unwrap().unwrap();
         assert!(out.is_new(), "Rising edge must force FnFlow::New");
+        assert_eq!(fn_enable.origin.hard_resets, 0, "Origin must not be hard reset on rising edge");
         assert_eq!(fn_enable.origin.resets, 1, "Origin must be reset on rising edge");
         assert_eq!(fn_enable.origin.calls, 1, "Origin must be evaluated");
         // 3. Steady high

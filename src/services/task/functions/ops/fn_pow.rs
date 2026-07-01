@@ -116,11 +116,13 @@ impl FnOut for FnPow {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnPow instances
@@ -159,6 +161,7 @@ mod tests {
         fn out(&mut self) -> FnResult<FnFlow, String> {
             self.result.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_point_int(val: i64) -> Point {

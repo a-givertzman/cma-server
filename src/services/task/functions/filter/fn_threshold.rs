@@ -148,12 +148,16 @@ impl FnOut for FnThreshold {
         }
     }
     //
-    fn reset(&mut self) {
-        self.threshold.reset();
+    fn hard_reset(&mut self) {
+        self.threshold.hard_reset();
         if let Some(factor) = &mut self.factor {
-            factor.reset();
+            factor.hard_reset();
         }
-        self.input.reset();
+        self.input.hard_reset();
+        self.filter.reset();
+    }
+    //
+    fn reset(&mut self) {
         self.filter.reset();
     }
 }

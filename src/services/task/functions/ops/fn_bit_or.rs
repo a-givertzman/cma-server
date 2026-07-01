@@ -32,7 +32,6 @@ pub struct FnBitOr {
     id: String,
 }
 //
-// 
 impl FnBitOr {
     ///
     /// Creates new instance of the FnBitOr
@@ -48,7 +47,6 @@ impl FnBitOr {
     }
 }
 //
-// 
 impl FnOut for FnBitOr {
     //
     fn id(&self) -> String {
@@ -136,11 +134,12 @@ impl FnOut for FnBitOr {
         // FnResult::Ok(value)
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnBitOr instances

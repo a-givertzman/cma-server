@@ -118,11 +118,13 @@ impl FnOut for FnMul {
         }
     }
     //
-    fn reset(&mut self) {
+    fn hard_reset(&mut self) {
         for input in &self.inputs {
-            input.borrow_mut().reset();
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
 ///
 /// Global static counter of FnMul instances
@@ -132,7 +134,7 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 #[cfg(test)]
 mod tests {
     use sal_sync::services::entity::{Cot, Status};
-use sal_sync::services::types::Bool;
+    use sal_sync::services::types::Bool;
     use super::*;
     use std::rc::Rc;
     use std::cell::RefCell;
@@ -158,6 +160,7 @@ use sal_sync::services::types::Bool;
             self.called += 1;
             self.flow.clone()
         }
+        fn hard_reset(&mut self) {}
         fn reset(&mut self) {}
     }
     fn mock_point_bool(id: &str, val: bool) -> Point {
