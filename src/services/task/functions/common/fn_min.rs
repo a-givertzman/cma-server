@@ -14,7 +14,7 @@ use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResu
 /// 
 /// Особенности работы:
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
-/// - `reset`: Сбрасывает накопленную сумму и счетчик если `> 0`.
+/// - `reset`: Сбрасывает минимум если `> 0`.
 /// - `input`: Источник входных данных. Выходной `Point` автоматически наследует 
 ///   тип данных входа (Bool, Int, Real или Double).
 /// - Игнорирует нечисловые типы (возвращает `Err`).
@@ -91,7 +91,6 @@ impl FnOut for FnMin {
             if let Some(reset) = flow.ignore(reset)? {
                 let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
                 if reset {
-                    self.min = None;
                     is_reset = true;
                 }
             }
@@ -105,19 +104,22 @@ impl FnOut for FnMin {
         if !value.is_finite() {
             return Err(err!(self.id, ".out | Invalid input: {:?}", value).to_string());
         }
-        let (is_changed, point) = if let Some(prev) = self.min.as_ref() {
-            if value < prev.to_double().as_double().value || prev.status() != input.status() {
-                let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
-                self.min = Some(p.clone());
-                (true, p)
-            } else {
-                (false, prev.clone())
-            }
-        } else { 
-            let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
-            self.min = Some(p.clone());
-            (true, p)
+        let prev = self.min.as_ref().map_or(value, |p| p.to_double().as_double().value);
+        let min = if is_reset {
+            value
+        } else {
+            value.min(prev)
         };
+        let is_changed = match &self.min {
+            Some(p) => min != prev || p.status() != input.status(),
+            None => {
+                let p = Self::point(&self.id, &input, min).map_err(|err| err_pass!(self.id, err).to_string())?;
+                self.min = Some(p.clone());
+                return flow.wrap_new(p);
+            }
+        };
+        let point = Self::point(&self.id, &input, min).map_err(|err| err_pass!(self.id, err).to_string())?;
+        self.min = Some(point.clone());
         log::trace!("{}.out | min: {:?}", self.id, self.min);
         if is_changed {
             flow.wrap_new(point)
@@ -206,10 +208,22 @@ mod tests {
         let reset = Rc::new(RefCell::new(MockNode { flow: Some(FnFlow::New(mock_bool(false))) }));
         let mut min_node = FnMin::new("test", Some(reset.clone()), input.clone());
         min_node.out().unwrap(); // min = 10.0
-        // Передний фронт сброса на фоне старых данных
+        // Опускаем входное значение, чтобы исторический минимум упал
+        input.borrow_mut().flow = Some(FnFlow::New(mock_double(5.0)));
+        min_node.out().unwrap(); // min = 5.0
+        
+        // Датчик снова показывает 10.0. Но минимум все еще 5.0
+        input.borrow_mut().flow = Some(FnFlow::New(mock_double(10.0)));
+        let res_before_reset = min_node.out().unwrap().unwrap();
+        assert!(matches!(res_before_reset, FnFlow::Old(_))); // Значение удержано
+        
+        // Дергаем сброс. Датчик все еще показывает 10.0
         reset.borrow_mut().flow = Some(FnFlow::New(mock_bool(true)));
-        input.borrow_mut().flow = Some(FnFlow::Old(mock_double(10.0))); 
         let res_reset = min_node.out().unwrap().unwrap();
-        assert!(matches!(res_reset, FnFlow::New(_)), "Сброс обязан сгенерировать New");
+        
+        // Так как математическое значение ПРЫГНУЛО с 5.0 обратно на 10.0 из-за сброса,
+        // узел обязан выдать New. Если бы до сброса было 10.0, он бы выдал Old.
+        assert_eq!(res_reset.value().as_double().value, 10.0);
+        assert!(matches!(res_reset, FnFlow::New(_)), "Сброс изменил выходное значение, поэтому New");
     }
 }

@@ -14,7 +14,7 @@ use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResu
 /// 
 /// Особенности работы:
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывант передачу данных (возвращает `None`).
-/// - `reset`: Сбрасывает накопленную сумму и счетчик если `> 0`.
+/// - `reset`: Сбрасывает максимум если `> 0`.
 /// - `input`: Источник входных данных. Выходной `Point` автоматически наследует 
 ///   тип данных входа (Bool, Int, Real или Double).
 /// - Игнорирует нечисловые типы (возвращает `Err`).
@@ -92,7 +92,6 @@ impl FnOut for FnMax {
             if let Some(reset) = flow.ignore(reset)? {
                 let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
                 if reset {
-                    self.max = None;
                     is_reset = true;
                 }
             }
@@ -106,46 +105,28 @@ impl FnOut for FnMax {
         if !value.is_finite() {
             return Err(err!(self.id, ".out | Invalid input: {:?}", value).to_string());
         }
-        let (is_changed, point) = if let Some(prev) = self.max.as_ref() {
-            if value > prev.to_double().as_double().value || prev.status() != input.status() {
-                let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
-                self.max = Some(p.clone());
-                (true, p)
-            } else {
-                (false, prev.clone())
-            }
-        } else { 
-            let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
-            self.max = Some(p.clone());
-            (true, p)
+        let prev = self.max.as_ref().map_or(value, |p| p.to_double().as_double().value);
+        let max = if is_reset {
+            value
+        } else {
+            value.max(prev)
         };
+        let is_changed = match &self.max {
+            Some(p) => max != prev || p.status() != input.status(),
+            None => {
+                let p = Self::point(&self.id, &input, max).map_err(|err| err_pass!(self.id, err).to_string())?;
+                self.max = Some(p.clone());
+                return flow.wrap_new(p);
+            }
+        };
+        let point = Self::point(&self.id, &input, max).map_err(|err| err_pass!(self.id, err).to_string())?;
+        self.max = Some(point.clone());
         log::trace!("{}.out | max: {:?}", self.id, self.max);
         if is_changed {
             flow.wrap_new(point)
         } else {
             flow.wrap_old(point)
         }
-
-        // let value = match input.typ() {
-        //     PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-        //     _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
-        // };
-        // let was_none = self.max.is_none();
-        // let max = *self.max.get_or_insert(value);
-        // if value > max {
-        //     self.max = Some(value);
-        //     log::trace!("{}.out | max: {:?}", self.id, self.max);
-        //     let max = Self::point(&self.id, &input, value)?;
-        //     flow.wrap_new(max)
-        // } else if was_none || is_reset {
-        //     log::trace!("{}.out | max: {:?}", self.id, self.max);
-        //     let max = Self::point(&self.id, &input, max)?;
-        //     flow.wrap_new(max)
-        // } else {
-        //     log::trace!("{}.out | max: {:?}", self.id, self.max);
-        //     let max = Self::point(&self.id, &input, max)?;
-        //     flow.wrap_old(max)
-        // }
     }
     //
     fn hard_reset(&mut self) {
@@ -218,14 +199,27 @@ mod tests {
     }
     #[test]
     fn test_fnmax_reset_edge() {
-        let input = Rc::new(RefCell::new(MockNode { flow: Some(FnFlow::New(mock_double(50.0))) }));
+        let input = Rc::new(RefCell::new(MockNode { flow: Some(FnFlow::New(mock_double(10.0))) }));
         let reset = Rc::new(RefCell::new(MockNode { flow: Some(FnFlow::New(mock_bool(false))) }));
-        let mut max_node = FnMax::new("test", Some(reset.clone()), input.clone());
-        max_node.out().unwrap(); // max = 50.0
-        // Передний фронт сброса
+        let mut min_node = FnMax::new("test", Some(reset.clone()), input.clone());
+        min_node.out().unwrap(); // min = 5.0
+        // Поднимаем входное значение, чтобы исторический максимум вырос
+        input.borrow_mut().flow = Some(FnFlow::New(mock_double(10.0)));
+        let res = min_node.out().unwrap(); // min = 10.0
+        assert!(res.unwrap().into_value().to_double().as_double().value == 10.0); // Значение удержано
+        
+        // Датчик снова показывает 5.0. Но максимум все еще 10.0
+        input.borrow_mut().flow = Some(FnFlow::New(mock_double(5.0)));
+        let res_before_reset = min_node.out().unwrap().unwrap();
+        assert!(matches!(res_before_reset, FnFlow::Old(_))); // Значение удержано
+        
+        // Дергаем сброс. Датчик все еще показывает 5.0
         reset.borrow_mut().flow = Some(FnFlow::New(mock_bool(true)));
-        input.borrow_mut().flow = Some(FnFlow::Old(mock_double(50.0))); // Данные не менялись
-        let res_reset = max_node.out().unwrap().unwrap();
-        assert!(matches!(res_reset, FnFlow::New(_)), "Сброс обязан сгенерировать New");
+        let res_reset = min_node.out().unwrap().unwrap();
+        
+        // Так как математическое значение УПАЛО с 10.0 обратно на 5.0 из-за сброса,
+        // узел обязан выдать New. Если бы до сброса было 5.0, он бы выдал Old.
+        assert_eq!(res_reset.value().as_double().value, 5.0);
+        assert!(matches!(res_reset, FnFlow::New(_)), "Сброс изменил выходное значение, поэтому New");
     }
 }
