@@ -78,7 +78,7 @@ fn calc_relative_load() {
         // step  Входной сигнал (Событие)                           Значение            crane                   winch1                  winch2                  winch3
         // - Crane
         // Устанавливаем номинальную нагрузку (Делитель = 100.0) -> Относительная = 0.0 (так как текущий вес 0.0)
-        (01,      "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None),              Ok(None),               Ok(None),               Ok(None)),
+        (01,      "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(Some(0.0)),         Ok(Some(0.0)),          Ok(None),               Ok(None)),
         // Поднимаем 25 тонн -> Относительная = 25% (0.25)
         (02,      "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(25.0),  Ok(Some(0.25)),        Ok(Some(0.25)),         Ok(None),               Ok(None)),
         // Поднимаем 125 тонн -> Относительная = 125% (1.25)
@@ -87,7 +87,7 @@ fn calc_relative_load() {
         (04,      "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(50.0),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(None),               Ok(None)),
         // - Winch 2
         // Устанавливаем номинальную нагрузку (Делитель = 80.0) -> Относительная = 0.0 (так как текущий вес 0.0)
-        (05,      "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(80.0),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(None),               Ok(None)),
+        (05,      "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(80.0),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(Some(0.0)),          Ok(None)),
         // Поднимаем 20 тонн -> Относительная = 25% (0.25)
         (06,      "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(Some(0.25)),         Ok(None)),
         // Поднимаем 100 тонн -> Относительная = 125% (1.25)
@@ -96,7 +96,7 @@ fn calc_relative_load() {
         (08,      "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(40.0),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(Some(2.50)),         Ok(None)),
         // - Winch 3
         // Устанавливаем номинальную нагрузку (Делитель = 70.0) -> Относительная = 0.0 (так как текущий вес 0.0)
-        (10,      "/App/ied13/db905_visual_data_fast/Winch3.LoadR0", Value::Real(70.0),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(Some(2.50)),         Ok(None)),
+        (10,      "/App/ied13/db905_visual_data_fast/Winch3.LoadR0", Value::Real(70.0),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(Some(2.50)),         Ok(Some(0.0))),
         // Поднимаем 20 тонн -> Относительная = 25% (0.25)
         (11,      "/App/ied14/db906_visual_data/Winch3.Load",        Value::Real(17.5),  Ok(Some(2.50)),        Ok(Some(2.50)),         Ok(Some(2.50)),         Ok(Some(0.25))),
         // Поднимаем 100 тонн -> Относительная = 125% (1.25)
@@ -277,7 +277,7 @@ fn detect_crane_is_active() {
     // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, Ожидаемый_craneIsActive)
     let test_data: &[(i32, u64, &str, Value, Result<Option<bool>, ()>)] = &[
         // Инициализация номинала (LoadR0 = 100.0). Динамический порог активности (5%) = 5.0
-        (1, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
+        (1, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(Some(false))),
         // Нагрузка 4.0 (< 5.0). Фильтр FnThreshold не пропускает, компаратор = false. Таймеры молчат.
         (2, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(4.0),   Ok(Some(false))),
         // Нагрузка 10.0 (> 5.0). FnThreshold пропускает, FnGe = true. Запускается TimerOnDelay (5000ms).
@@ -515,6 +515,72 @@ fn detect_winch3_is_active() {
 ///
 /// Проверка совпадения активности гидростанции с активностью рабочего цикла.
 #[test]
+fn detect_op_cycle_active() {
+    DebugSession::new().filter(LogLevel::Debug).init();
+    init_once();
+    init_each();
+    let dbg = "detect_op_cycle_active";
+    log::debug!("{dbg}");
+    let self_name = Name::new("", dbg);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
+    let conf = TaskConf::read(&self_name, "src/tests/unit/services/task/cma_recorder/cma-recorder.yaml").unwrap();
+    let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::empty()), None).unwrap());
+    task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
+    // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, Ожидаемый_pumpIsActive)
+    let test_data: &[(i32, u64, &str, Value, Result<Option<bool>, ()>)] = &[
+        // Инициализация номиналов. Порог активности (5%) = 5.0 для обеих лебедок.
+        (01, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
+        (02, 0,    "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(100.0), Ok(None)),
+        (03, 0,    "/App/ied13/db905_visual_data_fast/Winch3.LoadR0", Value::Real(100.0), Ok(Some(false))),
+        // Поднимаем груз на Лебедке 1 (10.0 > 5.0). Запуск OnDelay таймера.
+        (04, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(false))),
+        // Прошло 5.5с. Лебедка 1 перешла в Active -> Насос ВКЛ.
+        (05, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(true))),
+        // Поднимаем груз на Лебедке 2 (20.0 > 5.0). Запуск OnDelay для нее. Насос уже работает.
+        (06, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
+        // Прошло 5.5с. Лебедка 2 тоже Active. Насос продолжает работу (OR).
+        (07, 5500, "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
+        // Сбрасываем Лебедку 1 (0.0). Запуск OffDelay таймера.
+        (08, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // Прошло 5.5с. Лебедка 1 отключилась. Но Лебедка 2 всё еще Active -> Насос не останавливается.
+        (09, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // Сбрасываем Лебедку 2 (0.0). Запуск OffDelay.
+        (10, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // Прошло 5.5с. Лебедка 2 отключилась. Все механизмы стоят -> Насос ВЫКЛ.
+        (11, 5500, "/App/ied14/db906_visual_data/Winch2.Load",       Value::Real(0.0),   Ok(Some(false))),
+    ];
+    let flow = FlowContext::new();
+    for (step, delay_ms, name, val, target_pump) in test_data.iter().cloned() {
+        if delay_ms > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        }
+        let ts = chrono::Utc::now();
+        let point = match val {
+            Value::Real(v) => Point::Real(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Double(v) => Point::Double(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Int(v) => Point::Int(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Bool(v) => Point::Bool(PointHlr::new(0, name, Bool(v), Status::Ok, Cot::Inf, ts)),
+            Value::String(v) => Point::String(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            _ => panic!("{dbg} | Step {step} | '{name}': Invalid type"),
+        };
+        log::debug!("{dbg} | Step {step} | point: {:?}", point);
+        task_nodes.eval(point);
+        let pump_node = task_nodes.get_var("pumpIsActive").expect("Variable 'pumpIsActive' not found in DAG");
+        let result = flow.ignore(pump_node.borrow_mut().out());
+        match (&result, &target_pump) {
+            (Ok(Some(result)), Ok(Some(target))) => {
+                log::debug!("{dbg} | Step {step} | pumpIsActive: {:?}", result.value());
+                let actual = result.as_bool().value.0;
+                assert_eq!(actual, *target, "{dbg} | Step {step} | pumpIsActive \n result: {actual} \n target: {target}");
+            }
+            (Ok(None), Ok(None)) | (Err(_), Err(_)) => {}
+            _ => panic!("{dbg} | Step {step} | \n result: {:?} \n target: {:?}", result, target_pump),
+        }
+    }
+}
+///
+/// Проверка совпадения активности гидростанции с активностью рабочего цикла.
+#[test]
 fn detect_pump_is_active() {
     DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
@@ -528,24 +594,25 @@ fn detect_pump_is_active() {
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
     // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, Ожидаемый_pumpIsActive)
     let test_data: &[(i32, u64, &str, Value, Result<Option<bool>, ()>)] = &[
-        // 1. Инициализация номиналов. Порог активности (5%) = 5.0 для обеих лебедок.
-        (1, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
-        (2, 0,    "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(100.0), Ok(None)),
-        // 3. Поднимаем груз на Лебедке 1 (10.0 > 5.0). Запуск OnDelay таймера.
-        (3, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(false))),
-        // 4. Прошло 5.5с. Лебедка 1 перешла в Active -> Насос ВКЛ.
-        (4, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(true))),
-        // 5. Поднимаем груз на Лебедке 2 (20.0 > 5.0). Запуск OnDelay для нее. Насос уже работает.
-        (5, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
-        // 6. Прошло 5.5с. Лебедка 2 тоже Active. Насос продолжает работу (OR).
-        (6, 5500, "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
-        // 7. Сбрасываем Лебедку 1 (0.0). Запуск OffDelay таймера.
-        (7, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
-        // 8. Прошло 5.5с. Лебедка 1 отключилась. Но Лебедка 2 всё еще Active -> Насос не останавливается.
-        (8, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
-        // 9. Сбрасываем Лебедку 2 (0.0). Запуск OffDelay.
-        (9, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(0.0),   Ok(Some(true))),
-        // 10. Прошло 5.5с. Лебедка 2 отключилась. Все механизмы стоят -> Насос ВЫКЛ.
+        // Инициализация номиналов. Порог активности (5%) = 5.0 для обеих лебедок.
+        (01, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
+        (02, 0,    "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(100.0), Ok(None)),
+        (03, 0,    "/App/ied13/db905_visual_data_fast/Winch3.LoadR0", Value::Real(100.0), Ok(Some(false))),
+        // Поднимаем груз на Лебедке 1 (10.0 > 5.0). Запуск OnDelay таймера.
+        (03, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(false))),
+        // Прошло 5.5с. Лебедка 1 перешла в Active -> Насос ВКЛ.
+        (04, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(true))),
+        // Поднимаем груз на Лебедке 2 (20.0 > 5.0). Запуск OnDelay для нее. Насос уже работает.
+        (05, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
+        // Прошло 5.5с. Лебедка 2 тоже Active. Насос продолжает работу (OR).
+        (06, 5500, "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
+        // Сбрасываем Лебедку 1 (0.0). Запуск OffDelay таймера.
+        (07, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // Прошло 5.5с. Лебедка 1 отключилась. Но Лебедка 2 всё еще Active -> Насос не останавливается.
+        (08, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // Сбрасываем Лебедку 2 (0.0). Запуск OffDelay.
+        (09, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // Прошло 5.5с. Лебедка 2 отключилась. Все механизмы стоят -> Насос ВЫКЛ.
         (10, 5500, "/App/ied14/db906_visual_data/Winch2.Load",       Value::Real(0.0),   Ok(Some(false))),
     ];
     let flow = FlowContext::new();
@@ -591,28 +658,30 @@ fn detect_op_cycle_edges() {
     let conf = TaskConf::read(&self_name, "src/tests/unit/services/task/cma_recorder/cma-recorder.yaml").unwrap();
     let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::empty()), None).unwrap());
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
-    // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, target_started, target_done)
+    // Кортеж: (Шаг, Задержка_мс, Имя_сигнала,                      Значение,           target_started,     target_done)
     let test_data: &[(i32, u64, &str, Value, Result<Option<bool>, ()>, Result<Option<bool>, ()>)] = &[
-        // 1. Инициализация номинала Winch1 (LoadR0 = 100.0). Порог активности (5%) = 5.0
-        (1, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(Some(false)), Ok(Some(false))),
-        // 2. Нагрузка 15.0 (> 5.0). TimerOnDelay (5000ms) запускается. Цикл еще не начат.
-        (2, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
-        // 3. Прошло 2 секунды. Нагрузка висит. Таймер в процессе.
-        (3, 2000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
-        // 4. Прошло еще 3.5 секунды (всего 5.5). TimerOnDelay пробивается -> opCycleIsActive = true.
+        // Инициализация номинала Winch1 (LoadR0 = 100.0). Порог активности (5%) = 5.0
+        (01, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None), Ok(None)),
+        (01, 0,    "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(100.0), Ok(None), Ok(None)),
+        (01, 0,    "/App/ied13/db905_visual_data_fast/Winch3.LoadR0", Value::Real(100.0), Ok(Some(false)), Ok(Some(false))),
+        // Нагрузка 15.0 (> 5.0). TimerOnDelay (5000ms) запускается. Цикл еще не начат.
+        (02, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
+        // Прошло 2 секунды. Нагрузка висит. Таймер в процессе.
+        (03, 2000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
+        // Прошло еще 3.5 секунды (всего 5.5). TimerOnDelay пробивается -> opCycleIsActive = true.
         // Срабатывает передний фронт. opCycleIsStarted выдает одиночный импульс true.
-        (4, 3500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(true)),  Ok(Some(false))),
-        // 5. Следующий такт с той же нагрузкой. Импульс Started обязан упасть в false (одновибратор).
-        (5, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
-        // 6. Сброс нагрузки до 1.0 (< 5.0). TimerOffDelay (5000ms) запускается. Цикл все еще активен.
-        (6, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
-        // 7. Прошло 3 секунды. Крюк пустой. Таймер отключения в процессе.
-        (7, 3000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
-        // 8. Прошло еще 2.5 секунды (всего 5.5). TimerOffDelay истекает -> opCycleIsActive = false.
+        (04, 3500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(true)),  Ok(Some(false))),
+        // Следующий такт с той же нагрузкой. Импульс Started обязан упасть в false (одновибратор).
+        (05, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
+        // Сброс нагрузки до 1.0 (< 5.0). TimerOffDelay (5000ms) запускается. Цикл все еще активен.
+        (06, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
+        // Прошло 3 секунды. Крюк пустой. Таймер отключения в процессе.
+        (07, 3000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
+        // Прошло еще 2.5 секунды (всего 5.5). TimerOffDelay истекает -> opCycleIsActive = false.
         // Срабатывает задний фронт. opCycleIsDone выдает одиночный импульс true.
-        (8, 2500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(true))),
-        // 9. Следующий такт холостого хода. Импульс Done обязан упасть в false.
-        (9, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
+        (08, 2500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(true))),
+        // Следующий такт холостого хода. Импульс Done обязан упасть в false.
+        (09, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
     ];
     let flow = FlowContext::new();
     for (step, delay_ms, name, val, target_started, target_done) in test_data.iter().cloned() {
@@ -653,6 +722,70 @@ fn detect_op_cycle_edges() {
             }
             (Ok(None), Ok(None)) | (Err(_), Err(_)) => {}
             _ => panic!("{dbg} | Step {step} | opCycleIsDone \n result: {:?} \n target: {:?}", result_done, target_done),
+        }
+    }
+}
+///
+/// Инкремент и сохранение (FnRetain + FnAcc) сквозного идентификатора по началу каждого нового рабочего цикла.
+#[test]
+fn gen_op_cycle_id() {
+    DebugSession::new().filter(LogLevel::Debug).init();
+    init_once();
+    init_each();
+    let dbg = "gen_op_cycle_id";
+    log::debug!("{dbg}");
+    let self_name = Name::new("", dbg);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
+    let conf = TaskConf::read(&self_name, "src/tests/unit/services/task/cma_recorder/cma-recorder.yaml").unwrap();
+    let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::empty()), None).unwrap());
+    task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
+    // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, Ожидаемый_opCycleId)
+    let test_data: &[(i32, u64, &str, Value, Result<Option<i64>, ()>)] = &[
+        // 1. Инициализация номинала (LoadR0 = 100.0). Порог активности 5.0. ID цикла = 0 (default)
+        (1, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(Some(0))),
+        // 2. Нагрузка 10.0 (> 5.0). FnThreshold пропускает. Запускается TimerOnDelay (5000ms) для craneIsActive.
+        (2, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(0))),
+        // 3. Прошло 2.5 секунды. Таймер еще идет. Цикл не начат.
+        (3, 2500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(0))),
+        // 4. Прошло еще 3 секунды (всего 5.5). TimerOnDelay выдает true -> opCycleIsStarted дает импульс -> ID = 1
+        (4, 3000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(1))),
+        // 5. Импульс снят (задний фронт opCycleIsStarted). Счетчик не меняется. ID = 1.
+        (5, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(1))),
+        // 6. Сброс нагрузки до 0.0. Запускается TimerOffDelay (5000ms). Цикл все еще активен. ID = 1.
+        (6, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(1))),
+        // 7. Прошло 5.5 секунды. TimerOffDelay истекает -> Цикл завершен. ID не меняется.
+        (7, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(1))),
+        // 8. Стартуем ВТОРОЙ цикл. Нагрузка 20.0. TimerOnDelay пошел.
+        (8, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(20.0),  Ok(Some(1))),
+        // 9. Прошло 5.5 секунды. Таймер пробивается -> Cycle Started импульс -> ID инкрементируется до 2.
+        (9, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(20.0),  Ok(Some(2))),
+    ];
+    let flow = FlowContext::new();
+    for (step, delay_ms, name, val, target_id) in test_data.iter().cloned() {
+        if delay_ms > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        }
+        let ts = chrono::Utc::now();
+        let point = match val {
+            Value::Real(v) => Point::Real(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Double(v) => Point::Double(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Int(v) => Point::Int(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Bool(v) => Point::Bool(PointHlr::new(0, name, Bool(v), Status::Ok, Cot::Inf, ts)),
+            Value::String(v) => Point::String(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            _ => panic!("{dbg} | Step {step} | '{name}': Invalid type"),
+        };
+        log::debug!("{dbg} | Step {step} | point: {:?}", point);
+        task_nodes.eval(point);
+        let id_node = task_nodes.get_var("opCycleId").expect("Variable 'opCycleId' not found in DAG");
+        let result = flow.ignore(id_node.borrow_mut().out());
+        match (&result, &target_id) {
+            (Ok(Some(result)), Ok(Some(target))) => {
+                log::debug!("{dbg} | Step {step} | opCycleId: {:?}", result.value());
+                let actual = result.as_int().value;
+                assert_eq!(actual, *target, "{dbg} | Step {step} | opCycleId \n result: {actual} \n target: {target}");
+            }
+            (Ok(None), Ok(None)) | (Err(_), Err(_)) => {}
+            _ => panic!("{dbg} | Step {step} | \n result: {:?} \n target: {:?}", result, target_id),
         }
     }
 }

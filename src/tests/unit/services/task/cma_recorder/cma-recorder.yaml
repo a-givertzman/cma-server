@@ -37,19 +37,19 @@ service Task RecorderTask:
     #
     # The nominal load of the crane
     let craneLoad:
-        input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok
+        input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok default 0.0
     #
     # The nominal load of the Winch1
     let winch1Load:
-        input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok
+        input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok default 0.0
     #
     # The nominal load of the Winch2
     let winch2Load:
-        input: point real '/App/ied14/db906_visual_data/Winch2.Load' status ok
+        input: point real '/App/ied14/db906_visual_data/Winch2.Load' status ok default 0.0
     #
     # The nominal load of the Winch3
     let winch3Load:
-        input: point real '/App/ied14/db906_visual_data/Winch3.Load' status ok
+        input: point real '/App/ied14/db906_visual_data/Winch3.Load' status ok default 0.0
     #
     #
     let winch1LoadLimiterTrip:
@@ -154,9 +154,9 @@ service Task RecorderTask:
     let opCycleIsActive:
         input fn Or:
             input0: craneIsActive
-            input1: winch1IsActive
-            input2: winch2IsActive
-            input3: winch3IsActive
+            input1: winch1IsActive  
+            input2: winch2IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
+            input3: winch3IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
     #
     # Returns one tic true if operating cycle is begins (isActive false -> true)
     let opCycleIsStarted:
