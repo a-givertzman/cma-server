@@ -3,16 +3,16 @@ use concat_string::concat_string;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointType};
 use sal_sync::services::types::Bool;
-use crate::domain::{EdgeDetector, FnOutRef, TryTo};
+use crate::domain::{FnOutRef, TryTo};
 use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult};
 ///
-/// ### Function | Max
+/// ### Function | `FnMax`
 /// 
 /// Вычисляет максимальное значение (Max) входного сигнала.
 /// 
 /// Особенности работы:
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывант передачу данных (возвращает `None`).
-/// - `reset`: Сбрасывает вычисленное значение по переднему фронту сигнала (переход 0 -> 1).
+/// - `reset`: Сбрасывает накопленную сумму и счетчик если `> 0`.
 /// - `input`: Источник входных данных. Выходной `Point` автоматически наследует 
 ///   тип данных входа (Bool, Int, Real или Double).
 /// - Игнорирует нечисловые типы (возвращает `Err`).
@@ -20,7 +20,7 @@ use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResu
 pub struct FnMax {
     id: String,
     kind: FnKind,
-    reset: Option<FnChange>,
+    reset: Option<FnOutRef>,
     input: FnChange,
     max: Option<f64>,
 }
@@ -37,7 +37,7 @@ impl FnMax {
         Self { 
             id: format!("{}/FnMax{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            reset: reset.map(FnChange::new),
+            reset,
             input: FnChange::new(input),
             max: None,
         }
@@ -75,27 +75,27 @@ impl FnOut for FnMax {
     fn inputs(&self) -> Vec<String> {
         let mut inputs = self.input.inputs();
         if let Some(reset) = &self.reset {
-            inputs.append(&mut reset.inputs());
+            inputs.append(&mut reset.borrow().inputs());
         }
         inputs
     }
     //
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let mut force_recalc = false;
+        let mut is_reset = false;
         let input = self.input.out();
-        let reset = self.reset.as_mut().map(|f| f.out());
+        let reset = self.reset.as_mut().map(|f| f.borrow_mut().out());
         if let Some(reset) = reset {
             if let Some(reset) = flow.ignore(reset)? {
                 let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
                 if reset {
                     self.max = None;
-                    force_recalc = true;
+                    is_reset = true;
                 }
             }
         }
         let Some(input) = flow.map(input)? else { return Ok(None) };
-        if !flow.is_new() && !force_recalc {
+        if !flow.is_new() && !is_reset {
             let Some(max) = self.max else { return Ok(None) };
             return flow.wrap_old(Self::point(&self.id, &input, max)?);
         }
@@ -110,7 +110,7 @@ impl FnOut for FnMax {
             log::trace!("{}.out | max: {:?}", self.id, self.max);
             let max = Self::point(&self.id, &input, value)?;
             flow.wrap_new(max)
-        } else if was_none || force_recalc {
+        } else if was_none || is_reset {
             log::trace!("{}.out | max: {:?}", self.id, self.max);
             let max = Self::point(&self.id, &input, max)?;
             flow.wrap_new(max)
@@ -125,7 +125,7 @@ impl FnOut for FnMax {
         self.max = None;
         self.input.hard_reset();
         if let Some(reset) = &mut self.reset {
-            reset.hard_reset();
+            reset.borrow_mut().hard_reset();
         }
     }
     //

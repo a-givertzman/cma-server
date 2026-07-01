@@ -5,7 +5,7 @@ use concat_string::concat_string;
 use crate::domain::{FnOutRef, TryTo};
 use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 
-/// ### Function | FnAverage (Time-Weighted Average)
+/// ### Function | `FnAverage` (Time-Weighted Average)
 /// 
 /// Вычисляет взвешенное по времени среднее (Time-Weighted Average) входного сигнала.
 ///
@@ -37,8 +37,8 @@ impl FnAverage {
         Self { 
             id: format!("{}/FnAverage{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            reset: reset,
-            input: input,
+            reset,
+            input,
             count: 0,
             sum: 0.0,
             average: None,
@@ -76,15 +76,25 @@ impl FnOut for FnAverage {
         let input = self.input.borrow_mut().out();
         let reset = self.reset.as_mut().map(|f| f.borrow_mut().out());
         let Some(input) = flow.map(input)? else { return Ok(None) };
+        // let mut force_recalc = false;
         if let Some(reset) = reset {
             if let Some(reset) = flow.ignore(reset)? {
                 let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
                 if reset {
                     self.count = 0;
                     self.sum = 0.0;
+                    // force_recalc = true;
                 }
             }
         }
+        // Закоментировано потому что из двух вариантов реализации среднего: "Событийный" и "Взвешенный по времени"
+        // более подходящим и универсальным является "Взвешенный по времени", поэтому пока оставляю его.
+        // В будущем можно добавить отдельно событийный вариант FnEventAverage, который будет считать только FlowNew.
+        // // Возвращаем предыдущее значение, если нет новых данных на входе и не было сброса
+        // if !flow.is_new() && !force_recalc {
+        //     let Some(average) = self.average.as_ref() else { return Ok(None) };
+        //     return flow.wrap_old(average.clone());
+        // }
         // trace!("{}.out | input: {:?}", self.id, input);
         let value = match input.typ() {
             PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
@@ -96,14 +106,17 @@ impl FnOut for FnAverage {
         // log::debug!("{}.out | sum: {:?}", self.id, self.sum);
         // log::debug!("{}.out | count: {:?}", self.id, self.count);
         // log::debug!("{}.out | average: {:?}", self.id, average);
-        let point = match input.typ() {
-            PointType::Int => Point::Int(Self::point_with(&input, &self.id, average.round() as i64)),
-            PointType::Real => Point::Real(Self::point_with(&input, &self.id, average as f32)),
-            PointType::Double => Point::Double(Self::point_with(&input, &self.id, average)),
+        let (average, point) = match input.typ() {
+            PointType::Int => {
+                let av = average.round();
+                (av, Point::Int(Self::point_with(&input, &self.id, av as i64)))
+            }
+            PointType::Real => (average, Point::Real(Self::point_with(&input, &self.id, average as f32))),
+            PointType::Double => (average, Point::Double(Self::point_with(&input, &self.id, average))),
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
         let is_changed = self.average.as_ref().map_or(true, |prev| {
-            (prev.to_double().as_double().value - point.to_double().as_double().value).abs() > f64::EPSILON ||
+            (prev.to_double().as_double().value - average).abs() > f64::EPSILON ||
             prev.status() != input.status()
         });
         self.average = Some(point.clone());

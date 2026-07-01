@@ -1,9 +1,11 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
+use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointType};
 use sal_sync::services::types::Bool;
-use crate::domain::{EdgeDetector, FnOutRef, TryTo};
+use crate::domain::{FnOutRef, TryTo};
+use crate::err_pass;
 use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult};
 ///
 /// ### Function | `FnMin`
@@ -12,7 +14,7 @@ use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResu
 /// 
 /// Особенности работы:
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
-/// - `reset`: Сбрасывает вычисленное значение по переднему фронту сигнала (переход 0 -> 1).
+/// - `reset`: Сбрасывает накопленную сумму и счетчик если `> 0`.
 /// - `input`: Источник входных данных. Выходной `Point` автоматически наследует 
 ///   тип данных входа (Bool, Int, Real или Double).
 /// - Игнорирует нечисловые типы (возвращает `Err`).
@@ -20,9 +22,9 @@ use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResu
 pub struct FnMin {
     id: String,
     kind: FnKind,
-    reset: Option<FnChange>,
+    reset: Option<FnOutRef>,
     input: FnChange,
-    min: Option<f64>,
+    min: Option<Point>,
 }
 //
 impl FnMin {
@@ -36,7 +38,7 @@ impl FnMin {
         Self { 
             id: format!("{}/FnMin{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            reset: reset.map(FnChange::new),
+            reset,
             input: FnChange::new(input),
             min: None,
         }
@@ -74,49 +76,53 @@ impl FnOut for FnMin {
     fn inputs(&self) -> Vec<String> {
         let mut inputs = self.input.inputs();
         if let Some(reset) = &self.reset {
-            inputs.append(&mut reset.inputs());
+            inputs.append(&mut reset.borrow().inputs());
         }
         inputs
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
-        let mut force_recalc = false;
+        let mut is_reset = false;
         let input = self.input.out();
-        let reset = self.reset.as_mut().map(|f| f.out());
+        let reset = self.reset.as_mut().map(|f| f.borrow_mut().out());
         if let Some(reset) = reset {
             if let Some(reset) = flow.ignore(reset)? {
                 let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
                 if reset {
                     self.min = None;
-                    force_recalc = true;
+                    is_reset = true;
                 }
             }
         }
         let Some(input) = flow.map(input)? else { return Ok(None) };
-        if !flow.is_new() && !force_recalc {
-            let Some(min) = self.min else { return Ok(None) };
-            return flow.wrap_old(Self::point(&self.id, &input, min)?);
+        if !flow.is_new() && !is_reset {
+            let Some(min) = self.min.as_ref() else { return Ok(None) };
+            return flow.wrap_old(min.clone());
         }
         let value = match input.typ() {
             PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
             _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
         };
-        let was_none = self.min.is_none();
-        let min = *self.min.get_or_insert(value);
-        if value < min {
-            self.min = Some(value);
-            log::trace!("{}.out | min: {:?}", self.id, self.min);
-            let min = Self::point(&self.id, &input, value)?;
-            flow.wrap_new(min)
-        } else if was_none || force_recalc {
-            log::trace!("{}.out | min: {:?}", self.id, self.min);
-            let min = Self::point(&self.id, &input, min)?;
-            flow.wrap_new(min)
+        let (is_changed, point) = if let Some(prev) = self.min.as_ref() {
+            if value < prev.to_double().as_double().value || prev.status() != input.status() {
+                let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
+                self.min = Some(p.clone());
+                (true, p)
+            } else {
+                (false, prev.clone())
+            }
+        } else { 
+            let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
+            self.min = Some(p.clone());
+            (true, p)
+        };
+        log::trace!("{}.out | min: {:?}", self.id, self.min);
+        if is_changed {
+            flow.wrap_new(point)
         } else {
-            log::trace!("{}.out | min: {:?}", self.id, self.min);
-            let min = Self::point(&self.id, &input, min)?;
-            flow.wrap_old(min)
+            flow.wrap_old(point)
         }
     }
     //
@@ -124,7 +130,7 @@ impl FnOut for FnMin {
         self.min = None;
         self.input.hard_reset();
         if let Some(reset) = &mut self.reset {
-            reset.hard_reset();
+            reset.borrow_mut().hard_reset();
         }
     }
     //
