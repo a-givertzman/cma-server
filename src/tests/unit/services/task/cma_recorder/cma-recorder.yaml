@@ -160,7 +160,6 @@ service Task RecorderTask:
     #
     # Returns one tic true if operating cycle is begins (isActive false -> true)
     let opCycleIsStarted:
-        # input fn Debug:
         input fn RisingEdge:
             input: opCycleIsActive
     #
