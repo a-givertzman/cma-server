@@ -211,16 +211,13 @@ mod tests {
         // Опускаем входное значение, чтобы исторический минимум упал
         input.borrow_mut().flow = Some(FnFlow::New(mock_double(5.0)));
         min_node.out().unwrap(); // min = 5.0
-        
         // Датчик снова показывает 10.0. Но минимум все еще 5.0
         input.borrow_mut().flow = Some(FnFlow::New(mock_double(10.0)));
         let res_before_reset = min_node.out().unwrap().unwrap();
         assert!(matches!(res_before_reset, FnFlow::Old(_))); // Значение удержано
-        
         // Дергаем сброс. Датчик все еще показывает 10.0
         reset.borrow_mut().flow = Some(FnFlow::New(mock_bool(true)));
         let res_reset = min_node.out().unwrap().unwrap();
-        
         // Так как математическое значение ПРЫГНУЛО с 5.0 обратно на 10.0 из-за сброса,
         // узел обязан выдать New. Если бы до сброса было 10.0, он бы выдал Old.
         assert_eq!(res_reset.value().as_double().value, 10.0);

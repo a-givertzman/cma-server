@@ -26,7 +26,6 @@ pub struct FnMax {
     input: FnChange,
     max: Option<Point>,
 }
-//
 // 
 impl FnMax {
     ///
@@ -198,25 +197,22 @@ mod tests {
         assert!(matches!(res_held, FnFlow::Old(_)));
     }
     #[test]
-    fn test_fnmax_reset_edge() {
-        let input = Rc::new(RefCell::new(MockNode { flow: Some(FnFlow::New(mock_double(10.0))) }));
+    fn test_fnmax_reset_latch() {
+        let input = Rc::new(RefCell::new(MockNode { flow: Some(FnFlow::New(mock_double(5.0))) }));
         let reset = Rc::new(RefCell::new(MockNode { flow: Some(FnFlow::New(mock_bool(false))) }));
-        let mut min_node = FnMax::new("test", Some(reset.clone()), input.clone());
-        min_node.out().unwrap(); // min = 5.0
+        let mut max_node = FnMax::new("test", Some(reset.clone()), input.clone());
+        max_node.out().unwrap(); // max = 5.0
         // Поднимаем входное значение, чтобы исторический максимум вырос
         input.borrow_mut().flow = Some(FnFlow::New(mock_double(10.0)));
-        let res = min_node.out().unwrap(); // min = 10.0
+        let res = max_node.out().unwrap(); // max = 10.0
         assert!(res.unwrap().into_value().to_double().as_double().value == 10.0); // Значение удержано
-        
         // Датчик снова показывает 5.0. Но максимум все еще 10.0
         input.borrow_mut().flow = Some(FnFlow::New(mock_double(5.0)));
-        let res_before_reset = min_node.out().unwrap().unwrap();
+        let res_before_reset = max_node.out().unwrap().unwrap();
         assert!(matches!(res_before_reset, FnFlow::Old(_))); // Значение удержано
-        
         // Дергаем сброс. Датчик все еще показывает 5.0
         reset.borrow_mut().flow = Some(FnFlow::New(mock_bool(true)));
-        let res_reset = min_node.out().unwrap().unwrap();
-        
+        let res_reset = max_node.out().unwrap().unwrap();
         // Так как математическое значение УПАЛО с 10.0 обратно на 5.0 из-за сброса,
         // узел обязан выдать New. Если бы до сброса было 5.0, он бы выдал Old.
         assert_eq!(res_reset.value().as_double().value, 5.0);
