@@ -5,7 +5,7 @@ use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointType};
 use sal_sync::services::types::Bool;
 use crate::domain::{FnOutRef, TryTo};
-use crate::err_pass;
+use crate::{err, err_pass};
 use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult};
 ///
 /// ### Function | `FnMin`
@@ -101,10 +101,10 @@ impl FnOut for FnMin {
             let Some(min) = self.min.as_ref() else { return Ok(None) };
             return flow.wrap_old(min.clone());
         }
-        let value = match input.typ() {
-            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
-        };
+        let value: f64 = (&input).try_to().map_err(|err: Error| err_pass!(self.id, err, ".out | Invalid input type {:?}", input.typ()).to_string())?;
+        if !value.is_finite() {
+            return Err(err!(self.id, ".out | Invalid input: {:?}", value).to_string());
+        }
         let (is_changed, point) = if let Some(prev) = self.min.as_ref() {
             if value < prev.to_double().as_double().value || prev.status() != input.status() {
                 let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;

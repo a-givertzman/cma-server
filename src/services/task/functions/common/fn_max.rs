@@ -1,9 +1,11 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
+use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointType};
 use sal_sync::services::types::Bool;
 use crate::domain::{FnOutRef, TryTo};
+use crate::{err, err_pass};
 use crate::services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult};
 ///
 /// ### Function | `FnMax`
@@ -22,7 +24,7 @@ pub struct FnMax {
     kind: FnKind,
     reset: Option<FnOutRef>,
     input: FnChange,
-    max: Option<f64>,
+    max: Option<Point>,
 }
 //
 // 
@@ -80,6 +82,7 @@ impl FnOut for FnMax {
         inputs
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let mut is_reset = false;
@@ -96,29 +99,53 @@ impl FnOut for FnMax {
         }
         let Some(input) = flow.map(input)? else { return Ok(None) };
         if !flow.is_new() && !is_reset {
-            let Some(max) = self.max else { return Ok(None) };
-            return flow.wrap_old(Self::point(&self.id, &input, max)?);
+            let Some(max) = self.max.as_ref() else { return Ok(None) };
+            return flow.wrap_old(max.clone());
         }
-        let value = match input.typ() {
-            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
+        let value: f64 = (&input).try_to().map_err(|err: Error| err_pass!(self.id, err, ".out | Invalid input type {:?}", input.typ()).to_string())?;
+        if !value.is_finite() {
+            return Err(err!(self.id, ".out | Invalid input: {:?}", value).to_string());
+        }
+        let (is_changed, point) = if let Some(prev) = self.max.as_ref() {
+            if value > prev.to_double().as_double().value || prev.status() != input.status() {
+                let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
+                self.max = Some(p.clone());
+                (true, p)
+            } else {
+                (false, prev.clone())
+            }
+        } else { 
+            let p = Self::point(&self.id, &input, value).map_err(|err| err_pass!(self.id, err).to_string())?;
+            self.max = Some(p.clone());
+            (true, p)
         };
-        let was_none = self.max.is_none();
-        let max = *self.max.get_or_insert(value);
-        if value > max {
-            self.max = Some(value);
-            log::trace!("{}.out | max: {:?}", self.id, self.max);
-            let max = Self::point(&self.id, &input, value)?;
-            flow.wrap_new(max)
-        } else if was_none || is_reset {
-            log::trace!("{}.out | max: {:?}", self.id, self.max);
-            let max = Self::point(&self.id, &input, max)?;
-            flow.wrap_new(max)
+        log::trace!("{}.out | max: {:?}", self.id, self.max);
+        if is_changed {
+            flow.wrap_new(point)
         } else {
-            log::trace!("{}.out | max: {:?}", self.id, self.max);
-            let max = Self::point(&self.id, &input, max)?;
-            flow.wrap_old(max)
+            flow.wrap_old(point)
         }
+
+        // let value = match input.typ() {
+        //     PointType::Bool | PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
+        //     _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
+        // };
+        // let was_none = self.max.is_none();
+        // let max = *self.max.get_or_insert(value);
+        // if value > max {
+        //     self.max = Some(value);
+        //     log::trace!("{}.out | max: {:?}", self.id, self.max);
+        //     let max = Self::point(&self.id, &input, value)?;
+        //     flow.wrap_new(max)
+        // } else if was_none || is_reset {
+        //     log::trace!("{}.out | max: {:?}", self.id, self.max);
+        //     let max = Self::point(&self.id, &input, max)?;
+        //     flow.wrap_new(max)
+        // } else {
+        //     log::trace!("{}.out | max: {:?}", self.id, self.max);
+        //     let max = Self::point(&self.id, &input, max)?;
+        //     flow.wrap_old(max)
+        // }
     }
     //
     fn hard_reset(&mut self) {
