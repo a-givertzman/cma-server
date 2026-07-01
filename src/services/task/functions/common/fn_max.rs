@@ -23,7 +23,6 @@ pub struct FnMax {
     reset: Option<FnChange>,
     input: FnChange,
     max: Option<f64>,
-    reset_edge: EdgeDetector,
 }
 //
 // 
@@ -41,7 +40,6 @@ impl FnMax {
             reset: reset.map(FnChange::new),
             input: FnChange::new(input),
             max: None,
-            reset_edge: EdgeDetector::new(),
         }
     }
     ///
@@ -129,12 +127,10 @@ impl FnOut for FnMax {
         if let Some(reset) = &mut self.reset {
             reset.hard_reset();
         }
-        self.reset_edge.reset();
     }
     //
     fn reset(&mut self) {
         self.max = None;
-        self.reset_edge.reset();
     }
 }
 ///

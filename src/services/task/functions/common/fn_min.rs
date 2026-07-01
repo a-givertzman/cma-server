@@ -23,7 +23,6 @@ pub struct FnMin {
     reset: Option<FnChange>,
     input: FnChange,
     min: Option<f64>,
-    reset_edge: EdgeDetector,
 }
 //
 impl FnMin {
@@ -40,7 +39,6 @@ impl FnMin {
             reset: reset.map(FnChange::new),
             input: FnChange::new(input),
             min: None,
-            reset_edge: EdgeDetector::new(),
         }
     }
     ///
@@ -128,7 +126,6 @@ impl FnOut for FnMin {
         if let Some(reset) = &mut self.reset {
             reset.hard_reset();
         }
-        self.reset_edge.reset();
     }
     //
     fn reset(&mut self) {

@@ -1,11 +1,11 @@
 #[cfg(test)]
 use testing::entities::test_value::Value;
-use sal_sync::{math::AproxEq, services::{entity::{Point, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
+use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
 use std::{cell::RefCell, rc::Rc, sync::Once};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
-    services::task::{EvalCycle, EvalCycleRef, FlowContext, FnAverage, FnInput, FnOut}
+    services::task::{EvalCycle, EvalCycleRef, FlowContext, FnAverage, FnFlow, FnInput, FnOut}
 };
 ///
 ///
@@ -93,32 +93,36 @@ fn test_int() {
         None,
         input.clone(),
     );
+    // Формат: (step, input_value, target_average, target_is_new)
     let test_data = vec![
-        (00,    0i64,     0i64),
-        (01,    0,     0),
-        (02,    3,     1),
-        (03,    0,     1),
-        (04,    0,     1),
-        (05,    1,     1),
-        (06,    0,     1),
-        (07,    7,     1),
-        (08,    0,     1),
-        (09,    0,     1),
-        (10,    2,     1),
-        (11,    8,     2),
-        (12,    1,     2),
-        (13,    0,     2),
-        (14,    0,     1),
+        (00,    0i64,  0i64,  true),  // Холодный старт -> New
+        (01,    0,     0,     false), // Среднее не изменилось -> Old
+        (02,    3,     1,     true),  // 3/3 = 1 -> New
+        (03,    0,     1,     false), // 3/4 = 0.75 (округление 1). Старое 1 -> Old
+        (04,    0,     1,     false), // 3/5 = 0.60 (округление 1). -> Old
+        (05,    1,     1,     false),
+        (06,    0,     1,     false),
+        (07,    7,     1,     false), // 11/8 = 1.375 (округление 1). -> Old
+        (08,    0,     1,     false),
+        (09,    0,     1,     false),
+        (10,    2,     1,     false),
+        (11,    8,     2,     true),  // 21/12 = 1.75 (округление 2). Изменилось -> New!
+        (12,    1,     2,     false),
+        (13,    0,     2,     false),
+        (14,    0,     1,     true),  // 22/15 = 1.46 (округление 1). Изменилось -> New!
     ];
-    for (step, value, target) in test_data {
+    for (step, value, target, target_is_new) in test_data {
+        let mut flow = FlowContext::new();
         cycle.increment();
         let point = value.to_point(0, "input");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let result = fn_average.out().unwrap().unwrap().into_value();
+        let result = flow.map(fn_average.out()).unwrap().unwrap();
+        let flow_is_new = flow.is_new();
         // debug!("input: {:?}", &mut input);
-        log::debug!("{dbg} | Step {step} | \t value: {:?}   |   result: {:?}", value, result);
+        log::debug!("{dbg} | Step {step} | \t value: {:?}   |   result: {:?}", value, result.value());
         assert!(result.as_int().value == target, "{dbg} | Step {step} | \nresult: {:?}\ntarget: {:?}", result, target);
+        assert_eq!(flow_is_new, target_is_new, "{dbg} | Step {step} | Taint tracking mismatch");
     }
 }
 ///
@@ -181,31 +185,31 @@ fn test_double_reset() {
         input.clone(),
     );
     let test_data = vec![
-        (00,    true,  0.0,      None),
-        (01,    true,  0.0,      None),
-        (02,    true,  3.3,      None),
-        (03,    false,  0.1,     Some(0.1)),
-        (04,    false,  0.0,     Some(0.05)),
-        (05,    false,  1.6,     Some(0.566666666666667)),
-        (06,    false,  0.0,     Some(0.425)),
-        (07,    false,  7.2,     Some(1.78)),
-        (08,    false,  0.0,     Some(1.48333333333333)),
-        (09,    false,  0.3,     Some(1.31428571428571)),
-        (10,    false,  2.2,     Some(1.425)),
-        (11,    true,  8.1,     None),
-        (12,    true,  1.9,     None),
-        (13,    true,  0.1,     None),
-        (14,    true,  0.0,     None),
-        (15,    false,  0.1,     Some(0.1)),
-        (16,    false,  0.0,     Some(0.05)),
-        (17,    false,  1.6,     Some(0.566666666666667)),
-        (18,    false,  0.0,     Some(0.425)),
-        (19,    false,  7.2,     Some(1.78)),
-        (20,    false,  0.0,     Some(1.48333333333333)),
-        (21,    false,  0.3,     Some(1.31428571428571)),
-        (22,    false,  2.2,     Some(1.425)),
-        (23,    true,  0.0,     None),
-        (24,    true,  0.0,     None),
+        (00,    true,  0.0,      Some(0.00)),
+        (01,    true,  0.0,      Some(0.00)),
+        (02,    true,  3.3,      Some(3.30)),
+        (03,    false,  0.1,     Some(1.70)),
+        (04,    false,  0.0,     Some(1.133333333333333)),
+        (05,    false,  1.6,     Some(1.25)),
+        (06,    false,  0.0,     Some(1.00)),
+        (07,    false,  7.2,     Some(2.033333333333333)),
+        (08,    false,  0.0,     Some(1.742857142857143)),
+        (09,    false,  0.3,     Some(1.5625)),
+        (10,    false,  2.2,     Some(1.633333333333333)),
+        (11,    true,  8.1,     Some(8.1)),
+        (12,    true,  1.9,     Some(1.9)),
+        (13,    true,  0.1,     Some(0.1)),
+        (14,    true,  0.0,     Some(0.0)),
+        (15,    false,  0.1,     Some(0.05)),
+        (16,    false,  0.0,     Some(0.03333333333333)),
+        (17,    false,  1.6,     Some(0.425)),
+        (18,    false,  0.0,     Some(0.340)),
+        (19,    false,  7.2,     Some(1.48333333333333)),
+        (20,    false,  0.0,     Some(1.271428571428571)),
+        (21,    false,  0.3,     Some(1.15)),
+        (22,    false,  2.2,     Some(1.266666666666667)),
+        (23,    true,  0.0,     Some(0.0)),
+        (24,    true,  0.0,     Some(0.0)),
     ];
     let mut results = 0;
     let flow = FlowContext::new();
@@ -219,17 +223,38 @@ fn test_double_reset() {
         let result = flow.ignore(fn_average.out());
         match (&result, &target) {
             (Ok(Some(result)), Some(target)) => {
-                log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
-                assert!(result.as_double().value.aprox_eq(*target, 3), "\nresult: {:?}\ntarget: {:?}", result.as_real().value, target);
+                log::debug!("Step {step} \t value: {:?}   |   result: {:?}", value, result);
+                assert!(result.as_double().value.aprox_eq(*target, 6), "Step {step} | \nresult: {:?}\ntarget: {:?}", result.as_double().value, target);
                 results += 1;
             }
             (Ok(None), None) => {
                 // log::debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, reset, value, result);
                 results += 1;
             }
-            (Err(err), _) => panic!("step {} \t value: {:?}   |   Error: {:?}", step, value, err),
-            _ => panic!("step {step} \nresult: {:?}\ntarget: {:?}", result, target),
+            (Err(err), _) => panic!("Step {step} \t value: {:?}   |   Error: {:?}", value, err),
+            _ => panic!("step {step} | \nresult: {:?}\ntarget: {:?}", result, target),
         };
     }
     assert!(results == test_data.len(), "\nresult: {:?}\ntarget: {:?}", results, test_data.len());
+}
+///
+/// Проверка поведения при отсутствии входных данных (обрыв связи)
+#[test]
+fn test_disconnect() {
+    DebugSession::new().filter(LogLevel::Debug).init();
+    init_once();
+    let dbg = "FnAverage-test_disconnect";
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&dbg, Value::Double(0.0), &cycle);
+    let mut fn_average = FnAverage::new(dbg, None, input.clone());
+    // Такт 1: Нормальные данные
+    cycle.increment();
+    input.borrow_mut().add(&10.0.to_point(0, "input"));
+    let result = fn_average.out().unwrap();
+    assert!(matches!(result, Some(FnFlow::New(_))), "Должен вернуть новое посчитанное значение: \nresult: {:?}\ntarget: Some(New(_))", result);
+    // Такт 2: Источник замолчал (None)
+    cycle.increment();
+    // Мы не вызываем input.add(), имитируя отсутствие данных в цикле опроса
+    let result = fn_average.out().unwrap();
+    assert!(matches!(result, Some(FnFlow::Old(_))), "Вход не поменялся (Old) узел должен вернуть новое посчитанное значение, но так как результат расчета прежний, то Old: \nresult: {:?}\ntarget: Some(New(_))", result);
 }
