@@ -5,8 +5,7 @@ use std::{cell::RefCell, rc::Rc, str::FromStr, sync::Arc};
 use indexmap::IndexMap;
 use crate::{
     domain::FnOutRef, err_pass, services::task::{
-        functions::{functions::Functions, *},
-        task_nodes::TaskNodes
+        EvalCycleRef, functions::{functions::Functions, *}, task_nodes::TaskNodes
     }
 };
 ///
@@ -733,6 +732,7 @@ impl FnBuilder {
                     Some((input_conf_name, input_conf)) => {
                         let var = Self::fn_var(
                             var_name,
+                            nodes.cycle(),
                             Self::function(parent, input_conf_name, input_conf, nodes, services)
                                 .map_err(|err| error.pass_with(format!("Var | Can't get '{input_conf_name}'"), err))?,
                         );
@@ -820,9 +820,9 @@ impl FnBuilder {
     }
     ///
     ///
-    fn fn_var(parent: impl Into<String>, input: FnOutRef,) -> FnOutRef {
+    fn fn_var(parent: impl Into<String>, cycle: EvalCycleRef, input: FnOutRef,) -> FnOutRef {
         Rc::new(RefCell::new(
-        FnVar::new(parent, input),
+        FnVar::new(parent, cycle, input),
         ))
     }
         ///

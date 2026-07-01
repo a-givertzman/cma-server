@@ -1,5 +1,5 @@
 use std::sync::atomic::{Ordering, AtomicUsize};
-use crate::{domain::FnOutRef, services::task::FnFlow};
+use crate::{domain::FnOutRef, services::task::{CycleIndex, EvalCycleRef, FnFlow}};
 use super::{FnOut, FnKind, FnResult};
 ///
 /// ### Variable | Specific kinde of function
@@ -9,25 +9,27 @@ pub struct FnVar {
     id: String,
     kind: FnKind,
     input: FnOutRef,
-    // value: Option<FnResult<Point, String>>,
+    /// Локальное значение отработанного вычислительного цикла
+    cycle: CycleIndex,
+    /// Значение текущего вычислительного цикла из `TaskNodes`
+    eval_cycle: EvalCycleRef,
+    /// Текущий результат вычислений
+    state: FnResult<FnFlow, String>,
 }
 //
-// 
 impl FnVar {
-    pub fn new(parent: impl Into<String>, input: FnOutRef) -> Self {
+    pub fn new(parent: impl Into<String>, cycle: EvalCycleRef, input: FnOutRef) -> Self {
         Self {
             id: format!("{}/FnVar{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Var,
             input,
-            // value: None, 
+            cycle: CycleIndex::new(),
+            eval_cycle: cycle,
+            state: Ok(None),
         }
     }
 }
 //
-// 
-// impl FnIn for FnVar {}
-//
-// 
 impl FnOut for FnVar {
     //
     fn id(&self) -> String {
@@ -50,10 +52,24 @@ impl FnOut for FnVar {
     /// - Returns None if:
     ///   - Point filtered by any kind of filtering function
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        log::trace!("{}.eval | evaluating...", self.id);
-        let value = self.input.borrow_mut().out();
-        log::trace!("{}.out | value: {:?}", self.id, value);
-        value
+        if !self.cycle.update(&self.eval_cycle.get()) {
+            return self.state.clone();
+        }
+        match self.input.borrow_mut().out() {
+            Ok(Some(v)) => {
+                self.state = FnResult::Ok(Some(v.clone()));
+                Ok(Some(v))
+            }
+            Ok(None) => {
+                self.state = Ok(None);
+                Ok(None)
+            }
+            Err(err) => {
+                let err = FnResult::Err(format!("{}.out | Error: {}", self.id, err));
+                self.state = err.clone();
+                err
+            }
+        }
     }
     //
     fn hard_reset(&mut self) {
@@ -62,9 +78,6 @@ impl FnOut for FnVar {
     //
     fn reset(&mut self) {}
 }
-//
-// 
-// impl FnInOut for FnVar {}
 ///
 /// Global static counter of FnVar instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
