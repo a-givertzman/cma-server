@@ -512,3 +512,147 @@ fn detect_winch3_is_active() {
         }
     }
 }
+///
+/// Проверка совпадения активности гидростанции с активностью рабочего цикла.
+#[test]
+fn detect_pump_is_active() {
+    DebugSession::new().filter(LogLevel::Debug).init();
+    init_once();
+    init_each();
+    let dbg = "detect_pump_is_active";
+    log::debug!("{dbg}");
+    let self_name = Name::new("", dbg);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
+    let conf = TaskConf::read(&self_name, "src/tests/unit/services/task/cma_recorder/cma-recorder.yaml").unwrap();
+    let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::empty()), None).unwrap());
+    task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
+    // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, Ожидаемый_pumpIsActive)
+    let test_data: &[(i32, u64, &str, Value, Result<Option<bool>, ()>)] = &[
+        // 1. Инициализация номиналов. Порог активности (5%) = 5.0 для обеих лебедок.
+        (1, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
+        (2, 0,    "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(100.0), Ok(None)),
+        // 3. Поднимаем груз на Лебедке 1 (10.0 > 5.0). Запуск OnDelay таймера.
+        (3, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(false))),
+        // 4. Прошло 5.5с. Лебедка 1 перешла в Active -> Насос ВКЛ.
+        (4, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(true))),
+        // 5. Поднимаем груз на Лебедке 2 (20.0 > 5.0). Запуск OnDelay для нее. Насос уже работает.
+        (5, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
+        // 6. Прошло 5.5с. Лебедка 2 тоже Active. Насос продолжает работу (OR).
+        (6, 5500, "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(20.0),  Ok(Some(true))),
+        // 7. Сбрасываем Лебедку 1 (0.0). Запуск OffDelay таймера.
+        (7, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // 8. Прошло 5.5с. Лебедка 1 отключилась. Но Лебедка 2 всё еще Active -> Насос не останавливается.
+        (8, 5500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // 9. Сбрасываем Лебедку 2 (0.0). Запуск OffDelay.
+        (9, 0,    "/App/ied14/db906_visual_data/Winch2.Load",        Value::Real(0.0),   Ok(Some(true))),
+        // 10. Прошло 5.5с. Лебедка 2 отключилась. Все механизмы стоят -> Насос ВЫКЛ.
+        (10, 5500, "/App/ied14/db906_visual_data/Winch2.Load",       Value::Real(0.0),   Ok(Some(false))),
+    ];
+    let flow = FlowContext::new();
+    for (step, delay_ms, name, val, target_pump) in test_data.iter().cloned() {
+        if delay_ms > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        }
+        let ts = chrono::Utc::now();
+        let point = match val {
+            Value::Real(v) => Point::Real(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Double(v) => Point::Double(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Int(v) => Point::Int(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Bool(v) => Point::Bool(PointHlr::new(0, name, Bool(v), Status::Ok, Cot::Inf, ts)),
+            Value::String(v) => Point::String(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            _ => panic!("{dbg} | Step {step} | '{name}': Invalid type"),
+        };
+        log::debug!("{dbg} | Step {step} | point: {:?}", point);
+        task_nodes.eval(point);
+        let pump_node = task_nodes.get_var("pumpIsActive").expect("Variable 'pumpIsActive' not found in DAG");
+        let result = flow.ignore(pump_node.borrow_mut().out());
+        match (&result, &target_pump) {
+            (Ok(Some(result)), Ok(Some(target))) => {
+                log::debug!("{dbg} | Step {step} | pumpIsActive: {:?}", result.value());
+                let actual = result.as_bool().value.0;
+                assert_eq!(actual, *target, "{dbg} | Step {step} | pumpIsActive \n result: {actual} \n target: {target}");
+            }
+            (Ok(None), Ok(None)) | (Err(_), Err(_)) => {}
+            _ => panic!("{dbg} | Step {step} | \n result: {:?} \n target: {:?}", result, target_pump),
+        }
+    }
+}
+///
+/// Выделение переднего (Started) и заднего (Done) фронтов рабочего цикла.
+#[test]
+fn detect_op_cycle_edges() {
+    DebugSession::new().filter(LogLevel::Debug).init();
+    init_once();
+    init_each();
+    let dbg = "detect_op_cycle_edges";
+    log::debug!("{dbg}");
+    let self_name = Name::new("", dbg);
+    let mut task_nodes = TaskNodes::without_retain(dbg, 0);
+    let conf = TaskConf::read(&self_name, "src/tests/unit/services/task/cma_recorder/cma-recorder.yaml").unwrap();
+    let services = Arc::new(Services::new(dbg, ServicesConf::new(dbg, ConfTree::empty()), None).unwrap());
+    task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
+    // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, target_started, target_done)
+    let test_data: &[(i32, u64, &str, Value, Result<Option<bool>, ()>, Result<Option<bool>, ()>)] = &[
+        // 1. Инициализация номинала Winch1 (LoadR0 = 100.0). Порог активности (5%) = 5.0
+        (1, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(Some(false)), Ok(Some(false))),
+        // 2. Нагрузка 15.0 (> 5.0). TimerOnDelay (5000ms) запускается. Цикл еще не начат.
+        (2, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
+        // 3. Прошло 2 секунды. Нагрузка висит. Таймер в процессе.
+        (3, 2000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
+        // 4. Прошло еще 3.5 секунды (всего 5.5). TimerOnDelay пробивается -> opCycleIsActive = true.
+        // Срабатывает передний фронт. opCycleIsStarted выдает одиночный импульс true.
+        (4, 3500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(true)),  Ok(Some(false))),
+        // 5. Следующий такт с той же нагрузкой. Импульс Started обязан упасть в false (одновибратор).
+        (5, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(15.0),  Ok(Some(false)), Ok(Some(false))),
+        // 6. Сброс нагрузки до 1.0 (< 5.0). TimerOffDelay (5000ms) запускается. Цикл все еще активен.
+        (6, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
+        // 7. Прошло 3 секунды. Крюк пустой. Таймер отключения в процессе.
+        (7, 3000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
+        // 8. Прошло еще 2.5 секунды (всего 5.5). TimerOffDelay истекает -> opCycleIsActive = false.
+        // Срабатывает задний фронт. opCycleIsDone выдает одиночный импульс true.
+        (8, 2500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(true))),
+        // 9. Следующий такт холостого хода. Импульс Done обязан упасть в false.
+        (9, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(1.0),   Ok(Some(false)), Ok(Some(false))),
+    ];
+    let flow = FlowContext::new();
+    for (step, delay_ms, name, val, target_started, target_done) in test_data.iter().cloned() {
+        if delay_ms > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        }
+        let ts = chrono::Utc::now();
+        let point = match val {
+            Value::Real(v) => Point::Real(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Double(v) => Point::Double(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Int(v) => Point::Int(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            Value::Bool(v) => Point::Bool(PointHlr::new(0, name, Bool(v), Status::Ok, Cot::Inf, ts)),
+            Value::String(v) => Point::String(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
+            _ => panic!("{dbg} | Step {step} | '{name}': Invalid type"),
+        };
+        log::debug!("{dbg} | Step {step} | point: {:?}", point);
+        task_nodes.eval(point);
+        let started_node = task_nodes.get_var("opCycleIsStarted").expect("Variable 'opCycleIsStarted' not found in DAG");
+        let done_node = task_nodes.get_var("opCycleIsDone").expect("Variable 'opCycleIsDone' not found in DAG");
+        // Проверяем opCycleIsStarted
+        let result_started = flow.ignore(started_node.borrow_mut().out());
+        match (&result_started, &target_started) {
+            (Ok(Some(result)), Ok(Some(target))) => {
+                log::debug!("{dbg} | Step {step} | opCycleIsStarted: {:?}", result.value());
+                let actual = result.as_bool().value.0;
+                assert_eq!(actual, *target, "{dbg} | Step {step} | opCycleIsStarted \n result: {actual} \n target: {target}");
+            }
+            (Ok(None), Ok(None)) | (Err(_), Err(_)) => {}
+            _ => panic!("{dbg} | Step {step} | opCycleIsStarted \n result: {:?} \n target: {:?}", result_started, target_started),
+        }
+        // Проверяем opCycleIsDone
+        let result_done = flow.ignore(done_node.borrow_mut().out());
+        match (&result_done, &target_done) {
+            (Ok(Some(result)), Ok(Some(target))) => {
+                log::debug!("{dbg} | Step {step} | opCycleIsDone: {:?}", result.value());
+                let actual = result.as_bool().value.0;
+                assert_eq!(actual, *target, "{dbg} | Step {step} | opCycleIsDone \n result: {actual} \n target: {target}");
+            }
+            (Ok(None), Ok(None)) | (Err(_), Err(_)) => {}
+            _ => panic!("{dbg} | Step {step} | opCycleIsDone \n result: {:?} \n target: {:?}", result_done, target_done),
+        }
+    }
+}
