@@ -1,8 +1,9 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::{ConfKeywd, ConfKind, ConfTree, ConfTreeGet, ServicesConf}, entity::{Name, Object, Point}, Service, Services}, sync::Owner, thread_pool::{Scheduler, ThreadPool}};
 use testing::entities::test_value::Value;
-use crate::{domain::{testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}, RwLock}, services::ServicesFactory};
+use crate::{domain::{RwLock, testing::{RecvService, RecvServiceConf, SendService, SendServiceConf}}, err_pass, services::ServicesFactory};
 
 ///
 /// Makes easier to orgenise test of Srvice
@@ -49,7 +50,7 @@ impl ServiceTestPlanner {
         each_sent: Vec<impl Fn(&Point) + Send + Sync + 'static>,
         each_received: Vec<impl Fn(&Vec<Point>) + Send + Sync + 'static>,
         all_received: impl Fn(Vec<Vec<Point>>) + Send + Sync + 'static,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let parent = parent.into();
         let name = Name::new(&parent, "ServiceTestPlanner");
         let dbg = Dbg::new(&parent, name.me());
@@ -57,13 +58,14 @@ impl ServiceTestPlanner {
         let tp = ThreadPool::new(&parent, tread_pool);
         let services = conf.get("services").expect(&format!("{dbg}.run | `services` not foind in the config or has wrong value"));
         let services = ServicesConf::new(&parent, services);
-        let services = Arc::new(Services::new(&parent, services, Some(tp.scheduler())));
+        let services = Arc::new(Services::new(&parent, services, Some(tp.scheduler()))
+            .map_err(|err| Error::new(&dbg, "new").pass(err))?);
         let events: Vec<Vec<(String, Value)>> = events
             .into_iter()
             .map(|events| {
                 events.into_iter().rev().map(|(name, value)| (name.into(), value)).collect()
             }).collect();
-        Self {
+        Ok(Self {
             name,
             conf,
             tp,
@@ -81,7 +83,7 @@ impl ServiceTestPlanner {
             }).collect(),
             inspect_all_received: Arc::new(Box::new(all_received)),
             dbg,
-        }
+        })
     }
     ///
     /// Returns [Scheduler] from internal [ThreadPool]
@@ -92,6 +94,7 @@ impl ServiceTestPlanner {
     ///
     /// Starts all service's to perform a test
     #[allow(unused)]
+    #[named]
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "run");
@@ -158,7 +161,7 @@ impl ServiceTestPlanner {
                                                     conf,
                                                     self.services.clone(),
                                                     self.tp.scheduler(),
-                                                );
+                                                ).map_err(|err| err_pass!(dbg, err))?;
                                                 log::info!("{dbg}.run | Configuring service: {} - ok\n", service.name());
                                                 self.services_order.write().push(service.name().join());
                                                 self.services.insert(service);

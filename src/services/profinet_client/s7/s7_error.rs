@@ -66,6 +66,8 @@ pub enum S7Error {
 //
 // 
 impl S7Error {
+    ///
+    /// Returns a text description to the error [code]
     pub fn text(code: i32) -> String {
         let mut err = vec![0; 1024];
         unsafe {
@@ -80,7 +82,29 @@ impl S7Error {
         }
         let err = unsafe { std::str::from_utf8_unchecked(&err) };
         err.to_owned()
-    }    
+    }
+    ///
+    /// Возвращает true, если ошибка означает потерю физической или протокольной связи
+    pub fn is_connection_lost(code: i32) -> bool {
+        match code {
+            // TCP ошибки
+            0x00000001..=0x00000009 | 0x00002751 => true,
+            // ISO & PDU ошибки согласования
+            0x00010000 | 0x00100000 => true,
+            // Тайм-аут операции (PLC не ответил)
+            0x02000000 => true,
+            // Клиент в процессе удаления
+            0x02400000 => true,
+            // Все остальное (логические ошибки, неверные адреса и т.д.)
+            _ => false,
+        }
+    }
+    ///
+    /// Возвращает true, если ошибка не означает потерю физической или протокольной связи
+    pub fn is_connected(code: i32) -> bool {
+        ! Self::is_connection_lost(code)
+    }
+
 }
 //
 // 

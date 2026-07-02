@@ -110,6 +110,8 @@ class CMA green
 %% class di orange    
 ```
 
+---
+
 ## 1 Task service
 
 ### Overview
@@ -124,6 +126,112 @@ The computations can be executed:
 
 - periodically with configured cycle time (min 10ms for now)
 - event-trigger, computation node will be performed if at least one if it's input received new point
+
+### Coverage
+
+#### Ready to use functions
+
+- **Математика:**
+    - ✅ `Add`
+    - ✅ `Sub`
+    - ✅ `Mul`
+    - ✅ `Div`
+    - ✅ `Pow`
+- **Логика и сравнение:**
+    - ✅ `Ge` (>=)
+    - ✅ `Gt` (>)
+    - ✅ `Le` (<=)
+    - ✅ `Lt` (<)
+    - ✅ `Eq` (==)
+    - ✅ `Ne` (!=)
+    - ✅ `Or` (||)
+    - ✅ `And` (&&)
+    - NotImpl `BitOr`
+    - NotImpl `BitAnd`
+    - ✅`Not`
+- **Таймеры и триггеры:**
+    - ✅ `Timer`
+    - ✅ `TimerOnDelay`
+    - ✅ `TimerOffDelay`
+    - ✅ `RisingEdge`
+    - ✅ `FallingEdge`.
+- **Обработка сигналов и фильтрация:**
+    - ✅ `Threshold`
+    - ✅ `Select` (`Filter`)
+    - ✅ `IsChangedValue`
+    - ✅ `Hold` (`KeepValid`).
+    - ✅ `FnPointId`
+- **Агрегация и приведение типов:**
+    - ✅ `Average`
+    - ✅ `Max`
+    - ✅ `Min`
+    - ✅ `Acc`
+    - ✅ `PiecewiseLineApprox`.
+    - ✅ `ToInt`
+- **Состояние (State):**
+    - ✅ `Retain`.
+        - ✅ `TaskRetain`
+        - ✅ `RetainRead`
+        - ✅ `RetainWrite`
+- **Потребители:**
+    - ✅ `Sql` (SqlMetric)
+    - ✅ `Export`
+    - ✅ `ToApiQueue`
+    - ✅ `RecOpCycleMetric`
+
+#### Full list of defined functions, no in the refactoring stage
+<details>
+  <summary>Expand</summary>
+
+- **Базовая математика и логика (Math & Logic)**
+    - ✅ `Add`, `Sub`, `Mul`, `Div`, `Pow`, `Max` — базовые арифметические операции.
+    - ✅ `Gt`, `Ge`, `Eq`, `Le`, `Lt`, `Ne` — компараторы.
+    - ✅ `BitAnd`, `BitOr`, `BitXor`, `BitNot` — битовые операции.
+    - ✅ `Min`, `Max` — поиск минимума, максимума
+    - ❌ `Mod` — остаток от деления (критично для циклических расчетов).
+    - ❌ `Abs` — модуль числа.
+    - ❌ `Sqrt` — квадратный корень.
+    - ❌ `Sin`, `Cos`, `Tan`, `Asin`, `Acos`, `Atan` — базовая тригонометрия (нужна для сложной кинематики, например, кранов).
+    - ❌ `Log`, `Ln`, `Exp` — логарифмы и экспоненты.
+    - ❌ `Select` / `Mux` — мультиплексор (переключение входов по условию).
+    - ❌ `LogicalAnd`, `LogicalOr` — строгие логические операторы для Bool (если битовые не делают короткое замыкание).
+- **Триггеры, память и состояния (State & Triggers)**
+    - ✅ `RisingEdge` (R_TRIG), `FallingEdge` (F_TRIG) — детекторы фронтов.
+    - ✅ `Retain` — энергонезависимая память в рамках узла.
+    - ✅ `Acc` — аккумулятор (накопитель).
+    - ✅ `IsChangedValue`, `KeepValid` — удержание статуса.
+    - ✅ `Count` — счетчик срабатываний.
+    - ❌ `RS_FlipFlop` / `SR_FlipFlop` — триггеры с приоритетом сброса или установки.
+    - ❌ `Latch` — фиксация значения по управляющему сигналу до явного сброса.
+- **Таймеры и время (Timers)**
+    - ✅ `Timer`, `TimerOnDelay` (TON), `TimerOffDelay` (TOF).
+    - ❌ `TimerPulse` (TP) — генератор импульса заданной длины.
+    - ❌ `RTC` (Real-Time Clock) — извлечение текущего системного времени (часы, минуты, день недели) для вычислений.
+    - ❌ `Cron` — срабатывание узла по расписанию.
+- **Обработка сигналов (Signal Processing)**
+    - ✅ `Filter`, `Smooth`, `Average`.
+    - ✅ `PiecewiseLineApprox` — кусочно-линейная аппроксимация (отличная вещь для калибровки датчиков).
+    - ✅ `Threshold` — пороговые фильтры.
+    - ❌ `Integral` — интегрирование по времени (например, расчет кубов из текущего расхода м3/ч).
+    - ❌ `Derivative` — дифференцирование по времени (например, расчет скорости изменения давления).
+    - ❌ `RateLimiter` — ограничение скорости нарастания/спада сигнала (защита от скачков).
+    - ❌ `Deadband` — мертвая зона (сигнал не меняется, пока вход не выйдет за пределы коридора).
+    - ❌ `PID` — полноценный ПИД-регулятор прямо в графе.
+- **Работа со строками (Strings)**
+    - ✅ `ToString`.
+    - ❌ `Concat` — склейка строк (динамическое формирование сообщений).
+    - ❌ `Substr` — обрезка строк (например, извлечение кода ошибки из сырого ответа ПЛК).
+- **Интеграция, БД и специфичные операции (Routing & Domain)**
+    - ✅ `ToApiQueue`, `Export` — маршрутизация.
+    - ✅ Sql — Формирование SQL запросов.
+    - ❌ `SqlRequest` — прямой запрос в БД.
+    - ✅ RecOpCycleMetric, PointId — доменные регистраторы.
+    - ✅ Input, Const, Var, Debug, Plot — системные узлы и отладка.
+    - ✅ ToBool, ToInt, ToReal, ToDouble — касты типов.
+    - ❓ HttpRequest / Webhook — возможность пнуть внешнее API прямо из графа по событию (опасно для потока, требует асинхронности).
+
+</details>
+
 
 ### Basic entities and principles of the Tasck service computations
 
@@ -189,6 +297,19 @@ Returns latest received point
 # Syntax
 input <type> <'/path/PointName'>
 ```
+
+> 
+> **`every` - Input wildcard**. Подстановка любого сигнала
+> ```yaml
+> fn PointId
+>   input any every # рекция на любое входное сорбытие
+> fn PointId
+>   input int every # рекция на любое входное сорбытие указанного типа
+> ```
+> - **Назначение**: `every` работает как wildcard (подстановочный знак) или глобальный триггер. Если узел подписан на `point type every` (например, `point any every` или `point int every`), то любое входящее событие (`Point`), переданное в `Task`, должно вызвать перерасчёт этого узла.
+> - **Типизация**: Дополнительный фильтр по типу (например, `point int every`) означает, что узел среагирует на любое событие, только если его значение имеет тип `int`. `point any every` реагирует вообще на всё.
+> - **Ограничение**: Все вычисления, зависящие от `every`, должны сводиться к одному корню (или одному выходному узлу).
+
 
 ## 2 History Service
 

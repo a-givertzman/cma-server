@@ -13,9 +13,6 @@ pub trait ParsePoint: Send {
     /// Returns new point (prevously parsed) with the given [status]
     fn next_status(&mut self, status: Status) -> Option<Point>;
     ///
-    /// Returns true if value or status was updated since last call [addRaw()]
-    fn is_changed(&self) -> bool;
-    ///
     /// Returns raw protocol specific address
     fn address(&self) -> PointConfAddress;
     ///

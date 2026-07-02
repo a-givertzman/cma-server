@@ -1,28 +1,31 @@
+use std::sync::atomic::{AtomicI16, Ordering};
+
 use chrono::{DateTime, Utc};
+use sal_core::error::Error;
 use sal_sync::services::{
-    entity::{Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status},
+    entity::{Cot, Point, PointConf, PointConfAddress, PointType, PointHlr, Status},
     types::Bool,
 };
-use crate::services::slmp_client::slmp::ParsePoint;
+use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client::slmp::ParsePoint};
 
 ///
 /// Used for parsing configured point from slice of bytes read from device
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SlmpParseBool {
     id: String,
-    pub type_: PointConfType,
-    pub tx_id: usize,
-    pub name: String,
-    pub value: i64,
-    pub status: Status,
-    pub offset: Option<u32>,
-    pub bit: Option<u8>,
-    // pub history: PointConfHistory,
-    // pub alarm: Option<u8>,
-    // pub comment: Option<String>,
-    pub timestamp: DateTime<Utc>,
-    is_changed: bool,
+    typ: PointType,
+    txid: usize,
+    name: String,
+    last: AtomicI16,
+    value: Box<dyn Filter<Item = bool> + Send>,
+    status: Box<dyn Filter<Item = Status> + Send>,
+    offset: Option<u32>,
+    bit: Option<u8>,
+    // history: PointConfHistory,
+    // alarm: Option<u8>,
+    // comment: Option<String>,
 }
+//
 impl SlmpParseBool {
     ///
     /// Size in the bytes in the Device address area
@@ -37,18 +40,17 @@ impl SlmpParseBool {
     ) -> SlmpParseBool {
         SlmpParseBool {
             id: format!("SlmpParseBool"),
-            type_: config.type_.clone(),
-            tx_id,
+            typ: config.type_.clone(),
+            txid: tx_id,
             name,
-            value: 0i64,
-            status: Status::Invalid,
-            is_changed: false,
+            last: AtomicI16::new(0),
+            value: Box::new(FilterEmpty::<bool>::new(None)),
+            status: Box::new(FilterEmpty::<Status>::new(Some(Status::Invalid))),
             offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
             bit: config.clone().address.unwrap_or(PointConfAddress::empty()).bit,
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
-            timestamp: Utc::now(),
         }
     }
     //
@@ -58,69 +60,76 @@ impl SlmpParseBool {
         bytes: &[u8],
         start: usize,
         bit: usize,
-    ) -> Result<bool, String> {
-        if bytes.len() >= start + Self::SIZE {
-            match bytes[start..(start + Self::SIZE)].try_into() {
-                Ok(v) => {
-                    let value = i16::from_le_bytes(v);
-                    Ok(self.get_bit(value as i64, bit))
-                }
-                Err(e) => {
-                    // warn!("{}.convert | error: {}", self.id, e);
-                    Err(format!("{}.convert | Error: {}", self.id, e))
-                }
-            }
-        } else {
-            Err(format!("{}.convert | Index {} + size {} out of range for slice of length {}", self.id, start, Self::SIZE, bytes.len()))
-        }
+    ) -> Result<bool, Error> {
+        let value = bytes.get(start..(start + Self::SIZE))
+            .and_then(|bytes| bytes.try_into().ok())
+            .map(i16::from_le_bytes)
+            .ok_or_else(|| Error::new(&self.name, "convert").err("Wrong bytes length"))?;
+        self.last.store(value, Ordering::Release);
+        let value = ((value as i64) >> bit) & 1;
+        Ok(value > 0)
     }
     ///
-    ///
-    fn to_point(&self) -> Option<Point> {
-        if self.is_changed {
-            Some(Point::Bool(PointHlr::new(
-                self.tx_id,
-                &self.name,
-                Bool(self.get_bit(self.value, self.bit.unwrap() as usize)),
-                self.status,
-                Cot::Inf,
-                self.timestamp,
-            )))
-            // debug!("{} point Bool: {:?}", self.id, dsPoint.value);
-        } else {
-            None
-        }
+    /// Логика фильтра входных евентов
+    /// 
+    /// - Изменилось value или изменился status - возвращаем новый эвент
+    /// 
+    /// - Если value не изменилось или его нет (значит status пришел)
+    ///     - Если status изменился
+    ///         - Если есть сохраненное последнее value - возвращаем новый эвент
+    ///         - Если есть нет сохраненного value - эвента нет (изменение статуса игнорируется)
+    ///     - Если status прежний - эвента нет
+    /// 
+    /// Все варианты:
+    /// ```
+    /// | Input value | Value changed | Status changed | Last value exists | Output value | Output status | Result |
+    /// |-------------|-------------- |--------------- |-------------------|--------------|---------------|--------|
+    /// | None        | No            | No             | -                 | -            | -             | None   |
+    /// | None        | No            | Yes            | No                | -            | -             | None   |
+    /// | None        | No            | Yes            | Yes               | last         | new           | Point  |
+    /// | Some(v)     | No            | No             | Yes               | -            | -             | None   |
+    /// | Some(v)     | No            | Yes            | Yes               | last         | new           | Point  |
+    /// | Some(v)     | Yes           | No             | Yes               | v            | last status   | Point  |
+    /// | Some(v)     | Yes           | Yes            | Yes               | v            | new           | Point  |
+    /// ```
+    fn to_point(&mut self, value: Option<bool>, status: Status, ts: DateTime<Utc>) -> Option<Point> {
+        let value_changed = value.and_then(|v| self.value.add(v));
+        let status_changed = self.status.add(status);
+        // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.name, value_changed, status_changed);
+        let (value, status) = match status_changed {
+            Some(status_changed) => (
+                value_changed.or_else(|| self.value.last())?,
+                status_changed,
+            ),
+            None => (
+                value_changed?,
+                self.status.last().unwrap_or(Status::Ok)
+            )
+        };
+        Some(Point::Bool(PointHlr::new(
+            self.txid,
+            &self.name,
+            Bool(value),
+            status,
+            Cot::Inf,
+            ts,
+        )))
     }
     //
     //
-    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) {
+    fn add_raw(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
         let result = self.convert(
             bytes,
             self.offset.unwrap() as usize,
             self.bit.unwrap() as usize,
         );
         match result {
-            Ok(new_val) => {
-                let status = Status::Ok;
-                let self_value = self.get_bit(self.value, self.bit.unwrap() as usize);
-                if new_val != self_value || self.status != status {
-                    self.value = self.change_bit(self.value, new_val, self.bit.unwrap() as usize);
-                    self.status = status;
-                    self.timestamp = timestamp;
-                    self.is_changed = true;
-                }
-            }
+            Ok(value) => self.to_point(Some(value), Status::Ok, ts),
             Err(e) => {
-                self.status = Status::Invalid;
-                log::warn!("{}.add_raw | convertion error: {:?}", self.id, e);
+                log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
+                self.to_point(None, Status::Invalid, ts)
             }
         }
-    }
-    ///
-    /// 
-    fn get_bit(&self, value: i64, bit: usize) -> bool {
-        let b = (value >> bit) & 1;
-        b > 0
     }
     ///
     /// 
@@ -148,70 +157,302 @@ impl SlmpParseBool {
 ///
 impl ParsePoint for SlmpParseBool {
     //
-    //
-    fn type_(&self) -> PointConfType {
-        self.type_.clone()
+    fn next(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, ts)
     }
     //
-    //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp);
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
+    fn next_status(&mut self, status: Status, ts: DateTime<Utc>) -> Option<Point> {
+        self.to_point(None, status, Utc::now())
     }
-    //
-    //
-    fn next_status(&mut self, status: Status) -> Option<Point> {
-        if self.status != status {
-            self.status = status;
-            self.timestamp = Utc::now();
-            self.is_changed = true;
-        }
-        self.to_point().map(|point| {
-            self.is_changed = false;
-            point
-        })
-    }
-    //
-    //
-    fn is_changed(&self) -> bool {
-        self.is_changed
-    }
-    //
     //
     fn address(&self) -> PointConfAddress {
         PointConfAddress { offset: self.offset, bit: self.bit }
     }
     //
-    //
     fn size(&self) -> usize {
         Self::SIZE
     }
     //
-    //
-    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
+    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, Error> {
         match point.try_as_bool() {
             Ok(point) => {
-                let value = self.change_bit(self.value, point.value.0, self.bit.unwrap() as usize);
+                // TODO: FIX it by atomic write to the IED
+                let value = self.last.load(Ordering::Acquire) as i64;
+                let bit = self.bit.ok_or_else(|| Error::new(&self.name, "to_bytes"))?;
+                let value = self.change_bit(value, point.value.0, bit as usize);
                 log::debug!("{}.write | converting '{}' into i16...", self.id, point.value);
                 match i16::try_from(value) {
                     Ok(value) => {
                         Ok(value.to_le_bytes().to_vec())
                     }
                     Err(err) => {
-                        let message = format!("{}.write | '{}' to i16 conversion error: {:#?} in the parse point: {:#?}", self.id, point.value, err, self.name);
-                        log::warn!("{}", message);
-                        Err(message)
+                        let err = Error::new(&self.name, "to_bytes").pass_with(format!("Can't convert i16 '{}': {:?} into bytes", point.name, point.value), err.to_string());
+                        log::warn!("{}", err);
+                        Err(err)
                     }
                 }
             }
-            Err(_) => {
-                let message = format!("{}.write | Point of type 'Bool' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
-                log::warn!("{}", message);
-                Err(message)
+            Err(err) => {
+                let err = Error::new(&self.name, "to_bytes").pass_with(format!("Can't convert i16 '{}': {:?} into bytes", point.name(), point.value()), err.to_string());
+                log::warn!("{}", err);
+                Err(err)
             }
         }
+    }
+}
+///
+/// Tests
+#[cfg(test)]
+mod slmp_parse_bool_test {
+    use std::{sync::Once, time::{Duration, Instant}};
+    use super::*;
+    use chrono::Utc;
+    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use sal_core::dbg::Dbg;
+    use sal_sync::services::entity::{Name, PointConf, PointConfAddress, PointType, Status};
+    use testing::stuff::max_test_duration::TestDuration;
+        
+    ///
+    ///
+    static INIT: Once = Once::new();
+    ///
+    /// once called initialisation
+    fn init_once() {
+        INIT.call_once(|| {
+            // implement your initialisation code to be called only once for current test file
+        })
+    }
+    ///
+    /// returns:
+    ///  - ...
+    fn init_each() -> () {}
+    ///
+    /// Testing [SlmpParseBool].to_point
+    ///
+    #[test]
+    fn to_point() {
+        DebugSession::new().filter(LogLevel::Debug).init();
+        init_once();
+        init_each();
+        log::debug!("");
+        let dbg = Dbg::own("SlmpParseBool-to_point");
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+        test_duration.run().unwrap();
+        // status helpers
+        let ok = Status::Ok;
+        let invalid = Status::Invalid;
+        // ----------------------------------------------------------------
+        // Таблица тестов (повторяет truth-table метода)
+        // ----------------------------------------------------------------
+        let test_data = [
+            // ------------------------------------------------------------
+            // нет value, статус не изменился
+            // ------------------------------------------------------------
+            (01, None, ok, None),
+            // ------------------------------------------------------------
+            // status change без value и без last value -> None
+            // ------------------------------------------------------------
+            (02, None, invalid, None),
+            // ------------------------------------------------------------
+            // первое value
+            // ------------------------------------------------------------
+            (03, Some(false), ok, Some((false, ok))),
+            // ------------------------------------------------------------
+            // value unchanged -> None
+            // ------------------------------------------------------------
+            (04, Some(false), ok, None),
+            // ------------------------------------------------------------
+            // status changed -> emit last value
+            // ------------------------------------------------------------
+            (05, None, invalid, Some((false, invalid))),
+            // ------------------------------------------------------------
+            // value changed
+            // ------------------------------------------------------------
+            (06, Some(true), invalid, Some((true, invalid))),
+            // ------------------------------------------------------------
+            // value unchanged + status unchanged -> None
+            // ------------------------------------------------------------
+            (07, Some(true), invalid, None),
+            // ------------------------------------------------------------
+            // value unchanged + status changed
+            // ------------------------------------------------------------
+            (08, Some(true), ok, Some((true, ok))),
+            // ------------------------------------------------------------
+            // переход через 0
+            // ------------------------------------------------------------
+            (09, Some(false), ok, Some((false, ok))),
+            (10, Some(true), ok, Some((true, ok))),
+        ];
+        let mut parse = SlmpParseBool::new(0, Name::new(&dbg, "SlmpParseBool").join(),
+            &PointConf {
+                id: 0,
+                name: Name::new(&dbg, "SlmpParseBool").join(),
+                type_: PointType::Bool,
+                history: Default::default(), alarm: Default::default(),
+                address: Some(PointConfAddress {offset: Some(0), bit: None}),
+                filters: None, comment: None,
+            },
+        );
+        let ts = Utc::now();
+        for (step, input_value, input_status, target) in test_data {
+            log::debug!("{dbg} | step {step} | input: {:?} {:?}", input_value, input_status);
+            let t = Instant::now();
+            let result = parse.to_point(input_value, input_status, ts);
+            log::debug!("{dbg} | step {step} | elapsed {:?}", t.elapsed());
+            match (&result, &target) {
+                (None, None) => {},
+                (Some(Point::Bool(p)), Some((target_value, target_status))) => {
+                    assert!(
+                        p.value.0 == *target_value,
+                        "{dbg} | step {step} | \nvalue result: {:?}\ntarget: {:?}",
+                        p.value,
+                        target_value
+                    );
+                    assert!(
+                        p.status == *target_status,
+                        "{dbg} | step {step} | \nstatus result: {:?}\ntarget: {:?}",
+                        p.status,
+                        target_status
+                    );
+                }
+                _ => panic!(
+                    "{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}",
+                    result,
+                    target
+                ),
+            };
+        }
+        test_duration.exit();
+    }
+    ///
+    /// Testing [SlmpParseBool].add_raw
+    ///
+    #[test]
+    fn add_raw() {
+        fn to_le_bytes(bit: u8, v: bool) -> [u8; 2] {
+            let mut x: i16 = 0;
+            if v {
+                x |= 1 << bit; // Установить в true (1)
+            }
+            x.to_le_bytes()
+        }
+        DebugSession::new().filter(LogLevel::Debug).init();
+        init_once();
+        init_each();
+        log::debug!("");
+        let dbg = Dbg::own("SlmpParseBool-add_raw");
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+        test_duration.run().unwrap();
+        // ----------------------------------------------------------------
+        // Таблица тестов
+        // ----------------------------------------------------------------
+        // Бит в котом режит наш bool
+        let bit = 3;
+        let test_data = [
+            // ------------------------------------------------------------
+            // нормальные значения
+            // ------------------------------------------------------------
+            (
+                0,
+                &[][..],
+                None,
+                "first packet broken -> no event",
+            ),            (
+                1,
+                &to_le_bytes(bit, false)[..],
+                Some((false, Status::Ok)),
+                "first value",
+            ),
+            (
+                2,
+                &to_le_bytes(bit, false)[..],
+                None,
+                "value not changed",
+            ),
+            (
+                3,
+                &to_le_bytes(bit, true)[..],
+                Some((true, Status::Ok)),
+                "value changed",
+            ),
+            (
+                4,
+                &to_le_bytes(bit, false)[..],
+                Some(( false, Status::Ok)),
+                "value changed",
+            ),
+            // ------------------------------------------------------------
+            // ошибка парсинга
+            // ------------------------------------------------------------
+            (
+                8,
+                &[0x0],
+                Some(( false, Status::Invalid)),
+                "slice too short -> Invalid",
+            ),
+            (
+                9,
+                &to_le_bytes(bit, false)[..],
+                Some(( false, Status::Ok)),
+                "normal value ->  false",
+            ),
+            (
+                10,
+                &[],
+                Some(( false, Status::Invalid)),
+                "empty slice -> error",
+            ),
+        ];
+        let mut parse = SlmpParseBool::new(
+            0,
+            Name::new(&dbg, "SlmpParseBool").join(),
+            &PointConf {
+                id: 0,
+                name: Name::new(&dbg, "SlmpParseBool").join(),
+                type_: PointType::Bool,
+                history: Default::default(),
+                alarm: Default::default(),
+                address: Some(PointConfAddress {
+                    offset: Some(0),
+                    bit: Some(bit),
+                }),
+                filters: None,
+                comment: None,
+            },
+        );
+        let ts = Utc::now();
+        for (step, bytes, target, description) in test_data {
+            log::debug!("{dbg} | step {step} | {description} | bytes: {:?}", bytes);
+            let t = Instant::now();
+            let result = parse.add_raw(bytes, ts);
+            log::debug!("{dbg} | step {step} | elapsed {:?}", t.elapsed());
+            match (&result, &target) {
+                (None, None) => {}
+                (Some(Point::Bool(p)), Some((target_value, target_status))) => {
+                    assert!(
+                        p.value.0 == *target_value,
+                        "{dbg} | step {step} | value result: {:?}, target: {:?}",
+                        p.value,
+                        target_value
+                    );
+                    assert!(
+                        p.status == *target_status,
+                        "{dbg} | step {step} | status result: {:?}, target: {:?}",
+                        p.status,
+                        target_status
+                    );
+                }
+                _ => {
+                    panic!(
+                        "{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}",
+                        result,
+                        target
+                    );
+                }
+            }
+        }
+        test_duration.exit();
     }
 }

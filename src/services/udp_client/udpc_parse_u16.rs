@@ -121,7 +121,7 @@ impl ParsePoint for UdpcParseU16 {
                 }
             }
             Err(_) => {
-                let message = format!("{}.write | Point of type 'Int' expected, but found '{:?}' in the parse point: {:#?}", self.dbg, point.type_(), self.name);
+                let message = format!("{}.write | Point of type 'Int' expected, but found '{:?}' in the parse point: {:#?}", self.dbg, point.typ(), self.name);
                 log::warn!("{}", message);
                 Err(message)
             }

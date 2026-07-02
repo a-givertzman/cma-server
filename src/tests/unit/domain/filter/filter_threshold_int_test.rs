@@ -57,15 +57,14 @@ mod tests {
         test_duration.run().unwrap();
         let test_data = init_each();
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i16>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i16>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().map(|(value, target)| (*value, *target)).enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -84,15 +83,14 @@ mod tests {
         test_duration.run().unwrap();
         let test_data = init_each();
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i32>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i32>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().map(|(value, target)| (*value as i32, target.map(|t| t as i32))).enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -111,15 +109,14 @@ mod tests {
         test_duration.run().unwrap();
         let test_data = init_each();
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i64>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i64>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().map(|(value, target)| (*value as i64, target.map(|t| t as i64))).enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -181,15 +178,14 @@ mod tests {
             (-10, Some(-10)),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i16>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i16>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -251,15 +247,14 @@ mod tests {
             (-10, Some(-10)),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i32>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i32>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -321,15 +316,14 @@ mod tests {
             (-10, Some(-10)),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i64>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i64>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }

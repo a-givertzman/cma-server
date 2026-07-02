@@ -2,7 +2,7 @@
 use sal_sync::services::{entity::{Name, Object, {{Point, ToPoint}, PointTxId}}, service::{LinkName, Service}};
 use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}, thread};
 use testing::entities::test_value::Value;
-use crate::{core_::constants::constants::RECV_TIMEOUT, services::{safe_lock::rwlock::SafeLock}};
+use crate::{core_::RECV_TIMEOUT, services::{safe_lock::rwlock::SafeLock}};
 ///
 /// 
 pub struct MockRecvSendService {

@@ -13,42 +13,65 @@ service ProfinetClient Ied01:
         # description: 'db222 | Exhibit - drive data'
         number: 222
         offset: 0
-        size: 34
+        # size: 20
         point Drive.Speed: 
             type: 'Real'
-            offset: 0
+            address:
+                offset: 0
         point Drive.OutputVoltage: 
             type: 'Real'
-            offset: 4
+            address:
+                offset: 4
         point Drive.DCVoltage: 
             type: 'Real'
-            offset: 8
+            address:
+                offset: 8
         point Drive.Current: 
             type: 'Real'
-            offset: 12
+            address:
+                offset: 12
             history: read
         point Drive.Torque: 
             type: 'Real'
-            offset: 16
+            address:
+                offset: 16
     db db999:                       # multiple DB blocks are allowed, must have unique namewithing parent device
         description: 'db999 | Exhibit - drive data'
         number: 999
         offset: 0
-        size: 34
+        # size: 34
         point Drive.positionFromMru: 
             type: 'Real'
-            offset: 20
+            address:
+                offset: 20
         point Drive.positionFromHoist: 
             type: 'Real'
-            offset: 24
+            address:
+                offset: 24
         point Capacitor.Capacity: 
             type: 'Int'
-            offset: 28
+            address:
+                offset: 28
         point ChargeIn.On: 
             type: 'Bool'
-            offset: 30
-            bit: 0
+            address:
+                offset: 30
+                bit: 0
         point ChargeOut.On: 
             type: 'Bool'
-            offset: 32
-            bit: 0
+            address:
+                offset: 32
+                bit: 4
+    db db888:
+        description: 'db888 | Example'
+        number: 888
+        offset: 0
+        # size: 6
+        point Sensor.Real: 
+            type: 'Real'
+            address:
+                offset: 0
+        point Sensor.Int: 
+            type: 'Int'
+            address:
+                offset: 4

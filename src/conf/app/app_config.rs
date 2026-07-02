@@ -14,7 +14,7 @@ use std::{fs, path::Path, str::FromStr};
 ///         api:
 ///             table:      public.tags
 ///             address:    0.0.0.0:8080
-///             auth_token: 123!@#
+///             auth-token: 123!@#
 ///             database:   cma_data_server
 /// 
 /// service ProfinetClient Ied01:          # device will be executed in the independent thread, must have unique name

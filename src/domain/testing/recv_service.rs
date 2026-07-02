@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, Sender}, Handles, Owner}, thread_pool::Scheduler};
-use crate::domain::{constants::constants::RECV_TIMEOUT, testing::RecvServiceConf, RwLock};
+use crate::domain::{RECV_TIMEOUT, testing::RecvServiceConf, RwLock};
 ///
 /// Global static counter of FnOut instances
 #[allow(unused)]
@@ -125,7 +125,6 @@ impl Service for RecvService {
                     }
                 }
             }
-            Ok(())
         });
         match handle {
             Ok(handle) => {

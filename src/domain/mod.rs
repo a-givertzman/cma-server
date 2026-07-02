@@ -12,13 +12,19 @@
 //! 
 pub mod auth;
 pub mod cli;
-pub mod constants;
+mod constants;
+pub(crate) use constants::*;
+mod dsp;
+pub use dsp::*;
 pub mod failure;
 pub mod filter;
 pub mod format;
 pub mod net;
+mod point;
+pub(crate) use point::*;
 pub mod retain_buffer;
 pub mod testing;
 mod types;
-
-pub use types::*;
+pub(crate) use types::*;
+mod error;
+pub(crate) use error::*;

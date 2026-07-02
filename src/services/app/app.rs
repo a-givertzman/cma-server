@@ -1,4 +1,5 @@
-use sal_core::dbg::Dbg;
+use function_name::named;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::Services, thread_pool::{Scheduler, ThreadPool}};
 use std::{path::Path, process::exit, sync::Arc, thread, time::Duration};
 use libc::{
@@ -7,7 +8,7 @@ use libc::{
 };
 use signal_hook::iterator::Signals;
 use crate::{
-    conf::app::app_config::AppConfig,services::ServicesFactory
+    conf::app::app_config::AppConfig, err_pass, services::ServicesFactory
     
 };
 
@@ -36,13 +37,17 @@ impl App {
     }
     ///
     /// Executes all services
-    pub fn run(self) -> Result<(), String>  {
+    #[named]
+    pub fn run(self) -> Result<(), Error>  {
         let dbg = self.dbg.clone();
         log::info!("{dbg}.run | Starting application...");
         let conf = self.conf.clone();
         let self_name = conf.name.clone();
         let thread_pool = ThreadPool::new(&dbg, conf.tread_pool);
-        let services = Arc::new(Services::new(&dbg, conf.services.clone(), Some(thread_pool.scheduler())));
+        let services = Arc::new(
+            Services::new(&dbg, conf.services.clone(), Some(thread_pool.scheduler()))
+                .map_err(|err| err_pass!(dbg, err))?
+        );
         log::info!("{dbg}.run |     Configuring services...");
         let services_factory = ServicesFactory::new(&self_name);
         for (node_keywd, node_conf) in conf.nodes {
@@ -51,7 +56,8 @@ impl App {
             log::info!("{dbg}.run |         Configuring service: {}({})...", node_name, node_sufix);
             log::trace!("{dbg}.run |         Config: {:#?}", node_conf);
             services.insert(
-                services_factory.service(&node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler()),
+                services_factory.service(&node_name, &node_sufix, node_conf, services.clone(), thread_pool.scheduler())
+                    .map_err(|err| err_pass!(dbg, err))?,
             );
             log::info!("{dbg}.run |         Configuring service: {}({}) - ok\n", node_name, node_sufix);
         }
@@ -135,11 +141,9 @@ impl App {
                                 _ => log::warn!("{}.run Received unknown signal {:?}", dbg, signal)
                             }
                         }
-                        Ok(())
                     }).unwrap();
                     handle.join().unwrap();
                     signals_handle.close();
-                    Ok(())
                 }).unwrap();
             }
             Err(err) => {

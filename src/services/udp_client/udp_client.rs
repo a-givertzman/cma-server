@@ -6,7 +6,7 @@ use sal_core::{dbg::Dbg, error::{Error, ErrorLimit}};
 use sal_sync::{
     kernel::state::ChangeNotify,
     services::{Service, ServiceCycle, Services, entity::{
-        Name, Object, Point, PointConf, PointConfType, PointTxId, Status
+        Name, Object, Point, PointConf, PointType, PointTxId, Status
     }}, sync::{Handles, channel::Sender}, thread_pool::Scheduler
 };
 use crate::services::udp_client::{InputType, UdpClientConnect};
@@ -256,16 +256,16 @@ impl UdpClient {
     fn configure_parse_points(dbg: &Dbg, tx_id: usize, conf: &[PointConf]) -> IndexMap<u8, Box<dyn ParsePoint>> {
         conf.iter().filter_map(|point_conf| {
             match point_conf.type_ {
-                // PointConfType::Bool => {
+                // PointType::Bool => {
                 //     (point_conf.name.clone(), Self::box_bool(tx_id, point_conf.name.clone(), point_conf))
                 // }
-                PointConfType::Int => {
+                PointType::Int => {
                     Some((point_conf.id as u8, Self::box_i16(tx_id, point_conf.name.clone(), point_conf)))
                 }
-                // PointConfType::Real => {
+                // PointType::Real => {
                 //     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 // }
-                // PointConfType::Double => {
+                // PointType::Double => {
                 //     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 // }
                 _ => {
@@ -424,7 +424,6 @@ impl Service for UdpClient {
                     break 'main;
                 }
             }
-            Ok(())
         });
         match handle {
             Ok(handle) => {

@@ -3,7 +3,7 @@ use api_tools::{api::reply::api_reply::ApiReply, client::{api_query::{ApiQuery, 
 use indexmap::IndexMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object}, future::{Future, Sink}, Service, ServiceWaiting}, sync::{channel::{self, RecvTimeoutError}, Handles, Owner}, thread_pool::Scheduler};
-use crate::{domain::{constants::constants::RECV_TIMEOUT, Receiver, Sender}, infra::ApiClientConf};
+use crate::{domain::{RECV_TIMEOUT, Receiver, Sender}, infra::ApiClientConf};
 ///
 /// API Reply
 type Reply = Result<Vec<IndexMap<String, serde_json::Value>>, Error>;
@@ -127,7 +127,6 @@ impl Service for ApiClient {
             }
             is_started.store(false, Ordering::Release);
             log::info!("{dbg}.run | Exit");
-            Ok(())
         });
         match handle {
             Ok(handle) => {

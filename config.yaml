@@ -39,7 +39,7 @@ service ProfinetClient ied12:
     rack: 0
     slot: 1
     diagnosis:                          # internal diagnosis
-        point Status:                   # Ok(0) / Invalid(10)
+        point Status:                   # O'192.168.120.243'k(0) / Invalid(10)
             type: 'Int'
             # history: r
         point Connection:               # Ok(0) / Invalid(10)
