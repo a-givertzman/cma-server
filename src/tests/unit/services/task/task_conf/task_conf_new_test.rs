@@ -61,6 +61,7 @@ fn valid() {
             "#,
             TaskConf {
                 name: Name::new(&self_name, "Task0"),
+                retain: Default::default(),
                 cycle: Some(Duration::from_millis(100)),
                 rx: format!("recv-queue"),
                 rx_max_length: 10000,
@@ -122,6 +123,7 @@ fn valid() {
             "#,
             TaskConf {
                 name: Name::new(&self_name, "Task1"),
+                retain: Default::default(),
                 cycle: Some(Duration::from_millis(100)),
                 rx: format!("recv-queue"),
                 rx_max_length: 10000,
@@ -184,6 +186,7 @@ fn valid() {
             "#,
             TaskConf {
                 name: Name::new(&self_name, "Task2"),
+                retain: Default::default(),
                 cycle: Some(Duration::from_millis(100)),
                 rx: format!("recv-queue"),
                 rx_max_length: 10000,
@@ -225,7 +228,7 @@ fn valid() {
         // let fnKeyword = FnConfigKeyword::from_str(conf.as_str().unwrap()).unwrap();
         // debug!("\tfnKeyword: {:?}", fnKeyword);
         // let mut vars = vec![];
-        let fn_config = TaskConf::from_yaml(&self_name, &conf);
+        let fn_config = TaskConf::from_yaml(&self_name, &conf).unwrap();
         log::debug!("\tfnConfig: {:?}", fn_config);
         assert_eq!(fn_config, target, "\n result: {:#?}\n target: {:#?}", fn_config, target);
     }

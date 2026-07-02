@@ -43,9 +43,9 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
         }),
             ..Default::default()}, ..Default::default()
     };        
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new(parent, 0, &mut conf)
-    )))
+    ))
 }
 ///
 /// Threshold Int's

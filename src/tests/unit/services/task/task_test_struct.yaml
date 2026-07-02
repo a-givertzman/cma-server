@@ -33,10 +33,10 @@ service Task Task1:
     fn ToApiQueue:
         queue: /task_test/TaskTestReceiver.in-queue
         input fn SqlMetric:
-            initial: 0.123      # начальное значение
-            table: table_name
-            # sql: "UPDATE {table} SET kind = '{input1.value}' WHERE id = '{input2.value}';"
-            sql: "insert into {table} (id, value, timestamp) values ({id}, {input.value}, {input3.value});"
+            # sql: "UPDATE table_name SET kind = '{input1.value}' WHERE id = '{input2.value}';"
+            sql: "insert into table_name (id, value, timestamp) values ({id}, {input.value}, {input3.value});"
+            id fn PointId:
+                input: point any '/path/Point.Name'
             input let Var3:
                     input fn Add:
                         input1 fn Add:
@@ -48,12 +48,3 @@ service Task Task1:
                 input1:
                     var0
                 input2: point real '/path/Point.Name'
-
-# service ApiClient:
-
-# service CmaClient:
-
-# service CmaServer:
-
-# service ExternalDevice:
-#     protocol: profinet

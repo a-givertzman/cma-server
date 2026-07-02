@@ -1,3 +1,4 @@
+use sal_sync::services::{PointRegistry, PointRegistryConf, RegistryConf, entity::{PointConf, PointConfHistory, PointType}};
 #[cfg(test)]
 
 use sal_sync::{services::{
@@ -38,15 +39,21 @@ fn structure() {
     let iterations = 10;
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
-    let config = TaskConf::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-            retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
+        ConfTree::empty(),
+    ), Some(tp.scheduler()))
+        .unwrap()
+        .with_point_registry(PointRegistry::new(dbg, RegistryConf::default(), Some(tp.scheduler())).unwrap()
+        .with_registry([("/path/Point.Name".into(), vec![PointConf {
+            id: 123,
+            name: "/path/Point.Name".into(),
+            type_: PointType::Bool, history: PointConfHistory::None,
+            alarm: None, address: None, filters: None, comment: None,
+        }])])));
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
@@ -125,15 +132,15 @@ fn transfer() {
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
     // let path = "./src/tests/unit/task/task_test.yaml";
-    let config = TaskConf::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-            retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
+        ConfTree::empty(),
+    ), Some(tp.scheduler()))
+        .unwrap()
+        .with_point_registry(PointRegistry::new(dbg, RegistryConf::default(), Some(tp.scheduler())).unwrap()));
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",

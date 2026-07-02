@@ -6,7 +6,7 @@ use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnCon
 use std::{sync::Once, time::Duration, rc::Rc, cell::RefCell};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
-     domain::FnInOutRef, services::task::{FnInput, FnOut, FnTimerOffDelay},
+     domain::FnInOutRef, services::task::{EvalCycle, EvalCycleRef, FnInput, FnOut, FnTimerOffDelay},
 };
 ///
 ///
@@ -21,11 +21,11 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
-    let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
-        FnInput::new("test", 0, &mut conf)
-    )))
+fn init_each(default: &str, typ: FnConfPointType, cycle: &EvalCycleRef) -> FnInOutRef {
+    let mut conf = FnConfig { name: "test".to_owned(), type_: typ, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
+    Rc::new(RefCell::new(
+        FnInput::new("test", 0, &mut conf, cycle)
+    ))
 }
 ///
 /// `Task` `FnTimerOffDelay` | measuring simple elapsed seconds
@@ -35,64 +35,65 @@ fn elapsed() {
     init_once();
     let dbg = Dbg::own("FnTimerOffDelay-test");
     log::info!("{dbg}");
-    let input = init_each("false", FnConfPointType::Bool);
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each("false", FnConfPointType::Bool, &cycle);
     let test_data = vec![
-        (100,
+        (10,
         vec![
             //   duration    value      target
             //   before, ms
-            (01,  001,      false,     false),
-            (02,  001,      true,      true),
-            (03,  001,      false,     true),
-            (04,  050,      false,     true),
-            (05,  001,      true,      true),
-            (06,  001,      false,     true),
-            (07,  150,      false,     false),
-            (08,  001,      true,      true),
-            (09,  001,      false,     true),
-            (10,  090,      false,     true),
-            (11,  050,      false,     false),
-            (12,  001,      true,      true),
-            (13,  001,      false,     true),
-            (14,  200,      false,     false),
-            (15,  010,      true,     true),
-            (16,  100,      true,     true),
+            (01,  01,      false,     false),
+            (02,  01,      true,      true),
+            (03,  00,      false,     true),
+            (04,  05,      false,     true),
+            (05,  01,      true,      true),
+            (06,  01,      false,     true),
+            (07,  15,      false,     false),
+            (08,  01,      true,      true),
+            (09,  01,      false,     true),
+            (10,  09,      false,     true),
+            (11,  05,      false,     false),
+            (12,  01,      true,      true),
+            (13,  01,      false,     true),
+            (14,  20,      false,     false),
+            (15,  01,      true,     true),
+            (16,  10,      true,     true),
         ]),
-        (250,
+        (25,
         vec![
             //   duration    value      target
             //   before, ms
-            (21,  001,      false,     false),
-            (22,  001,      true,     true),
-            (23,  001,      false,      true),
-            (24,  200,      false,      true),
-            (25,  001,      true,     true),
-            (26,  001,      false,     true),
-            (27,  100,      false,     true),
-            (28,  160,      false,     false),
-            (29,  001,      true,     true),
-            (30,  001,      false,     true),
-            (31,  500,      false,     false),
-            (32,  100,      true,     true),
-            (33,  100,      true,     true),
+            (21,  01,      false,     false),
+            (22,  01,      true,     true),
+            (23,  01,      false,      true),
+            (24,  20,      false,      true),
+            (25,  01,      true,     true),
+            (26,  01,      false,     true),
+            (27,  10,      false,     true),
+            (28,  16,      false,     false),
+            (29,  01,      true,     true),
+            (30,  01,      false,     true),
+            (31,  50,      false,     false),
+            (32,  10,      true,     true),
+            (33,  10,      true,     true),
         ]),
-        (500,
+        (50,
         vec![
             //   duration    value      target
             //   before, ms
-            (21,  001,      false,     false),
-            (22,  001,      true,     true),
-            (23,  001,      false,      true),
-            (24,  300,      false,      true),
-            (25,  001,      true,     true),
-            (26,  001,      false,     true),
-            (27,  200,      false,     true),
-            (28,  360,      false,     false),
-            (29,  001,      true,     true),
-            (30,  001,      false,     true),
-            (31,  510,      false,     false),
-            (32,  100,      true,     true),
-            (33,  100,      true,     true),
+            (21,  01,      false,     false),
+            (22,  01,      true,     true),
+            (23,  01,      false,      true),
+            (24,  30,      false,      true),
+            (25,  01,      true,     true),
+            (26,  01,      false,     true),
+            (27,  20,      false,     true),
+            (28,  36,      false,     false),
+            (29,  01,      true,     true),
+            (30,  01,      false,     true),
+            (31,  51,      false,     false),
+            (32,  10,      true,     true),
+            (33,  10,      true,     true),
         ]),
     ];
     for (delay, test_data) in test_data {
@@ -103,11 +104,12 @@ fn elapsed() {
             input.clone(),
         );
         for (step, before, value, target) in test_data {
+            cycle.increment();
             let point = value.to_point(0, "test");
             input.borrow_mut().add(&point);
             // debug!("input: {:?}", &input);
             std::thread::sleep(Duration::from_millis(before));
-            let result = fn_timer.out().unwrap().as_bool().value.0;
+            let result = fn_timer.out().unwrap().unwrap().into_value().as_bool().value.0;
             // debug!("input: {:?}", &mut input);
             log::debug!("{step} | input: {:?}   |   result: {:?}", value, result);
             assert!(result == target, "{dbg} | step {step} \nresult: {} \ntarget: {}", result, target);
