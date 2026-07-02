@@ -2,7 +2,7 @@ use std::{fmt::Debug, fs, io::Write, sync::{atomic::{AtomicBool, Ordering}, Arc}
 use chrono::{DateTime, Utc};
 use concat_string::concat_string;
 use indexmap::IndexMap;
-use rand::Rng;
+use rand::{Rng, RngExt};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{
     entity::{

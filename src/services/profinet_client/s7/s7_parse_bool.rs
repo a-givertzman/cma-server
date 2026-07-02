@@ -31,7 +31,7 @@ pub struct S7ParseBool {
     offset: u32,
     bit: u8,
     name: String,
-    notify: ChangeNotify<ParseState, String>,
+    notify: ChangeNotify<'static, ParseState, String>,
     // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,

@@ -2,7 +2,7 @@
 
 mod jds_deserialize {
     use chrono::{DateTime, Utc};
-        use rand::Rng;
+        use rand::{Rng, RngExt};
     use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;

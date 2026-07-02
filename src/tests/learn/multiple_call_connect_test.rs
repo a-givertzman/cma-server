@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::{Rng, RngExt};
     use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}, thread};
     use std::{sync::Once, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel};
