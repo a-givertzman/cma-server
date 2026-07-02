@@ -1,9 +1,10 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
+use function_name::named;
+
 use crate::{
-    domain::FnOutRef,
-    services::task::{
+    domain::FnOutRef, err_pass, services::task::{
         FlowContext, FnFlow, FnKind, FnOut, FnResult
-    },
+    }
 };
 ///
 /// ### Function | `Debug`
@@ -53,6 +54,7 @@ impl FnOut for FnDebug {
             .collect()
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         if self.inputs.len() > 1 {
@@ -71,12 +73,23 @@ impl FnOut for FnDebug {
             return Ok(None);
         }
         if let Some((name, input)) = self.inputs.first() {
-            let Some(v) = flow.map(input.borrow_mut().out())? else { return Ok(None) };
-            log::debug!(
-                "{}.out | {name}: Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
-                self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.ts().format("%H:%M:%S%.3f")
-            );
-            return flow.wrap(v);
+            match flow.map(input.borrow_mut().out()) {
+                Ok(Some(v)) => {
+                    log::debug!(
+                        "{}.out | {name}: Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
+                        self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.ts().format("%H:%M:%S%.3f")
+                    );
+                    return flow.wrap(v);
+                }
+                Ok(None) => {
+                    log::debug!("{}.out | {name}: Value {} | ---:---\n  └─ Val: --- | Ok(None)", self.id, flow);
+                    return Ok(None);
+                }
+                Err(err) => {
+                    log::debug!("{}.out | {name}: Value {} | ---:---\n  └─ Val: --- | Err({})", self.id, flow, err);
+                    return Err(err_pass!(self.id, err).to_string());
+                }
+            }
         }
         Ok(None)
     }

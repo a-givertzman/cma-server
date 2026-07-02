@@ -743,8 +743,8 @@ fn gen_op_cycle_id() {
     let test_data: &[(i32, u64, &str, Value, Result<Option<i64>, ()>)] = &[
         // Инициализация номинала (LoadR0 = 100.0). Порог активности 5.0. ID цикла = 0 (default)
         (01, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
-        (02, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
-        (03, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), Ok(None)),
+        (02, 0,    "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(100.0), Ok(None)),
+        (03, 0,    "/App/ied13/db905_visual_data_fast/Winch3.LoadR0", Value::Real(100.0), Ok(Some(0))),
         // Нагрузка 10.0 (> 5.0). FnThreshold пропускает. Запускается TimerOnDelay (5000ms) для craneIsActive.
         (04, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Ok(Some(0))),
         // Прошло 2.5 секунды. Таймер еще идет. Цикл не начат.
@@ -776,11 +776,11 @@ fn gen_op_cycle_id() {
             Value::String(v) => Point::String(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
             _ => panic!("{dbg} | Step {step} | '{name}': Invalid type"),
         };
-        log::debug!("{dbg} | Step {step} | point: {:?}", point);
+        log::debug!("{dbg} | Step {step} | point '{}': {:?}", point.name(), point.value());
         task_nodes.eval(point);
         let id_node = task_nodes.get_var("opCycleId").expect("Variable 'opCycleId' not found in DAG");
         let result = flow.ignore(id_node.borrow_mut().out());
-        log::debug!("{dbg} | Step {step} | opCycleId: {:?}", result);
+        // log::debug!("{dbg} | Step {step} | opCycleId: {:?}", result);
         match (&result, &target_id) {
             (Ok(Some(result)), Ok(Some(target))) => {
                 log::debug!("{dbg} | Step {step} | opCycleId: {:?}", result.value());
@@ -788,7 +788,7 @@ fn gen_op_cycle_id() {
                 assert_eq!(actual, *target, "{dbg} | Step {step} | opCycleId \n result: {actual} \n target: {target}");
             }
             (Ok(None), Ok(None)) | (Err(_), Err(_)) => {}
-            _ => {} //panic!("{dbg} | Step {step} | \n result: {:?} \n target: {:?}", result, target_id),
+            _ => panic!("{dbg} | Step {step} | \n result: {:?} \n target: {:?}", result, target_id),
         }
     }
 }

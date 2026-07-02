@@ -1,5 +1,5 @@
 use sal_core::error::Error;
-use sal_sync::services::entity::{Name, Point, PointTxId};
+use sal_sync::services::entity::{Name, Point};
 use std::{sync::{Arc, atomic::{AtomicUsize, Ordering}}};
 use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult, TaskRetain}};
 ///
@@ -26,7 +26,6 @@ use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOu
 /// ```
 #[derive(Debug)]
 pub struct FnRetainRead {
-    txid: usize,
     kind: FnKind,
     key: String,
     retain: Arc<TaskRetain>,
@@ -47,7 +46,6 @@ impl FnRetainRead {
     pub fn new(parent: &Name, retain: Arc<TaskRetain>, key: impl Into<String>, every_cycle: bool, default: Option<FnOutRef>) -> Result<Self, Error> {
         let id = format!("{}/FnRetainRead{}", parent.join(), COUNT.fetch_add(1, Ordering::Relaxed));
         Ok(Self {
-            txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
             key: key.into(),
             retain,
@@ -85,6 +83,7 @@ impl FnOut for FnRetainRead {
             }
         }
         if let Some(val) = self.retain.get(&self.key) {
+            log::debug!("{}.out | Got retained value '{}': {:?}", self.id, self.key, val.value());
             if self.every_cycle {
                 if let Some(cached) = &self.cache {
                     if cached.value() == val.value() && cached.status() == val.status() {
@@ -95,12 +94,15 @@ impl FnOut for FnRetainRead {
             self.cache = Some(val.clone());
             return flow.wrap_new(val);
         } else {
+            log::debug!("{}.out | Can't get retained value '{}'", self.id, self.key);
             if let Some(default) = self.default.as_ref() {
                 if self.every_cycle {
                     let Some(val) = flow.map(default.borrow_mut().out())? else { return Ok(None) };
+                    log::debug!("{}.out | Got default value '{}': {:?}", self.id, self.key, val.value());
                     return flow.wrap(val);
                 } else {
                     let Some(val) = flow.ignore(default.borrow_mut().out())? else { return Ok(None) };
+                    log::debug!("{}.out | Got default value '{}': {:?}", self.id, self.key, val.value());
                     self.cache = Some(val.clone());
                     return flow.wrap_new(val);
                 }
@@ -125,35 +127,6 @@ impl FnOut for FnRetainRead {
 static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///
 /// Basic Tests
-#[cfg(test)]
-mod tests {
-    use sal_sync::services::entity::{Cot, PointHlr, Status};
-    use super::*;
-    use std::cell::RefCell;
-    use std::rc::Rc;
-    #[derive(Debug)]
-    struct MockNode {
-        flow: FnResult<FnFlow, String>,
-        inputs_called: usize,
-    }
-    impl FnOut for MockNode {
-        fn id(&self) -> String { "mock".to_string() }
-        fn kind(&self) -> FnKind { FnKind::Fn }
-        fn inputs(&self) -> Vec<String> { vec!["mock_point".to_string()] }
-        fn out(&mut self) -> FnResult<FnFlow, String> {
-            self.inputs_called += 1;
-            self.flow.clone()
-        }
-        fn hard_reset(&mut self) {}
-        fn reset(&mut self) {}
-    }
-    fn create_mock(flow: FnFlow) -> FnOutRef {
-        Rc::new(RefCell::new(MockNode { flow: Ok(Some(flow)), inputs_called: 0 }))
-    }
-    fn mock_point_int(id: &str, val: i64) -> Point {
-        Point::Int(PointHlr::new(0, id, val, Status::Ok, Cot::Inf, chrono::Utc::now()))
-    }
-}
 #[cfg(test)]
 mod testsы {
     use sal_core::dbg::Dbg;

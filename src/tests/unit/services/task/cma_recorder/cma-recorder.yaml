@@ -166,7 +166,8 @@ service Task RecorderTask:
     # Returns one tic true if operating cycle is finished (isActive true -> false)
     let opCycleIsDone:
         input fn FallingEdge:
-            input: opCycleIsActive
+            input fn Debug:
+                input: opCycleIsActive
     #
     # Detect if pump is active (true - isActive, false - isNotActive)
     let pumpIsActive:
@@ -180,7 +181,8 @@ service Task RecorderTask:
                 initial fn Retain:
                     default: const int 0
                     key: 'OperatingCycleId'
-                input: opCycleIsStarted
+                input fn Debug:
+                    input: opCycleIsStarted
     #
     # Crane Average load in operating cycle, ??? unit ???
     let craneCycleAverageLoad:
@@ -285,7 +287,8 @@ service Task RecorderTask:
     # crane-characteristic-number  |  текущее характеристическое число для крана
     let craneEigenValue:
         input fn Retain:
-            enable: opCycleIsDone
+            enable fn Debug:
+                input: opCycleIsDone
             key: 'crane-characteristic-number'
             input fn Add:
                 input1 fn Pow:
