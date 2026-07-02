@@ -22,7 +22,7 @@ use crate::{
 ///
 /// 
 type Diagnosis = Arc<FxDashMap<DiagKeywd, DiagPoint>>;
-type ConnectionNotify = Arc<ChangeNotify<Status, Dbg>>;
+type ConnectionNotify = Arc<ChangeNotify<'static, Status, Dbg>>;
 ///
 /// Cyclically reads adressess from the PROFINET device and yields changed to the MultiQueue
 /// Writes Point to the protocol (PROFINET device) specific address

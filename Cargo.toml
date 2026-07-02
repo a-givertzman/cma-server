@@ -23,10 +23,11 @@ chrono = { version = "^0.4", features = ["serde"] }
 sal-core = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-sal-core.git" }
 testing = { tag = "0.1.2", git = "https://github.com/a-givertzman/rust-testing.git" }
 debugging = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-debuging.git" }
-api-tools = { tag = "0.2.2", git = "https://github.com/a-givertzman/rust-api-tools.git" }
-# sal-sync = { path = "../sal-sync" }
+api-tools = { tag = "0.2.3", git = "https://github.com/a-givertzman/rust-api-tools.git" }
 sal-sync = { tag = "0.3.2", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
-# frdm-tools = { tag = "0.2.0", git = "https://github.com/a-givertzman/frdm-server.git" }
+frdm-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/frdm-server.git" }
+
+# sal-sync = { path = "../sal-sync" }
 
 #
 # Serde
@@ -47,7 +48,7 @@ tempfile = "^3.27"
 
 #
 # Math
-rand = "^0.9"
+rand = "^0.10"
 rustfft = "^6.4"
 
 #
@@ -64,10 +65,10 @@ scc = "^3.7"
 #
 # Collections
 linked-hash-map = "^0.5"
-indexmap = "^2.12"
+indexmap = "^2.14"
 # hashers = "^1.0"
 rustc-hash = "^2.1"
-circular-buffer = "^1.2"
+# circular-buffer = "^2.0"
 
 #
 # CPP integrations
@@ -80,10 +81,10 @@ libloading = "^0.9"
 # fast string concatinations
 concat-string = "^1.0"
 
-signal-hook = "^0.3"
+signal-hook = "^0.4"
 
-strum = "^0.27"
-strum_macros = "^0.27"
+strum = "^0.28"
+strum_macros = "^0.28"
 
 #
 # CLI

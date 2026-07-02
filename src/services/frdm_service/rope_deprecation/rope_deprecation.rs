@@ -153,7 +153,6 @@ impl Service for RopeDeprecation where {
                 }
             }
             log::info!("{dbg}.run | Exit");
-            Ok(())
         });
         handles.push(handle);
         for handle in handles {

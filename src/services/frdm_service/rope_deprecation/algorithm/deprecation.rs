@@ -194,7 +194,7 @@ fn slices() {
         &dbg,
         ServicesConf::new(&dbg, ConfTree::new_root(serde_yaml::from_str(r"").unwrap())),
         Some(tp.scheduler()),
-    ));
+    ).unwrap());
     let exit = Arc::new(AtomicBool::new(false));
     let inputs = Arc::new(Inputs::new(&dbg, &conf, services, tp.scheduler(), exit));
     let parking = false;

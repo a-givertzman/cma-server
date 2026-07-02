@@ -3,7 +3,7 @@ use chrono::Datelike;
 use frdm_tools::{camera::Camera, AutoGamma, Context, ContextRead, Cropping, CroppingCtx, Eval, FastScan, FineScan, FineScanCtx, Gray, Image, Initial, InitialCtx, MetaCtx, RopeDefectCtx, RopeDefectKind};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object}, Service, ServiceWaiting}, sync::Handles, thread_pool::Scheduler};
-use crate::{domain::constants::constants::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::{rope_defect::RopeDefectConf, Inputs}};
+use crate::{domain::RECV_TIMEOUT, infra::ApiClient, services::frdm_service::{rope_defect::RopeDefectConf, Inputs}};
 
 ///
 /// Dects defect on the frames coming from the camera
@@ -296,7 +296,6 @@ impl Service for RopeDefect {
                 }
             }
             log::info!("{dbg}.run | Exit");
-            Ok(())
         });
         match handle {
             Ok(handle) => {

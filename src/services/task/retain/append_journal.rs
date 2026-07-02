@@ -58,8 +58,8 @@ pub struct AppendJournal<Child> {
     mode: RetainMode,
     buffer: Cell<VecDeque<RetainEvent>>,
     child: Child,
-    notify: ChangeNotify<State, String>,
-    buf_notify: ChangeNotify<BufState, String>,
+    notify: ChangeNotify<'static, State, String>,
+    buf_notify: ChangeNotify<'static, BufState, String>,
     dbg: Dbg,
 }
 //

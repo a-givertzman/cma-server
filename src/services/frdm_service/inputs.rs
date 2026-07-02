@@ -1,7 +1,7 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{Service, ServiceWaiting, Services, SubscriptionCriteria, conf::ServicesConf, entity::{Cot, Name, Object, Point}, retain::RetainConf}, sync::{AtomicUsizeOption, Handles}, thread_pool::{Scheduler, ThreadPool}};
-use crate::{domain::{constants::constants::RECV_TIMEOUT, unbounded, FxDashMap, Receiver, Sender}, services::frdm_service::{FrdmServiceConf, Rope}};
+use sal_sync::{services::{Service, ServiceWaiting, Services, SubscriptionCriteria, conf::ServicesConf, entity::{Cot, Name, Object, Point}, RegistryConf}, sync::{AtomicUsizeOption, Handles}, thread_pool::{Scheduler, ThreadPool}};
+use crate::{domain::{RECV_TIMEOUT, unbounded, FxDashMap, Receiver, Sender}, services::frdm_service::{FrdmServiceConf, Rope}};
 
 ///
 /// Stores all last incoming events, specified in the `subscriptions`
@@ -77,9 +77,9 @@ impl Inputs {
             cam_segment_ix: Arc::new(AtomicUsizeOption::new(None)),
             services: Arc::new(Services::new(
                 &dbg,
-                ServicesConf { name, retain: RetainConf { path: None, point: None } },
+                ServicesConf { name, retain: RegistryConf { path: None, point: None } },
                 None,
-            )),
+            ).unwrap()),
             scheduler: tp.scheduler(),
             handles: Handles::new(&dbg),
             exit,
@@ -243,7 +243,6 @@ impl Service for Inputs where {
                 }
             }
             log::info!("{dbg}.run | Exit");
-            Ok(())
         });
         match handle {
             Ok(handle) => {

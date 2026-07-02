@@ -90,7 +90,6 @@ impl FrdmService {
                     }
                 }
             }
-            Ok(())
         })?;
         Ok(())
     }
