@@ -1,11 +1,11 @@
-#[cfg(test)]
+// #[cfg(test)]
 
-use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{Service, Services, conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Object, Point, PointHlr, Status, ToPoint}, types::Bool}, sync::{Handles, Owner, channel::{self, Receiver, Sender}}};
+// use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::services::{Services, conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, Status}, types::Bool};
 use testing::entities::test_value::Value;
-use std::{cell::RefCell, collections::HashMap, fmt::{Debug, Display}, rc::Rc, sync::{Arc, Once, atomic::{AtomicBool, AtomicUsize, Ordering}}, thread::{self}, time::Duration};
+use std::sync::{Arc, Once};
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, services::task::{FlowContext, FnKind, FnResult, TaskConf, TaskEvalNode, TaskNodes}, short_type_name};
+use crate::services::task::{FlowContext, TaskConf, TaskNodes};
 ///
 ///
 static INIT: Once = Once::new();
@@ -935,23 +935,23 @@ fn export_op_metric_record() {
 /// Экспорт в БД событий CraneMode.MOPS по факту их изменения (IsChangedValue).
 #[test]
 fn live_mops_event() {
-    
+
 }
 ///
 /// Экспорт в БД событий CraneMode.AOPS по факту их изменения.
 #[test]
 fn live_aops_event() {
-    
+
 }
 ///
 /// Расчет плавающего порога чувствительности (PiecewiseLineApprox) от 30% на пустом крюке до 0.1% на максимальной нагрузке.
 #[test]
 fn live_dynamic_deadband() {
-    
+
 }
 ///
 /// Экспорт в БД изменения нагрузки крана и лебедок. Срабатывает только при превышении динамического порога (FnThreshold) для снижения шума.
 #[test]
 fn live_load_filter_event() {
-    
+
 }

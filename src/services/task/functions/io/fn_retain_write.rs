@@ -170,7 +170,7 @@ mod tests {
     }
     #[test]
     fn test_default_fallback_ignores_flow() {
-        let (tx, rx) = crate::domain::unbounded();
+        let (tx, _rx) = crate::domain::unbounded();
         let input = Rc::new(RefCell::new(MockNode::new("in", None))); // Основной вход обрывается
         let default = Rc::new(RefCell::new(MockNode::new("def", Some(FnFlow::New(mock_point(42))))));
         let mut retain = FnRetainWrite::new(&Name::from("test"), tx, "key", Some(default.clone()), input.clone()).unwrap();
