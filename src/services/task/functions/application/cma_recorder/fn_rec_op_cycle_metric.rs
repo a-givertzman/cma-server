@@ -1,15 +1,16 @@
+use indexmap::IndexMap;
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, services::{entity::{Cot, Point, PointHlr, PointTxId, Status}, types::Bool}, sync::channel::Sender};
-use std::sync::{atomic::{AtomicUsize, Ordering}};
-use chrono::Utc;
-use crate::{domain::FnInOutRef, services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult}};
+use sal_sync::{collections::FxIndexMap, services::entity::{Point, PointType}, sync::channel::Sender};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use crate::{domain::{Edge, EdgeDetector, FnOutRef}, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult}};
 ///
-/// Function | Creates SQL requests on [op-cycle] falling edge:
+/// ### Function | Creates SQL requests on [op-cycle] falling edge:
 /// - Operating cycle SQL request (id, start, stop)
 /// - Operating cycle metrics SQL requests (cycle_id, pid, metric_id, value)
-/// - Returns [enable] input if all inputs are Ok
+/// - Returns `op-cycle` input if all inputs are Ok
+/// - **Note:** `enable` input logic is implemented via `FnEnable` decorator.
 /// 
-/// Example
+/// ### Example
 /// 
 /// ```yaml
 /// ```
@@ -17,12 +18,13 @@ use crate::{domain::FnInOutRef, services::task::{FnIn, FnInOut, FnOut, FnKind, F
 pub struct FnRecOpCycleMetric {
     id: String,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
     send_to: Option<Sender<Point>>,
-    op_cycle: FnInOutRef,
-    inputs: FxIndexMap<String, FnInOutRef>,
+    reset: Option<FnChange>,
+    op_cycle: FnChange,
+    inputs: FxIndexMap<String, FnChange>,
     values: FxIndexMap<String, Point>,
     state: State,
+    reset_edge: EdgeDetector,
 }
 //
 // 
@@ -30,39 +32,21 @@ impl FnRecOpCycleMetric {
     ///
     /// Creates new instance of the FnRecOpCycleMetric
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, send_to: Option<Sender<Point>>, op_cycle: FnInOutRef, inputs: impl IntoIterator<Item = (String, FnInOutRef)>) -> Self {
+    pub fn new(parent: impl Into<String>, send_to: Option<Sender<Point>>, reset: Option<FnOutRef>, op_cycle: FnOutRef, inputs: impl IntoIterator<Item = (String, FnOutRef)>) -> Self {
         let id = format!("{}/FnRecOpCycleMetric{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
         Self { 
-            kind:FnKind::Fn,
-            enable,
+            kind: FnKind::Fn,
             send_to,
-            op_cycle,
-            inputs: inputs.into_iter().collect(),
+            reset: reset.map(FnChange::new),
+            op_cycle: FnChange::new(op_cycle),
+            inputs: inputs.into_iter().map(|(k, inp)| (k, FnChange::new(inp))).collect(),
             values: FxIndexMap::default(),
             state: State::new(&id),
+            reset_edge: EdgeDetector::new(),
             id,
         }
     }
-    ///
-    /// Sends Point to the external service if 'send-to' specified
-    fn send(&self, point: &Point) {
-        match &self.send_to {
-            Some(tx_send) => match tx_send.send(point.clone()) {
-                Ok(_) => {
-                    // log::trace!("{}.out | Point sent: {:#?}", self.id, point);
-                }
-                Err(err) => {
-                    log::error!("{}.out | Send error: {:#?}\n\t point: {:#?}", self.id, err, point);
-                }
-            }
-            None => log::warn!("{}.out | Point can't be sent - 'send-to' is not specified", self.id),
-        }
-    }
 }
-//
-// 
-impl FnIn for FnRecOpCycleMetric {}
-//
 // 
 impl FnOut for FnRecOpCycleMetric {
     //
@@ -70,108 +54,100 @@ impl FnOut for FnRecOpCycleMetric {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        if let Some(enable) = &self.enable {
-            inputs.append(&mut enable.borrow().inputs());
+        let mut inputs = self.op_cycle.inputs();
+        if let Some(reset) = &self.reset {
+            inputs.append(&mut reset.inputs());
         }
-        inputs.append(&mut self.op_cycle.borrow().inputs());
         for (_, input) in &self.inputs {
-            inputs.append(&mut input.borrow().inputs());
+            inputs.append(&mut input.inputs());
         }
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
-        let (enable, txid, status, cot, timestamp) = match &mut self.enable {
-            Some(en) => match en.borrow_mut().out() {
-                FnResult::Ok(en) => (en.to_bool().as_bool().value.0, en.txid(), en.status(), en.cot(), en.timestamp()),
-                FnResult::None => return FnResult::None,
-                FnResult::Err(err) => return FnResult::Err(err),
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
+        let reset = self.reset.as_mut().map(|f| f.out());
+        let op_cycle = self.op_cycle.out();
+        let inputs: IndexMap<&String, FnResult<FnFlow, String>> = self.inputs.iter_mut()
+            .map(|(key, input)| (key, input.out())).collect();
+        if let Some(reset) = reset {
+            if let Some(reset) = reset? {
+                if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
+                    self.state.reset();
+                }
             }
-            None => (true, PointTxId::from_str(&self.id), Status::Ok, Cot::Inf, Utc::now()),
-        };
-        let op_cycle = {
-            let op_cycle = self.op_cycle.borrow_mut().out();
-            match op_cycle {
-                FnResult::Ok(op_cycle) => op_cycle.to_bool().as_bool().value.0,
-                FnResult::None => return FnResult::None,
-                FnResult::Err(err) => return FnResult::Err(err),
-            }
+        }
+        let Some(op_cycle_point) = flow.map(op_cycle)? else { return Ok(None) };
+        let op_cycle = match op_cycle_point.typ() {
+            PointType::Bool | PointType::Int | PointType::Real | PointType::Double => op_cycle_point.to_bool().as_bool().value.0,
+            _ => return Err(format!("{}.out | Invalid op_cycle type '{:?}', expected bool or number", self.id, op_cycle_point.typ())),
         };
         match self.state.add(op_cycle) {
             Cycle::None => {}
             Cycle::Started => {
-                log::trace!("{}.out | Operating Cycle - values", self.id);
-                for (input_name, input) in &self.inputs {
-                    match input.borrow_mut().out() {
-                        FnResult::Ok(input) => {
-                            match input {
-                                Point::String(p) => {
-                                    // log::debug!("{}.out | '{}': {:?}", self.id, input_name, p.value);
-                                    // p.name = input_name.to_owned();
-                                    self.values.insert(input_name.to_owned(), Point::String(p));
-                                }
-                                _ => {
-                                    log::warn!("{}.out | Input '{}': unexpected type {:?}, string sql requared", self.id, input_name, input.type_());
-                                }
-                            };
-                        }
-                        FnResult::None => {}
-                        FnResult::Err(err) => {
-                            log::warn!("{}.out | Input '{}' - SKIPPED, error: {:?}", self.id, input_name, err);
+                log::trace!("{}.out | Operating Cycle - Active", self.id);
+                for (input_name, input) in inputs {
+                    if let Some(val_flow) = input? {
+                        let value = val_flow.into_value();
+                        if value.typ() == PointType::String {
+                            // log::debug!("{}.out | '{}': {:?}", self.id, input_name, p.value);
+                            // p.name = input_name.to_owned();
+                            self.values.insert(input_name.to_owned(), value);
+                        } else {
+                            log::warn!("{}.out | Input '{}': unexpected type {:?}, string sql requared", self.id, input_name, value.typ());
                         }
                     }
                 }
             }
             Cycle::Finished => {
-                log::debug!("{}.out | Operating Cycle - SENDING...", self.id);
+                log::debug!("{}.out | Operating Cycle - SENDING {} values...", self.id, self.values.len());
                 let log_values: Vec<String> = self.values.iter().map(|(key, point)| {
                     format!("'{}': '{}'", key, point.value().to_string())
                 }).collect();
                 log::debug!("{}.out | Operating Cycle - values ({}): {:#?}", self.id, self.values.len(), log_values);
-                for (_, value) in &self.values {
-                    self.send(value);
+                if let Some(tx) = &self.send_to {
+                    for (_, value) in self.values.drain(..) {
+                        if let Err(err) = tx.send(value) {
+                            log::error!("{}.out | Send error: {:#?}", self.id, err);
+                        }
+                    }
+                } else {
+                    log::warn!("{}.out | Point can't be sent - 'send-to' is not specified", self.id);
+                    self.values.clear();
                 }
-                self.values.clear();
             }
         }
-        FnResult::Ok(Point::Bool(
-            PointHlr::new(
-                txid,
-                &self.id,
-                Bool(enable),
-                status,
-                cot,
-                timestamp,
-            )
-        ))
+        flow.wrap(op_cycle_point)
+    }
+    //
+    fn hard_reset(&mut self) {
+        self.state.reset();
+        if let Some(reset) = &mut self.reset {
+            reset.hard_reset();
+        }
+        self.reset_edge.reset();
+        self.op_cycle.hard_reset();
+        for (_, input) in &mut self.inputs {
+            input.hard_reset();
+        }
     }
     //
     fn reset(&mut self) {
         self.state.reset();
-        if let Some(enable) = &self.enable {
-            enable.borrow_mut().reset();
-        }
-        self.op_cycle.borrow_mut().reset();
-        for (_, input) in &self.inputs {
-            input.borrow_mut().reset();
-        }
+        self.reset_edge.reset();
     }
 }
-//
-// 
-impl FnInOut for FnRecOpCycleMetric {}
 ///
 /// Global static counter of FnRecOpCycleMetric instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///
 /// State of the Operating cycle
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Cycle {
     /// Initial state, nothing hapens while this state
     /// Used to detect the start of the operating cycle
@@ -200,8 +176,8 @@ impl State {
         }
     }
     ///
-    /// Returns current state depending on the OperatingCycle status
-    /// `op_cycle` - the OperatinCycle is active as boolean
+    /// Returns current state depending on the Operating Cycle status
+    /// `op_cycle` - the Operating Cycle is active as boolean
     pub fn add(&mut self, op_cycle: bool) -> Cycle {
         match self.state {
             Cycle::None => match op_cycle {
@@ -209,9 +185,9 @@ impl State {
                     log::debug!("{}.add | Operating Cycle - STARTED", self.dbg);
                     self.state = Cycle::Started;
                     self.state
-                },
+                }
                 false => Cycle::None,
-            }
+            },
             Cycle::Started => match op_cycle {
                 true => Cycle::Started,
                 false => {
@@ -219,7 +195,7 @@ impl State {
                     self.state = Cycle::None;
                     Cycle::Finished
                 }
-            }
+            },
             Cycle::Finished => unreachable!(),
         }
     }
@@ -228,5 +204,98 @@ impl State {
     #[allow(unused)]
     pub fn reset(&mut self) {
         self.state = Cycle::None;
+    }
+}
+///
+/// Проверяем полный жизненный цикл:
+/// - спокойствие
+/// - запуск (передний фронт)
+/// - удержание
+/// - завершение (задний фронт)
+/// - а также поведение при принудительном сбросе
+#[cfg(test)]
+mod state_tests {
+    use super::*;
+    #[test]
+    fn test_state_cycle_accuracy() {
+        let mut state = State::new("TestMetric");
+        // 1. Начальное состояние: система ждет старта (сигнал 0)
+        assert_eq!(state.add(false), Cycle::None);
+        assert_eq!(state.add(false), Cycle::None);
+        // 2. Передний фронт: старт производственного цикла (сигнал 1)
+        assert_eq!(state.add(true), Cycle::Started);
+        // 3. Удержание: цикл продолжается, повторных стартов быть не должно
+        assert_eq!(state.add(true), Cycle::Started);
+        assert_eq!(state.add(true), Cycle::Started);
+        // 4. Задний фронт: завершение цикла. Триггер должен сработать ровно один раз
+        assert_eq!(state.add(false), Cycle::Finished);
+        // 5. Возврат в режим ожидания
+        assert_eq!(state.add(false), Cycle::None);
+        assert_eq!(state.add(false), Cycle::None);
+        // 6. Проверка принудительного сброса на «горячую»
+        assert_eq!(state.add(true), Cycle::Started);
+        state.reset();
+        assert_eq!(state.add(false), Cycle::None);
+    }
+}
+#[cfg(test)]
+mod integration_tests {
+    use std::{cell::RefCell, rc::Rc};
+    use super::*;
+    use crate::domain::unbounded;
+    use sal_sync::services::entity::{PointHlr, Status, Cot};
+    // Заглушка для имитации входящих метрик
+    #[derive(Debug)]
+    struct FakeOrigin {
+        value: Option<FnFlow>,
+    }
+    impl FakeOrigin {
+        fn new() -> Self { Self { value: None } }
+        fn set_str(&mut self, val: impl Into<String>) {
+            let p = Point::String(PointHlr::new(0, "test", val.into(), Status::Ok, Cot::Inf, chrono::Utc::now()));
+            self.value = Some(FnFlow::New(p));
+        }
+        fn set_int(&mut self, val: i64) {
+            let p = Point::Int(PointHlr::new(0, "test", val, Status::Ok, Cot::Inf, chrono::Utc::now()));
+            self.value = Some(FnFlow::New(p));
+        }
+    }
+    impl FnOut for FakeOrigin {
+        fn id(&self) -> String { "fake".to_string() }
+        fn kind(&self) -> FnKind { FnKind::Var }
+        fn inputs(&self) -> Vec<String> { vec![] }
+        fn out(&mut self) -> FnResult<FnFlow, String> { Ok(self.value.clone()) }
+        fn hard_reset(&mut self) {}
+        fn reset(&mut self) {}
+    }
+    #[test]
+    fn test_snapshot_physics_on_falling_edge() {
+        fn wrap(f: FnOutRef) -> FnOutRef { f }
+        let (tx, rx) =  unbounded();
+        let op_cycle = Rc::new(RefCell::new(FakeOrigin::new()));
+        let metric = Rc::new(RefCell::new(FakeOrigin::new()));
+        // Инициализация узла
+        let mut node = FnRecOpCycleMetric::new(
+            "Test", Some(tx), None, op_cycle.clone(),
+            vec![("speed".to_string(), wrap(metric.clone()))],
+        );
+        // Такт 1: Запуск цикла (op_cycle = 1, speed = 1500.0)
+        metric.borrow_mut().set_str("1501.0");
+        op_cycle.borrow_mut().set_int(1);
+        node.out().unwrap();
+        assert!(matches!(rx.try_recv(), Ok(None)), "Отправки быть не должно, цикл активен");
+        // Такт 2: Рабочий режим (op_cycle = 1, speed = 1550.0) - это значение должно стать финальным
+        metric.borrow_mut().set_str("1552.0");
+        op_cycle.borrow_mut().set_int(1);
+        node.out().unwrap();
+        assert!(matches!(rx.try_recv(), Ok(None)), "Отправки быть не должно, цикл активен");
+        // Такт 3: Остановка (op_cycle = 0, speed = 0.0) - двигатель встал
+        op_cycle.borrow_mut().set_int(0);
+        node.out().unwrap();
+        // Проверка: мы должны получить в канал значение 1550.0 (срез прошлого такта), а не 0.0
+        let sent_point = rx.try_recv()
+            .expect("Данные должны быть отправлены по заднему фронту")
+            .expect("Данные должны быть не None");
+        assert_eq!(sent_point.value().to_string(), "1552.0", "Узел обязан отправить финальный рабочий срез");
     }
 }

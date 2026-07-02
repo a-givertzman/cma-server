@@ -1,39 +1,56 @@
-use sal_sync::services::entity::{Point, PointConfType, PointHlr};
+use sal_core::error::Error;
+use sal_sync::services::entity::{Point, PointHlr, PointType};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
-use crate::domain::FnInOutRef;
-use crate::services::task::{FnIn, FnInOut, FnOut, FnKind, FnResult};
+use crate::domain::{FnOutRef, TryTo};
+use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
+
+/// ### Function | `FnAverage` (Time-Weighted Average)
+/// 
+/// Вычисляет взвешенное по времени среднее (Time-Weighted Average) входного сигнала.
 ///
-/// Returns an average value (in Double) of the input
+/// Особенности работы:
+/// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
+/// - `reset`: Сбрасывает накопленную сумму и счетчик если `> 0`.
+/// - `input`: Источник числовых данных. Выходной `Point` автоматически наследует 
+///   тип данных входа (Int, Real или Double).
+/// - Игнорирует нечисловые типы (возвращает `Err`).
 #[derive(Debug)]
 pub struct FnAverage {
     id: String,
     kind: FnKind,
-    enable: Option<FnInOutRef>,
-    input: FnInOutRef,
-    count: i64,
+    reset: Option<FnOutRef>,
+    input: FnOutRef,
+    count: u64,
     sum: f64,
+    average: Option<Point>,
 }
 //
 // 
 impl FnAverage {
     ///
     /// Creates new instance of the FnAverage
-    #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, enable: Option<FnInOutRef>, input: FnInOutRef) -> Self {
+    /// * `parent` - Идентификатор родительского узла
+    /// * `reset` - Входной сигнал для сброса накопителя (опциональный).
+    /// * `input` - Входной числовой сигнал для расчета среднего.
+    pub fn new(parent: impl Into<String>, reset: Option<FnOutRef>, input: FnOutRef) -> Self {
         Self { 
             id: format!("{}/FnAverage{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
-            kind:FnKind::Fn,
-            enable,
+            kind: FnKind::Fn,
+            reset,
             input,
             count: 0,
             sum: 0.0,
+            average: None,
         }
     }
+    ///
+    /// Возвращает `Point` с обновленными `name` и `value`
+    #[inline]
+    fn point_with<T>(p: &Point, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(p.txid(), name, value, p.status(), p.cot(), p.ts())
+    }
 }
-//
-// 
-impl FnIn for FnAverage {}
 //
 // 
 impl FnOut for FnAverage {
@@ -42,110 +59,90 @@ impl FnOut for FnAverage {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        if let Some(enable) = &self.enable {
-            inputs.append(&mut enable.borrow().inputs());
+        let mut inputs = self.input.borrow().inputs();
+        if let Some(reset) = self.reset.as_ref() {
+            inputs.append(&mut reset.borrow().inputs());
         }
-        inputs.append(&mut self.input.borrow().inputs());
         inputs
     }
     //
-    fn out(&mut self) -> FnResult<Point, String> {
-        let enable = match &self.enable {
-            Some(enable) => {
-                let enable = enable.borrow_mut().out();
-                match enable {
-                    FnResult::Ok(enable) => enable.to_bool().as_bool().value.0,
-                    FnResult::None => return FnResult::None,
-                    FnResult::Err(err) => return FnResult::Err(err),
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
+        let input = self.input.borrow_mut().out();
+        let reset = self.reset.as_mut().map(|f| f.borrow_mut().out());
+        let Some(input) = flow.map(input)? else { return Ok(None) };
+        // let mut force_recalc = false;
+        if let Some(reset) = reset {
+            if let Some(reset) = flow.ignore(reset)? {
+                let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
+                if reset {
+                    self.count = 0;
+                    self.sum = 0.0;
+                    // force_recalc = true;
                 }
             }
-            None => true,
-        };
-        log::trace!("{}.out | enable: {:?}", self.id, enable);
-        if enable {
-            let input = self.input.borrow_mut().out();
-            // trace!("{}.out | input: {:?}", self.id, input);
-            match input {
-                FnResult::Ok(input) => {
-                    let value = input.to_double().as_double().value;
-                    self.sum += value;
-                    self.count += 1;
-                    let average = if self.count != 0 {
-                        self.sum / (self.count as f64)
-                    } else {
-                        0.0
-                    };
-                    log::trace!("{}.out | sum: {:?}", self.id, self.sum);
-                    log::trace!("{}.out | count: {:?}", self.id, self.count);
-                    log::trace!("{}.out | average: {:?}", self.id, average);
-                    match input.type_() {
-                        PointConfType::Int => {
-                            FnResult::Ok(Point::Int(
-                                PointHlr::new(
-                                    input.txid(),
-                                    &self.id,
-                                    average.round() as i64,
-                                    input.status(),
-                                    input.cot(),
-                                    input.timestamp(),
-                                )
-                            ))
-                        }
-                        PointConfType::Real => {
-                            FnResult::Ok(Point::Real(
-                                PointHlr::new(
-                                    input.txid(),
-                                    &self.id,
-                                    average as f32,
-                                    input.status(),
-                                    input.cot(),
-                                    input.timestamp(),
-                                )
-                            ))
-                        }
-                        PointConfType::Double => {
-                            FnResult::Ok(Point::Double(
-                                PointHlr::new(
-                                    input.txid(),
-                                    &self.id,
-                                    average,
-                                    input.status(),
-                                    input.cot(),
-                                    input.timestamp(),
-                                )
-                            ))
-                        }
-                        _ => FnResult::Err(concat_string!(self.id, ".out | Invalid input type '", input.type_().to_string(), "'")),
-                    }
-                }
-                FnResult::None => FnResult::None,
-                FnResult::Err(err) => FnResult::Err(err),
-            }
-        } else {
-            self.count = 0;
-            self.sum = 0.0;
-            FnResult::None
         }
+        // Закоментировано потому что из двух вариантов реализации среднего: "Событийный" и "Взвешенный по времени"
+        // более подходящим и универсальным является "Взвешенный по времени", поэтому пока оставляю его.
+        // В будущем можно добавить отдельно событийный вариант FnEventAverage, который будет считать только FlowNew.
+        // // Возвращаем предыдущее значение, если нет новых данных на входе и не было сброса
+        // if !flow.is_new() && !force_recalc {
+        //     let Some(average) = self.average.as_ref() else { return Ok(None) };
+        //     return flow.wrap_old(average.clone());
+        // }
+        // trace!("{}.out | input: {:?}", self.id, input);
+        let value = match input.typ() {
+            PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
+        };
+        self.sum += value;
+        self.count += 1;
+        let average = self.sum / (self.count as f64);
+        // log::debug!("{}.out | sum: {:?}", self.id, self.sum);
+        // log::debug!("{}.out | count: {:?}", self.id, self.count);
+        // log::debug!("{}.out | average: {:?}", self.id, average);
+        let (average, point) = match input.typ() {
+            PointType::Int => {
+                let av = average.round();
+                (av, Point::Int(Self::point_with(&input, &self.id, av as i64)))
+            }
+            PointType::Real => (average, Point::Real(Self::point_with(&input, &self.id, average as f32))),
+            PointType::Double => (average, Point::Double(Self::point_with(&input, &self.id, average))),
+            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
+        };
+        let is_changed = self.average.as_ref().map_or(true, |prev| {
+            (prev.to_double().as_double().value - average).abs() > f64::EPSILON ||
+            prev.status() != input.status()
+        });
+        self.average = Some(point.clone());
+        if is_changed {
+            flow.wrap_new(point)
+        } else {
+            flow.wrap_old(point)
+        }
+    }
+    //
+    fn hard_reset(&mut self) {
+        self.count = 0;
+        self.sum = 0.0;
+        self.average = None;
+        if let Some(reset) = &mut self.reset {
+            reset.borrow_mut().hard_reset();
+        }
+        self.input.borrow_mut().hard_reset();
     }
     //
     fn reset(&mut self) {
         self.count = 0;
         self.sum = 0.0;
-        if let Some(enable) = &self.enable {
-            enable.borrow_mut().reset();
-        }
-        self.input.borrow_mut().reset();
+        self.average = None;
     }
 }
-//
-// 
-impl FnInOut for FnAverage {}
 ///
 /// Global static counter of FnAverage instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

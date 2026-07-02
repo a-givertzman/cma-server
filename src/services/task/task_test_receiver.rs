@@ -1,6 +1,6 @@
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::{Name, Object, Point}, Service}, sync::{channel::{self, Receiver, RecvTimeoutError, Sender}, Handles, Owner}};
-use std::{fmt::Debug, ops::RangeBounds, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration};
+use std::{fmt::Debug, ops::{Bound, RangeBounds}, sync::{Arc, atomic::{AtomicBool, Ordering}}, thread::{self}, time::Duration};
 use crate::domain::RwLock;
 ///
 /// 
@@ -53,8 +53,21 @@ impl TaskTestReceiver {
     ///
     /// Returns and removes the subslice by the specified range from inner `received`
     #[allow(unused)]
-    pub fn drain<R: RangeBounds<usize>>(&self, range: R) -> Vec<Point> {
-        self.received.write().drain(range).collect()
+    pub fn drain<R: RangeBounds<usize> + std::fmt::Debug>(&self, range: R) -> Vec<Point> {
+        let mut lock = self.received.write();
+        let len = lock.len();
+        // Используем встроенный метод для получения индексов (стабилизирован в последних версиях)
+        // Если диапазон некорректен, вернем пустой вектор
+        let start = match range.start_bound() {
+            Bound::Included(&n) => n,
+            Bound::Excluded(&n) => n + 1,
+            Bound::Unbounded => 0,
+        };
+        if start >= len {
+            log::error!("{}.drain | Out of range or wrong Range: {:?}", self.dbg, range);
+            return Vec::new();
+        }
+        lock.drain(range).collect()
     }
     ///
     /// Clearing vector of received Pont's
