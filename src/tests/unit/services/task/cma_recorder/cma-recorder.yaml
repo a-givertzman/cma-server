@@ -19,35 +19,35 @@ service Task RecorderTask:
                 - /App/ied14/db906_visual_data/CraneMode.MOPS
 
     #
-    # The nominal load of the crane
+    # The nominal load of the crane, Ton
     let craneLoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok # default 100000
     #
-    # The nominal load of the Winch1
+    # The nominal load of the Winch1, Ton
     let winch1LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok # default 100000
     #
-    # The nominal load of the Winch2
+    # The nominal load of the Winch2, Ton
     let winch2LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch2.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch2.LoadR0' status ok # default 100000
     #
-    # The nominal load of the Winch3
+    # The nominal load of the Winch3, Ton
     let winch3LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch3.LoadR0' status ok
+        input: point real '/App/ied13/db905_visual_data_fast/Winch3.LoadR0' status ok # default 100000
     #
-    # The nominal load of the crane
+    # The nominal load of the crane, Ton
     let craneLoad:
         input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok default 0.0
     #
-    # The nominal load of the Winch1
+    # The nominal load of the Winch1, Ton
     let winch1Load:
         input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok default 0.0
     #
-    # The nominal load of the Winch2
+    # The nominal load of the Winch2, Ton
     let winch2Load:
         input: point real '/App/ied14/db906_visual_data/Winch2.Load' status ok default 0.0
     #
-    # The nominal load of the Winch3
+    # The nominal load of the Winch3, Ton
     let winch3Load:
         input: point real '/App/ied14/db906_visual_data/Winch3.Load' status ok default 0.0
     #
@@ -166,8 +166,8 @@ service Task RecorderTask:
     # Returns one tic true if operating cycle is finished (isActive true -> false)
     let opCycleIsDone:
         input fn FallingEdge:
-            input fn Debug:
-                input: opCycleIsActive
+            # input fn Debug:
+            input: opCycleIsActive
     #
     # Detect if pump is active (true - isActive, false - isNotActive)
     let pumpIsActive:
@@ -287,8 +287,7 @@ service Task RecorderTask:
     # crane-characteristic-number  |  текущее характеристическое число для крана
     let craneEigenValue:
         input fn Retain:
-            enable fn Debug:
-                input: opCycleIsDone
+            enable: opCycleIsDone
             key: 'crane-characteristic-number'
             input fn Add:
                 input1 fn Pow:
@@ -304,7 +303,6 @@ service Task RecorderTask:
     let craneOperatingCycleSecs:
         input fn Timer:
             reset: opCycleIsStarted
-            initial: const real 0.0
             input: opCycleIsActive
     #
     # winch1-characteristic-number  |  текущее характеристическое число лебедка 1
@@ -1212,22 +1210,22 @@ service Task RecorderTask:
         #
         # 3.7  |  real  |  crane-characteristic-number  |  текущее характеристическое число для крана
         input37 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'crane-characteristic-number';
+            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'crane-characteristic-number';
             input: craneEigenValue
         #
         # 3.7.1  |  real  |  winch1-characteristic-number  |  текущее характеристическое число лебедка 1
         input371 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'winch1-characteristic-number';
+            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch1-characteristic-number';
             input: winch1EigenValue
         #
         # 3.7.2  |  real  |  winch2-characteristic-number  |  текущее характеристическое число лебедка 2
         input372 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'winch2-characteristic-number';
+            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch2-characteristic-number';
             input: winch2EigenValue
         #
         # 3.7.3  |  real  |  winch3-characteristic-number  |  текущее характеристическое число лебедка 3
         input373 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'winch3-characteristic-number';
+            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch3-characteristic-number';
             input: winch3EigenValue
         #
         # 3.8  |  real  |  crane-load-spectrum-factor  |  коэффициент распределения нагрузок для крана

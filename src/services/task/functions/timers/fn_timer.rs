@@ -118,6 +118,7 @@ impl FnOut for FnTimer {
         let elapsed = match self.edge.add(is_active) {
             Some(Edge::Rising) => {
                 self.active_t = Some(Instant::now());
+                // log::debug!("{}.out | STARTED", self.id);
                 self.total_t
             }
             Some(Edge::Falling) => {
@@ -131,6 +132,7 @@ impl FnOut for FnTimer {
             }
             _ => {
                 if let Some(t) = self.active_t {
+                    // log::debug!("{}.out | ACTIVE: {:?}", self.id, t);
                     is_changed = true;
                     self.ts = chrono::Utc::now();
                     self.total_t + t.elapsed().as_secs_f64()
@@ -139,7 +141,7 @@ impl FnOut for FnTimer {
                 }
             }
         };
-        log::trace!("{}.out | elapsed: {:?}", self.id, self.total_t);
+        // log::trace!("{}.out | elapsed: {:?}", self.id, self.total_t);
         let point = Point::Double(Self::point_with(&input, &self.id, elapsed, self.ts));
         if is_changed {
             flow.wrap_new(point)
