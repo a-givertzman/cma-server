@@ -22,9 +22,9 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ))
 }
 ///
 ///
@@ -129,7 +129,7 @@ fn multiple_real() {
         input2.clone(),
     );
     let test_data = vec![
-        (-0.1f32, 0.0, false),
+        (-0.1f32, 0.0f32, false),
         ( 1.0f32, 1.1, false),
         ( 2.0f32, 2.2, false),
         ( 5.0f32, 5.0, true),
@@ -166,15 +166,15 @@ fn multiple_double() {
     init_once();
     log::info!("test_single");
     // let (initial, switches) = init_each();
-    let input1 = init_each("0.0", FnConfPointType::Real);
-    let input2 = init_each("0.0", FnConfPointType::Real);
+    let input1 = init_each("0.0", FnConfPointType::Double);
+    let input2 = init_each("0.0", FnConfPointType::Double);
     let mut fn_trip = FnGe::new(
         "test",
         input1.clone(),
         input2.clone(),
     );
     let test_data = vec![
-        (-0.1f64, 0.0, false),
+        (-0.1f64, 0.0f64, false),
         ( 1.0f64, 1.1, false),
         ( 2.0f64, 2.2, false),
         ( 5.0f64, 5.0, true),

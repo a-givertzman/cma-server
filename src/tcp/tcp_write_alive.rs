@@ -98,7 +98,6 @@ impl TcpWriteAlive {
             Some(scheduler) => {
                 let handle = scheduler.spawn(move || {
                     Self::run_(dbg, cycle, tcp_stream, stream_write, exit, exit_pair);
-                    Ok(())
                 })?;
                 self.handles.push(handle);
             }

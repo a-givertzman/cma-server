@@ -1,1 +1,1 @@
-pub mod format_test;
+mod format_point_test;

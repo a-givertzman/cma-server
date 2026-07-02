@@ -43,7 +43,7 @@ fn basic() {
         ConfTree::empty()//new_root(serde_yaml::from_str(r#"
         // retain:
         // "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
 
     let api_client = ApiClient::new(conf, services, tp.scheduler());
     // let test_duration = Duration::from_secs(10);
@@ -216,7 +216,6 @@ fn basic() {
                 panic!("{dbg} | Preparing test TCP server - error: {:?}", err);
             }
         };
-        Ok(())
     }).unwrap();
     api_client.run().unwrap();
     let send = api_client.get_link("api-link");

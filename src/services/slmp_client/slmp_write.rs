@@ -1,6 +1,7 @@
 use std::{
     net::TcpStream, sync::{atomic::{AtomicU32, Ordering}, Arc},
 };
+use function_name::named;
 use sal_core::error::{Error, ErrorLimit};
 use sal_sync::{
     collections::FxIndexMap,
@@ -12,9 +13,7 @@ use sal_sync::{
     }, sync::channel::{RecvTimeoutError, Sender}, thread_pool::{JoinHandle, Scheduler},
 };
 use crate::{
-    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
-    domain::Mutex,
-    services::slmp_client::slmp_db::SlmpDb,
+    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf, domain::Mutex, err_pass, services::slmp_client::slmp_db::SlmpDb
 };
 
 use super::slmp_read::SlmpRead;
@@ -38,6 +37,7 @@ pub struct SlmpWrite {
 impl SlmpWrite {
     ///
     /// Creates new instance of the SlpmRead
+    #[named]
     pub fn new(
         parent: impl Into<String>,
         tx_id: usize,
@@ -49,10 +49,10 @@ impl SlmpWrite {
         status: Arc<AtomicU32>,
         scheduler: Scheduler,
         exit: Arc<ExitNotify>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let dbg = format!("{}/SlmpWrite", parent.into());
-        let dbs = SlmpRead::build_dbs(&dbg, tx_id, &conf);
-        Self {
+        let dbs = SlmpRead::build_dbs(&dbg, tx_id, &conf).map_err(|err| err_pass!(dbg, err))?;
+        Ok(Self {
             tx_id,
             dbg,
             // name,
@@ -64,7 +64,7 @@ impl SlmpWrite {
             status,
             scheduler,
             exit,
-        }
+        })
     }
     ///
     /// Writes point's to the device,
@@ -157,7 +157,6 @@ impl SlmpWrite {
                 }
             }
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         log::info!("{}.run | Started", self.dbg);
         handle.map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))

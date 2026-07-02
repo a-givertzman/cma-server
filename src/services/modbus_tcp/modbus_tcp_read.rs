@@ -84,7 +84,6 @@ impl Service for ModbusTcpRead {
                     break;
                 }
             }
-            Ok(())
         }).map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))?;
         self.handles.push(handle);
         log::info!("{}.run | Starting - ok", self.dbg);

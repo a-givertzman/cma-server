@@ -1,13 +1,11 @@
 #[cfg(test)]
 use testing::entities::test_value::Value;
-use sal_sync::{math::AproxEq, services::{entity::{Point, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
+use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
 use std::{cell::RefCell, rc::Rc, sync::Once};
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
-    services::task::{
-        FnOut, FnAverage, FnInput, FnResult
-    }
+    services::task::{EvalCycle, EvalCycleRef, FlowContext, FnAverage, FnFlow, FnInput, FnOut}
 };
 ///
 ///
@@ -22,7 +20,7 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(parent: &str, initial: Value) -> FnInOutRef {
+fn init_each(parent: &str, initial: Value, cycle: &EvalCycleRef) -> FnInOutRef {
     let mut conf = FnConfig {
         name: "test".to_owned(),
         type_: match initial {
@@ -43,103 +41,88 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
         }),
             ..Default::default()}, ..Default::default()
     };
-    Rc::new(RefCell::new(Box::new(
-        FnInput::new(parent, 0, &mut conf)
-    )))
+    Rc::new(RefCell::new(
+        FnInput::new(parent, 0, &mut conf, cycle)
+    ))
 }
 ///
 ///
 #[test]
 fn test_bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
-    let self_id = "test_bool";
-    log::info!("{}", self_id);
-    let enable = init_each(&self_id, Value::Bool(false));
-    let input = init_each(&self_id, Value::Bool(false));
+    let dbg = "FnAverage-test_bool";
+    log::info!("{}", dbg);
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&dbg, Value::Bool(false), &cycle);
     let mut fn_average = FnAverage::new(
-        self_id,
-        Some(enable.clone()),
+        dbg,
+        None,
         input.clone(),
     );
     let test_data = vec![
-        (00,    true,  false,     FnResult::<Point, _>::Err("")),
-        (01,    true,  false,     FnResult::Err("")),
-        (02,    true,   true,      FnResult::Err("")),
-        (03,    true,  false,     FnResult::Err("")),
-        (04,    true,  false,     FnResult::Err("")),
-        (05,    true,   true,      FnResult::Err("")),
-        (06,    true,  false,     FnResult::Err("")),
-        (07,    true,   true,      FnResult::Err("")),
-        (08,    true,  false,     FnResult::Err("")),
-        (09,    true,  false,     FnResult::Err("")),
-        (10,    true,   true,      FnResult::Err("")),
-        (11,    true,   true,      FnResult::Err("")),
-        (12,    true,   true,      FnResult::Err("")),
-        (13,    true,  false,     FnResult::Err("")),
-        (14,    true,  false,     FnResult::Err("")),
+        (00,    false),
+        (01,    false),
+        (02,    true),
+        (03,    false),
+        (04,    false),
+        (05,    true),
     ];
-    let mut results = 0;
-    for (step, en, value, _) in &test_data {
-        let en = en.to_point(0, "enable");
+    let flow = FlowContext::new();
+    for (step, value) in &test_data {
+        cycle.increment();
         let point = value.to_point(0, "input");
-        enable.borrow_mut().add(&en);
         input.borrow_mut().add(&point);
-        // debug!("input: {:?}", &input);
-        let result = fn_average.out();
-        match result {
-            FnResult::Ok(_) => {}
-            FnResult::None => {}
-            FnResult::Err(err) => {
-                log::debug!("step {} \t value: {:?}   |   Error: {:?}", step, value, err);
-                results += 1;
-            }
-        }
+        let result = flow.ignore(fn_average.out());
+        log::debug!("{dbg} | Step {step} | input: {:?} => result: {:?}", value, result);
+        assert!(result.is_err(), "{dbg} | Step {step} | \nresult: {:?}\ntarget: Err(_)", result);
     }
-    assert!(results == test_data.len(), "\nresult: {:?}\ntarget: {:?}", results, test_data.len());
 }
 ///
 ///
 #[test]
 fn test_int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
-    let self_id = "test_int";
-    log::info!("{}", self_id);
-    let enable = init_each(&self_id, Value::Bool(false));
-    let input = init_each(&self_id, Value::Int(0));
+    let dbg = "FnAverage-test_int";
+    log::info!("{}", dbg);
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&dbg, Value::Int(0), &cycle);
     let mut fn_average = FnAverage::new(
-        self_id,
-        Some(enable.clone()),
+        dbg,
+        None,
         input.clone(),
     );
+    // Формат: (step, input_value, target_average, target_is_new)
     let test_data = vec![
-        (00,    true,  0i64,     0i64),
-        (01,    true,  0,     0),
-        (02,    true,  3,     1),
-        (03,    true,  0,     1),
-        (04,    true,  0,     1),
-        (05,    true,  1,     1),
-        (06,    true,  0,     1),
-        (07,    true,  7,     1),
-        (08,    true,  0,     1),
-        (09,    true,  0,     1),
-        (10,    true,  2,     1),
-        (11,    true,  8,     2),
-        (12,    true,  1,     2),
-        (13,    true,  0,     2),
-        (14,    true,  0,     1),
+        (00,    0i64,  0i64,  true),  // Холодный старт -> New
+        (01,    0,     0,     false), // Среднее не изменилось -> Old
+        (02,    3,     1,     true),  // 3/3 = 1 -> New
+        (03,    0,     1,     false), // 3/4 = 0.75 (округление 1). Старое 1 -> Old
+        (04,    0,     1,     false), // 3/5 = 0.60 (округление 1). -> Old
+        (05,    1,     1,     false),
+        (06,    0,     1,     false),
+        (07,    7,     1,     false), // 11/8 = 1.375 (округление 1). -> Old
+        (08,    0,     1,     false),
+        (09,    0,     1,     false),
+        (10,    2,     1,     false),
+        (11,    8,     2,     true),  // 21/12 = 1.75 (округление 2). Изменилось -> New!
+        (12,    1,     2,     false),
+        (13,    0,     2,     false),
+        (14,    0,     1,     true),  // 22/15 = 1.46 (округление 1). Изменилось -> New!
     ];
-    for (step, en, value, target) in test_data {
-        let en = en.to_point(0, "enable");
+    for (step, value, target, target_is_new) in test_data {
+        let mut flow = FlowContext::new();
+        cycle.increment();
         let point = value.to_point(0, "input");
-        enable.borrow_mut().add(&en);
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let result = fn_average.out().unwrap();
+        let result = flow.map(fn_average.out()).unwrap().unwrap();
+        let flow_is_new = flow.is_new();
         // debug!("input: {:?}", &mut input);
-        log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
-        assert!(result.as_int().value == target, "\nresult: {:?}\ntarget: {:?}", result, target);
+        log::debug!("{dbg} | Step {step} | \t value: {:?}   |   result: {:?}", value, result.value());
+        assert!(result.as_int().value == target, "{dbg} | Step {step} | \nresult: {:?}\ntarget: {:?}", result, target);
+        assert_eq!(flow_is_new, target_is_new, "{dbg} | Step {step} | Taint tracking mismatch");
     }
 }
 ///
@@ -148,173 +131,130 @@ fn test_int() {
 fn test_real() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    let self_id = "test_real";
-    log::info!("{}", self_id);
-    let enable = init_each(&self_id, Value::Bool(false));
-    let input = init_each(&self_id, Value::Real(0.0));
+    let dbg = "FnAverage-test_real";
+    log::info!("{}", dbg);
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&dbg, Value::Real(0.0), &cycle);
     let mut fn_average = FnAverage::new(
-        self_id,
-        Some(enable.clone()),
+        dbg,
+        None,
         input.clone(),
     );
     let test_data = vec![
-        (00,    true,  0.0f32,     0.0),
-        (01,    true,  0.0,     0.0),
-        (02,    true,  3.3,     1.09999),
-        (03,    true,  0.1,     0.84999),
-        (04,    true,  0.0,     0.67999),
-        (05,    true,  1.6,     0.83333),
-        (06,    true,  0.0,     0.71428),
-        (07,    true,  7.2,     1.52499),
-        (08,    true,  0.0,     1.35555),
-        (09,    true,  0.3,     1.24999),
-        (10,    true,  2.2,     1.33636),
-        (11,    true,  8.1,     1.9),
-        (12,    true,  1.9,     1.9),
-        (13,    true,  0.1,     1.77142),
-        (14,    true,  0.0,     1.65333),
+        (00,    0.0f32,     0.0),
+        (01,    0.0,     0.0),
+        (02,    3.3,     1.09999),
+        (03,    0.1,     0.84999),
+        (04,    0.0,     0.67999),
+        (05,    1.6,     0.83333),
+        (06,    0.0,     0.71428),
+        (07,    7.2,     1.52499),
+        (08,    0.0,     1.35555),
+        (09,    0.3,     1.24999),
+        (10,    2.2,     1.33636),
+        (11,    8.1,     1.9),
+        (12,    1.9,     1.9),
+        (13,    0.1,     1.77142),
+        (14,    0.0,     1.65333),
     ];
-    for (step, en, value, target) in test_data {
-        let en = en.to_point(0, "enable");
+    for (step, value, target) in test_data {
+        cycle.increment();
         let point = value.to_point(0, "input");
-        enable.borrow_mut().add(&en);
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let result = fn_average.out().unwrap();
+        let result = fn_average.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_real().value.aprox_eq(target, 3), "\nresult: {:?}\ntarget: {:?}", result, target);
     }
 }
 ///
-/// Real points on input, enable - is variable during the test
+/// Double points on input, enable - is variable during the test
 #[test]
-fn test_real_enable() {
+fn test_double_reset() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    let self_id = "test_real_enable";
-    log::info!("{}", self_id);
-    let enable = init_each(&self_id, Value::Bool(false));
-    let input = init_each(&self_id, Value::Real(0.0));
+    let dbg = "FnAverage-test_double_reset";
+    log::info!("{}", dbg);
+    let cycle = Rc::new(EvalCycle::new());
+    let reset = init_each(&dbg, Value::Bool(false), &cycle);
+    let input = init_each(&dbg, Value::Double(0.0), &cycle);
     let mut fn_average = FnAverage::new(
-        self_id,
-        Some(enable.clone()),
+        dbg,
+        Some(reset.clone()),
         input.clone(),
     );
-    let test_data = [
-        (00,    false,  0.0f32,     None),
-        (01,    false,  0.0,     None),
-        (02,    false,  3.3,     None),
-        (03,    true,  0.1,     Some(0.1)),
-        (04,    true,  0.0,     Some(0.05)),
-        (05,    true,  1.6,     Some(0.566666666666667)),
-        (06,    true,  0.0,     Some(0.425)),
-        (07,    true,  7.2,     Some(1.77999)),
-        (08,    true,  0.0,     Some(1.48333333333333)),
-        (09,    true,  0.3,     Some(1.31428571428571)),
-        (10,    true,  2.2,     Some(1.424999)),
-        (11,    false,  8.1,     None),
-        (12,    false,  1.9,     None),
-        (13,    false,  0.1,     None),
-        (14,    false,  0.0,     None),
-        (15,    true,  0.1,     Some(0.1)),
-        (16,    true,  0.0,     Some(0.05)),
-        (17,    true,  1.6,     Some(0.566666666666667)),
-        (18,    true,  0.0,     Some(0.425)),
-        (19,    true,  7.2,     Some(1.77999)),
-        (20,    true,  0.0,     Some(1.48333333333333)),
-        (21,    true,  0.3,     Some(1.31428571428571)),
-        (22,    true,  2.2,     Some(1.424999)),
-        (23,    false,  0.0,     None),
-        (24,    false,  0.0,     None),
+    let test_data = vec![
+        (00,    true,  0.0,      Some(0.00)),
+        (01,    true,  0.0,      Some(0.00)),
+        (02,    true,  3.3,      Some(3.30)),
+        (03,    false,  0.1,     Some(1.70)),
+        (04,    false,  0.0,     Some(1.133333333333333)),
+        (05,    false,  1.6,     Some(1.25)),
+        (06,    false,  0.0,     Some(1.00)),
+        (07,    false,  7.2,     Some(2.033333333333333)),
+        (08,    false,  0.0,     Some(1.742857142857143)),
+        (09,    false,  0.3,     Some(1.5625)),
+        (10,    false,  2.2,     Some(1.633333333333333)),
+        (11,    true,  8.1,     Some(8.1)),
+        (12,    true,  1.9,     Some(1.9)),
+        (13,    true,  0.1,     Some(0.1)),
+        (14,    true,  0.0,     Some(0.0)),
+        (15,    false,  0.1,     Some(0.05)),
+        (16,    false,  0.0,     Some(0.03333333333333)),
+        (17,    false,  1.6,     Some(0.425)),
+        (18,    false,  0.0,     Some(0.340)),
+        (19,    false,  7.2,     Some(1.48333333333333)),
+        (20,    false,  0.0,     Some(1.271428571428571)),
+        (21,    false,  0.3,     Some(1.15)),
+        (22,    false,  2.2,     Some(1.266666666666667)),
+        (23,    true,  0.0,     Some(0.0)),
+        (24,    true,  0.0,     Some(0.0)),
     ];
     let mut results = 0;
-    for (step, en_val, value, target) in &test_data {
-        let en = en_val.to_point(0, "enable");
+    let flow = FlowContext::new();
+    for (step, rst, value, target) in &test_data {
+        cycle.increment();
+        let rst = rst.to_point(0, "reset");
         let point = value.to_point(0, "input");
-        enable.borrow_mut().add(&en);
+        reset.borrow_mut().add(&rst);
         input.borrow_mut().add(&point);
-        log::debug!("step {} \t input: {:?}", step, input);
-        let result = fn_average.out();
-        match &result {
-            FnResult::Ok(result) => {
-                log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
-                assert!(result.as_real().value.aprox_eq(target.unwrap(), 3), "\nresult: {:?}\ntarget: {:?}", result.as_real().value, target);
+        // debug!("input: {:?}", &input);
+        let result = flow.ignore(fn_average.out());
+        match (&result, &target) {
+            (Ok(Some(result)), Some(target)) => {
+                log::debug!("Step {step} \t value: {:?}   |   result: {:?}", value, result);
+                assert!(result.as_double().value.aprox_eq(*target, 6), "Step {step} | \nresult: {:?}\ntarget: {:?}", result.as_double().value, target);
                 results += 1;
             }
-            FnResult::None => {
-                log::debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, en_val, value, result);
-                assert!(target.is_none(), "\nresult: {:?}\ntarget: {:?}", result, target);
+            (Ok(None), None) => {
+                // log::debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, reset, value, result);
                 results += 1;
             }
-            FnResult::Err(err) => panic!("step {} \t value: {:?}   |   Error: {:?}", step, value, err),
+            (Err(err), _) => panic!("Step {step} \t value: {:?}   |   Error: {:?}", value, err),
+            _ => panic!("step {step} | \nresult: {:?}\ntarget: {:?}", result, target),
         };
     }
     assert!(results == test_data.len(), "\nresult: {:?}\ntarget: {:?}", results, test_data.len());
 }
 ///
-/// Double points on input, enable - is variable during the test
+/// Проверка поведения при отсутствии входных данных (обрыв связи)
 #[test]
-fn test_double_enable() {
-    DebugSession::new().filter(LogLevel::Info).init();
+fn test_disconnect() {
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
-    let self_id = "test_double_enable";
-    log::info!("{}", self_id);
-    let enable = init_each(&self_id, Value::Bool(false));
-    let input = init_each(&self_id, Value::Double(0.0));
-    let mut fn_average = FnAverage::new(
-        self_id,
-        Some(enable.clone()),
-        input.clone(),
-    );
-    let test_data = vec![
-        (00,    false,  0.0,     None),
-        (01,    false,  0.0,     None),
-        (02,    false,  3.3,     None),
-        (03,    true,  0.1,     Some(0.1)),
-        (04,    true,  0.0,     Some(0.05)),
-        (05,    true,  1.6,     Some(0.566666666666667)),
-        (06,    true,  0.0,     Some(0.425)),
-        (07,    true,  7.2,     Some(1.78)),
-        (08,    true,  0.0,     Some(1.48333333333333)),
-        (09,    true,  0.3,     Some(1.31428571428571)),
-        (10,    true,  2.2,     Some(1.425)),
-        (11,    false,  8.1,     None),
-        (12,    false,  1.9,     None),
-        (13,    false,  0.1,     None),
-        (14,    false,  0.0,     None),
-        (15,    true,  0.1,     Some(0.1)),
-        (16,    true,  0.0,     Some(0.05)),
-        (17,    true,  1.6,     Some(0.566666666666667)),
-        (18,    true,  0.0,     Some(0.425)),
-        (19,    true,  7.2,     Some(1.78)),
-        (20,    true,  0.0,     Some(1.48333333333333)),
-        (21,    true,  0.3,     Some(1.31428571428571)),
-        (22,    true,  2.2,     Some(1.425)),
-        (23,    false,  0.0,     None),
-        (24,    false,  0.0,     None),
-    ];
-    let mut results = 0;
-    for (step, en_val, value, target) in &test_data {
-        let en = en_val.to_point(0, "enable");
-        let point = value.to_point(0, "input");
-        enable.borrow_mut().add(&en);
-        input.borrow_mut().add(&point);
-        // debug!("input: {:?}", &input);
-        let result = fn_average.out();
-        match &result {
-            FnResult::Ok(result) => {
-                log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
-                assert!(result.as_double().value.aprox_eq(target.unwrap(), 3), "\nresult: {:?}\ntarget: {:?}", result.as_real().value, target);
-                results += 1;
-            }
-            FnResult::None => {
-                log::debug!("step {} \t enable: {:?}  |  value: {:?}  |  result: {:?}", step, en_val, value, result);
-                assert!(target.is_none(), "\nresult: {:?}\ntarget: {:?}", result, target);
-                results += 1;
-            }
-            FnResult::Err(err) => panic!("step {} \t value: {:?}   |   Error: {:?}", step, value, err),
-        };
-    }
-    assert!(results == test_data.len(), "\nresult: {:?}\ntarget: {:?}", results, test_data.len());
+    let dbg = "FnAverage-test_disconnect";
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&dbg, Value::Double(0.0), &cycle);
+    let mut fn_average = FnAverage::new(dbg, None, input.clone());
+    // Такт 1: Нормальные данные
+    cycle.increment();
+    input.borrow_mut().add(&10.0.to_point(0, "input"));
+    let result = fn_average.out().unwrap();
+    assert!(matches!(result, Some(FnFlow::New(_))), "Должен вернуть новое посчитанное значение: \nresult: {:?}\ntarget: Some(New(_))", result);
+    // Такт 2: Источник замолчал (None)
+    cycle.increment();
+    // Мы не вызываем input.add(), имитируя отсутствие данных в цикле опроса
+    let result = fn_average.out().unwrap();
+    assert!(matches!(result, Some(FnFlow::Old(_))), "Вход не поменялся (Old) узел должен вернуть новое посчитанное значение, но так как результат расчета прежний, то Old: \nresult: {:?}\ntarget: Some(New(_))", result);
 }

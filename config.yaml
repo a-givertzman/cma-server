@@ -13,7 +13,7 @@ services:
 
 
 service MultiQueue:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
     in queue in-queue:
         max-length: 10000
     send-to:
@@ -21,7 +21,7 @@ service MultiQueue:
 
 
 service CacheService MainCache:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
     retain: true
     retain-dely: 30s    # default 30s
     subscribe:
@@ -29,17 +29,17 @@ service CacheService MainCache:
             Inf: []             # IMPORTENT !!!
 
 service ProfinetClient ied12:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
     cycle: 500 ms
     subscribe: /App/MultiQueue
     send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.02'
-    ip: '192.168.130.10'
+    ip: '192.168.120.243'
     rack: 0
     slot: 1
     diagnosis:                          # internal diagnosis
-        point Status:                   # Ok(0) / Invalid(10)
+        point Status:                   # O'192.168.120.243'k(0) / Invalid(10)
             type: 'Int'
             # history: r
         point Connection:               # Ok(0) / Invalid(10)
@@ -381,12 +381,6 @@ service ProfinetClient ied12:
             address:
                 offset: 160
             comment: "Положение 'За палубой', град"
-        point Settings.Rotation.PositionOffshoreStart: 
-            type: Int
-            address:
-                offset: 160
-            comment: "Положение 'За палубой', град"
-
         point Settings.Rotation.PositionMarchingMode: 
             type: Int
             address:
@@ -629,13 +623,13 @@ service ProfinetClient ied12:
 
 
 service ProfinetClient ied13:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
-    cycle: 10 ms
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
+    cycle: 30 ms
     subscribe: /App/MultiQueue
     send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.03'
-    ip: '192.168.130.10'
+    ip: '192.168.120.243'
     rack: 0
     slot: 1
     diagnosis:                          # internal diagnosis
@@ -702,55 +696,91 @@ service ProfinetClient ied13:
             address:
                 offset: 2
             comment: 'Скорость об/мин'
+            filters:
+                threshold: 22.5
+                factor: 0.0
         point Winch1.EncoderBR2:
             type: Int
             address:
                 offset: 4
             comment: 'Длина каната, см'
+            filters:
+                threshold: 53.0
+                factor: 0.0
         point Winch1.LVDT1: 
             type: Real
             address:
                 offset: 6
+            filters:                    # Filter conf, using such filter, point can be filtered immediately after input's parser
+                threshold: 0.5          #   Absolute threshold delta 1..5 %
+                factor: 0.0             #   Multiplier for absolute threshold delta - in this case the delta will be accumulated
             comment: 'Датчик угла наклона шайбы гидромотора 1, ॰'
         point Winch1.LVDT2: 
             type: Real
             address:
                 offset: 10
             comment: 'Датчик угла наклона шайбы гидромотора 2, ॰'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch1.PressureLineA_1: 
             type: Real
             address:
                 offset: 14
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch1.PressureLineA_2: 
             type: Real
             address:
                 offset: 18
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch1.PressureBrakeA: 
             type: Real
             address:
                 offset: 22
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch1.PressureBrakeB: 
             type: Real
             address:
                 offset: 26
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch1.TempLine1: 
             type: Real
             address:
                 offset: 30
+            filters:
+                threshold: 0.1
+                factor: 0.0
         point Winch1.TempLine2: 
             type: Real
             address:
                 offset: 34
+            filters:
+                threshold: 0.1
+                factor: 0.0
         point Winch1.LoadR0: 
             type: Real
             address:
                 offset: 38
             comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch1.LoadRn: 
             type: Real
             address:
                 offset: 42
             comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch2.ValveEV1: 
             type: Bool
             address:
@@ -804,55 +834,91 @@ service ProfinetClient ied13:
             address:
                 offset: 48
             comment: 'Скорость об/мин'
+            filters:
+                threshold: 22.5
+                factor: 0.0
         point Winch2.EncoderBR2: 
             type: Int
             address:
                 offset: 50
             comment: 'Длина каната, см'
+            filters:
+                threshold: 53.0
+                factor: 0.0
         point Winch2.LVDT1: 
             type: Real
             address:
                 offset: 52
             comment: 'Датчик угла наклона шайбы гидромотора 1, ॰'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch2.LVDT2: 
             type: Real
             address:
                 offset: 56
             comment: 'Датчик угла наклона шайбы гидромотора 2, ॰'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch2.PressureLineA_1: 
             type: Real
             address:
                 offset: 60
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch2.PressureLineA_2: 
             type: Real
             address:
                 offset: 64
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch2.PressureBrakeA: 
             type: Real
             address:
                 offset: 68
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch2.PressureBrakeB: 
             type: Real
             address:
                 offset: 72
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch2.TempLine1: 
             type: Real
             address:
                 offset: 76
+            filters:
+                threshold: 0.1
+                factor: 0.0
         point Winch2.TempLine2: 
             type: Real
             address:
                 offset: 80
+            filters:
+                threshold: 0.1
+                factor: 0.0
         point Winch2.LoadR0:
             type: Real
             address:
                 offset: 84
             comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch2.LoadRn:
             type: Real
             address:
                 offset: 88
             comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch3.ValveEV1: 
             type: Bool
             address:
@@ -906,55 +972,91 @@ service ProfinetClient ied13:
             address:
                 offset: 94
             comment: 'Скорость об/мин'
+            filters:
+                threshold: 22.5
+                factor: 0.0
         point Winch3.EncoderBR2: 
             type: Int
             address:
                 offset: 96
             comment: 'Длина каната, см'
+            filters:
+                threshold: 53.0
+                factor: 0.0
         point Winch3.LVDT1: 
             type: Real
             address:
                 offset: 98
             comment: 'Датчик угла наклона шайбы гидромотора 1, ॰'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch3.LVDT2: 
             type: Real
             address:
                 offset: 102
+            filters:
+                threshold: 0.5
+                factor: 0.0
             comment: 'Датчик угла наклона шайбы гидромотора 2, ॰'
         point Winch3.PressureLineA_1: 
             type: Real
             address:
                 offset: 106
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch3.PressureLineA_2: 
             type: Real
             address:
                 offset: 110
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch3.PressureBrakeA: 
             type: Real
             address:
                 offset: 114
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch3.PressureBrakeB: 
             type: Real
             address:
                 offset: 118
+            filters:
+                threshold: 1.0
+                factor: 0.0
         point Winch3.TempLine1: 
             type: Real
             address:
                 offset: 122
+            filters:
+                threshold: 0.1
+                factor: 0.0
         point Winch3.TempLine2: 
             type: Real
             address:
                 offset: 126
+            filters:
+                threshold: 0.1
+                factor: 0.0
         point Winch3.LoadR0: 
             type: Real
             address:
                 offset: 130
             comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Winch3.LoadRn: 
             type: Real
             address:
                 offset: 134
-            comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'        
+            comment: 'NEW  |  Абсолютная номинальная нагрузка активной лебедки'
+            filters:
+                threshold: 0.5
+                factor: 0.0      
         point Jib.LimitSwitchUp:
             type: Bool
             address:
@@ -965,15 +1067,24 @@ service ProfinetClient ied13:
             address:
                 offset: 140
             comment: 'Угод хобота'
+            filters:
+                threshold: 0.5
+                factor: 0.0
         point Jib.WeightSensor:
             type: Real
             address:
                 offset: 144
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point Boom.SensorAngle: 
             type: Real
             address:
                 offset: 148
             comment: 'Угол стрелы'
+            # filters:
+            #     threshold: 0.5
+            #     factor: 0.0
         point Rotate.PressureLowM1: 
             type: Bool
             address:
@@ -1010,6 +1121,9 @@ service ProfinetClient ied13:
             type: Real
             address:
                 offset: 156
+            # filters:
+            #     threshold: 1.0
+            #     factor: 0.0
         point Platform.PressureOilLow: 
             type: Bool
             address:
@@ -1039,6 +1153,9 @@ service ProfinetClient ied13:
             address:
                 offset: 162
             comment: 'Датчик МРУ'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point HPU.HighOilLevel: 
             type: Bool
             address:
@@ -1079,38 +1196,65 @@ service ProfinetClient ied13:
             type: Real
             address:
                 offset: 168
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point HPU.PressureOutPump1: 
             type: Real
             address:
                 offset: 172
+            # filters:
+            #     threshold: 4.0
+            #     factor: 0.0
         point HPU.PressureOutPump2: 
             type: Real
             address:
                 offset: 176
+            # filters:
+            #     threshold: 4.0
+            #     factor: 0.0
         point HPU.PressureInPump1: 
             type: Real
             address:
                 offset: 180
+            # filters:
+            #     threshold: 0.5
+            #     factor: 0.0
         point HPU.PressureInPump2: 
             type: Real
             address:
                 offset: 184
+            # filters:
+            #     threshold: 0.5
+            #     factor: 0.0
         point HPU.CoolerTemperatureIn: 
             type: Real
             address:
                 offset: 188
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point HPU.CoolerTemperatureOut: 
             type: Real
             address:
                 offset: 192
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point HPU.CoolerPressureIn: 
             type: Real
             address:
                 offset: 196
+            # filters:
+            #     threshold: 0.2
+            #     factor: 0.0
         point HPU.CoolerPressureOut: 
             type: Real
             address:
                 offset: 200
+            # filters:
+            #     threshold: 0.2
+            #     factor: 0.0
         point HPU.OilHeating: 
             type: Bool
             address:
@@ -1168,13 +1312,13 @@ service ProfinetClient ied13:
 
 
 service ProfinetClient ied14:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
     cycle: 50 ms
     subscribe: /App/MultiQueue
     send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.04'
-    ip: '192.168.130.10'
+    ip: '192.168.120.243'
     rack: 0
     slot: 1
     diagnosis:                          # internal diagnosis
@@ -1297,36 +1441,57 @@ service ProfinetClient ied14:
             address:
                 offset: 40
             comment: 'Вылет (метры)'
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point Crane.Wind: 
             type: Real
             address:
                 offset: 44
             comment: 'Скорость ветра (м/секунду)'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 8.0
         point Crane.Pitch: 
             type: Real
             address:
                 offset: 48
             comment: 'Дифферент (градусы)'
+            # filters:
+            #     threshold: 1.0
+            #     factor: 0.0
         point Crane.Roll: 
             type: Real
             address:
                 offset: 52
             comment: 'Крен (градусы)'
+            # filters:
+            #     threshold: 1.0
+            #     factor: 0.0
         point Crane.Slewing: 
             type: Real
             address:
                 offset: 56
             comment: 'Угол поворота стрелы (градусы)'
+            # filters:
+            #     threshold: 1.0
+            #     factor: 0.0
         point Crane.BoomAngle: 
             type: Real
             address:
                 offset: 60
             comment: 'Положение рукояти (градусы)'
+            # filters:
+            #     threshold: 1.0
+            #     factor: 0.0
         point Crane.JibAngle: 
             type: Real
             address:
                 offset: 64
             comment: 'Положение хобота (градусы)'
+            # filters:
+            #     threshold: 1.0
+            #     factor: 0.0
         point Crane.HookLimitSwitch: 
             type: Int
             address:
@@ -1335,26 +1500,44 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 70
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point Crane.Reserve2: 
             type: Real
             address:
                 offset: 72
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point Crane.Reserve3: 
             type: Real
             address:
                 offset: 76
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point Winch1.SWL0:
             type: Real
             address:
                 offset: 80
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch1.SWL:
             type: Real
             address:
                 offset: 84
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch1.Load:
             type: Real
             address:
                 offset: 88
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch1.Overload:
             type: Bool
             address:
@@ -1374,11 +1557,17 @@ service ProfinetClient ied14:
             type: Real
             address:
                 offset: 98
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch1.Depth: 
             type: Real
             address:
                 offset: 102
             comment: 'Глубина абсолютная (метры)'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch1.LoadIndex: 
             type: Int
             address:
@@ -1401,33 +1590,51 @@ service ProfinetClient ied14:
             address:
                 offset: 114
                 bit: 0
-        point Winch1.Hook.X: 
+        point Winch1.Hook.X:
             type: Real
             address:
                 offset: 116
             comment: 'Положение крюка по X'
-        point Winch1.Hook.Y: 
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
+        point Winch1.Hook.Y:
             type: Real
             address:
                 offset: 120
             comment: 'Положение крюка по Y'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch1.Hook.Speed: 
             type: Real
             address:
                 offset: 124
             comment: 'Скорость крюка (м/минуту)'
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point Winch2.SWL0:
             type: Real
             address:
                 offset: 128
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch2.SWL:
             type: Real
             address:
                 offset: 132
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch2.Load:
             type: Real
             address:
                 offset: 136
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch2.Overload:
             type: Bool
             address:
@@ -1447,11 +1654,17 @@ service ProfinetClient ied14:
             type: Real
             address:
                 offset: 146
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch2.Depth: 
             type: Real
             address:
                 offset: 150
             comment: 'Глубина абсолютная (метры)'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch2.LoadIndex: 
             type: Int
             address:
@@ -1479,28 +1692,46 @@ service ProfinetClient ied14:
             address:
                 offset: 164
             comment: 'Положение крюка по X'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch2.Hook.Y: 
             type: Real
             address:
                 offset: 168
             comment: 'Положение крюка по Y'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch2.Hook.Speed: 
             type: Real
             address:
                 offset: 172
             comment: 'Скорость крюка (м/минуту)'
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point Winch3.SWL0:
             type: Real
             address:
                 offset: 176
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch3.SWL:
             type: Real
             address:
                 offset: 180
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch3.Load:
             type: Real
             address:
                 offset: 184
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch3.Overload:
             type: Bool
             address:
@@ -1520,11 +1751,17 @@ service ProfinetClient ied14:
             type: Real
             address:
                 offset: 194
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch3.Depth: 
             type: Real
             address:
                 offset: 198
             comment: 'Глубина абсолютная (метры)'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch3.LoadIndex: 
             type: Int
             address:
@@ -1552,16 +1789,25 @@ service ProfinetClient ied14:
             address:
                 offset: 212
             comment: 'Положение крюка по X'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch3.Hook.Y: 
             type: Real
             address:
                 offset: 216
             comment: 'Положение крюка по Y'
+            # filters:
+            #     threshold: 0.01
+            #     factor: 0.0
         point Winch3.Hook.Speed: 
             type: Real
             address:
                 offset: 220
             comment: 'Скорость крюка (м/минуту)'
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
         point HPU.Pump1.State: 
             type: Int
             address:
@@ -1570,14 +1816,23 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 226
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.Pump1.Reserve2: 
             type: Int
             address:
                 offset: 228
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.Pump1.Reserve3: 
             type: Int
             address:
                 offset: 230
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.Pump2.State: 
             type: Int
             address:
@@ -1586,14 +1841,23 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 234
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.Pump2.Reserve2: 
             type: Int
             address:
                 offset: 236
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.Pump2.Reserve3: 
             type: Int
             address:
                 offset: 238
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.EmergencyHPU.State: 
             type: Int
             address:
@@ -1602,29 +1866,41 @@ service ProfinetClient ied14:
             type: Int
             address:
                 offset: 242
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.EmergencyHPU.Reserve2: 
             type: Int
             address:
                 offset: 244
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.EmergencyHPU.Reserve3: 
             type: Int
             address:
                 offset: 246
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point HPU.OilTemp: 
             type: Real
             address:
                 offset: 248
             comment: 'Температура масла (градусы)'
+            # filters:
+            #     threshold: 0.1
+            #     factor: 0.0
 
 
 service ProfinetClient ied15:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
-    cycle: 7 ms
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
+    cycle: 30 ms
     subscribe: /App/MultiQueue
     send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.05'
-    ip: '192.168.130.10'
+    ip: '192.168.120.243'
     rack: 0
     slot: 1
     diagnosis:                          # internal diagnosis
@@ -1637,7 +1913,7 @@ service ProfinetClient ied15:
     db db907_alarms:
         number: 907
         offset: 0
-        size: 16
+        size: 18
         point Rotate.PressureLowM1Alarm:
             type: Bool
             address:
@@ -1839,66 +2115,66 @@ service ProfinetClient ied15:
         point EmerW2.TTM10.1_Error:
             type: Bool
             address:
-                offset: 13
+                offset: 14
                 bit: 0
             alarm: 1
         point EmerW2.B3_Error:
             type: Bool
             address:
-                offset: 13
+                offset: 14
                 bit: 1
             alarm: 1
         point EmerW2.B1_Error:
             type: Bool
             address:
-                offset: 13
+                offset: 14
                 bit: 2
             alarm: 1
         point EmerW2.B2_Error:
             type: Bool
             address:
-                offset: 13
+                offset: 14
                 bit: 3
             alarm: 1
         point EmerW2.EncRot_Error:
             type: Bool
             address:
-                offset: 13
+                offset: 14
                 bit: 4
             alarm: 1
         point WarnW1.PressureFilterCloggedWarn:
             type: Bool
             address:
-                offset: 14
+                offset: 16
                 bit: 0
             alarm: 4
         point WarnW1.DrainFilterCloggedWarn:
             type: Bool
             address:
-                offset: 14
+                offset: 16
                 bit: 1
             alarm: 4
         point WarnW1.DrainBoostFilterCloggedWarn:
             type: Bool
             address:
-                offset: 14
+                offset: 16
                 bit: 2
             alarm: 4
         point WarnW1.SWL90Warn:
             type: Bool
             address:
-                offset: 14
+                offset: 16
                 bit: 3
             alarm: 4
 
 service ProfinetClient ied16:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
     cycle: 50 ms
     subscribe: /App/MultiQueue
     send-to: /App/MultiQueue.in-queue
     protocol: 'profinet'
     description: 'S7-IED-01.05'
-    ip: '192.168.130.10'
+    ip: '192.168.120.243'
     rack: 0
     slot: 1
     diagnosis:                          # internal diagnosis
@@ -2040,25 +2316,40 @@ service ProfinetClient ied16:
             type: Int
             address:
                 offset: 62
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point AnalogOutputs.Reserve2:
             type: Int
             address:
                 offset: 64
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point AnalogOutputs.Reserve3:
             type: Int
             address:
                 offset: 66
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point AnalogOutputs.Reserve4:
             type: Int
             address:
                 offset: 68
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
         point AnalogOutputs.Reserve5:
             type: Int
             address:
                 offset: 70
+            # filters:
+            #     threshold: 10.0
+            #     factor: 0.0
 
 service Task HistoryTask:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
     cycle: 1 s
     in queue recv-queue:
         max-length: 10000
@@ -2069,10 +2360,8 @@ service Task HistoryTask:
     #     input: point any every
     fn ToApiQueue:
         queue: /App/ApiClient.in-queue
-        input fn SqlMetric:
-            initial: 0.123      # начальное значение
-            table: public.event
-            sql: "insert into {table} (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
+        input fn Sql:
+            sql: "insert into public.event (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
             input1 fn ToInt:
                 input: point any every      # point: every point of any type
             input2 fn PointId:
@@ -2080,7 +2369,7 @@ service Task HistoryTask:
 
 
 service ApiClient:
-    wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
     cycle: 100 ms
     reconnect: 1 s  # default 3 s
     address: 0.0.0.0:8080

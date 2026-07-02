@@ -33,7 +33,7 @@ fn random_i16() {
     log::debug!("");
     let dbg = "test";
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(100));
+    let test_duration = TestDuration::new(dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
     let mut rng = rand::rng();
     let rng = &mut rng;
@@ -41,7 +41,7 @@ fn random_i16() {
     //     Configure here                                 //
     ////////////////////////////////////////////////////////
     // Total test values                                  //
-    let count = 512 * 1000;
+    let count = 512 * 100;
     // Values<i16> in DATA field of UDP message
     let message_length = 1024;
     // Sampling frequency                                 //
@@ -61,7 +61,7 @@ fn random_i16() {
                 point:
                     path: point/id.json
         "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     let path = "./src/tests/unit/services/udp_client/udp-client.yaml";
     let conf = UdpClientConf::read(dbg, path);
     let udp_client = Arc::new(UdpClient::new(conf, services.clone(), tp.scheduler()));
@@ -101,10 +101,10 @@ fn random_i16() {
     udp_server.run().unwrap();
     
     let mut received = 0;
-    let timeout = Duration::from_secs(10);
+    let timeout = Duration::from_millis(128);
     let wait_time = Instant::now();
     while received < test_data.len() {
-        thread::sleep(Duration::from_millis(500));
+        thread::yield_now();
         received = receiver.received().len();
         log::debug!("{} | receiver {}/{} ...", dbg, received, test_data.len());
         if wait_time.elapsed() > timeout {

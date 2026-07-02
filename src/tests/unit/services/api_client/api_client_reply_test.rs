@@ -6,7 +6,7 @@ use std::{sync::{Once, Arc}, thread, time::{Duration, Instant}, net::TcpListener
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use api_tools::api::{message::{fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn}, message::{MessageField, MessageParse}, message_kind::MessageKind, parse_data::ParseData, parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn}, reply::api_reply::ApiReply, socket::tcp_socket::TcpMessage};
-use crate::{domain::Mutex, services::{ApiClient, ApiClientConf}};
+use crate::{domain::RwLock, services::{ApiClient, ApiClientConf}};
 ///
 static INIT: Once = Once::new();
 ///
@@ -30,22 +30,23 @@ fn reply() {
     let dbg = Dbg::own("api-client-test");
     println!("\n{}", dbg);
     let path = "./src/tests/unit/services/api_client/api_client_reply.yaml";
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(15));
     test_duration.run().unwrap();
     let mut conf = ApiClientConf::read(&dbg, path);
     // let addr = conf.address.clone();
     // let addr = "127.0.0.1:".to_owned() + &TestSession::free_tcp_port_str();
     let addr = "127.0.0.1:3232".to_owned();
     conf.address = addr.parse().unwrap();
-    let tp = ThreadPool::new(&dbg, Some(4));
+    let tp = ThreadPool::new(&dbg, Some(12));
     let services = Arc::new(Services::new(&dbg, ServicesConf::new(
         &dbg, 
         ConfTree::empty()//new_root(serde_yaml::from_str(r#"
         // retain:
         // "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     let mq_conf = serde_yaml::from_str(&format!(r#"
         service MultiQueue:
+            wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
             in queue in-queue:
                 max-length: 10000
             send-to:
@@ -91,13 +92,13 @@ fn reply() {
     );
     let test_data: Vec<Value> = test_data.collect();
     let mut sent = vec![];
-    let received = Arc::new(Mutex::new(vec![]));
-    let received_ref = received.clone();
+    let received = Arc::new(RwLock::new(vec![]));
     let mut buf = [0; 1024 * 4];
     let dbg_clone = dbg.clone();
-    let receiver_handle = tp.spawn(move || {
+    let receiver_handle = tp.scheduler().spawn({
+        let received = received.clone();
+        move || {
         let dbg = Dbg::new(dbg_clone, "MockTcpServer");
-        let mut received = received_ref.lock();
         let mut message = TcpMessage::new(
             &dbg,
             vec![
@@ -132,13 +133,13 @@ fn reply() {
             Ok(listener) => {
                 log::info!("{dbg} | Preparing test server - ok");
                 let mut max_read_errors = ErrorLimit::new(100);
-                'main: while received.len() < count {
+                'main: while received.read().len() < count {
                     log::info!("{dbg} | accept connections on {addr}...");
                     match listener.accept() {
                         Ok((mut _socket, _)) => {
                             log::info!("{dbg} | accept connection on - ok\n\t{:?} -> {:?}", _socket.local_addr(), _socket.peer_addr());
                             _socket.set_read_timeout(Some(Duration::from_millis(100))).unwrap();
-                            while received.len() < count {
+                            while received.read().len() < count {
                                 // for e in buf.iter_mut() {*e = 0;}
                                 log::debug!("{dbg} | Receiving bytes...", );
                                 match _socket.read(&mut buf) {
@@ -153,8 +154,8 @@ fn reply() {
                                                     Ok(value) => {
                                                         let value: serde_json::Value = value;
                                                         log::debug!("{dbg} | received value: {:?}", value);
-                                                        received.push(value.clone());
-                                                        log::debug!("{dbg} | received count: {} of {}", received.len(), count);
+                                                        received.write().push(value.clone());
+                                                        log::debug!("{dbg} | received count: {} of {}", received.read().len(), count);
                                                         let obj = value.as_object().unwrap();
                                                         let reply = ApiReply::new(
                                                             obj.get("authToken").unwrap().as_str().unwrap().to_string(),
@@ -173,7 +174,7 @@ fn reply() {
                                                             }
                                                         };
                                                         // debug!("{dbg} | received / count: {:?}", received.len() / count);
-                                                        if (state == 0) && received.len() as f64 / count as f64 > 0.333 {
+                                                        if (state == 0) && received.read().len() as f64 / count as f64 > 0.333 {
                                                             state = 1;
                                                             let break_socket_duration = Duration::from_millis(100);
                                                             log::debug!("{dbg} | breaking socket connection for {:?}", break_socket_duration);
@@ -183,11 +184,11 @@ fn reply() {
                                                             log::debug!("{dbg} | beaking socket connection for {:?} - elapsed, restoring...", break_socket_duration);
                                                             break;
                                                         }
-                                                        if (state == 1) & (received.len() >= count) {
+                                                        if (state == 1) & (received.read().len() >= count) {
                                                             _socket.flush().unwrap();
                                                             thread::sleep(Duration::from_millis(100));
                                                             _socket.shutdown(std::net::Shutdown::Both).unwrap();
-                                                            log::debug!("{dbg} | All received, count: {} of {}", received.len(), count);
+                                                            log::debug!("{dbg} | All received, count: {} of {}", received.read().len(), count);
                                                             break 'main;
                                                         }
                                                     }
@@ -225,11 +226,17 @@ fn reply() {
                 panic!("{dbg} | Preparing test TCP server - error: {:?}", err);
             }
         };
-        Ok(())
-    }).unwrap();
+    }}).unwrap();
+    log::debug!("{dbg} | Starting Services...");
     services.run().unwrap();
+    log::debug!("{dbg} | Starting Services - Ok");
+    std::thread::sleep(Duration::from_millis(50));
+    log::debug!("{dbg} | Starting MultiQueue...");
     mq.run().unwrap();
+    log::debug!("{dbg} | Starting MultiQueue - Ok");
+    log::debug!("{dbg} | Starting ApiClient...");
     api_client.run().unwrap();
+    log::debug!("{dbg} | Starting ApiClient - Ok");
     let send = api_client.get_link("api-link");
     let timer = Instant::now();
     for value in test_data {
@@ -237,7 +244,7 @@ fn reply() {
         send.send(point.clone()).unwrap();
         sent.push(point.as_string().value);
         println!("sent: {:?}", point);
-        std::thread::sleep(Duration::from_millis(100));
+        std::thread::sleep(Duration::from_millis(10));
     }
     receiver_handle.join().unwrap();
     api_client.exit();
@@ -246,19 +253,19 @@ fn reply() {
     println!("elapsed: {:?}", timer.elapsed());
     println!("total test events: {:?}", count);
     println!("sent events: {:?}", sent.len());
-    let mut received = received.lock();
-    println!("recv events: {:?}", received.len());
+    println!("recv events: {:?}", received.read().len());
     assert!(sent.len() == count, "sent: {:?}\ntarget: {:?}", sent.len(), count);
-    assert!(received.len() == count, "received: {:?}\ntarget: {:?}", received.len(), count);
+    assert!(received.read().len() == count, "received: {:?}\ntarget: {:?}", received.read().len(), count);
     while &sent.len() > &0 {
         let target = sent.pop().unwrap();
-        let result = received.pop().unwrap();
+        let result = received.write().pop().unwrap();
         let result = result.as_object().unwrap().get("sql").unwrap().as_object().unwrap().get("sql").unwrap().as_str().unwrap();
-        log::debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
+        log::debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.read().len(), result, sent.len(), target);
         assert!(result == &target, "\nresult: {:?}\ntarget: {:?}", result, target);
     }
     api_client.wait().unwrap();
     mq.wait().unwrap();
     services.wait().unwrap();
+    tp.shutdown().unwrap();
     test_duration.exit();
 }

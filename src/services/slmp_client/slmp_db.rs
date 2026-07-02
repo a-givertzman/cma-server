@@ -1,23 +1,15 @@
 use std::{fs, io::{BufReader, Read, Write}, net::TcpStream};
 use chrono::Utc;
 use concat_string::concat_string;
+use function_name::named;
 use indexmap::IndexMap;
 use sal_core::error::Error;
-use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointConfType, Status}, sync::channel::Sender};
+use sal_sync::{services::entity::{Name, Point, PointConf, PointConfFilter, PointType, Status}, sync::channel::Sender};
 use crate::{
-    conf::slmp_client_conf::slmp_db_conf::SlmpDbConf,
-    domain::{
+    conf::slmp_client_conf::slmp_db_conf::SlmpDbConf, domain::{
         filter::{filter::{Filter, FilterEmpty}, filter_threshold::FilterThreshold},
         net::connection_status::{ConnectionStatus, SocketState},
-    },
-    services::slmp_client::{
-        slmp::ParsePoint,
-        slmp::{
-            c_slmp_const::FrameType, device_code::DeviceCode, slmp_packet::SlmpPacket,
-            slmp_parse_bool::SlmpParseBool, slmp_parse_int::SlmpParseInt, slmp_parse_real::SlmpParseReal,
-        }
-    },
-    tcp::tcp_stream_write::OpResult,
+    }, err_pass, services::slmp_client::slmp::{ParsePoint, c_slmp_const::FrameType, device_code::DeviceCode, slmp_packet::SlmpPacket, slmp_parse_bool::SlmpParseBool, slmp_parse_int::SlmpParseInt, slmp_parse_real::SlmpParseReal}, tcp::tcp_stream_write::OpResult
 };
 ///
 /// Represents SLMP Data Block - a collection of the SLMP addresses
@@ -40,20 +32,21 @@ impl SlmpDb {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [SlmpDb]
-    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &SlmpDbConf) -> Self {
-        let self_id = format!("{}/SlmpDb({})", parent_id.into(), conf.name);
-        let slmp_packet = SlmpPacket::new(&self_id, conf.device_code, conf.offset, conf.size);
-        Self {
-            dbg: self_id.clone(),
-            name: conf.name.clone(),
+    #[named]
+    pub fn new(parent_id: impl Into<String>, tx_id: usize, conf: &SlmpDbConf) -> Result<Self, Error> {
+        let dbg = format!("{}/SlmpDb({})", parent_id.into(), conf.name);
+        let slmp_packet = SlmpPacket::new(&dbg, conf.device_code, conf.offset, conf.size);
+        Ok(Self {
             // description: conf.description.clone(),
             device_code: conf.device_code,
             offset: conf.offset as u32,
             size: conf.size,
             // cycle: conf.cycle,
             slmp_packet,
-            points: Self::configure_parse_points(&self_id, tx_id, conf),
-        }
+            points: Self::configure_parse_points(&dbg, tx_id, conf).map_err(|err| err_pass!(dbg, err))?,
+            name: conf.name.clone(),
+            dbg,
+        })
     }
     ///
     /// Writes Point's to the log file
@@ -75,7 +68,7 @@ impl SlmpDb {
     pub fn yield_status(&mut self, status: Status, tx_send: &Sender<Point>) -> Result<(), String> {
         let mut message = String::new();
         for (_key, parse_point) in &mut self.points {
-            if let Some(point) = parse_point.next_status(status) {
+            if let Some(point) = parse_point.next_status(status, chrono::Utc::now()) {
                 match tx_send.send(point) {
                     Ok(_) => {}
                     Err(err) => {
@@ -92,24 +85,28 @@ impl SlmpDb {
     }
     ///
     /// Configuring ParsePoint objects depending on point configurations coming from [conf]
-    fn configure_parse_points(self_id: &str, tx_id: usize, conf: &SlmpDbConf) -> IndexMap<String, Box<dyn ParsePoint>> {
-        conf.points.iter().map(|point_conf| {
-            match point_conf.type_ {
-                PointConfType::Bool => {
+    #[named]
+    fn configure_parse_points(dbg: &str, tx_id: usize, conf: &SlmpDbConf) -> Result<IndexMap<String, Box<dyn ParsePoint>>, Error> {
+        let mut parse_points = IndexMap::with_capacity(conf.points.len());
+        for point_conf in conf.points.iter() {
+            let (name, point) = match point_conf.type_ {
+                PointType::Bool => {
                     (point_conf.name.clone(), Self::box_bool(tx_id, point_conf.name.clone(), point_conf))
                 }
-                PointConfType::Int => {
-                    (point_conf.name.clone(), Self::box_int(tx_id, point_conf.name.clone(), point_conf))
+                PointType::Int => {
+                    (point_conf.name.clone(), Self::box_int(dbg, tx_id, point_conf.name.clone(), point_conf).map_err(|err| err_pass!(dbg, err))?)
                 }
-                PointConfType::Real => {
+                PointType::Real => {
                     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 }
-                PointConfType::Double => {
+                PointType::Double => {
                     (point_conf.name.clone(), Self::box_real(tx_id, point_conf.name.clone(), point_conf))
                 }
-                _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for Device", self_id, point_conf.type_)
-            }
-        }).collect()
+                _ => panic!("{}.configureParsePoints | Unknown type '{:?}' for Device", dbg, point_conf.type_)
+            };
+            parse_points.insert(name, point);
+        }
+        Ok(parse_points)
     }
     ///
     /// Returns all available bytes from the socket
@@ -289,13 +286,14 @@ impl SlmpDb {
     }
     ///
     ///
-    fn box_int(tx_id: usize, name: String, config: &PointConf) -> Box<dyn ParsePoint> {
-        Box::new(SlmpParseInt::new(
+    fn box_int(parent: impl Into<String>, tx_id: usize, name: String, config: &PointConf) -> Result<Box<dyn ParsePoint>, Error> {
+        Ok(Box::new(SlmpParseInt::new(
+            parent,
             tx_id,
             name,
             config,
             Self::int_filter(config.filters.clone()),
-        ))
+        )?))
     }
     ///
     ///
@@ -313,10 +311,10 @@ impl SlmpDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<2, i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<i64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<2, i64>::new(None)),
+            None => Box::new(FilterEmpty::<i64>::new(None)),
         }
     }
     ///
@@ -325,10 +323,10 @@ impl SlmpDb {
         match conf {
             Some(conf) => {
                 Box::new(
-                    FilterThreshold::<2, f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                    FilterThreshold::<f32>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
                 )
             }
-            None => Box::new(FilterEmpty::<2, f32>::new(None)),
+            None => Box::new(FilterEmpty::<f32>::new(None)),
         }
     }
     // ///

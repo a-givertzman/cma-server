@@ -1,40 +1,60 @@
-use sal_sync::services::entity::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use sal_core::error::Error;
+use sal_sync::services::entity::{Point, PointHlr, PointTxId};
 use crate::{
-    domain::FnInOutRef,
+    domain::{FnOutRef, PointMeta, NumValue},
     services::task::{
-        FnInOut, FnIn, FnOut,
-        FnKind, FnResult
+        FlowContext, FnFlow, FnKind, FnOut, FnResult
     },
 };
 ///
-/// Function | Returns input1 - input2
+/// ### Function | `FnSub`
+/// 
+/// Возвращает разность `input1 - input2`,
+/// динамически повышая тип данных до наиболее точного.
+/// 
+/// **Example**
+/// ```yaml
+/// fn Sub:
+///     input1: point int '/App/Service/Point.Name1'
+///     input2: point int '/App/Service/Point.Name2'
+/// fn Sub:
+///     in1: point double '/App/Service/Point.Name1'
+///     in2: point double '/App/Service/Point.Name2'
+/// ```
 #[derive(Debug)]
 pub struct FnSub {
-    id: String,
+    txid: usize,
     kind: FnKind,
-    input1: FnInOutRef,
-    input2: FnInOutRef,
+    inputs: [FnOutRef; 2],
+    id: String,
 }
 //
 // 
 impl FnSub {
     ///
-    /// Creates new instance of the FnSub
+    /// Creates `FnSub` new instance
+    /// - `parent` - Идентификатор родительского узла
+    /// - `inputs` - Вектор входных сигналов, должен содержать два входа
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input1: FnInOutRef, input2: FnInOutRef) -> Self {
-        Self { 
-            id: format!("{}/FnSub{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst)),
+    pub fn new(parent: impl Into<String>, inputs: Vec<FnOutRef>) -> Result<Self, Error> {
+        let id = format!("{}/FnSub{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
+        let inputs: [FnOutRef; 2] = inputs.try_into()
+            .map_err(|_| Error::new(&id, "new").err("Two inputs must be specified"))?;
+        Ok(Self { 
+            txid: PointTxId::from_str(&id),
             kind: FnKind::Fn,
-            input1,
-            input2,
-        }
-    }    
+            inputs,
+            id,
+        })
+    }
+    ///
+    /// Возвращает `PointHlr` с обновленными `txid`, `name` и `value`
+    #[inline]
+    fn point_with<T>(txid: usize, meta: &PointMeta, name: impl Into<String>, value: T) -> PointHlr<T> {
+        PointHlr::new(txid, name, value, meta.status, meta.cot, meta.ts)
+    }
 }
-//
-// 
-impl FnIn for FnSub {}
-//
 // 
 impl FnOut for FnSub { 
     //
@@ -42,47 +62,126 @@ impl FnOut for FnSub {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = self.input1.borrow().inputs();
-        inputs.extend(self.input2.borrow().inputs());
+        let mut inputs = vec![];
+        for input in &self.inputs {
+            inputs.append(&mut input.borrow().inputs());
+        }
         inputs
     }
     //
-    //
-    fn out(&mut self) -> FnResult<Point, String> {
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut inputs: Vec<FnResult<FnFlow, String>> = self.inputs.iter().map(|input| {
+            input.borrow_mut().out()
+        }).collect();
+        let mut meta = PointMeta::default();
+        let mut flow = FlowContext::new();
         // TODO Add overflow check
-        let input1 = self.input1.borrow_mut().out();
-        log::trace!("{}.out | input1: {:?}", self.id, &input1);
-        let input1 = match input1 {
-            FnResult::Ok(input1) => input1,
-            FnResult::None => return FnResult::None,
-            FnResult::Err(err) => return FnResult::Err(err),
+        let (input1, input2) = (inputs.remove(0), inputs.remove(0));
+        let Some(input) = flow.map(input1)? else { return Ok(None) };
+        meta = meta.update_latest(&input).update_status(&input);
+        let v1 = match input {
+            Point::Bool(p) => NumValue::Bool(p.value.0),
+            Point::Int(p) => NumValue::Int(p.value),
+            Point::Real(p) => NumValue::Real(p.value),
+            Point::Double(p) => NumValue::Double(p.value),
+            _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
-        let input2 = self.input2.borrow_mut().out();
-        log::trace!("{}.out | input2: {:?}", self.id, &input2);
-        let input2 = match input2 {
-            FnResult::Ok(input2) => input2,
-            FnResult::None => return FnResult::None,
-            FnResult::Err(err) => return FnResult::Err(err),
+        let Some(input) = flow.map(input2)? else { return Ok(None) };
+        meta = meta.update_latest(&input).update_status(&input);
+        let v2 = match input {
+            Point::Bool(p) => NumValue::Bool(p.value.0),
+            Point::Int(p) => NumValue::Int(p.value),
+            Point::Real(p) => NumValue::Real(p.value),
+            Point::Double(p) => NumValue::Double(p.value),
+            _ => return Err(concat_string::concat_string!(self.id, ".out | Invalid type '", input.typ().to_string(), "'")),
         };
-        let out = input1 - input2;
-        log::trace!("{}.out | out: {:?}", self.id, &out);
-        FnResult::Ok(out)
+        let value = (v1 - v2).map_err(|_| format!("{}.out | Can't sub {:?} - {:?}", self.id, v1, v2))?;
+        match value {
+            NumValue::Bool(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value as i64))),
+            NumValue::Int(value) => flow.wrap(Point::Int(Self::point_with(self.txid, &meta, &self.id, value))),
+            NumValue::Real(value) => flow.wrap(Point::Real(Self::point_with(self.txid, &meta, &self.id, value))),
+            NumValue::Double(value) => flow.wrap(Point::Double(Self::point_with(self.txid, &meta, &self.id, value))),
+        }
     }
     //
-    //
-    fn reset(&mut self) {
-        self.input1.borrow_mut().reset();
-        self.input2.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        for input in &self.inputs {
+            input.borrow_mut().hard_reset();
+        }
     }
+    //
+    fn reset(&mut self) {}
 }
-//
-// 
-impl FnInOut for FnSub {}
 ///
 /// Global static counter of FnSub instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
+/// Basic Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use sal_sync::services::entity::{Cot, Status};
+    #[derive(Debug)]
+    struct MockNode {
+        output: FnResult<FnFlow, String>,
+    }
+    impl FnOut for MockNode {
+        fn id(&self) -> String { "mock".to_string() }
+        fn kind(&self) -> FnKind { FnKind::Var }
+        fn inputs(&self) -> Vec<String> { vec![] }
+        fn out(&mut self) -> FnResult<FnFlow, String> { self.output.clone() }
+        fn hard_reset(&mut self) {}
+        fn reset(&mut self) {}
+    }
+    fn make_point_int(val: i64) -> Point {
+        Point::Int(PointHlr::new(0, "p", val, Status::Ok, Cot::Inf, chrono::offset::Utc::now()))
+    }
+    fn make_point_double(val: f64) -> Point {
+        Point::Double(PointHlr::new(0, "p", val, Status::Ok, Cot::Inf, chrono::offset::Utc::now()))
+    }
+    fn make_point_real(val: f32) -> Point {
+        Point::Real(PointHlr::new(0, "p", val, Status::Ok, Cot::Inf, chrono::offset::Utc::now()))
+    }
+    #[test]
+    fn test_sub_type_promotion_and_math() {
+        let n1 = Rc::new(RefCell::new(MockNode { output: Ok(Some(FnFlow::Old(make_point_int(10)))) }));
+        let n2 = Rc::new(RefCell::new(MockNode { output: Ok(Some(FnFlow::New(make_point_real(2.5)))) }));
+        let mut sub = FnSub::new("root", vec![n1, n2]).unwrap();
+        let res = sub.out().unwrap().unwrap();
+        assert!(matches!(res, FnFlow::New(Point::Real(_))));
+        if let FnFlow::New(Point::Real(p)) = res {
+            assert_eq!(p.value, 7.5f32);
+        }
+    }
+    #[test]
+    fn test_taint_tracking_propagation() {
+        let n1 = Rc::new(RefCell::new(MockNode { output: Ok(Some(FnFlow::Old(make_point_int(5)))) }));
+        let n2 = Rc::new(RefCell::new(MockNode { output: Ok(Some(FnFlow::Old(make_point_int(2)))) }));
+        let mut sub = FnSub::new("root", vec![n1, n2]).unwrap();
+        let res = sub.out().unwrap().unwrap();
+        assert!(matches!(res, FnFlow::Old(_)));
+    }
+    #[test]
+    fn test_short_circuit_none_break() {
+        let n1 = Rc::new(RefCell::new(MockNode { output: Ok(None) }));
+        let n2 = Rc::new(RefCell::new(MockNode { output: Ok(Some(FnFlow::New(make_point_int(5)))) }));
+        let mut sub = FnSub::new("root", vec![n1, n2]).unwrap();
+        let res = sub.out().unwrap();
+        assert!(res.is_none());
+    }
+    #[test]
+    fn test_nan_input_returns_err() {
+        let n1 = Rc::new(RefCell::new(MockNode { output: Ok(Some(FnFlow::New(make_point_double(f64::NAN)))) }));
+        let n2 = Rc::new(RefCell::new(MockNode { output: Ok(Some(FnFlow::New(make_point_int(5)))) }));
+        let mut sub = FnSub::new("root", vec![n1, n2]).unwrap();
+        let res = sub.out();
+        assert!(res.is_err());
+    }
+}

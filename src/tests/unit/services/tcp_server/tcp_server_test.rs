@@ -54,7 +54,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -136,7 +136,7 @@ mod tcp_server {
         println!("\n{}", self_id);
         let dbg = "test";
         let self_name = Name::from(dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         let iterations = 100;
         let test_data = IncTestValues::new(
@@ -154,7 +154,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms

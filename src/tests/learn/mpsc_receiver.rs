@@ -4,7 +4,7 @@ mod tests {
     use std::sync::Once;
     use debugging ::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use sal_sync::sync::channel;
-    use crate::domain::constants::constants::RECV_TIMEOUT; 
+    use crate::domain::RECV_TIMEOUT; 
     ///    
     static INIT: Once = Once::new();
     ///

@@ -35,9 +35,9 @@ fn init_once() {
 ///  - ...
 fn init_each(default: Option<&str>, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: default.map(|d| d.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ))
 }
 ///
 /// Testing FftBuf with empty filter
@@ -51,7 +51,8 @@ fn format_sql() {
     let self_name = Name::new("", dbg);
     let tx_id = PointTxId::from_str(&dbg);
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(dbg, Duration::from_secs(30));
+    let duration_limit = Duration::from_secs(60);
+    let test_duration = TestDuration::new(dbg, duration_limit);
     test_duration.run().unwrap();
     let test_data = [
         // sampl_freq   fft_size    ffts    threshold   target_ffts   target freqs                                            target formated
@@ -158,8 +159,7 @@ fn format_sql() {
                     for (index, val) in buf.iter().take(fft_size / 2).skip(1).enumerate() {
                         match fft_filters.get_mut(index) {
                             Some((_freq_name, filter)) => {
-                                filter.add(val.abs() * fft_amp_factor);
-                                if let Some(filter_value) = filter.pop() {
+                                if let Some(filter_value) = filter.add(val.abs() * fft_amp_factor) {
                                     fft_scalar.push(filter_value);
                                 }
                             }
@@ -171,7 +171,7 @@ fn format_sql() {
 
                     // Receiving FnVaFft results
                     let time = Instant::now();
-                    while receiver.received().len() < fft_scalar.len() {
+                    while receiver.received().len() < fft_scalar.len() && time.elapsed() < (duration_limit / 6) {
                         thread::sleep(Duration::from_millis(3));
                     }
                     let received = receiver.drain(0..fft_scalar.len());
@@ -233,10 +233,10 @@ fn filter(conf: Option<PointConfFilter>) -> Box<dyn Filter<Item = f64>> {
     match conf {
         Some(conf) => {
             Box::new(
-                FilterThreshold::<2, f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
+                FilterThreshold::<f64>::new(None, conf.threshold, conf.factor.unwrap_or(0.0))
             )
         }
-        None => Box::new(FilterEmpty::<2, f64>::new(None)),
+        None => Box::new(FilterEmpty::<f64>::new(None)),
     }
 }
 ///

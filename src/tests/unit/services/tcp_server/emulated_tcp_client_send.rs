@@ -193,12 +193,12 @@ impl Service for EmulatedTcpClientSend {
                                 // }
                                 if switch_state.changed() {
                                     log::info!("{}.run | state: {} progress percent: {}", dbg, switch_state.state(), progress_percent);
-                                    thread::sleep(Duration::from_millis(1000));
+                                    thread::sleep(Duration::from_millis(320));
                                     tcp_stream.flush().unwrap();
-                                    thread::sleep(Duration::from_millis(1000));
+                                    // thread::sleep(Duration::from_millis(1000));
                                     tcp_stream.shutdown(std::net::Shutdown::Both).unwrap();
-                                    // drop(tcpStream);
-                                    thread::sleep(Duration::from_millis(1000));
+                                    // drop(tcp_stream);
+                                    // thread::sleep(Duration::from_millis(1000));
                                     break;
                                 } 
                                 if exit.load(Ordering::SeqCst) {

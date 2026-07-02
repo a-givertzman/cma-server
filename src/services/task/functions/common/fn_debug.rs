@@ -1,102 +1,107 @@
-use concat_string::concat_string;
-use sal_sync::services::entity::Point;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use function_name::named;
+
 use crate::{
-    domain::FnInOutRef,
-    services::task::{
-        FnIn, FnInOut, FnOut,
-        FnKind, FnResult
-    },
+    domain::FnOutRef, err_pass, services::task::{
+        FlowContext, FnFlow, FnKind, FnOut, FnResult
+    }
 };
 ///
-/// Function | Just doing debug of values coming from inputs
-/// - Returns value from the last input
+/// ### Function | `Debug`
+/// 
+/// Log values coming from inputs
+///
+/// Узел для отладки потока данных (Taint Tracking) в графе вычислений.
+/// Перехватывает вызовы `out()` своих зависимостей, логирует актуальные значения 
+/// и их статус (New/Old)
+/// 
+/// Если вход один, то возвращает его как есть, если больше одного, то возвращая `Ok(None)`.
 #[derive(Debug)]
 pub struct FnDebug {
     id: String,
     kind: FnKind,
-    inputs: Vec<FnInOutRef>,
+    inputs: Vec<(String, FnOutRef)>,
 }
 //
-// 
 impl FnDebug {
     ///
-    /// Creates new instance of the FnDebug
+    /// ### Creates new instance of the `FnDebug`
+    /// - `parent` - Идентификатор родительского узла
+    /// - `inputs` - Список ссылок на зависимости (`FnOutRef`), значения которых требуется отслеживать.
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, inputs: Vec<FnInOutRef>) -> Self {
+    pub fn new(parent: impl Into<String>, inputs: impl IntoIterator<Item = (String, FnOutRef)>) -> Self {
         Self { 
             id: format!("{}/FnDebug{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
-            inputs,
+            inputs: inputs.into_iter().collect(),
         }
     }    
 }
 //
-// 
-impl FnIn for FnDebug {}
-//
-// 
 impl FnOut for FnDebug { 
     //
     fn id(&self) -> String {
         self.id.clone()
     }
     //
-    fn kind(&self) -> &FnKind {
-        &self.kind
+    fn kind(&self) -> FnKind {
+        self.kind
     }
     //
     fn inputs(&self) -> Vec<String> {
-        let mut inputs = vec![];
-        for input in &self.inputs {
-            inputs.append(&mut input.borrow().inputs());
-        }
-        inputs
+        self.inputs.iter()
+            .flat_map(|(_, input)| input.borrow().inputs())
+            .collect()
     }
     //
-    //
-    fn out(&mut self) -> FnResult<Point, String> {
-        let mut inputs = self.inputs.iter();
-        let mut value: Point;
-        // let first = .cloned();
-        match inputs.next() {
-            Some(first) => {
-                let first = first.borrow_mut().out();
-                match first {
-                    FnResult::Ok(input) => {
-                        value = input.to_owned();
-                        log::debug!("{}.out | value: {:#?}", self.id, value);
-                        while let Some(input) = inputs.next().cloned() {
-                            let input = input.borrow_mut().out();
-                            match input {
-                                FnResult::Ok(input) => {
-                                    value = input.clone();
-                                    log::debug!("{}.out | value: {:#?}", self.id, value);
-                                }
-                                FnResult::None => return FnResult::None,
-                                FnResult::Err(err) => return FnResult::Err(err),
-                            }
-                        }        
+    #[named]
+    fn out(&mut self) -> FnResult<FnFlow, String> {
+        let mut flow = FlowContext::new();
+        if self.inputs.len() > 1 {
+            for (name, input) in &self.inputs {
+                match flow.ignore(input.borrow_mut().out()) {
+                    Ok(Some(v)) => {
+                        log::debug!(
+                            "{}.out | {name}: Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
+                            self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.ts().format("%H:%M:%S%.3f")
+                        );
                     }
-                    FnResult::None => return FnResult::None,
-                    FnResult::Err(err) => return FnResult::Err(err),
+                    Ok(None) => log::warn!("{}.out | '{name}': None", self.id),
+                    Err(err) => log::error!("{}.out | '{name}': {:?}", self.id, err),
                 }
             }
-            None => return FnResult::Err(concat_string!(self.id, ".out | No inputs found")),
+            return Ok(None);
         }
-        FnResult::Ok(value)
+        if let Some((name, input)) = self.inputs.first() {
+            match flow.map(input.borrow_mut().out()) {
+                Ok(Some(v)) => {
+                    log::debug!(
+                        "{}.out | {name}: Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
+                        self.id, flow, v.txid(), v.name(), v.value(), v.status(), v.cot(), v.ts().format("%H:%M:%S%.3f")
+                    );
+                    return flow.wrap(v);
+                }
+                Ok(None) => {
+                    log::debug!("{}.out | {name}: Value {} | ---:---\n  └─ Val: --- | Ok(None)", self.id, flow);
+                    return Ok(None);
+                }
+                Err(err) => {
+                    log::debug!("{}.out | {name}: Value {} | ---:---\n  └─ Val: --- | Err({})", self.id, flow, err);
+                    return Err(err_pass!(self.id, err).to_string());
+                }
+            }
+        }
+        Ok(None)
     }
     //
-    //
-    fn reset(&mut self) {
-        for input in &self.inputs {
-            input.borrow_mut().reset();
+    fn hard_reset(&mut self) {
+        for (_, input) in &self.inputs {
+            input.borrow_mut().hard_reset();
         }
     }
+    //
+    fn reset(&mut self) {}
 }
-//
-// 
-impl FnInOut for FnDebug {}
 ///
 /// Global static counter of FnDebug instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);

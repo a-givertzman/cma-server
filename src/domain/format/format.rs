@@ -71,7 +71,7 @@ impl Format {
                         match sufix.as_str() {
                             "name" => point.name(),
                             "value" => point.value().to_string(),
-                            "timestamp" => point.timestamp().to_string(),
+                            "timestamp" => point.ts().to_string(),
                             "status" => point.status().to_string(),
                             _ => panic!("Format.out | Unknown input sufix in: {:?}, allowed: .name / .value / .timestamp", &name),
                         }

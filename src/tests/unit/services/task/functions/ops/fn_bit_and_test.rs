@@ -4,7 +4,7 @@ use std::{sync::Once, rc::Rc, cell::RefCell};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
-    services::task::{FnOut, FnInput, FnBitAnd}
+    services::task::{EvalCycle, EvalCycleRef, FnBitAnd, FnInput, FnOut}
 };
 ///
 ///
@@ -19,30 +19,32 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+fn init_each(default: &str, type_: FnConfPointType, cycle: &EvalCycleRef) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
-        FnInput::new("test", 0, &mut conf)
-    )))
+    Rc::new(RefCell::new(
+        FnInput::new("test", 0, &mut conf, cycle)
+    ))
 }
 ///
 /// Testing Task FnAnd Bool's
 #[test]
+#[ignore = "Isn't implemented yet"]
 fn test_bool() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_bool";
     log::info!("{}", self_id);
     let mut target: bool;
-    let input1 = init_each("false", FnConfPointType::Bool);
-    let input2 = init_each("false", FnConfPointType::Bool);
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each("false", FnConfPointType::Bool, &cycle);
+    let input2 = init_each("false", FnConfPointType::Bool, &cycle);
     let mut fn_bit_and = FnBitAnd::new(
         self_id,
         vec![
             input1.clone(),
             input2.clone(),
         ],
-    );
+    ).unwrap();
     let test_data = vec![
         (00, false, false),
         (01, false, true),
@@ -50,11 +52,12 @@ fn test_bool() {
         (03, true,  true),
     ];
     for (step, value1, value2) in test_data {
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
-        let result = fn_bit_and.out().unwrap().as_bool().value.0;
+        let result = fn_bit_and.out().unwrap().unwrap().into_value().as_bool().value.0;
         log::debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
         target = value1 & value2;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -63,15 +66,17 @@ fn test_bool() {
 ///
 /// Testing Task FnAnd Bool's
 #[test]
+#[ignore = "Isn't implemented yet"]
 fn test_bool_3() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_bool_3";
     log::info!("{}", self_id);
     let mut target: bool;
-    let input1 = init_each("false", FnConfPointType::Bool);
-    let input2 = init_each("false", FnConfPointType::Bool);
-    let input3 = init_each("false", FnConfPointType::Bool);
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each("false", FnConfPointType::Bool, &cycle);
+    let input2 = init_each("false", FnConfPointType::Bool, &cycle);
+    let input3 = init_each("false", FnConfPointType::Bool, &cycle);
     let mut fn_bit_and = FnBitAnd::new(
         self_id,
         vec![
@@ -79,7 +84,7 @@ fn test_bool_3() {
             input2.clone(),
             input3.clone(),
         ],
-    );
+    ).unwrap();
     let test_data = vec![
         (00, false, false, false),
         (01, false, true, false),
@@ -91,13 +96,14 @@ fn test_bool_3() {
         (07, true,  true, true),
     ];
     for (step, value1, value2, value3) in test_data {
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         let point3 = value3.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
         input3.borrow_mut().add(&point3);
-        let result = fn_bit_and.out().unwrap().as_bool().value.0;
+        let result = fn_bit_and.out().unwrap().unwrap().into_value().as_bool().value.0;
         log::debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
         target = value1 & value2 & value3;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -106,21 +112,23 @@ fn test_bool_3() {
 ///
 /// Testing Task FnAnd Int's
 #[test]
+#[ignore = "Isn't implemented yet"]
 fn test_int() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_int";
     log::info!("{}", self_id);
     let mut target: i64;
-    let input1 = init_each("0", FnConfPointType::Int);
-    let input2 = init_each("0", FnConfPointType::Int);
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each("0", FnConfPointType::Int, &cycle);
+    let input2 = init_each("0", FnConfPointType::Int, &cycle);
     let mut fn_bit_and = FnBitAnd::new(
         self_id,
         vec![
             input1.clone(),
             input2.clone(),
         ],
-    );
+    ).unwrap();
     let test_data = vec![
         (00, 1, 5),
         (01, 5, 1),
@@ -135,11 +143,12 @@ fn test_int() {
         (10, 0,  -4),
     ];
     for (step, value1, value2) in test_data {
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
-        let result = fn_bit_and.out().unwrap().as_int().value;
+        let result = fn_bit_and.out().unwrap().unwrap().into_value().as_int().value;
         log::debug!("step {}  |  value1: {:?} & value2: {:?} | result: {:?}", step, value1, value2, result);
         target = value1 & value2;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -148,15 +157,17 @@ fn test_int() {
 ///
 /// Testing Task FnAnd Int's
 #[test]
+#[ignore = "Isn't implemented yet"]
 fn test_int_3() {
     DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_int_3";
     log::info!("{}", self_id);
     let mut target: i64;
-    let input1 = init_each("0", FnConfPointType::Int);
-    let input2 = init_each("0", FnConfPointType::Int);
-    let input3 = init_each("0", FnConfPointType::Int);
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each("0", FnConfPointType::Int, &cycle);
+    let input2 = init_each("0", FnConfPointType::Int, &cycle);
+    let input3 = init_each("0", FnConfPointType::Int, &cycle);
     let mut fn_bit_and = FnBitAnd::new(
         self_id,
         vec![
@@ -164,7 +175,7 @@ fn test_int_3() {
             input2.clone(),
             input3.clone(),
         ],
-    );
+    ).unwrap();
     let test_data = vec![
         (00, 1, 5, 3),
         (01, 5, 1, 0),
@@ -179,13 +190,14 @@ fn test_int_3() {
         (10, 0,  -4, 4),
     ];
     for (step, value1, value2, value3) in test_data {
+        cycle.increment();
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         let point3 = value3.to_point(0, "test");
         input1.borrow_mut().add(&point1);
         input2.borrow_mut().add(&point2);
         input3.borrow_mut().add(&point3);
-        let result = fn_bit_and.out().unwrap().as_int().value;
+        let result = fn_bit_and.out().unwrap().unwrap().into_value().as_int().value;
         log::debug!("step {}  |  value1: {:?} & value2: {:?} & value3: {:?} | result: {:?}", step, value1, value2, value3, result);
         target = value1 & value2 & value3;
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);

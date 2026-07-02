@@ -122,7 +122,7 @@ fn run() {
             }
             planner_clone.take().unwrap().exit();
         },
-    ));
+    ).unwrap());
     planner_clone1.replace(planner.clone());
     planner.run().unwrap();
     planner.wait().unwrap();

@@ -4,7 +4,7 @@ use sal_sync::services::{
     service::{LinkName, Service},
 };
 use testing::entities::test_value::Value;
-use crate::{core_::constants::constants::RECV_TIMEOUT, services::safe_lock::rwlock::SafeLock};
+use crate::{core_::RECV_TIMEOUT, services::safe_lock::rwlock::SafeLock};
 ///
 ///
 pub struct MockTcpServer {
