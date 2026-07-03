@@ -1136,7 +1136,7 @@ service Task RecorderTask:
             sql: update public.rec_basic_metric set value = value + 1 where name = 'cycles-{range.value}_load-range';
             range: cycleLoadRange
         input34_1_L fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = '{range.value}-load';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = '{range.value}-load';
             input: craneCycleAverageLoadRelative
             range: cycleLoadRange
         #
