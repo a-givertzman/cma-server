@@ -1,0 +1,122 @@
+name: App
+description: Short explanation / purpose etc.
+
+
+service MultiQueue:
+    in queue in-queue:
+        max-length: 10000
+    send-to:
+        # - TaskTestReceiver.queue
+
+
+# service CacheService MainCache:
+#     retain: true
+#     retain-dely: 30s    # default 30s
+#     subscribe: 
+#         /App/MultiQueue: 
+#             Inf: []             # IMPORTENT !!!
+
+
+service SlmpClient Ied15:
+    cycle: 100 ms
+    subscribe: /App/MultiQueue
+    send-to: /App/MultiQueue.in-queue
+    description: 'SLMP-IED-01.01'
+    ip: '192.168.120.200'
+    port: 4999
+    diagnosis:                          # internal diagnosis
+        point Status:                   # Ok(0) / Invalid(10)
+            type: 'Int'
+            # history: r
+        point Connection:               # Ok(0) / Invalid(10)
+            type: 'Int'
+            # history: r
+    db db_test_data:
+        device-code: D
+        offset: 1100
+        size: 18
+        point Lable15.F32:
+            type: Real
+            address:
+                offset: 0
+            comment: 'Индикация поворота стрелы направо'
+        point Lable16.F32:
+            type: Real
+            address:
+                offset: 4
+            comment: 'Индикация поворота стрелы направо'
+        point Lable17.F32:
+            type: Real
+            address:
+                offset: 8
+            comment: 'Индикация поворота стрелы направо'
+        point Lable18.i16:
+            type: Int
+            address:
+                offset: 12
+            comment: 'Индикация поворота стрелы направо'
+        point Lable19.i16:
+            type: Int
+            address:
+                offset: 14
+            comment: 'Индикация поворота стрелы направо'
+        point Lable20.i16:
+            type: Int
+            address:
+                offset: 16
+            comment: 'Индикация поворота стрелы направо'
+
+# service Task DebugTask:
+#     cycle: 100 s
+#     in queue recv-queue:
+#         max-length: 10000
+#     subscribe: 
+#         /App/MultiQueue:                     # - multicast subscription to the MultiQueue
+#             {cot: Inf}: []               #   - on all points having Cot::Inf and history::ReadWrite
+#     fn Debug:
+#         input: point real DLable20.F32
+
+# service Task HistoryTask:
+#     cycle: 100 s
+#     in queue recv-queue:
+#         max-length: 10000
+#     subscribe: 
+#         /App/MultiQueue:                     # - multicast subscription to the MultiQueue
+#             {cot: Inf, history: rw}: []               #   - on all points having Cot::Inf and history::ReadWrite
+#     # fn Debug:
+#     #     input: point any every
+#     fn ToApiQueue:
+#         queue: /App/ApiClient.in-queue
+#         input fn SqlMetric:
+#             initial: 0.123      # начальное значение
+#             table: public.event
+#             sql: "insert into {table} (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
+#             input1 fn ToInt:
+#                 input: point any every      # point: every point of any type
+#             input2 fn PointId:
+#                 input: point any every
+
+
+# service ApiClient:
+#     cycle: 100 ms
+#     reconnect: 1 s  # default 3 s
+#     address: 127.0.0.1:8080
+#     database: crane_data_server
+#     in queue in-queue:
+#         max-length: 10000
+#     auth_token: 123!@#
+#     # debug: true
+
+
+service TcpServer:
+    reconnect: 1 s      # default 3 s
+    keep-timeout: 20 s
+    # address: 192.168.120.144:16688
+    # address: 127.0.0.1:16688
+    address: 10.131.145.127:16688
+    auth-secret:       # auth: none / auth-secret: pass: ... / auth-ssh: path: ...
+        pass: '12345'
+    in queue link:
+        max-length: 10000
+    send-to: /App/MultiQueue.in-queue
+    # cache: /App/MainCache

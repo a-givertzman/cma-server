@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
-use rand::RngExt;
+use rand::{Rng, RngExt};
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};

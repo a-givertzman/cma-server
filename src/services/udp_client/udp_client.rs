@@ -374,7 +374,7 @@ impl Service for UdpClient {
         // *SELF_ID.write() = dbg.clone();
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
-            let mut notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, State::None, vec![
+            let notify: ChangeNotify<_, String> = ChangeNotify::new(dbg, State::None, vec![
                 (State::None,           Box::new(|_| {})),
                 (State::Start,          Box::new(|message| log::info!("{}", message))),
                 (State::Connected,      Box::new(|message| log::info!("{}", message))),
