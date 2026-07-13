@@ -63,6 +63,21 @@ service VirtualDevice VirtualIed15:
         point /App/ied14/db906_visual_data/Winch3.Load: 
             type: Real
             history: rw
+        point /App/ied14/db906_visual_data/Winch1.SWLProtection: 
+            type: Bool
+            history: rw
+        point /App/ied14/db906_visual_data/Winch2.SWLProtection: 
+            type: Bool
+            history: rw
+        point /App/ied14/db906_visual_data/Winch3.SWLProtection: 
+            type: Bool
+            history: rw
+        point /App/ied14/db906_visual_data/CraneMode.AOPS: 
+            type: Int
+            history: rw
+        point /App/ied14/db906_visual_data/CraneMode.MOPS: 
+            type: Int
+            history: rw
     results:
         # point Result.Val1:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
         #     type: Real
@@ -111,25 +126,25 @@ service VirtualDevice VirtualIed15:
 
 
 
-# service Task HistoryTask:
-#     cycle: 1 s
-#     in queue recv-queue:
-#         max-length: 10000
-#     subscribe: 
-#         /App/MultiQueue:                     # - multicast subscription to the MultiQueue
-#             {cot: Inf, history: rw}: []               #   - on all points having Cot::Inf and history::ReadWrite
-#     # fn Debug:
-#     #     input: point any every
-#     fn ToApiQueue:
-#         queue: /App/ApiClient.in-queue
-#         input fn SqlMetric:
-#             initial: 0.123      # начальное значение
-#             table: public.event
-#             sql: "insert into {table} (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
-#             input1 fn ToInt:
-#                 input: point any every      # point: every point of any type
-#             input2 fn PointId:
-#                 input: point any every
+service Task HistoryTask:
+    cycle: 1 s
+    in queue recv-queue:
+        max-length: 10000
+    subscribe: 
+        /App/MultiQueue:                     # - multicast subscription to the MultiQueue
+            {cot: Inf, history: rw}: []               #   - on all points having Cot::Inf and history::ReadWrite
+    # fn Debug:
+    #     input: point any every
+    fn ToApiQueue:
+        queue: /App/ApiClient.in-queue
+        input fn SqlMetric:
+            initial: 0.123      # начальное значение
+            # table: public.event
+            sql: "insert into public.event (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
+            input1 fn ToInt:
+                input: point any every      # point: every point of any type
+            input2 fn PointId:
+                input: point any every
 
 
 service ApiClient:
