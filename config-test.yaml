@@ -38,28 +38,40 @@ service VirtualDevice VirtualIed15:
                 # - /App/TestTask/Result.Val3
                 # - Result.Value4
     send-to: /App/MultiQueue.in-queue
-    path: './test-ied15.ods'            # Optional, if signal have to be charged from the table
+    path: './Registrator-test-load.ods'            # Optional, if signal have to be charged from the table
     sheet: 'data'
     api:                                # Optional, if databese access for example required
-        address: 127.0.0.1:8081
-        database: crane-data-server
+        address: 127.0.0.1:8080
+        database: crane_data_server
         auth-token: 123!@#
     inputs:                             # Input signal to be charged from the specified table file, or calculated in `Task`
-        point Winch.Valve1: 
+        point /App/ied13/db905_visual_data_fast/Winch1.LoadR0: 
             type: Real
             history: rw
-        point Winch.Valve2: 
+        point /App/ied13/db905_visual_data_fast/Winch2.LoadR0: 
+            type: Real
+            history: rw
+        point /App/ied13/db905_visual_data_fast/Winch3.LoadR0: 
+            type: Real
+            history: rw
+        point /App/ied14/db906_visual_data/Winch1.Load: 
+            type: Real
+            history: rw
+        point /App/ied14/db906_visual_data/Winch2.Load: 
+            type: Real
+            history: rw
+        point /App/ied14/db906_visual_data/Winch3.Load: 
             type: Real
             history: rw
     results:
-        point Result.Val1:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
-            type: Real
-        point Result.Val2:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
-            type: Real
-        sql Result.Val3:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
-            type: Int
-            sql: 'select value from public.frdm_settings;'
-            delay: 10 ms
+        # point Result.Val1:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
+        #     type: Real
+        # point Result.Val2:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
+        #     type: Real
+        # sql Result.Val3:             # the name of calculated result to be stored into the table column 'Result.Name1/result'
+        #     type: Int
+        #     sql: 'select value from public.frdm_settings;'
+        #     delay: 10 ms
             # sql: 'select id, value from public.frdm_settings;'
             # type: Real
         # sql Result.Val4:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
@@ -67,35 +79,35 @@ service VirtualDevice VirtualIed15:
         #     delay:  10ms                 # Optional delay, to be awaited before select apears
 
 
-service Task TestTask:
-    cycle: 1 ms
-    in queue recv-queue:
-        max-length: 10000
-    subscribe: 
-        /App/MultiQueue:                 # - multicast subscription to the MultiQueue
-            # {cot: Inf, ...}: []               #   - on all points having Cot::Inf and history::ReadWrite
-            # Inf: []               #   - on all points having Cot::Inf and history::ReadWrite
-            Inf:
-                - /App/VirtualIed15/Winch.Valve1
-                - /App/VirtualIed15/Winch.Valve2
-    # fn Debug:
-    #     input: point any every
-    fn Export ExportResultVal1:
-        enable: const bool true
-        send-to: /App/MultiQueue.in-queue
-        conf point Result.Val1:
-            type: Real
-        input fn Add:
-            input1: point real /App/VirtualIed15/Winch.Valve1
-            input2: point real /App/VirtualIed15/Winch.Valve2 default 0.0
-    fn Export ExportResultVal2:
-        enable: const bool true
-        send-to: /App/MultiQueue.in-queue
-        conf point Result.Val2:
-            type: Real
-        input fn Mul:
-            input1: point real /App/VirtualIed15/Winch.Valve1
-            input2: point real /App/VirtualIed15/Winch.Valve2
+# service Task TestTask:
+#     cycle: 1 ms
+#     in queue recv-queue:
+#         max-length: 10000
+#     subscribe: 
+#         /App/MultiQueue:                 # - multicast subscription to the MultiQueue
+#             # {cot: Inf, ...}: []               #   - on all points having Cot::Inf and history::ReadWrite
+#             # Inf: []               #   - on all points having Cot::Inf and history::ReadWrite
+#             Inf:
+#                 - /App/VirtualIed15/Winch.Valve1
+#                 - /App/VirtualIed15/Winch.Valve2
+#     # fn Debug:
+#     #     input: point any every
+#     fn Export ExportResultVal1:
+#         enable: const bool true
+#         send-to: /App/MultiQueue.in-queue
+#         conf point Result.Val1:
+#             type: Real
+#         input fn Add:
+#             input1: point real /App/VirtualIed15/Winch.Valve1
+#             input2: point real /App/VirtualIed15/Winch.Valve2 default 0.0
+#     fn Export ExportResultVal2:
+#         enable: const bool true
+#         send-to: /App/MultiQueue.in-queue
+#         conf point Result.Val2:
+#             type: Real
+#         input fn Mul:
+#             input1: point real /App/VirtualIed15/Winch.Valve1
+#             input2: point real /App/VirtualIed15/Winch.Valve2
 
 
 
