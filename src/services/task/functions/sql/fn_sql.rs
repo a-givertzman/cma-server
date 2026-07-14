@@ -154,6 +154,7 @@ impl FnOut for FnSql {
 ///
 /// Global static counter of FnSql instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
 /// Подготавливает сырую строку для безопасной вставки в SQL-запрос.
 /// - Удаляет пробелы по краям
 /// - Вырезает нулевые байты (\0)

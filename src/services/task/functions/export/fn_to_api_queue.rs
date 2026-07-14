@@ -1,5 +1,7 @@
 use function_name::named;
+use sal_core::error::Error;
 use sal_sync::{services::entity::{Point, PointHlr}, sync::channel::Sender};
+use sqlparser::{dialect::PostgreSqlDialect, tokenizer::{Token, Tokenizer}};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
 use crate::{domain::{FnOutRef, TryTo}, err_pass, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}};
 ///
@@ -47,6 +49,38 @@ impl FnToApiQueue {
         }
     }
     ///
+    /// Подготавливает сырой SQL-запрос.
+    /// - Удаляет пробелы по краям
+    /// - Вырезает нулевые байты (\0)
+    /// - Экранирует одинарные кавычки
+    #[named]
+    fn prepare_raw_sql(&self, sql: &str) -> Result<String, Error> {
+        let dialect = PostgreSqlDialect {};
+        let tokens = Tokenizer::new(&dialect, sql.trim())
+            .tokenize()
+            .map_err(|err| err_pass!(self.id, err, "Invalid SQL: {}", sql))?;
+        let mut result = String::with_capacity(sql.len() + 16);
+        for token in tokens {
+            match token {
+                // Если токен — это строка в одинарных кавычках 'value'
+                Token::SingleQuotedString(ref text) => {
+                    // Вырезаем нулевые байты для безопасности (как в вашей функции)
+                    let clean_text: String = text.chars().filter(|&c| c != '\0').collect();
+                    let escaped_text = clean_text.replace('\'', "''");
+                    result.push('\'');
+                    result.push_str(&escaped_text);
+                    result.push('\'');
+                }
+                // Все остальные токены (INSERT, INTO, имена таблиц, скобки) пропускаем "как есть"
+                _ => {
+                    // Восстанавливаем исходное форматирование токена
+                    result.push_str(&token.to_string());
+                }
+            }
+        }
+        Ok(result)
+    }
+    ///
     /// Возвращает `Point` с обновленными `txid`, `name` и `value`
     #[inline]
     fn point_with(&self, p: &Point, value: String) -> Point {
@@ -92,7 +126,7 @@ impl FnOut for FnToApiQueue {
         log::trace!("{}.out | input: {:?}", self.id, input);
         if flow.is_new() {
             let sql: String = (&input).try_to().map_err(|err: sal_core::error::Error| err_pass!(self.id, err).to_string())?;
-            let sql = sql.trim().to_owned();
+            let sql = self.prepare_raw_sql(&sql).map_err(|err: sal_core::error::Error| err_pass!(self.id, err).to_string())?;
             if !sql.is_empty() {
                 self.send(self.point_with(&input, sql));
             }
