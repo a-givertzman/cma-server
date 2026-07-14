@@ -1,7 +1,6 @@
 mod api_client;
 mod app;
 mod cache_service;
-mod frdm_service;
 mod history;
 mod jds_request;
 mod mock;

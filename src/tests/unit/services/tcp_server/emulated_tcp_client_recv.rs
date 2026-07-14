@@ -244,7 +244,7 @@ impl Service for EmulatedTcpClientRecv {
                                             log::info!("{}.run | state: {} progress percent: {}", self_id, switch_state.state(), progress_percent);
                                             tcp_stream.shutdown(std::net::Shutdown::Both).unwrap();
                                             drop(tcp_stream);
-                                            thread::sleep(Duration::from_millis(1000));
+                                            thread::sleep(Duration::from_millis(128));
                                             break;
                                         }
                                         if switch_state.changed() {
@@ -291,7 +291,7 @@ impl Service for EmulatedTcpClientRecv {
                     }
                     Err(err) => {
                         log::warn!("{}.run | connection error: {:?}", self_id, err);
-                        thread::sleep(Duration::from_millis(1000))
+                        thread::sleep(Duration::from_millis(128))
                     }
                 }
                 if exit.load(Ordering::SeqCst) {

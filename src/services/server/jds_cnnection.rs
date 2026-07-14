@@ -1,13 +1,10 @@
-use std::{
-    collections::HashMap, fmt::Debug, hash::BuildHasherDefault, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Instant 
-};
-use hashers::fx_hash::FxHasher;
+use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Instant};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{entity::{Cot, Name, Object, Point}, Service, Services, SubscriptionCriteria}, sync::{channel::{Receiver, RecvTimeoutError, Sender}, Handles, Owner}, thread_pool::Scheduler};
+use sal_sync::{collections::FxHashMap, services::{Service, Services, SubscriptionCriteria, entity::{Cot, Name, Object, Point}}, sync::{Handles, Owner, channel::{self, Receiver, RecvTimeoutError, Sender}}, thread_pool::Scheduler};
 use serde_json::json;
 use crate::{
     domain::{
-        constants::constants::RECV_TIMEOUT, net::protocols::jds::{
+        RECV_TIMEOUT, net::protocols::jds::{
             jds_decode_message::JdsDecodeMessage, 
             jds_deserialize::JdsDeserialize, 
             jds_encode_message::JdsEncodeMessage, 
@@ -55,7 +52,7 @@ pub struct Shared {
     pub jds_state: JdsState,
     pub auth: TcpServerAuth,
     pub cache: Option<String>,
-    pub req_reply_send: Vec<Sender<Point>>,
+    pub req_reply_send: Sender<Point>,
 }
 
 ///
@@ -116,6 +113,7 @@ impl Service for JdsConnection {
         let self_conf_send_to = conf.send_to.clone();
         let receiver_name = Name::new(&self_name, &self.connection_id).join();
         let subscribe = self_conf_send_to.service();
+        let (req_reply_send, _) = channel::unbounded();
         let shared_options: Arc<RwLock<Shared>> = Arc::new(RwLock::new(Shared {
                 subscribe: subscribe.clone(), 
                 subscribe_receiver: receiver_name.clone(), 
@@ -126,7 +124,7 @@ impl Service for JdsConnection {
                 auth: conf.auth.clone(),
                 // connection_id: self.connection_id.clone(),
                 cache: conf.cache.clone(),
-                req_reply_send: vec![],
+                req_reply_send,
         }));
         let rx_max_length = conf.rx_max_len;
         let action_recv = self.action_recv.take().unwrap();
@@ -138,7 +136,7 @@ impl Service for JdsConnection {
         let handle = self.scheduler.spawn(move || {
             log::info!("{}.run | Preparing thread - ok", dbg);
             let receivers = Arc::new(RwLock::new(
-                HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()),
+                FxHashMap::default(),
             ));
             receivers.write().insert(Cot::Req, services.get_link(&self_conf_send_to));
             let points = services.points(&dbg)
@@ -162,7 +160,7 @@ impl Service for JdsConnection {
             });
             log::debug!("{}.run | subscribe: {:?}", dbg, subscribe);
             let (req_reply_send, recv) = services.subscribe(&subscribe, &receiver_name, &points);
-            shared_options.write().req_reply_send = vec![req_reply_send.clone()];
+            shared_options.write().req_reply_send = req_reply_send.clone();
             let buffered = rx_max_length > 0;
             let tcp_read_alive = TcpReadAlive::new(
                 &dbg,
@@ -181,7 +179,7 @@ impl Service for JdsConnection {
                         let parent_id: Dbg = parent_id;
                         let parent: Name = parent_name;
                         let point: Point = point;
-                        log::debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
+                        // log::debug!("{}.run | point from socket: Point( name: {:?}, status: {:?}, cot: {:?}, timestamp: {:?})", parent, point.name(), point.status(), point.cot(), point.timestamp());
                         log::trace!("{}.run | point from socket: \n\t{:?}", parent, point);
                         match point.cot() {
                             Cot::Req => JdsRequest::handle(&parent_id, &parent, 0, point, services, shared, scheduler),
@@ -279,7 +277,6 @@ impl Service for JdsConnection {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {

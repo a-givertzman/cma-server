@@ -8,12 +8,13 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 /// service FrdmService FrdmService1:
 ///     cycle: 100 ms
 ///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+///     subscribe: MultiQueue       # Service name, to subscribe for event's required for the calculations like rope positin and crane angles
 ///     api-client:
 ///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///         address: "0.0.0.0:8081",
 ///         auth-token: "123!@#",
 ///         database: "cma",
-///     table_settings: 'public.frdm_settings'
+///     table-settings: 'public.frdm_settings'
 ///     rope-defect:
 ///         tables:
 ///             defect: 'public.frdm_defect'
@@ -22,31 +23,66 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
 ///         camera-offset: 5.5 m                        # camera position from the begin of the rope (hook side)
 ///         defect-detection:
-///             contours:
+///             normalize:
+///                 cropping:
+///                     x: 230              # New left edge
+///                     y: 300              # New top edge
+///                     width: 1410         # New image width
+///                     height: 1000        # New image height
 ///                 gamma:
-///                     no-param: not parameters implemented 
-///                 brightness-contrast:
-///                     histogram-clipping: 1     # optional histogram clipping, default = 0 %
-///                 gausian:
-///                     kernel-size:
-///                         width: 3
-///                         heidht: 3
-///                     sigma-x: 0.0
-///                     sigma-y: 0.0
-///                 sobel:
-///                     kernel-size: 3
-///                     scale: 1.0
-///                     delta: 0.0
-///                 overlay:
-///                     src1-weight: 0.5
-///                     src2-weight: 0.5
-///                     gamma: 0.0
-///             edge-detection:
-///                 threshold: 1                        # 0...255
+///                     factor: 120.0       # Percent of influence of [AutoGamma] algorythm bigger the value more the effect of [AutoGamma] algorythm, %
+///             
 ///             fast-scan:
-///                 geometry-defect-threshold: 1.2      # 1.1...1.3, absolute threshold to detect the geometry deffects
+///                 fast-contours:
+///                     otsu-tune: 0.40
+///                 temporal-filter:
+///                     gaussian:
+///                         kernel: [11, 11]    # Gausian blur kernel size, must be odd
+///                         sigma: [0.0, 0.0]   # Standard deviation in [X, Y] direction, The higher the value, the more pixels are used to count each pixel and the smoother blur will be
+///                     open-kernel: [3, 3]     # Morphology open operation kernel size [w, h], default [5, 5]
+///                     erode-kernel: [3, 3]    # Morphology erode operation kernel size [w, h], default [5, 5]
+///                     threshold: 12.0         # Threshold to detect the pixel whas changed or not in the each next frame
+///                 fast-edges:
+///                     otsu-tune: 1.40         # Multiplier to otsu auto threshold, 1.0 - do nothing, just use otsu auto threshold, default 1.0
+///                     # threshold: 128        # 0...255, used if otsu-tune is not specified
+///                     smooth: 36              # Smoothing of edge line factor. The higher the factor the smoother the line.
+///                 union:
+///                     add-weighted:
+///                         weight1: 1.0            # Weight of the first array elements.
+///                         weight2: 1.0            # Weight of the second array elements.
+///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                     rope-width: 380               # Standart rope width, px
+///                     width-tolerance: 50.0         # Tolerance for rope width, %
+///                     square-tolerance: 100.0       # Tolerance for rope square, %
+///                 distortion-threshold: 1.2    # 1.1..1.3, absolute threshold to detect the geometry deffects
+///             
 ///             fine-scan:
-///                 no-params: not implemented yet
+///                 fine-contours:
+///                     otsu-tune: 0.40         # Auto threshold factor, 1 - no correction, 0..1 - more, 1.. - less sensitive
+///                     merge-distance: 24.0    # Maximum distance between contours to be merged
+///                 temporal-filter:
+///                     gaussian:
+///                         kernel: [11, 11]    # Gausian blur kernel size, must be odd
+///                         sigma: [0.0, 0.0]   # Standard deviation in [X, Y] direction, The higher the value, the more pixels are used to count each pixel and the smoother blur will be
+///                     open-kernel: [3, 3]     # Morphology open operation kernel size [w, h], default [5, 5]
+///                     erode-kernel: [3, 3]    # Morphology erode operation kernel size [w, h], default [5, 5]
+///                     threshold: 12.0         # Threshold to detect the pixel whas changed or not in the each next frame
+///                 fine-edges:
+///                     # otsu-tune: 1.40       # Multiplier to otsu auto threshold, 1.0 - do nothing, just use otsu auto threshold, default 1.0
+///                     threshold: 16           # 0...255, used if otsu-tune is not specified
+///                     smooth: 16              # Smoothing of edge line factor. The higher the factor the smoother the line.
+///                 union:
+///                     # add-weighted:
+///                     #     weight1: 1.0            # Weight of the first array elements.
+///                     #     weight2: 1.0            # Weight of the second array elements.
+///                     bitwise-and:
+///                         no-params: ~
+///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                     rope-width: 380               # Standart rope width, px
+///                     width-tolerance: 30.0         # Tolerance for rope width, %
+///                     square-tolerance: 100.0       # Tolerance for rope square, %
+///                 distortion-threshold: 1.4    # 1.1..1.3, absolute threshold to detect the geometry deffects
+///                 defect-threshold: 2.5        # 1.1..1.3, absolute threshold to detect the geometry deffects
 ///         camera Camera1:
 ///             fps: Max                    # Max / Min / 30.0
 ///             resolution: 
@@ -68,14 +104,12 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 /// 
 ///     rope-deprecation:
 ///         table: 'public.frdm_deprecation'
-///         subscribe: MultiQueue                                          # Service name, to subscribe for rope positin and crane angles event's
 ///         crane:
 ///             rope:
-///                 width: 35 mm            # Diameter of the rome
-///                 length: 3000 m          # Total working length of the rope
-///                 winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
-///                 segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
-///                 pos: point real 'Winch.EncoderBR2'      # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
+///                 width: 35 mm        # Diameter of the rome
+///                 length: 3000 m      # Total working length of the rope
+///                 segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///                 pos: point real 'Winch.EncoderBR2'      # meters, current rope position
 ///                 load: point real 'Winch.Load'           # tonn, current rope load
 ///             booms:
 ///                 - Main-Boom:
@@ -83,58 +117,60 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
 ///                     l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
-///                     len: 11200.0 mm                                         # length of the boom
+///                     len: 11200.0 mm                          # length of the boom
 ///                     angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
 ///                 - Rotary-Boom:
 ///                     l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
 ///                     l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
 ///                     l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
-///                     len: 7984.1 mm                                          # length of the rotary boom
+///                     len: 7984.1 mm                           # length of the rotary boom
 ///                     angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
 ///             blocks:
 ///                 - 1:
 ///                     lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///                     d: 844.0 mm                 # Диаметры блоков, мм
-///                     schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///                     scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///                 - 2:
 ///                     lf: 308.0 mm, 1090.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///                     d: 816.0 mm                 # Диаметры блоков, мм
-///                     schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///                     scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///                 - 3:
 ///                     lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///                     d: 816.0 mm                 # Диаметры блоков, мм
-///                     schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///                     scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///                 - 4:
 ///                     lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///                     d: 816.0 mm                 # Диаметры блоков, мм
-///                     schemes: TopBottom          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///                     scheme: TopBottom          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Boom 2                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///                 - 5:
 ///                     lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///                     d: 816.0 mm                 # Диаметры блоков, мм
-///                     schemes: BottomTop          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///                     scheme: BottomTop          # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Boom 3                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///                 - 6:
 ///                     lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///                     d: 816.0 mm                 # Диаметры блоков, мм
-///                     schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///                     scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Boom 4                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///                 - 7:
 ///                     lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///                     d: 0.0 mm                   # Диаметры блоков, мм
-///                     schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
+///                     scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 ///                     bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 ///```
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FrdmServiceConf {
     pub name: Name,
     /// Next service will wait until current completely started plus specified time, optional
     pub wait_started: Option<Duration>,
     // pub cycle: Option<Duration>,
+    /// Service name, to subscribe for rope positin and crane angles event's
+    pub subscribe: String,
     /// API configuration parametes
     pub api: ApiClientConf,
     /// Names of the database table used for storing common settings for the clients
@@ -157,6 +193,8 @@ impl FrdmServiceConf {
         log::trace!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
         log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
+        let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
+        log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
         let api: ConfTree = conf.get("api-client").expect(&format!("{dbg}.new | 'api-client' - not found or wrong config"));
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
@@ -171,6 +209,7 @@ impl FrdmServiceConf {
         Self {
             name,
             wait_started,
+            subscribe,
             api,
             table_settings,
             rope_defect,
@@ -207,6 +246,21 @@ impl FrdmServiceConf {
             Err(err) => {
                 panic!("FrdmServiceConf.read | File {} reading error: {:?}", path, err)
             }
+        }
+    }
+}
+//
+//
+impl Default for FrdmServiceConf {
+    fn default() -> Self {
+        Self {
+            name: Name::new("", "FrdmServiceConf"),
+            wait_started: Default::default(),
+            subscribe: Default::default(),
+            api: Default::default(),
+            table_settings: Default::default(),
+            rope_defect: Default::default(),
+            rope_deprecation: Default::default(),
         }
     }
 }

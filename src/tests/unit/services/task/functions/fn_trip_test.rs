@@ -2,10 +2,10 @@
 
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
-    services::task::{comp::fn_ge::FnGe, fn_::FnOut, fn_input::FnInput},
+    services::task::{FnGe, FnOut, FnInput},
 };
 ///
 ///
@@ -22,15 +22,15 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ))
 }
 ///
 ///
 #[test]
 fn single_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_single");
     // let (initial, switches) = init_each();
@@ -71,7 +71,7 @@ fn single_int() {
 ///
 #[test]
 fn multiple_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_single");
 
@@ -117,7 +117,7 @@ fn multiple_int() {
 ///
 #[test]
 fn multiple_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_single");
     // let (initial, switches) = init_each();
@@ -129,7 +129,7 @@ fn multiple_real() {
         input2.clone(),
     );
     let test_data = vec![
-        (-0.1f32, 0.0, false),
+        (-0.1f32, 0.0f32, false),
         ( 1.0f32, 1.1, false),
         ( 2.0f32, 2.2, false),
         ( 5.0f32, 5.0, true),
@@ -162,19 +162,19 @@ fn multiple_real() {
 ///
 #[test]
 fn multiple_double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_single");
     // let (initial, switches) = init_each();
-    let input1 = init_each("0.0", FnConfPointType::Real);
-    let input2 = init_each("0.0", FnConfPointType::Real);
+    let input1 = init_each("0.0", FnConfPointType::Double);
+    let input2 = init_each("0.0", FnConfPointType::Double);
     let mut fn_trip = FnGe::new(
         "test",
         input1.clone(),
         input2.clone(),
     );
     let test_data = vec![
-        (-0.1f64, 0.0, false),
+        (-0.1f64, 0.0f64, false),
         ( 1.0f64, 1.1, false),
         ( 2.0f64, 2.2, false),
         ( 5.0f64, 5.0, true),

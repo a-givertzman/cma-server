@@ -4,7 +4,7 @@ mod multi_queue {
     use std::{collections::HashMap, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use sal_sync::services::{entity::Name, retain::retain_conf::RetainConf, Service};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         services::{Services}, tests::unit::services::multi_queue::{mock_multi_queue::MockMultiQueue, mock_multi_queue_match::MockMultiQueueMatch, mock_recv_service::MockRecvService, mock_send_service::MockSendService}
     };
@@ -30,7 +30,7 @@ mod multi_queue {
     #[ignore = "Performance test"]
     #[test]
     fn performance() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test MultiQueue Performance";
@@ -137,7 +137,7 @@ mod multi_queue {
     #[ignore = "Performance test"]
     #[test]
     fn match_performance() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test MultiQueue Performance with matching by producer ID";

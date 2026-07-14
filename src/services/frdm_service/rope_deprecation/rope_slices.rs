@@ -52,7 +52,7 @@ impl<'a> RopeSlices<'a> {
             slices: (0..slices).map(|slice| {
                 let offset = (slice as f64) * conf.rope.segment.as_m();
                 log::trace!("{dbg}.new | Slice: {slice}: offset: {:.2}", offset);
-                RopeSlice::new(slice, &conf.bendings, offset)
+                RopeSlice::new(slice, conf.blocks.len(), offset)
             }).collect(),
             conf,
             deprecation: Box::new(deprecation),
@@ -83,6 +83,7 @@ impl<'a> RopeSlices<'a> {
         //         }
         //     }
         // }
+        let bendings = vec![];
         for slice in &mut self.slices {
             if let Some(deprecation) = slice.deprecation(&self.conf.bendings, todo!(), todo!()) {
                 (self.deprecation)(slice.id(), deprecation);

@@ -1,10 +1,10 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
-    domain::FnInOutRef, 
-    services::task::{fn_::FnOut, fn_acc::FnAcc, fn_input::FnInput},
+    domain::{FnInOutRef, FnOutRef}, 
+    services::task::{FnAcc, FnInput, FnOut},
 };
 ///
 ///
@@ -19,25 +19,26 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+fn init_each(default: &str, type_: FnConfPointType) -> (FnOutRef, FnInOutRef) {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    let input = Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ));
+    (input.clone(), input)
 }
 ///
 /// Testing accumulation of the BSool's
 #[test]
 fn acc_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("acc_bool");
-    let initial = Some(init_each("0", FnConfPointType::Int));
-    let input = init_each("false", FnConfPointType::Bool);
+    let (initial, _) = init_each("0", FnConfPointType::Int);
+    let (input1, input) = init_each("false", FnConfPointType::Bool);
     let mut fn_count = FnAcc::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1.clone(),
     );
     let test_data = vec![
         (false, 0),
@@ -69,15 +70,15 @@ fn acc_bool() {
 /// Testing accumulation of the Int's
 #[test]
 fn acc_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("acc_int");
-    let initial = Some(init_each("0", FnConfPointType::Int));
-    let input = init_each("0", FnConfPointType::Int);
+    let (initial, _) = init_each("0", FnConfPointType::Int);
+    let (input1, input) = init_each("0", FnConfPointType::Int);
     let mut fn_count = FnAcc::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1,
     );
     let test_data = vec![
         (0, 0),
@@ -109,15 +110,15 @@ fn acc_int() {
 /// Testing accumulation of the Int's using reset
 #[test]
 fn acc_int_reset() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("acc_int_reset");
-    let initial = Some(init_each("0", FnConfPointType::Int));
-    let input = init_each("0", FnConfPointType::Int);
+    let (initial, _) = init_each("0", FnConfPointType::Int);
+    let (input1, input) = init_each("0", FnConfPointType::Int);
     let mut fn_count = FnAcc::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1,
     );
     let test_data = vec![
         (0, 0, false),
@@ -152,15 +153,15 @@ fn acc_int_reset() {
 /// Testing accumulation of the Real's
 #[test]
 fn acc_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("acc_real");
-    let initial = Some(init_each("0.0", FnConfPointType::Real));
-    let input = init_each("0.0", FnConfPointType::Real);
+    let (initial, _) = init_each("0.0", FnConfPointType::Real);
+    let (input1, input) = init_each("0.0", FnConfPointType::Real);
     let mut fn_count = FnAcc::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1,
     );
     let test_data = vec![
         (0.0f32, 0.0),
@@ -192,15 +193,15 @@ fn acc_real() {
 /// Testing accumulation of the Double's
 #[test]
 fn acc_double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("acc_double");
-    let initial = Some(init_each("0.0", FnConfPointType::Double));
-    let input = init_each("0.0", FnConfPointType::Double);
+    let (initial, _) = init_each("0.0", FnConfPointType::Double);
+    let (input1, input) = init_each("0.0", FnConfPointType::Double);
     let mut fn_count = FnAcc::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1,
     );
     let test_data = vec![
         (0.0f64, 0.0),

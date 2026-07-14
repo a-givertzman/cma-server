@@ -4,7 +4,7 @@ mod tcp_server {
     use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use std::{sync::{Arc, Once}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues}, session::test_session::TestSession};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         services::{
             server::{TcpServerConf, TcpServer},
@@ -30,7 +30,7 @@ mod tcp_server {
     /// Testing sending points from the TcpServer
     #[test]
     fn send() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "tcp_server_test_send";
@@ -54,7 +54,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -129,14 +129,14 @@ mod tcp_server {
     /// Testing receiving points on the TcpServer
     #[test]
     fn receive() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "tcp_server_test_teceive";
         println!("\n{}", self_id);
         let dbg = "test";
         let self_name = Name::from(dbg);
-        let test_duration = TestDuration::new(dbg, Duration::from_secs(10));
+        let test_duration = TestDuration::new(dbg, Duration::from_secs(20));
         test_duration.run().unwrap();
         let iterations = 100;
         let test_data = IncTestValues::new(
@@ -154,7 +154,7 @@ mod tcp_server {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let conf = format!(r#"
             service TcpServer:
                 cycle: 1 ms
@@ -183,7 +183,6 @@ mod tcp_server {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "queue",
             iterations,
         ));
         services.insert(receiver.clone());

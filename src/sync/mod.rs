@@ -1,3 +1,6 @@
-mod atomic_usize_option;
+//! 
+//! Tools useful for multi thread code and entities which can be safely shared between threads.
+//! 
+mod send_wrapper;
 
-pub use atomic_usize_option::*;
+pub use send_wrapper::*;

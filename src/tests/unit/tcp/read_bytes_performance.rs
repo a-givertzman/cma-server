@@ -43,7 +43,7 @@ mod socket_read_performance {
     #[ignore = "Performance test"]
     #[test]
     fn read_bytes() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test read bytes from socket performance");

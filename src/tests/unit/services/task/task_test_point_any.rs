@@ -1,9 +1,10 @@
+use sal_sync::services::{PointRegistry, RegistryConf, entity::{PointConf, PointConfHistory, PointType}};
 #[cfg(test)]
 
 use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, Service, Services}, thread_pool::ThreadPool};
 use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::task::{Task, TaskConf, TaskTestProducer, TaskTestReceiver};
 ///
 ///
@@ -23,7 +24,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn point_any_structure() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = "task_test_point_any";
@@ -41,25 +42,30 @@ fn point_any_structure() {
                 max-length: 10000
             fn ToApiQueue:
                 queue: {}/TaskTestReceiver.in-queue
-                input fn SqlMetric:
-                    initial: 0.123      # начальное значение
-                    table: table_name
-                    sql: "insert into {{table}} (id, value, timestamp) values ({{id}}, {{input1.value}}, {{input1.value}});"
+                input fn Sql:
+                    sql: "insert into table_name (id, value, timestamp) values ({{id}}, {{input1.value}}, {{input1.value}});"
+                    id fn PointId:
+                        input:  point any every
                     input1: point any every
     "#, self_name)).unwrap();
-    let config = TaskConf::from_yaml(&self_name, &conf);
+    let config = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-            retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
+        ConfTree::empty(),  //::new_root(serde_yaml::from_str(r#""#).unwrap()),
+    ), Some(tp.scheduler()))
+    .unwrap()
+        .with_point_registry(PointRegistry::new(dbg, RegistryConf::default(), Some(tp.scheduler())).unwrap()
+        .with_registry([("/path/Point.Name".into(), vec![PointConf {
+            id: 123,
+            name: "/path/Point.Name".into(),
+            type_: PointType::Bool, history: PointConfHistory::None,
+            alarm: None, address: None, filters: None, comment: None,
+        }])])));
     let receiver = Arc::new(TaskTestReceiver::new(
         &self_name.join(),
         "",
-        "in-queue",
         iterations,
     ));
     services.insert(receiver.clone());

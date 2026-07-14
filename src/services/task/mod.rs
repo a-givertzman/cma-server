@@ -76,7 +76,11 @@
 //! input <type> <'/path/PointName'>
 //! ```
 //! 
-mod nested_function;
+mod eval_cycle;
+mod fn_eval_once;
+mod functions;
+mod retain;
+pub(super) use retain::*;
 mod task_conf;
 mod task;
 mod task_nodes;
@@ -85,7 +89,9 @@ mod task_eval_node;
 mod task_test_receiver;
 mod task_test_producer;
 
-pub use nested_function::*;
+pub(crate) use eval_cycle::*;
+pub(super) use fn_eval_once::*;
+pub use functions::*;
 pub use task_conf::*;
 pub use task::*;
 pub use task_nodes::*;

@@ -13,7 +13,7 @@ use sal_sync::{
     services::{entity::{Name, Object, Point},
     Service, ServiceCycle, Services}, sync::{channel::Sender, Handles}
 };
-use crate::services::udp_client::udp_client::UdpClient;
+use crate::services::udp_client::{InputType, UdpClient};
 ///
 /// 
 #[derive(Clone)]
@@ -35,7 +35,7 @@ pub struct MockUdpServer {
     conf: MockUdpServerConfig,
     #[allow(unused)]
     services: Arc<Services>,
-    test_data: Vec<i16>,
+    test_data: Vec<u16>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
@@ -44,7 +44,7 @@ pub struct MockUdpServer {
 impl MockUdpServer {
     //
     /// Crteates new instance of the MockUdpServer 
-    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<Services>, test_data: &[i16]) -> Self {
+    pub fn new(parent: impl Into<String>, conf: MockUdpServerConfig, services: Arc<Services>, test_data: &[u16]) -> Self {
         let dbg = Dbg::new(parent, format!("MockUdpServer({})", conf.name));
         Self {
             name: conf.name.clone(),
@@ -149,8 +149,8 @@ impl Service for MockUdpServer {
                                             for message in message_windows {
                                                 cycle.start();
                                                 log::trace!("{}.run | words: \n\t{:?}", self_id, message);
-                                                let mut buf = vec![UdpClient::SYN, conf.channel, 16];
-                                                buf.extend(((conf.count * 2) as u32).to_be_bytes());
+                                                let mut buf = vec![UdpClient::DAT, conf.channel, InputType::U16 as u8];
+                                                buf.extend(((conf.count) as u32).to_be_bytes());
                                                 // let data = unsafe { message.align_to::<u8>() };
                                                 // let data = message.into_iter().map(|v| {v.to_be_bytes()});
                                                 buf.extend(message.into_iter().flat_map(|v| {v.to_be_bytes()}));

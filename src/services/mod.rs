@@ -9,20 +9,25 @@
 //!     send-to: MultiQueue.in-queue
 //! ```
 ///
-pub mod app;
 mod api_cient;
+pub use api_cient::*;
+pub mod app;
 mod cache;
+pub use cache::*;
 pub mod diagnosis;
-pub mod frdm_service;
+mod frdm_service;
+pub use frdm_service::*;
 pub mod history;
+mod modbus_tcp;
+pub use modbus_tcp::*;
 pub mod profinet_client;
 pub mod server;
 pub mod slmp_client;
 pub mod task;
 pub mod tcp_client;
 pub mod udp_client;
+mod virtual_device;
+pub use virtual_device::*;
 mod services_factory;
-
-pub use api_cient::*;
-pub use cache::*;
 pub use services_factory::*;
+

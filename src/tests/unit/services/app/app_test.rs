@@ -2,7 +2,7 @@
 
 mod services {
     use std::{sync::Once, env};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::services::app::app::App;
     ///
     ///
@@ -23,7 +23,7 @@ mod services {
     #[test]
     #[ignore = "To be implemented and activated later"]
     fn run() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "app_test";

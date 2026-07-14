@@ -3,10 +3,10 @@
 use sal_sync::services::{entity::{Name, PointConf, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use testing::entities::test_value::Value;
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
      domain::FnInOutRef,
-    services::task::{fn_::FnOut, fn_input::FnInput, fn_point_id::FnPointId},
+    services::task::{FnOut, FnInput, FnPointId},
 };
 ///
 ///
@@ -23,9 +23,9 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ))
 }
 const POINTS: &[(usize, &str)] = &[
                 (0, r#"PointName0:
@@ -48,7 +48,7 @@ const POINTS: &[(usize, &str)] = &[
 ///
 #[test]
 fn basic() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "fn_point_id_test";
     println!("{}", self_id);

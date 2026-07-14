@@ -2,11 +2,11 @@
 use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
 use testing::entities::test_value::Value;
 use std::{cell::RefCell, rc::Rc, sync::Once};
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{
-        filter::fn_smooth::FnSmooth, fn_::FnOut, fn_input::FnInput
+        FnSmooth, FnOut, FnInput
     }
 };
 ///
@@ -43,28 +43,28 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
         }),
             ..Default::default()}, ..Default::default()
     };        
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new(parent, 0, &mut conf)
-    )))
+    ))
 }
 ///
 /// Threshold Reals's
 #[test]
 fn fn_smooth_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    let self_id = "fn_smooth_real";
-    log::info!("{}", self_id);
-    let factor = init_each(&self_id, Value::Double(0.125));
-    let input = init_each(&self_id, Value::Real(0.0));
+    let dbg = "fn_smooth_real";
+    log::info!("{}", dbg);
+    let factor = init_each(&dbg, Value::Real(0.125));
+    let input = init_each(&dbg, Value::Real(0.0));
     let mut fn_smooth = FnSmooth::new(
-        self_id,
+        dbg,
         factor,
         input.clone(),
     );
     let test_data = vec![
     //  step    input  target
-        (0,    0.00,        0.0),
+        (0,    0.00f32,     0.0),
         (1,    0.00,        0.0),
         (2,    3.30,        0.4125),
         (3,    0.10,        0.3734375),
@@ -137,27 +137,26 @@ fn fn_smooth_real() {
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_real().value.aprox_eq(target, 4), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
-        println!("------------")
     }
 }
 ///
 /// Threshold Double's
 #[test]
 fn fn_smooth_double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    let self_id = "fn_smooth_double";
-    log::info!("{}", self_id);
-    let factor = init_each(&self_id, Value::Double(0.125));
-    let input = init_each(&self_id, Value::Double(0.0));
+    let dbg = "fn_smooth_double";
+    log::info!("{}", dbg);
+    let factor = init_each(&dbg, Value::Double(0.125));
+    let input = init_each(&dbg, Value::Double(0.0));
     let mut fn_smooth = FnSmooth::new(
-        self_id,
+        dbg,
         factor,
         input.clone(),
     );
     let test_data = vec![
     //  step    input  target
-        (0,    0.00,        0.0),
+        (0,    0.00f64,     0.0),
         (1,    0.00,        0.0),
         (2,    3.30,        0.4125),
         (3,    0.10,        0.3734375),
@@ -230,6 +229,77 @@ fn fn_smooth_double() {
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
         assert!(result.as_double().value.aprox_eq(target, 6), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
-        println!("------------")
+    }
+}
+///
+/// User Threshold Reals's
+#[test]
+fn fn_smooth_user() {
+    DebugSession::new().filter(LogLevel::Debug).init();
+    init_once();
+    let self_id = "fn_smooth_user";
+    log::info!("{}", self_id);
+    let factor = init_each(&self_id, Value::Real(0.125));
+    let input = init_each(&self_id, Value::Real(0.0));
+    let mut fn_smooth = FnSmooth::new(
+        self_id,
+        factor,
+        input.clone(),
+    );
+    let test_data = vec![
+    //  step    input  target
+        (00, 0.00f32, 0.00),
+        (01, 5.17, 5.17),
+        (02, 15.92, 15.92),
+        (03, 16.44, 16.44),
+        (04, 17.93, 17.93),
+        (05, 18.88, 18.88),
+        (06, 19.17, 19.17),
+        (07, 20.17, 20.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (08, 21.17, 21.17),
+        (09, 13.17, 13.17),
+        (10, 0.00, 0.00),
+        (11, 0.00, 0.00),
+        (12, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+        (13, 0.00, 0.00),
+    ];
+    for (step, value, target) in test_data {
+        let point = value.to_point(0, &format!("input step {}", step));
+        input.borrow_mut().add(&point);
+        // debug!("input: {:?}", &input);
+        let result = fn_smooth.out().unwrap();
+        // debug!("input: {:?}", &mut input);
+        log::debug!("step {}  value: {:?}   |   result: {:?}", step, value, result.value());
+        // assert!(result.as_real().value.aprox_eq(target, 4), "step {}\nresult: {:?}\ntarget: {:?}", step, result, target);
     }
 }

@@ -4,7 +4,7 @@ use sal_sync::services::{conf::{ConfTree, ServicesConf}, Services};
 use sal_sync::{services::{entity::ToPoint, Service}, thread_pool::ThreadPool};
 use std::{sync::{Once, Arc}, thread, time::{Duration, Instant}, net::TcpListener, io::{Read, Write}};
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use api_tools::api::{message::{fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn}, message::{MessageField, MessageParse}, message_kind::MessageKind, parse_data::ParseData, parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn}, reply::api_reply::ApiReply, socket::tcp_socket::TcpMessage};
 use crate::{domain::Mutex, services::{ApiClient, ApiClientConf}};
 ///
@@ -24,7 +24,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn basic() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = Dbg::own("api-client-test");
@@ -43,7 +43,7 @@ fn basic() {
         ConfTree::empty()//new_root(serde_yaml::from_str(r#"
         // retain:
         // "#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
 
     let api_client = ApiClient::new(conf, services, tp.scheduler());
     // let test_duration = Duration::from_secs(10);
@@ -216,7 +216,6 @@ fn basic() {
                 panic!("{dbg} | Preparing test TCP server - error: {:?}", err);
             }
         };
-        Ok(())
     }).unwrap();
     api_client.run().unwrap();
     let send = api_client.get_link("api-link");

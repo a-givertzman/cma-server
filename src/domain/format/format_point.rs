@@ -1,9 +1,55 @@
-use std::collections::HashMap;
+use std::str::FromStr;
+
 use regex::RegexBuilder;
-use sal_sync::services::entity::Point;
+use sal_core::error::Error;
+use sal_sync::{collections::FxHashMap, services::entity::Point};
 ///
-/// ### Replaces markers in the input sreing with the concrete `Point`'s parameters
-/// ````
+/// Сегмент скомпилированного текстового шаблона SQL.
+#[derive(Debug, Clone)]
+enum Token {
+    Static(String),
+    Dynamic { name: String, prefix: String, suffix: Sufix, precision: Option<usize> },
+}
+///
+/// Варианты суфикса маркера
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Sufix {
+    Name,
+    Value,
+    Ts,
+    Status,
+    None,
+}
+impl FromStr for Sufix {
+    type Err = Error;
+    fn from_str(sufix: &str) -> Result<Self, Self::Err> {
+        match sufix {
+            "name" => Ok(Self::Name),
+            "value" => Ok(Self::Value),
+            "timestamp" => Ok(Self::Ts),
+            "status" => Ok(Self::Status),
+            _ => Err(Error::new("FormatPoint.Sufix", "from_str").err(format!("Unknown sufix '{sufix}', expected name/value/timestamp/status")))
+        }
+    }
+}
+///
+/// ### Шаблонизатор для подстановки параметров `Point` в строку
+/// 
+/// **Виды поддерживаемых маркеров для `Point`:**
+/// ```ignore
+///     - {input}  - по умолчанию {input.value}
+///     - {input.name}
+///     - {input.value}
+///     - {input.timestamp}
+///     - {input.status}
+/// ```
+/// **Поддержка форматирования (округление):**
+/// - `{input:.2}` округлит вещественное число до двух знаков после запятой
+/// - `{input.value:.4}` округлит до четырех знаков
+
+///
+/// **Example 1**
+/// ```ignore
 /// Point {
 ///     name: "test-point",
 ///     value: 12,
@@ -14,89 +60,130 @@ use sal_sync::services::entity::Point;
 /// "select * from table where id = {point.value}"     => "select * from table where id = 12"
 /// "select * from table where id = {point.timestamp}" => "select * from table where id = "
 /// "select * from table where id = {point.status}"    => "select * from table where id = 0"
-/// ````
+/// ```
 ///
-/// input marker can be:
-/// ````
-///     - input  - by defoult input.value will be used
-///     - input.name
-///     - input.value
-///     - input.timestamp
-///     - input.status
-/// ````
-/// - formating string: "insert into {table} (id, value) values ({input1.status}, {input1.value})"
-/// - values can be added using insert method format.insert("input1", point)
-/// - values: table = "temperature"; point.status = 1; point.value = 19,7
-/// - out   : "insert into temperature (id, value) values (0, 19,7)"
+/// **Example 2**
+/// - formating string: `insert into temperature (id, value) values ({input1.status}, {input1.value});`
+/// - values can be added using insert method `format.insert("input1", point)`
+/// - values: `point.status = 1; point.value = 19,7`
+/// - out   : `"insert into temperature (id, value) values (0, 19,7)"`
 pub struct FormatPoint {
-    input: String,
-    names: HashMap<String, (String, Option<String>)>,
-    values: HashMap<String, Point>,
+    tokens: Vec<Token>,
+    names: FxHashMap<String, (String, Sufix)>,
+    values: FxHashMap<String, Point>,
 }
-//
 // 
 impl FormatPoint {
     ///
     /// Creates new instance of the Format from configuration string
-    pub fn new(input: &str) -> Self {
+    pub fn new(input: &str) -> Result<Self, Error> {
         let re = r#"\{(.*?)\}"#;
         let re = RegexBuilder::new(re).multi_line(true).build().unwrap();
-        let names = re.captures_iter(input).map(|cap| {
-            let full_name = cap.get(1).unwrap().as_str().to_string();
-            let mut parts = full_name.split('.').map(|part| part.into());
-            let name = parts.next().unwrap();
-            let sufix = parts.next();
-            (full_name, (name, sufix))
-        }).collect();        
-        log::trace!("Format.new | names {:?}", &names);
-        Self {
-            input: input.into(),
-            names,
-            values: HashMap::new(),
+        let mut tokens = Vec::new();
+        let mut names = FxHashMap::default();
+        let mut last_idx = 0;
+        for cap in re.captures_iter(input) {
+            let mat = cap.get(0).unwrap();
+            if mat.start() > last_idx {
+                tokens.push(Token::Static(input[last_idx..mat.start()].to_string()));
+            }
+            let marker = cap.get(1).unwrap().as_str().to_string();
+            log::trace!("FormatPoint.new | marker: {marker}");
+            let mut parts_colon = marker.split(':');
+            let name = parts_colon.next().unwrap().to_string();
+            log::trace!("FormatPoint.new | name: {name}");
+            let format_spec = parts_colon.next();
+            let mut precision = None;
+            if let Some(fmt) = format_spec {
+                if fmt.starts_with('.') {
+                    if let Ok(p) = fmt[1..].parse::<usize>() {
+                        precision = Some(p);
+                    } else {
+                        return Err(Error::new("FormatPoint", "new").err(format!("Invalid precision format '{}' in marker '{}'", fmt, marker)));
+                    }
+                } else {
+                    return Err(Error::new("FormatPoint", "new").err(format!("Unsupported format specifier '{}' in marker '{}'", fmt, marker)));
+                }
+            }
+            let mut parts_dot = name.split('.');
+            let prefix: String = parts_dot.next().unwrap().into();
+            let suffix = match parts_dot.next() {
+                Some(sufix) => Sufix::from_str(&sufix).map_err(|err| Error::new("FormatPoint", "new").pass(err))?,
+                None => Sufix::None,
+            };
+            names.insert(name.clone(), (prefix.clone(), suffix.clone()));
+            tokens.push(Token::Dynamic { name, prefix, suffix, precision });
+            last_idx = mat.end();
         }
+        if last_idx < input.len() {
+            tokens.push(Token::Static(input[last_idx..].to_string()));
+        }
+        Ok(Self { tokens, names, values: FxHashMap::default() })
     }
     ///
-    /// Inserts a Point by key to the configured format
+    /// Вносит актуальное значение `Point` для подстановки в шаблон.
+    /// - `key`: Полное имя маркера (например, "input1.value" или "input1")
     pub fn insert(&mut self, key: &str, value: Point) {
         self.values.insert(key.into(), value);
     }
     ///
     /// Returns formatted string? replacing configured markers with the associated values by them keys
-    pub fn out(&self) -> String {
-        let mut input = self.input.clone();
-        for (full_name, (name, sufix)) in &self.names {
-            log::trace!("Format.out | fullName {:?}", full_name);
-            if let Some(point) = self.values.get(full_name) {
-                let value = match sufix {
-                    Some(sufix) => {
-                        match sufix.as_str() {
-                            "name" => point.name(),
-                            "value" => point.value().to_string(),
-                            "timestamp" => point.timestamp().to_string(),
-                            "status" => point.status().to_string(),
-                            _ => panic!("Format.out | Unknown input sufix in: {:?}, allowed: .name / .value / .timestamp", &name),
-                        }
+    /// - String values will passed into `escape` to be processed with the external escaper
+    pub fn escaped(&self, escape: impl Fn(&str) -> String) -> String {
+        let mut out = String::with_capacity(256);
+        for token in &self.tokens {
+            match token {
+                Token::Static(s) => out.push_str(s),
+                Token::Dynamic { name, prefix: _, suffix, precision } => {
+                    if let Some(point) = self.values.get(name) {
+                        let value = match suffix {
+                            Sufix::Name => &point.name(),
+                            Sufix::Value | Sufix::None => {
+                                if let Some(prec) = precision {
+                                    match point {
+                                        Point::Bool(p) => &p.value.to_string(),
+                                        Point::Int(p) => &p.value.to_string(),
+                                        Point::Real(p) => &format!("{:.*}", prec, p.value),
+                                        Point::Double(p) => &format!("{:.*}", prec, p.value),
+                                        Point::String(p) => &escape(&p.value),
+                                        Point::Bytes(p) => &format!("{:?}", p.value),
+                                    }
+                                } else {
+                                    match point {
+                                        Point::Bool(p) => &p.value.to_string(),
+                                        Point::Int(p) => &p.value.to_string(),
+                                        Point::Real(p) => &p.value.to_string(),
+                                        Point::Double(p) => &p.value.to_string(),
+                                        Point::String(p) => &escape(&p.value),
+                                        Point::Bytes(p) => &format!("{:?}", p.value),
+                                    }
+                                }
+                            }
+                            Sufix::Ts => &point.ts().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
+                            Sufix::Status => &point.status().to_string(),
+                        };
+                        out.push_str(value);
+                    } else {
+                        out.push_str("{");
+                        out.push_str(name);
+                        out.push_str("}");
                     }
-                    None => {
-                        log::trace!("Format.out | name: {:?}, sufix: None, taking point.value by default", &name);
-                        point.value().to_string()
-                    }
-                };
-                let pattern = format!("{{{}}}", full_name);
-                log::trace!("Format.out | replacing pattern {:?} with value: {:?}", pattern, value);
-                input = input.replace(&pattern, &value);
-                log::trace!("Format.out | result: {:?}", input);
-            };
-        };
-        input
+                }
+            }
+        }
+        out
     }
     ///
-    /// Returns List of al names & sufixes in the following format:
-    /// ```
-    /// HashMap<fullName, (name, sufix)>
-    /// ```
+    /// Returns formatted string? replacing configured markers with the associated values by them keys
+    pub fn out(&self) -> String {
+        self.escaped(|v| v.to_owned())
+    }
+    ///
+    /// Returns List of all names & sufixes in the following format:
+    /// ```ignore
+    /// Map<fullName, (name, sufix)>
+    /// 
     /// - Keep in maind, the name can be:
-    /// ````
     ///      input | sufix      |
     ///      name  |            |
     ///     - input  - by defoult input.value will be used
@@ -104,27 +191,13 @@ impl FormatPoint {
     ///     - input.value
     ///     - input.timestamp
     ///     - input.status
-    /// ````
-    pub fn names(&self) -> HashMap<String, (String, Option<String>)> {
+    /// ```
+    pub fn markers(&self) -> FxHashMap<String, (String, Sufix)> {
         self.names.clone()
     }
-    ///
-    /// Already inserted values will be stored into out, 
-    /// and will be removed from the names. 
-    /// Less number of remained values, faster the replacement
-    pub fn prepare(&mut self) {
-        let input = self.out();
-        self.input = input;
-        let values = self.values.clone();
-        let names = values.keys();
-        for name in names {
-            self.names.remove(name);
-            self.values.remove(name);
-        };
-        log::trace!("Format.prepare | self.input {:?}", self.input);
-    }
+    #[deprecated(since = "0.3.1", note = "Пожалуйста, удалите метод, он ничего не делает")]
+    pub fn prepare(&mut self) {}
 }
-//
 //
 impl std::fmt::Display for FormatPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -132,10 +205,133 @@ impl std::fmt::Display for FormatPoint {
     }
 }
 //
-// 
 impl std::fmt::Debug for FormatPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.out())
-        // f.debug_struct("Format").field("input", &self.input).field("values", &self.values).finish()
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
+    use chrono::Utc;
+    /// Вспомогательный метод для штамповки тестовых точек Point::Int
+    fn create_test_point(name: &str, value: i64, status: Status) -> Point {
+        Point::Int(PointHlr::new(
+            0,
+            name,
+            value,
+            status,
+            Cot::Inf,
+            Utc::now(),
+        ))
+    }
+    #[test]
+    fn test_format_all_valid_suffixes() {
+        let template = "INSERT INTO metrics (tag, val, stat, ts) VALUES ('{input.name}', {input.value}, {input.status}, '{input.timestamp}');";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("Sensor_A", 105, Status::Ok);
+        formatter.insert("input.name", point.clone());
+        formatter.insert("input.value", point.clone());
+        formatter.insert("input.status", point.clone());
+        formatter.insert("input.timestamp", point.clone());
+        let result = formatter.out();
+        assert!(result.contains("'Sensor_A'"));
+        assert!(result.contains("105"));
+        assert!(result.contains("0"));
+    }
+    #[test]
+    fn test_format_default_suffix_fallback() {
+        let template = "SELECT * FROM table WHERE value = {input};";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("Sensor_B", 42, Status::Ok);
+        formatter.insert("input", point);
+        assert_eq!(formatter.out(), "SELECT * FROM table WHERE value = 42;");
+    }
+    #[test]
+    fn test_format_precision_floats() {
+        let template = "VALUES ({input1:.2}, {input2.value:.4})";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point1 = Point::Double(PointHlr::new(0, "P1", 3.14159265, Status::Ok, Cot::Inf, Utc::now()));
+        let point2 = Point::Real(PointHlr::new(0, "P2", 2.71828, Status::Ok, Cot::Inf, Utc::now()));
+        formatter.insert("input1", point1);
+        formatter.insert("input2.value", point2);
+        assert_eq!(formatter.out(), "VALUES (3.14, 2.7183)");
+    }
+    #[test]
+    fn test_format_precision_fallback_for_int() {
+        let template = "VALUES ({input:.2})";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("P1", 42, Status::Ok);
+        formatter.insert("input", point);
+        assert_eq!(formatter.out(), "VALUES (42)"); // Безопасное проглатывание формата для Int
+    }
+    #[test]
+    fn test_format_duplication_use() {
+        let template = "VALUES ({input:.2}) [{input}]";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("P1", 43, Status::Ok);
+        formatter.insert("input", point);
+        assert_eq!(formatter.out(), "VALUES (43) [43]"); // Безопасное проглатывание формата для Int
+    }
+    #[test]
+    fn test_format_missing_value_leaves_placeholder() {
+        let template = "SELECT {missing.value} FROM table WHERE id = {present.value};";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("Sensor_C", 77, Status::Ok);
+        formatter.insert("present.value", point);
+        assert_eq!(formatter.out(), "SELECT {missing.value} FROM table WHERE id = 77;");
+    }
+    #[test]
+    fn test_format_no_placeholders() {
+        let raw_sql = "SELECT * FROM static_table WHERE id = 10;";
+        let formatter = FormatPoint::new(raw_sql).unwrap();
+        assert_eq!(formatter.out(), raw_sql);
+    }
+    #[test]
+    fn test_format_empty_template() {
+        let formatter = FormatPoint::new("").unwrap();
+        assert_eq!(formatter.out(), "");
+    }
+    #[test]
+    fn test_format_multoline_template() {
+        let template = "UPDATE table\nSET val = {input.value}\nWHERE name = '{input.name}';";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("Sensor_D", 99, Status::Ok);
+        formatter.insert("input.value", point.clone());
+        formatter.insert("input.name", point);
+        let expected = "UPDATE table\nSET val = 99\nWHERE name = 'Sensor_D';";
+        assert_eq!(formatter.out(), expected);
+    }
+    #[test]
+    fn test_format_unknown_suffix_panics() {
+        let template = "SELECT * FROM table WHERE val = {input.corrupted_property};";
+        let formatter = FormatPoint::new(template);
+        assert!(matches!(formatter, Err(_)));
+    }
+    #[test]
+    fn test_format_display_and_debug_traits() {
+        let template = "VALUES ({input.value})";
+        let mut formatter = FormatPoint::new(template).unwrap();
+        let point = create_test_point("Sensor_F", 12, Status::Ok);
+        formatter.insert("input.value", point);
+        let display_output = format!("{}", formatter);
+        let debug_output = format!("{:?}", formatter);
+        assert_eq!(display_output, "VALUES (12)");
+        assert_eq!(debug_output, "VALUES (12)");
+    }
+    #[test]
+    fn test_format_names_extraction() {
+        let template = "SELECT * FROM {table} WHERE val = {input.value:.3} AND status = {input.status};";
+        let formatter = FormatPoint::new(template).unwrap();
+        let names = formatter.markers();
+        // println!("FormatPoint.test_format_names_extraction | names: {:?}", names);
+        assert_eq!(names.len(), 3);
+        assert!(names.contains_key("table"));
+        assert!(names.contains_key("input.value"));
+        assert!(names.contains_key("input.status"));
+        let (name, suffix) = names.get("input.value").unwrap();
+        assert_eq!(name, "input");
+        assert_eq!(*suffix, Sufix::Value);
     }
 }

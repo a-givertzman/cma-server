@@ -3,7 +3,7 @@
 
 mod tests {
     use std::sync::Once;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use sal_sync::kernel::state::{Switch, SwitchCondition, SwitchState, SwitchStateChanged};
     ///
     ///
@@ -52,7 +52,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn test_state() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         println!("test SwitchState");
         let steps: Vec<f64> = vec![0.25, 0.50, 0.75];

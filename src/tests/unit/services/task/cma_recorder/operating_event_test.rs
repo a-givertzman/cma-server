@@ -8,7 +8,7 @@ mod cma_recorder {
     }, thread_pool::ThreadPool};
     use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         services::{
             ApiClient, ApiClientConf,
@@ -39,7 +39,7 @@ mod cma_recorder {
     ///  ...to be extended
     #[test]
     fn operating_event() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "AppTest";
@@ -432,7 +432,6 @@ mod cma_recorder {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             total_count * 1000,
         ));
         services.insert(receiver.clone());

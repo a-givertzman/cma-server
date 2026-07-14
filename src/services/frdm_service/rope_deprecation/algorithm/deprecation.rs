@@ -1,17 +1,32 @@
-use std::ops::Range;
+use std::{ops::Range, sync::Arc};
 use sal_core::dbg::Dbg;
-use sal_sync::{collections::FxIndexMap, services::entity::Point};
-use crate::services::frdm_service::{Bendings, CraneConf};
+use sal_sync::collections::FxIndexMap;
+use crate::services::frdm_service::{Bendings, CraneConf, Inputs};
 
 ///
-/// Evaluation for the crane rope deprication
+/// ## Evaluation for the crane rope Deprecation
+/// 
+/// ### Use [Inputs] to pass a new Event contains a value for the calculation
+/// - Expected boom len / angle, rope pos / load events, for example:
+///     - [Load.MainBoomAngle], current angle of the boom (relative axis), degrees
+///     - [Load.RotaryBoomLen], length of the rotary boom, meter
+///     - [Winch.EncoderBR2], current rope position, meter
+///     - [Winch.Load], current rope load, tonn
+/// - Event mast have proper name, defined in the configured inputs, else it will be ignored
+/// - Event mast have value in proper units:
+///     - angle: degrees
+///     - distances: millimeters
+///     - weight: tonn
+/// - Event can have type (else it will be ignores):
+///     - `Int`
+///     - `Real`
+///     - `Double`
 pub struct Deprecation<'a> {
-    inputs: FxIndexMap<String, f64>,
-    subscriptions: Vec<String>,
+    inputs: Arc<Inputs>,
     conf: CraneConf,
     segment: f64,
     ///                Block     Slices
-    slices: FxIndexMap<usize, Vec<usize>>,
+    blocks: FxIndexMap<usize, Vec<usize>>,
     bendings: Bendings,
     results: Box<dyn Fn(&usize, f64) + 'a>,
     dbg: Dbg,
@@ -20,83 +35,33 @@ pub struct Deprecation<'a> {
 //
 impl<'a> Deprecation<'a> {
     ///
-    /// Returns [Boom] new instance
-    /// - `results` - Callback provides deprication results as index of slice and it new deprication value
-    pub fn new(parent: impl Into<String>, conf: &CraneConf, bendings: Bendings, mut subscriptions: Vec<String>, results: impl Fn(&usize, f64) + 'a) -> Self {
-        let dbg = Dbg::new(parent, "Deprication");
-        subscriptions.push(conf.rope.load.clone());
-        subscriptions.push(conf.rope.pos.clone());
+    /// Returns [Deprecation] new instance
+    /// - `inputs` - [Inputs] provides `Events` required for the calculations
+    /// - `results` - Callback provides Deprecation results as index of slice and it new Deprecation value
+    pub fn new(parent: impl Into<String>, conf: &CraneConf, inputs: Arc<Inputs>, bendings: Bendings, results: impl Fn(&usize, f64) + 'a) -> Self {
+        let dbg = Dbg::new(parent, "Deprecation");
+        inputs.subscribe(conf.rope.load.clone());
+        inputs.subscribe(conf.rope.pos.clone());
         Self {
-            inputs: FxIndexMap::default(),
-            subscriptions,
+            inputs,
             conf: conf.clone(),
             segment: conf.rope.segment.as_mm(),
-            slices: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
+            blocks: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
             bendings,
             results: Box::new(results),
             dbg,
         }
     }
     ///
-    /// ### Use this method to pass a new Event contains a value for the calculation
-    /// - Expected boom len / angle, rope pos / load events, for example:
-    ///     - [Load.MainBoomAngle], current angle of the boom (relative axis), degrees
-    ///     - [Load.RotaryBoomLen], length of the rotary boom, meter
-    ///     - [Winch.EncoderBR2], current rope position, meter
-    ///     - [Winch.Load], current rope load, tonn
-    /// - Event mast have proper name, defined in the configured inputs, else it will be ignored
-    /// - Event mast have value in proper units:
-    ///     - angle: degrees
-    ///     - distances: millimeters
-    ///     - weight: tonn
-    /// - Event can have type (else it will be ignores):
-    ///     - `Int`
-    ///     - `Real`
-    ///     - `Double`
-    fn add(&mut self, event: &Point) {
-        match self.inputs.get_mut(&event.name()) {
-            Some(input) => {
-                match event {
-                    Point::Bool(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bool'", self.dbg, event.name()),
-                    Point::Int(point) => *input = point.value as f64,
-                    Point::Real(point) => *input = point.value as f64,
-                    Point::Double(point) => *input = point.value,
-                    Point::String(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'String'", self.dbg, event.name()),
-                    Point::Bytes(_) => log::warn!("{}.add | Point '{}' - expected numeric type, but has 'Bytes'", self.dbg, event.name()),
-                }
-                log::debug!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), event.value());
-            }
-            None => {
-                match self.subscriptions.contains(&event.name()) {
-                    true => {
-                        let val = event.to_double().as_double().value;
-                        self.inputs.insert(event.name(), val);
-                        log::warn!("{}.add | Point '{}', value: {:?}", self.dbg, event.name(), val);
-                    }
-                    false => log::warn!("{}.add | Unexpected Point '{}'", self.dbg, event.name()),
-                }
-            }
-        }
-    }
-    ///
-    /// Returns current calue from inputs by the key if exists
-    pub fn get(&self, key: &str) -> Option<f64> {
-        match self.inputs.get(key) {
-            Some(val) => Some(*val),
-            None => None,
-        }
-    }
-    ///
     /// Evaluates Boom's values using passed new parameters
-    pub fn eval(&mut self, event: &Point) -> Option<()> {
-        self.add(event);
+    pub fn eval(&mut self) -> Option<()> {
         match self.bendings.eval(&self.inputs) {
             Some(blocks) => {
                 // log::debug!("{} | Bendings:", self.dbg);
                 // for block in &blocks {
                 //     log::debug!("{} | \t Block[{}]: {:.4}..{:.4}", self.dbg, block.name, block.bending.start, block.bending.end);
                 // }
-                let pos = self.inputs.get(&self.conf.rope.pos);
+                let pos = self.inputs.rope_pos();
                 let load = self.inputs.get(&self.conf.rope.load);
                 match (pos, load) {
                     (None, None) => {
@@ -111,12 +76,13 @@ impl<'a> Deprecation<'a> {
                         log::warn!("{}.eval | Input '{}' - Not found", self.dbg, self.conf.rope.load);
                         return None;
                     }
-                    (Some(_), Some(load)) => {
+                    (Some(pos), Some(load)) => {
+                        log::debug!("{}.eval | pos {pos} mm,  load {load} tonn", self.dbg);
                         for (block_ix, block) in blocks.iter().enumerate() {
                             let deprecation = load / (block.diameter * 0.001);
-                            let mut current = self.slices(&block.bending);
+                            let current = self.slices(&block.bending);
                             // Exit: the Slices that are in self.slices but not in current
-                            for slice in &self.slices[block_ix] {
+                            for slice in &self.blocks[block_ix] {
                                 // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
                                 if let Err(_) = current.binary_search(slice) {
                                     (self.results)(&slice, deprecation);
@@ -124,13 +90,12 @@ impl<'a> Deprecation<'a> {
                             }
                             // Enter: the Slices that are in current but not in self.slices
                             for slice in &current {
-                                if let Err(_) = self.slices[block_ix].binary_search(slice) {
+                                if let Err(_) = self.blocks[block_ix].binary_search(slice) {
                                 // log::debug!("{dbg} | Slice[{}] -> Enter ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
                                     (self.results)(&slice, deprecation);
                                 }
                             }
-                            current.sort();
-                            self.slices[block_ix] = current;
+                            self.blocks[block_ix] = current;
                             // log::debug!("{} | Slices: {:?}", self.dbg, self.slices);
                         }
                         Some(())
@@ -141,7 +106,7 @@ impl<'a> Deprecation<'a> {
         }
     }
     ///
-    /// Returns slices (indexes) intersects with the bend range
+    /// Returns slices (indexes) sorted ASC, intersects with the bend range
     fn slices(&self, bend: &Range<f64>) -> Vec<usize> {
         // Количество Слайсов которые приходятся на начало Бенда
         // log::debug!("{}.slices | rope_len: {}", self.dbg, self.rope_len);
@@ -164,10 +129,10 @@ impl<'a> Deprecation<'a> {
 /// Testing such functionality / behavior
 #[test]
 fn slices() {
-    use std::{time::{Duration, Instant}};
-    use sal_sync::services::conf::ConfTree;
+    use std::{sync::atomic::AtomicBool, time::{Duration, Instant}};
+    use sal_sync::{services::{conf::{ConfTree, ServicesConf}, Services}, thread_pool::ThreadPool};
     use testing::stuff::max_test_duration::TestDuration;
-    use crate::services::frdm_service::{BlockArcs, Blocks, Booms, LooseRopeSections};
+    use crate::services::frdm_service::{BlockArcs, Blocks, Booms, FrdmServiceConf, RopeSections};
     env_logger::Builder::new().filter_level(log::LevelFilter::Debug).init();
     log::debug!("");
     let dbg = Dbg::own("Deprecation.slices");
@@ -223,28 +188,37 @@ fn slices() {
                 scheme: TopTop
                 bind: Fixed
     ").unwrap());
-    let conf = CraneConf::new(&dbg, conf);
-    let mut subscriptions = vec![];
+    let conf = FrdmServiceConf::new(&dbg, conf);
+    let tp = ThreadPool::new(&dbg, Some(4));
+    let services = Arc::new(Services::new(
+        &dbg,
+        ServicesConf::new(&dbg, ConfTree::new_root(serde_yaml::from_str(r"").unwrap())),
+        Some(tp.scheduler()),
+    ).unwrap());
+    let exit = Arc::new(AtomicBool::new(false));
+    let inputs = Arc::new(Inputs::new(&dbg, &conf, services, tp.scheduler(), exit));
+    let parking = false;
     let deprecation = Deprecation::new(
         &dbg,
-        &conf,
+        &conf.rope_deprecation.crane,
+        inputs.clone(),
         Bendings::new(
             &dbg,
-            conf.rope.pos.clone(),
-            &conf.rope,
+            &conf.rope_deprecation.crane.rope,
             BlockArcs::new(
                 &dbg,
-                LooseRopeSections::new(
+                RopeSections::new(
                     &dbg,
                     Blocks::new(
                         &dbg,
-                        &conf.blocks,
-                        Booms::new(&dbg, &conf.booms, &mut subscriptions),
+                        conf.rope_deprecation.crane.rope.aux_length,
+                        &conf.rope_deprecation.crane.blocks,
+                        parking,
+                        Booms::new(&dbg, &conf.rope_deprecation.crane.booms, inputs, parking),
                     ),
                 ),
             ),
         ),
-        subscriptions,
         |_, _| {},
     );
     let mut t;

@@ -62,7 +62,7 @@ id | frdm_defect_id | camera_id | path
 -- FRDM | Images of the rope defects
 create table public.frdm_defect_image (
     id                  bigserial not null,
-    frdm_defect_id      int8 not null,
+    frdm_defect_id      frdm_defect_enum not null,
     camera_id           int2 not null,
     path                text not null,
     created             timestamp default current_timestamp not null,
@@ -95,17 +95,45 @@ end; $$
 language plpgsql;
 
 -- FRDM | Function cleaning the old images keeping 10 imeges per rope slice for each defect tipe
-create or replace function clean_frdm_defect_image() returns trigger as $$
+CREATE OR REPLACE FUNCTION public.clean_frdm_defect_image(defect_id_ frdm_defect_enum, camera_id_ bigint)
+ RETURNS TABLE(path text)
+AS $function$
+declare
+	images numeric;
+	cam record;
+	err text;
+	deleted_row record;
 begin
-    delete from public.frdm_defect_image
-        where (id) in (
-            select id
-            from public.frdm_defect_image
-            order by created
-            limit 1
-        );
-   return new;
-end; $$ 
+	-- FRDM | Function cleaning the old images keeping 10 imeges per rope slice for each defect tipe
+	for cam in select camera from public.frdm_defect_image group by camera
+	loop
+		select count(public.frdm_defect_image.id) into images from public.frdm_defect_image
+		 	where frdm_defect_id = defect_id_ and camera = camera_id_;
+		raise notice '%', format('clean_frdm_defect_image | Defect ' || defect_id_ || ' Camera[' || camera_id_ || '] images: ' || images);
+		if images > 10 then
+			raise notice '%', format('clean_frdm_defect_image | Cleaning Defect ' || defect_id_ || ' Camera[' || camera_id_ || '] images: ' || images);
+		    for deleted_row in
+			    delete from public.frdm_defect_image
+			        where (id) in (
+			            select id from public.frdm_defect_image fdi
+						where fdi.frdm_defect_id = defect_id_ and fdi.camera = camera_id_
+			            order by last
+			            limit images - 10
+						offset 1
+			        )
+		    	returning public.frdm_defect_image.id, public.frdm_defect_image.path
+			loop
+				raise notice '%', format('clean_frdm_defect_image | Deleted: ' || deleted_row);
+				path := deleted_row.path;
+				return next;
+			end loop;
+		end if;
+	end loop;
+	exception
+		when others then
+			GET STACKED DIAGNOSTICS err = PG_EXCEPTION_CONTEXT;
+			raise warning '%', format('Frdm | clean_frdm_defect_image | error: ' || err);
+end; $function$
 language plpgsql;
 
 -- FRDM | Trigger for `frdm_defect_image` table to call cleaning after each insert

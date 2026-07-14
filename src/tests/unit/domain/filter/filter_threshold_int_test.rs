@@ -3,7 +3,7 @@
 mod tests {
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::domain::filter::{filter_threshold::FilterThreshold, filter::Filter};
     ///
     ///
@@ -48,7 +48,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_threshold_abs_pos_i16() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_pos 0 - 10 - 0";
@@ -57,15 +57,14 @@ mod tests {
         test_duration.run().unwrap();
         let test_data = init_each();
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i16>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i16>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().map(|(value, target)| (*value, *target)).enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -75,7 +74,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_threshold_abs_pos_i32() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_pos_i32 0 - 10 - 0";
@@ -84,15 +83,14 @@ mod tests {
         test_duration.run().unwrap();
         let test_data = init_each();
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i32>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i32>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().map(|(value, target)| (*value as i32, target.map(|t| t as i32))).enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -102,7 +100,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_threshold_abs_pos_i64() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_pos_i64 0 - 10 - 0";
@@ -111,15 +109,14 @@ mod tests {
         test_duration.run().unwrap();
         let test_data = init_each();
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i64>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i64>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().map(|(value, target)| (*value as i64, target.map(|t| t as i64))).enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -129,7 +126,7 @@ mod tests {
     /// Testing FilterThreshold with absolute threshold
     #[test]
     fn test_filter_threshold_abs_neg_i16() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_neg_i16 (-10) - 10 - (-10)";
@@ -181,15 +178,14 @@ mod tests {
             (-10, Some(-10)),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i16>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i16>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -199,7 +195,7 @@ mod tests {
     /// Testing FilterThreshold with absolute threshold
     #[test]
     fn test_filter_threshold_abs_neg_i32() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_neg_i32 (-10) - 10 - (-10)";
@@ -251,15 +247,14 @@ mod tests {
             (-10, Some(-10)),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i32>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i32>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
@@ -269,7 +264,7 @@ mod tests {
     /// Testing FilterThreshold with absolute threshold
     #[test]
     fn test_filter_threshold_abs_neg_i64() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_neg_i64 (-10) - 10 - (-10)";
@@ -321,15 +316,14 @@ mod tests {
             (-10, Some(-10)),
         ];
         let threasold = 1.5;
-        let mut filter = FilterThreshold::<2, i64>::new(None, threasold, 0.0);
+        let mut filter = FilterThreshold::<i64>::new(None, threasold, 0.0);
         let mut prev = 0;
         for (step, (value, target)) in test_data.into_iter().enumerate() {
-            filter.add(value);
+            let result = filter.add(value);
             let diff = (prev as f64 - (value as f64)).abs();
             if diff > threasold {
                 prev = value;
             }
-            let result = filter.pop();
             println!("{}    step: {}  in: {}   |   out: {:?}   |   diff: {}", self_id, step, value, result, diff);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }

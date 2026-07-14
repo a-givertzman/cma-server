@@ -5,16 +5,60 @@ use crate::services::frdm_service::Offset;
 
 ///
 /// Схема схода каната с блоком к следующему
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(usize)]
 pub enum BlockScheme {
     /// Schema "1", Rope exits from top of the block, enters to the next on the top
-    TopTop = 1,
+    TopTop((f64, f64)) = 1,
     /// Schema "2", Rope exits from top of the block, enters to the next on the bottom
-    TopBottom = 2,
+    TopBottom((f64, f64)) = 2,
     /// Schema "3", Rope exits from bottom of the block, enters to the next on the top
-    BottomTop = 3,
+    BottomTop((f64, f64)) = 3,
     /// Schema "4", Rope exits from bottom of the block, enters to the next on the bottom
-    BottomBottom = 4,
+    BottomBottom((f64, f64)) = 4,
+}
+impl BlockScheme {
+    // let (k, j) = match block.scheme {
+    //     super::BlockScheme::TopTop => (-1.0, 1.0),
+    //     super::BlockScheme::TopBottom => (1.0, 1.0),
+    //     super::BlockScheme::BottomTop => (1.0, -1.0),
+    //     super::BlockScheme::BottomBottom => (-1.0, -1.0),
+    // };
+    ///
+    /// Returns tuple (k, j) - coefficients depends on rope transition kind between blocks
+    pub fn kj(&self) -> (f64, f64) {
+        match self {
+            BlockScheme::TopTop(kj) => *kj,
+            BlockScheme::TopBottom(kj) => *kj,
+            BlockScheme::BottomTop(kj) => *kj,
+            BlockScheme::BottomBottom(kj) => *kj,
+        }
+    }
+    ///
+    /// Schema "1", Rope exits from top of the block, enters to the next on the top
+    #[allow(unused)]
+    pub fn top_top() -> Self {
+        Self::TopTop((-1.0, 1.0))
+    }
+    ///
+    /// Schema "2", Rope exits from top of the block, enters to the next on the bottom
+    #[allow(unused)]
+    pub fn top_bottom() -> Self {
+        Self::TopBottom((1.0, 1.0))
+    }
+    ///
+    /// Schema "3", Rope exits from bottom of the block, enters to the next on the top
+    #[allow(unused)]
+    pub fn bottom_top() -> Self {
+        Self::BottomTop((1.0, -1.0))
+    }
+    ///
+    /// Schema "4", Rope exits from bottom of the block, enters to the next on the bottom
+    #[allow(unused)]
+    pub fn bottom_bottom() -> Self {
+        Self::BottomBottom((-1.0, -1.0))
+    }
+
 }
 impl FromStr for BlockScheme {
     type Err = Error;
@@ -22,10 +66,10 @@ impl FromStr for BlockScheme {
     /// Retirns [BlockScheme] from str like `TopTop`, `TopBottom`, `BottomTop`, `BottomBottom`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "TopTop" => Ok(Self::TopTop),
-            "TopBottom" => Ok(Self::TopBottom),
-            "BottomTop" => Ok(Self::BottomTop),
-            "BottomBottom" => Ok(Self::BottomBottom),
+            "TopTop" => Ok(Self::TopTop((-1.0, 1.0))),
+            "TopBottom" => Ok(Self::TopBottom((1.0, 1.0))),
+            "BottomTop" => Ok(Self::BottomTop((1.0, -1.0))),
+            "BottomBottom" => Ok(Self::BottomBottom((-1.0, -1.0))),
             _ => Err(Error::new("BlockScheme", "from_str").err(format!("Unknown variant '{s}'"))),
         }
     }
@@ -38,8 +82,44 @@ pub enum BlockBind {
     Fixed,
     /// Блок на стреле
     Boom(usize),
+    /// Блок на стреле, работает впаре, подразумевается что пара соседних блоков имеет такой тип
+    BoomPair(usize),
     /// Блок на подвесе (крюке)
     Hook,
+}
+//
+//
+impl BlockBind {
+    ///
+    /// Returns Boom or BoomFixed from corresponding string
+    fn boom(s: &str) -> Result<Self, Error> {
+        let re = Regex::new(r"(boom|boompair)[ \t](\d+)").unwrap();
+        let caps = re.captures(s)
+            .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
+        let kind = caps.get(1)
+            .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'")))?;
+        let bind = caps.get(2)
+            .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
+        let bind = bind.as_str().parse()
+            .map_err(|_| Error::new("BlockBind", "from_str").err(format!("Wring Block number in '{s}', Expecting integer >= 0")))?;
+        match kind.as_str() {
+            "boom" => Ok(Self::Boom(bind)),
+            "boompair" => Ok(Self::BoomPair(bind)),
+            _ => Err(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'"))),
+        }
+    }
+    ///
+    /// Returns `true` if `self` and `other` has same kind
+    #[allow(unused)]
+    pub fn is(&self, other: Self) -> bool {
+        match (self, other) {
+            (BlockBind::Fixed, BlockBind::Fixed) => true,
+            (BlockBind::Boom(_), BlockBind::Boom(_)) => true,
+            (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
+            (BlockBind::Hook, BlockBind::Hook) => true,
+            _ => false,
+        }
+    }
 }
 impl FromStr for BlockBind {
     type Err = Error;
@@ -48,16 +128,7 @@ impl FromStr for BlockBind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase() {
             key if key == "fixed" => Ok(Self::Fixed),
-            key if key.starts_with("boom") => {
-                let re = Regex::new(r"Boom[ \t](\d+)").unwrap();
-                let caps = re.captures(s)
-                    .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
-                let bind = caps.get(1)
-                    .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
-                let bind = bind.as_str().parse()
-                    .map_err(|_| Error::new("BlockBind", "from_str").err(format!("Wring Block number in '{s}', Expecting integer >= 0")))?;
-                Ok(Self::Boom(bind))
-            }
+            key if key.starts_with("boom") => Self::boom(&key),
             key if key == "hook" => Ok(Self::Hook),
             _ => Err(Error::new("BlockBind", "from_str").err(format!("Unknown variant '{s}'"))),
         }
@@ -70,7 +141,7 @@ pub struct Block {
     pub name: String,
     /// Block position relative to boom G (end of boom)
     pub lf: Offset<f64>,
-    /// Block diameter
+    /// Block diameter, mm
     pub diameter: f64,
     /// Схема схода каната с блоком к следующему
     pub scheme: BlockScheme,
@@ -92,6 +163,8 @@ pub struct Block {
     pub rope_len_bck: f64,
     /// Текущие точки входа и схода каната с блока, считая от его начала каната 
     pub bending: Range<f64>,
+    /// Блок исключен из вычислений
+    pub skipped: bool,
 }
 //
 //
@@ -137,6 +210,29 @@ impl Block {
             rope_len_fwd,
             rope_len_bck,
             bending,
+            skipped: false,
+        }
+    }
+}
+//
+//
+impl Default for Block {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            lf: Offset::new(0.0, 0.0),
+            diameter: Default::default(),
+            scheme: BlockScheme::top_top(),
+            bind: BlockBind::Fixed,
+            pos: Offset::new(0.0, 0.0),
+            rope_alpha_fwd: Default::default(),
+            rope_alpha_bck: Default::default(),
+            wrap_alpha: Default::default(),
+            wrap_length: Default::default(),
+            rope_len_fwd: Default::default(),
+            rope_len_bck: Default::default(),
+            bending: Default::default(),
+            skipped: Default::default(),
         }
     }
 }

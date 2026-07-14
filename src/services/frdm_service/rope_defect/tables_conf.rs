@@ -8,3 +8,13 @@ pub struct TablesConf {
     #[serde(rename = "defect-image")]
     pub defect_image: String,
 }
+//
+//
+impl Default for TablesConf {
+    fn default() -> Self {
+        Self {
+            defect: Default::default(),
+            defect_image: Default::default(),
+        }
+    }
+}

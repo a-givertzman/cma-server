@@ -3,6 +3,7 @@ use std::{fs, io::Write};
 pub fn main() {
     build_slmp_module();
     println!(r"cargo:rustc-link-search=./lib/");
+    println!(r"cargo:rustc-link-arg=-Wl,--allow-shlib-undefined");
 }
 ///
 /// 

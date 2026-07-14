@@ -1,10 +1,12 @@
+use sal_core::error::Error;
+use sal_sync::services::entity::Point;
 #[cfg(test)]
-use sal_sync::services::{entity::{Point, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
+use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
-    services::task::{fn_::FnOut, fn_input::FnInput, ops::fn_add::FnAdd}
+    services::task::{EvalCycle, EvalCycleRef, FlowContext, FnAdd, FnInput, FnOut}
 };
 ///
 ///
@@ -19,128 +21,197 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
-    let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
-        FnInput::new("test", 0, &mut conf)
-    )))
+fn init_each(default: Option<impl ToString>, type_: FnConfPointType, cycle: &EvalCycleRef) -> FnInOutRef {
+    let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: default.map(|d| d.to_string()), ..Default::default()}, ..Default::default()};
+    Rc::new(RefCell::new(
+        FnInput::new("test", 0, &mut conf, cycle)
+    ))
+}
+/// Testing Add Overflow
+#[test]
+fn overflow() {
+    DebugSession::new().filter(LogLevel::Info).init();
+    let dbg = "FnAdd-overflow";
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(Some(i64::MAX), FnConfPointType::Int, &cycle);
+    let input2 = init_each(Some("1"), FnConfPointType::Int, &cycle);
+    let mut fn_add = FnAdd::new(dbg, vec![input1.clone(), input2.clone()]).unwrap();
+    let flow = FlowContext::new();
+    cycle.increment();
+    input1.borrow_mut().add(&i64::MAX.to_point(0, "test"));
+    input2.borrow_mut().add(&1i64.to_point(0, "test"));
+    let state = flow.ignore(fn_add.out());
+    // Должен вернуть Err, а не паниковать и не уходить в отрицательный диапазон
+    assert!(matches!(state, Err(_)), "Переполнение должно возвращать ошибку");
+}
+///
+/// Testing Type Promotion
+#[test]
+fn promotion() {
+    DebugSession::new().filter(LogLevel::Info).init();
+    init_once();
+    let dbg = "FnAdd-promotion";
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(Some("0"), FnConfPointType::Int, &cycle);
+    let input2 = init_each(Some("0.0"), FnConfPointType::Double, &cycle);
+    let mut fn_add = FnAdd::new(dbg, vec![input1.clone(), input2.clone()]).unwrap();
+    let flow = FlowContext::new();
+    cycle.increment();
+    input1.borrow_mut().add(&5i64.to_point(0, "test"));
+    input2.borrow_mut().add(&2.5f64.to_point(0, "test"));
+    let state = flow.ignore(fn_add.out()).unwrap().unwrap();
+    // При сложении Int и Double результат обязан стать Double
+    assert!(matches!(state, Point::Double(_)));
+    assert_eq!(state.as_double().value, 7.5);
+}
+///
+/// Testing NaN Guard
+#[test]
+fn nan_guard() {
+    DebugSession::new().filter(LogLevel::Info).init();
+    init_once();
+    let dbg = "FnAdd-nan";
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(Some("0.0"), FnConfPointType::Real, &cycle);
+    let input2 = init_each(Some("0.0"), FnConfPointType::Real, &cycle);
+    let mut fn_add = FnAdd::new(dbg, vec![input1.clone(), input2.clone()]).unwrap();
+    let flow = FlowContext::new();
+    cycle.increment();
+    input1.borrow_mut().add(&1.0f32.to_point(0, "test"));
+    input2.borrow_mut().add(&f32::NAN.to_point(0, "test"));
+    let state = flow.ignore(fn_add.out());
+    assert!(matches!(state, Err(_)), "Вредоносный NaN должен немедленно вызывать ошибку");
+}
+///
+/// Testing Cold Mode
+#[test]
+fn cold_mode() {
+    DebugSession::new().filter(LogLevel::Info).init();
+    init_once();
+    let dbg = "FnAdd-cold";
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(None::<i64>, FnConfPointType::Int, &cycle);
+    let input2 = init_each(None::<i64>, FnConfPointType::Int, &cycle);
+    let mut fn_add = FnAdd::new(dbg, vec![input1.clone(), input2.clone()]).unwrap();
+    // Сигнал не подан, входы вернут Ok(None)
+    let state = fn_add.out();
+    assert!(matches!(state, Ok(None)), "Узел должен спать при отсутствии сигнала \nresult: {:?} target: {:?}", state, Ok::<_, Error>(None::<i64>));
 }
 ///
 /// Testing Task Add Bool's
 #[test]
-fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+fn bool() {
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    log::info!("test_bool");
-    let mut value1_stored;
-    let mut value2_stored = false.to_point(0, "bool");
-    let mut target: Point;
-    let input1 = init_each("false", FnConfPointType::Bool);
-    let input2 = init_each("false", FnConfPointType::Bool);
+    let dbg = "FnAdd-bool";
+    log::info!("{dbg}");
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(Some("false"), FnConfPointType::Bool, &cycle);
+    let input2 = init_each(Some("false"), FnConfPointType::Bool, &cycle);
     let mut fn_add = FnAdd::new(
-        "test",
+        dbg,
         vec![
             input1.clone(),
             input2.clone(),
         ]
-    );
-    let test_data = vec![
-        (false, false),
-        (false, true),
-        (false, false),
-        (true, false),
-        (false, false),
-        (true, true),
-        (false, false),
-    ];
-    for (value1, value2) in test_data {
-        let point1 = value1.to_point(0, "test");
-        let point2 = value2.to_point(0, "test");
-        input1.borrow_mut().add(&point1);
-        let state = fn_add.out().unwrap();
-        log::debug!("value1: {:?}   |   state: {:?}", value1, state);
-        value1_stored = point1.clone();
-        target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
-        assert_eq!(state.as_bool().value, target.as_bool().value);
-        input2.borrow_mut().add(&point2);
-        let state = fn_add.out().unwrap();
-        log::debug!("value2: {:?}   |   state: {:?}", value2, state);
-        value2_stored = point2.clone();
-        target = Point::Bool(value1_stored.as_bool() + value2_stored.as_bool());
-        assert_eq!(state.as_bool().value, target.as_bool().value);
-    }
+    ).unwrap();
+    let flow = FlowContext::new();
+    cycle.increment();
+    let point = false.to_point(0, "test");
+    input1.borrow_mut().add(&point);
+    let state = flow.ignore(fn_add.out());
+    log::debug!("{dbg} | value: {:?}   |   state: {:?}", point.value(), state);
+    assert!(matches!(state, Err(_)));
+    let point = true.to_point(0, "test");
+    input2.borrow_mut().add(&point);
+    let state = flow.ignore(fn_add.out());
+    log::debug!("{dbg} | value2: {:?}   |   state: {:?}", point.value(), state);
+    assert!(matches!(state, Err(_)));
 }
 ///
 /// Testing Task Add Int's
 #[test]
-fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+fn int() {
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    log::info!("test_int");
+    let dbg = "FnAdd-int";
+    log::info!("{dbg}");
     let mut value1_stored;
     let mut value2_stored = 0.to_point(0, "int");
     let mut target: i64;
-    let input1 = init_each("0", FnConfPointType::Int);
-    let input2 = init_each("0", FnConfPointType::Int);
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(Some("0"), FnConfPointType::Int, &cycle);
+    let input2 = init_each(Some("0"), FnConfPointType::Int, &cycle);
     let mut fn_add = FnAdd::new(
-        "test",
+        dbg,
         vec![
             input1.clone(),
             input2.clone(),
         ]
-    );
+    ).unwrap();
     let test_data = vec![
-        (1, 1),
-        (2, 2),
-        (5, 5),
-        (-1, 1),
-        (-5, 1),
-        (1, -1),
-        (1, -5),
-        (0, 0),
-        (i64::MIN, 0),
-        (0, i64::MIN),
-        (i64::MAX, 0),
-        (0, i64::MAX),
+        (01, 1, 1, Ok(())),
+        (02, 2, 2, Ok(())),
+        (03, 5, 5, Ok(())),
+        (04, -1, 1, Ok(())),
+        (05, -5, 1, Ok(())),
+        (06, 1, -1, Ok(())),
+        (07, 1, -5, Ok(())),
+        (08, 0, 0, Ok(())),
+        (09, i64::MIN, 0, Ok(())),
+        (10, 0, i64::MIN, Ok(())),
+        (11, i64::MAX, 0, Ok(())),
+        (12, 0, i64::MAX, Ok(())),
+        (13, 1, i64::MAX, Err(())),
     ];
-    for (value1, value2) in test_data {
+    let flow = FlowContext::new();
+    for (step, value1, value2, target_kind) in test_data {
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
-        input1.borrow_mut().add(&point1);
-        let state = fn_add.out().unwrap();
-        log::debug!("value1: {:?}   |   state: {:?}", value1, state);
-        value1_stored = point1.clone();
-        target = value1_stored.as_int().value + value2_stored.as_int().value;
-        let result = state.as_int().value;
-        assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
-        input2.borrow_mut().add(&point2);
-        let state = fn_add.out().unwrap();
-        log::debug!("value2: {:?}   |   state: {:?}", value2, state);
-        value2_stored = point2.clone();
-        target = value1_stored.as_int().value + value2_stored.as_int().value;
-        let result = state.as_int().value;
-        assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
+        if target_kind.is_ok() {
+            input1.borrow_mut().add(&point1);
+            let state = flow.ignore(fn_add.out()).unwrap().unwrap();
+            log::debug!("{dbg} | step {step}: value1: {:?}   |   state: {:?}", value1, state);
+            value1_stored = point1.clone();
+            target = value1_stored.as_int().value + value2_stored.as_int().value;
+            let result = state.as_int().value;
+            assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
+            input2.borrow_mut().add(&point2);
+            let state = flow.ignore(fn_add.out()).unwrap().unwrap();
+            log::debug!("{dbg} | step {step}: value2: {:?}   |   state: {:?}", value2, state);
+            value2_stored = point2.clone();
+            target = value1_stored.as_int().value + value2_stored.as_int().value;
+            let result = state.as_int().value;
+            assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
+        } else {
+            input1.borrow_mut().add(&point1);
+            input2.borrow_mut().add(&point2);
+            let result = flow.ignore(fn_add.out());
+            assert!(matches!(result, Err(_)), "\n result: {:?} \n target: Err(_)", result);
+        }
     }
 }
 ///
 /// Testing Add Real's
 #[test]
 fn real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    log::info!("fn_mul_real");
+    let dbg = "FnAdd-real";
+    log::info!("dbg");
     let mut value1_stored;
     let mut value2_stored = 0.0f32.to_point(0, "real");
     let mut target: f32;
-    let input1 = init_each("0.0", FnConfPointType::Real);
-    let input2 = init_each("0.0", FnConfPointType::Real);
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(Some("0.0"), FnConfPointType::Real, &cycle);
+    let input2 = init_each(Some("0.0"), FnConfPointType::Real, &cycle);
     let mut fn_mul = FnAdd::new(
-        "test",
+        dbg,
         vec![
             input1.clone(),
             input2.clone(),
         ]
-    );
+    ).unwrap();
     let test_data = vec![
         (01, 0.1, 0.1),
         (02, 0.2, 0.2),
@@ -163,19 +234,20 @@ fn real() {
         (19, 0.5, f32::MAX),
         (20, 1.0, f32::MAX),
     ];
+    let flow = FlowContext::new();
     for (step, value1, value2) in test_data {
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
-        let state = fn_mul.out().unwrap();
-        log::debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
+        let state = flow.ignore(fn_mul.out()).unwrap().unwrap();
+        log::debug!("{dbg} | step {}:  value1: {:?}   |   state: {:?}", step, value1, state);
         value1_stored = point1.clone();
         target = value1_stored.as_real().value + value2_stored.as_real().value;
         let result = state.as_real().value;
         assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
         input2.borrow_mut().add(&point2);
-        let state = fn_mul.out().unwrap();
-        log::debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
+        let state = flow.ignore(fn_mul.out()).unwrap().unwrap();
+        log::debug!("{dbg} | step {}:  value2: {:?}   |   state: {:?}", step, value2, state);
         value2_stored = point2.clone();
         target = value1_stored.as_real().value + value2_stored.as_real().value;
         let result = state.as_real().value;
@@ -186,21 +258,23 @@ fn real() {
 /// Testing Add Double's
 #[test]
 fn double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
-    log::info!("fn_mul_double");
+    let dbg = "FnAdd-double";
+    log::info!("{dbg}");
     let mut value1_stored;
     let mut value2_stored = 0.0f64.to_point(0, "double");
     let mut target: f64;
-    let input1 = init_each("0.0", FnConfPointType::Double);
-    let input2 = init_each("0.0", FnConfPointType::Double);
+    let cycle = Rc::new(EvalCycle::new());
+    let input1 = init_each(Some("0.0"), FnConfPointType::Double, &cycle);
+    let input2 = init_each(Some("0.0"), FnConfPointType::Double, &cycle);
     let mut fn_mul = FnAdd::new(
-        "test",
+        dbg,
         vec![
             input1.clone(),
             input2.clone(),
         ]
-    );
+    ).unwrap();
     let test_data = vec![
         (01, 0.1, 0.1),
         (02, 0.2, 0.2),
@@ -223,19 +297,20 @@ fn double() {
         (19, 0.5, f64::MAX),
         (20, 1.0, f64::MAX),
     ];
+    let flow = FlowContext::new();
     for (step, value1, value2) in test_data {
         let point1 = value1.to_point(0, "test");
         let point2 = value2.to_point(0, "test");
         input1.borrow_mut().add(&point1);
-        let state = fn_mul.out().unwrap();
-        log::debug!("step: {}  |  value1: {:?}   |   state: {:?}", step, value1, state);
+        let state = flow.ignore(fn_mul.out()).unwrap().unwrap();
+        log::debug!("{dbg} | step {step}:  value1: {:?}   |   state: {:?}", value1, state);
         value1_stored = point1.clone();
         target = value1_stored.as_double().value + value2_stored.as_double().value;
         let result = state.as_double().value;
         assert_eq!(result, target, "\n result: {} \n target: {}", result, target);
         input2.borrow_mut().add(&point2);
-        let state = fn_mul.out().unwrap();
-        log::debug!("step: {}  |  value2: {:?}   |   state: {:?}", step, value2, state);
+        let state = flow.ignore(fn_mul.out()).unwrap().unwrap();
+        log::debug!("{dbg} | step {step}:  value2: {:?}   |   state: {:?}", value2, state);
         value2_stored = point2.clone();
         target = value1_stored.as_double().value + value2_stored.as_double().value;
         let result = state.as_double().value;

@@ -3,7 +3,7 @@ mod tests {
     use std::{sync::Once, time::Duration, thread::{self}};
     use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
     use sal_sync::sync::channel::{self, RecvTimeoutError};
-    use crate::domain::constants::constants::RECV_TIMEOUT;
+    use crate::domain::RECV_TIMEOUT;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     // use super::*;
@@ -29,7 +29,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn test_mpsc_receiver() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         println!("test mpsc::Receiver");

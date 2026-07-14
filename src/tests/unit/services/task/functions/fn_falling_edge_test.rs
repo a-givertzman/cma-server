@@ -2,11 +2,11 @@
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use testing::entities::test_value::Value;
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{
-        edge_detection::fn_falling_edge::FnFallingEdge, fn_::FnOut, fn_input::FnInput
+        EvalCycle, EvalCycleRef, FnFallingEdge, FnInput, FnOut
     }
 };
 ///
@@ -22,7 +22,7 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(parent: &str, initial: Value) -> FnInOutRef {
+fn init_each(parent: &str, initial: Value, cycle: &EvalCycleRef) -> FnInOutRef {
     let mut conf = FnConfig {
         name: "test".to_owned(),
         type_: match initial {
@@ -44,19 +44,20 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
             ..Default::default()}, ..Default::default()
     };
 
-    Rc::new(RefCell::new(Box::new(
-        FnInput::new(parent, 0, &mut conf)
-    )))
+    Rc::new(RefCell::new(
+        FnInput::new(parent, 0, &mut conf, cycle)
+    ))
 }
 ///
 ///
 #[test]
 fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_bool";
     log::info!("{}", self_id);
-    let input = init_each(&self_id, Value::Bool(false));
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&self_id, Value::Bool(false), &cycle);
     let mut fn_rising_edge = FnFallingEdge::new(
         self_id,
         input.clone(),
@@ -79,10 +80,11 @@ fn test_bool() {
         (14,    false,     false),
     ];
     for (step, value, target) in test_data {
+        cycle.increment();
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let result = fn_rising_edge.out().unwrap();
+        let result = fn_rising_edge.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
     assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);
@@ -92,11 +94,12 @@ fn test_bool() {
 ///
 #[test]
 fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_int";
     log::info!("{}", self_id);
-    let input = init_each(&self_id, Value::Int(0));
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&self_id, Value::Int(0), &cycle);
     let mut fn_rising_edge = FnFallingEdge::new(
         self_id,
         input.clone(),
@@ -119,10 +122,11 @@ fn test_int() {
         (14,    -10,    false),
     ];
     for (step, value, target) in test_data {
+        cycle.increment();
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let result = fn_rising_edge.out().unwrap();
+        let result = fn_rising_edge.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
     assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);
@@ -132,17 +136,18 @@ fn test_int() {
 ///
 #[test]
 fn test_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_real";
     log::info!("{}", self_id);
-    let input = init_each(&self_id, Value::Real(0.0));
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&self_id, Value::Real(0.0), &cycle);
     let mut fn_rising_edge = FnFallingEdge::new(
         self_id,
         input.clone(),
     );
     let test_data = vec![
-        (00,    0.0,      false),
+        (00,    0.0f32,   false),
         (01,    0.0,      false),
         (02,    0.1,      false),
         (03,    0.0,      true),
@@ -159,10 +164,11 @@ fn test_real() {
         (14,    -10.0,    false),
     ];
     for (step, value, target) in test_data {
+        cycle.increment();
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let result = fn_rising_edge.out().unwrap();
+        let result = fn_rising_edge.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
     assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);
@@ -172,11 +178,12 @@ fn test_real() {
 ///
 #[test]
 fn test_double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     let self_id = "test_real";
     log::info!("{}", self_id);
-    let input = init_each(&self_id, Value::Double(0.0));
+    let cycle = Rc::new(EvalCycle::new());
+    let input = init_each(&self_id, Value::Double(0.0), &cycle);
     let mut fn_rising_edge = FnFallingEdge::new(
         self_id,
         input.clone(),
@@ -199,10 +206,11 @@ fn test_double() {
         (14,    -10.0,    false),
     ];
     for (step, value, target) in test_data {
+        cycle.increment();
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        let result = fn_rising_edge.out().unwrap();
+        let result = fn_rising_edge.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
         log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
     assert!(result.as_bool().value.0 == target, "\nresult: {:?}\ntarget: {:?}", result, target);

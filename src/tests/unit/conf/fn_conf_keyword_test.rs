@@ -24,7 +24,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for valid input
     #[test]
     fn valid() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test_create_valid");
@@ -61,7 +61,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for invalid input
     #[test]
     fn invalid() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::info!("test_create_invalid");
@@ -102,7 +102,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for valid input with options
     #[test]
     fn valid_options() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         log::debug!("valid_options");

@@ -2,10 +2,10 @@
 
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, services::task::{
-        fn_::FnOut, fn_input::FnInput, fn_var::FnVar,
+        EvalCycle, FlowContext, FnInput, FnOut, FnVar
     }
 };
 ///
@@ -23,15 +23,16 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
-        FnInput::new("test", 0, &mut conf)
-    )))
+    let cycle = Rc::new(EvalCycle::new());
+    Rc::new(RefCell::new(
+        FnInput::new("test", 0, &conf, &cycle)
+    ))
 }
 ///
 ///
 #[test]
 fn test_bool() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_bool");
     let input = init_each("false", FnConfPointType::Bool);
@@ -55,22 +56,23 @@ fn test_bool() {
         false,
         false,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }
 
 
 #[test]
 fn test_int() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_int");
     let input = init_each("0", FnConfPointType::Int);
@@ -91,22 +93,23 @@ fn test_int() {
         i64::MIN,
         i64::MAX,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }
 ///
 ///
 #[test]
 fn test_real() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_real");
     let input = init_each("0.0", FnConfPointType::Real);
@@ -127,22 +130,23 @@ fn test_real() {
         f32::MIN,
         f32::MAX,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }
 ///
 ///
 #[test]
 fn test_double() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_double");
     let input = init_each("0.0", FnConfPointType::Double);
@@ -163,14 +167,15 @@ fn test_double() {
         f64::MIN,
         f64::MAX,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }

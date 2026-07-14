@@ -1,3 +1,4 @@
+use sal_sync::services::{PointRegistry, PointRegistryConf, RegistryConf, entity::{PointConf, PointConfHistory, PointType}};
 #[cfg(test)]
 
 use sal_sync::{services::{
@@ -5,7 +6,7 @@ use sal_sync::{services::{
 }, thread_pool::ThreadPool};
 use std::{env, sync::{Arc, Once}, time::{Duration, Instant}};
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::services::task::{Task, TaskConf, TaskTestProducer, TaskTestReceiver};
 ///
 ///
@@ -25,7 +26,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn structure() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = "task_test";
@@ -38,19 +39,24 @@ fn structure() {
     let iterations = 10;
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
-    let config = TaskConf::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-            retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
+        ConfTree::empty(),
+    ), Some(tp.scheduler()))
+        .unwrap()
+        .with_point_registry(PointRegistry::new(dbg, RegistryConf::default(), Some(tp.scheduler())).unwrap()
+        .with_registry([("/path/Point.Name".into(), vec![PointConf {
+            id: 123,
+            name: "/path/Point.Name".into(),
+            type_: PointType::Bool, history: PointConfHistory::None,
+            alarm: None, address: None, filters: None, comment: None,
+        }])])));
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         iterations,
     ));
     services.insert(receiver.clone());      // "TaskTestReceiver",
@@ -114,7 +120,7 @@ fn structure() {
 #[test]
 #[ignore = "TODO - transfered values assertion not implemented yet"]
 fn transfer() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     log::info!("test");
@@ -126,19 +132,18 @@ fn transfer() {
     log::trace!("dir: {:?}", env::current_dir());
     let path = "./src/tests/unit/services/task/task_test_struct.yaml";
     // let path = "./src/tests/unit/task/task_test.yaml";
-    let config = TaskConf::read(&self_name, path);
+    let config = TaskConf::read(&self_name, path).unwrap();
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
-        ConfTree::new_root(serde_yaml::from_str(r#"
-            retain:
-        "#).unwrap()),
-    ), Some(tp.scheduler())));
+        ConfTree::empty(),
+    ), Some(tp.scheduler()))
+        .unwrap()
+        .with_point_registry(PointRegistry::new(dbg, RegistryConf::default(), Some(tp.scheduler())).unwrap()));
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         iterations,
     ));
     services.insert(receiver.clone());      // "TaskTestReceiver",

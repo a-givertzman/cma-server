@@ -1,10 +1,10 @@
 #[cfg(test)]
 
 use regex::Regex;
-use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
+use sal_sync::{services::{MultiQueue, MultiQueueConf, Service, Services, conf::{ConfTree, ServicesConf}, entity::{Name, Point}}, thread_pool::ThreadPool};
 use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     services::{
         task::{Task, TaskConf, TaskTestReceiver}, ApiClient, ApiClientConf
@@ -29,7 +29,7 @@ fn init_each() -> () {}
 /// Testing the Recorder | Basic metric - 'distribution by load' metric only (count & load per cycle)
 #[test]
 fn operating_metric_cycles_distribution_by_load_test() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     init_each();
     let dbg = "AppTest";
@@ -100,7 +100,6 @@ fn operating_metric_cycles_distribution_by_load_test() {
     let receiver = Arc::new(TaskTestReceiver::new(
         dbg,
         "",
-        "in-queue",
         total_count * 1000,
     ));
     services.insert(receiver.clone());
@@ -157,33 +156,15 @@ fn operating_metric_cycles_distribution_by_load_test() {
     let targets = targets();
     let mut index = 0;
     for result in receiver.received() {
-        if result.name().starts_with("input34_1") {
-            let name = result.name();
-            let result = result.as_string().value;
-            let target = targets[index];
-            assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-            index += 1;
-        }
-        if result.name().starts_with("input34_2") {
-            let name = result.name();
-            let result = result.as_string().value;
-            let target = targets[index];
-            assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-            index += 1;
-        }
-        if result.name().starts_with("input34_3") {
-            let name = result.name();
-            let result = result.as_string().value;
-            let target = targets[index];
-            assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-            index += 1;
-        }
-        if result.name().starts_with("input34_4") {
-            let name = result.name();
-            let result = result.as_string().value;
-            let target = targets[index];
-            assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
-            index += 1;
+        if let Point::String(result) = result {
+            let sql = &result.value;
+            if sql.starts_with("update public.basic_metric set value") {
+                let name = result.name;
+                let result = result.value;
+                let target = targets[index];
+                assert!(Regex::new(target).unwrap().is_match(&result), "index {}, name '{}' \nresult: {:?}\ntarget: {:?}", index, name, result, target);
+                index += 1;
+            }
         }
     };
     assert!(index == targets.len(), "result: {:?}\ntarget: {:?}", index, targets.len());

@@ -14,8 +14,11 @@ pub mod slmp_parse_int;
 pub mod slmp_parse_real;
 
 pub mod device_code;
+mod parse_point;
 
 pub mod c_slmp_const;
 pub mod c_slmp_info;
 
 pub mod slmp_packet;
+
+pub(super) use parse_point::*;

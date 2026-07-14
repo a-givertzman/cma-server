@@ -22,6 +22,8 @@ pub struct Boom {
     pub dpt: Offset<f64>,
     /// Boom G point - end of boom
     pub gpt: Offset<f64>,
+    /// Угол в парковочном положении, град
+    pub parking: f64
 }
 impl Boom {
     ///
@@ -32,7 +34,7 @@ impl Boom {
     /// - `l2` - Горизонтальное смещение точки D, мм
     /// - `l3` - Вертикальное смещение начала стрелы относительно..., мм
     /// - `l4` - Горизонтальное смещение начала стрелы относительно..., мм
-    pub fn new(name: impl Into<String>, alpha_input: InputKind<f64>, len_input: InputKind<f64>, l1: f64, l2: f64, l3: f64, l4: f64) -> Self {
+    pub fn new(name: impl Into<String>, alpha_input: InputKind<f64>, len_input: InputKind<f64>, l1: f64, l2: f64, l3: f64, l4: f64, parking: f64) -> Self {
         Self {
             name: name.into(),
             alpha_input: match &alpha_input {
@@ -58,6 +60,7 @@ impl Boom {
             l4,
             dpt: Offset::new(0.0, 0.0),
             gpt: Offset::new(0.0, 0.0),
+            parking,
         }
     }
 }

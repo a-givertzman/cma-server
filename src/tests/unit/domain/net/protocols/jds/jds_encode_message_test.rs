@@ -34,7 +34,7 @@ mod jds_encode_message {
     ///
     #[test]
     fn basic() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         println!("test");

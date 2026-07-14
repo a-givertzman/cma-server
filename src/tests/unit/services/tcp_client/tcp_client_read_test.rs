@@ -6,7 +6,7 @@ mod tcp_client {
     }, sync::channel, thread_pool::ThreadPool};
     use std::{io::Write, net::TcpListener, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         conf::tcp_client_conf::TcpClientConf,
         domain::{net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, RwLock},
@@ -31,7 +31,7 @@ mod tcp_client {
     ///
     #[test]
     fn read() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "TcpClient-READ";
@@ -90,7 +90,7 @@ mod tcp_client {
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let multi_queue = Arc::new(MockMultiQueue::new(dbg, "", Some(total_count)));
         let tcp_client = Arc::new(TcpClient::new(conf, services.clone(), tp.scheduler()));
         let multi_queue_service_id = multi_queue.name().join();

@@ -9,7 +9,7 @@ mod cma_recorder {
     }, thread_pool::ThreadPool};
     use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{
         services::{
             ApiClient, ApiClientConf,
@@ -35,7 +35,7 @@ mod cma_recorder {
     /// Testing the Recorder | Basic metric - all basic metrics
     #[test]
     fn operating_cycle_live_data() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         init_each();
         let dbg = "AppTest";
@@ -55,7 +55,7 @@ mod cma_recorder {
                     point:
                         path: point/id.json
             "#).unwrap()),
-        ), Some(tp.scheduler())));
+        ), Some(tp.scheduler())).unwrap());
         let mut tasks = vec![];
         let path = "./src/tests/unit/services/task/cma_recorder/basic-metric.yaml";
         match fs::read_to_string(path) {
@@ -66,7 +66,7 @@ mod cma_recorder {
                         for (key, config) in config.as_mapping().unwrap() {
                             let mut conf = serde_yaml::Mapping::new();
                             conf.insert(key.clone(), config.clone());
-                            let config = TaskConf::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf));
+                            let config = TaskConf::from_yaml(&self_name, &serde_yaml::Value::Mapping(conf)).unwrap();
                             let task = Arc::new(Task::new(config, services.clone(), tp.scheduler()));
                             services.insert(task.clone());
                             tasks.push(task);
@@ -274,7 +274,6 @@ mod cma_recorder {
         let receiver = Arc::new(TaskTestReceiver::new(
             dbg,
             "",
-            "in-queue",
             total_count * 1000,
         ));
         services.insert(receiver.clone());

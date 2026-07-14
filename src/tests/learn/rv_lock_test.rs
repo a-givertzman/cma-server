@@ -2,11 +2,10 @@
 //! Trying to estimate difference between accessing to the values stored in the HashMap / RwLock<HasMap> / Mutex<HasMap> or using match
 #[cfg(test)]
 mod tests {
-    use hashers::fx_hash::FxHasher;
-    use sal_sync::sync::channel;
+    use sal_sync::{collections::FxHashMap, sync::channel};
     use std::{collections::HashMap, hash::BuildHasherDefault, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::domain::{Mutex, RwLock};
 
     ///
@@ -30,7 +29,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn map_in_rv_lock() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         let self_id = "test access to map behaind RvLock";
         println!("\n{}", self_id);
@@ -40,7 +39,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let map = Arc::new(
-            RwLock::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
+            RwLock::new(FxHashMap::default())
         );
         let (send, recv) = channel::unbounded();
         for key in KEYS {
@@ -109,7 +108,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn just_map() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         let self_id = "test direct access to map";
         println!("\n{}", self_id);
@@ -118,7 +117,7 @@ mod tests {
         let test_data = init_each(self_id);
 
         let test_data_len = test_data.len();
-        let mut map = HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
+        let mut map = FxHashMap::default();
         let (send, recv) = channel::unbounded();
         for key in KEYS {
             map.insert(key, send.clone());
@@ -186,7 +185,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn map_in_mutex() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         let self_id = "test access to map behaind Mutex";
         println!("\n{}", self_id);
@@ -196,7 +195,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let map = Arc::new(
-            Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
+            Mutex::new(FxHashMap::default())
         );
         let (send, recv) = channel::unbounded();
         for key in KEYS {
@@ -265,7 +264,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn matching() {
-        DebugSession::init(LogLevel::Info, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Info).init();
         init_once();
         let self_id = "test access values using match";
         println!("\n{}", self_id);
@@ -275,7 +274,7 @@ mod tests {
 
         let test_data_len = test_data.len();
         let map = Arc::new(
-            Mutex::new(HashMap::with_hasher(BuildHasherDefault::<FxHasher>::default()))
+            Mutex::new(FxHashMap::default())
         );
         let (send, recv) = channel::unbounded();
         for key in KEYS {

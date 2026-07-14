@@ -1,6 +1,7 @@
+use regex::Regex;
 use sal_sync::{services::entity::{Name, Object, Point}, sync::channel::{Receiver, RecvTimeoutError}};
 use crate::{
-    domain::{constants::constants::RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
+    domain::{RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
 };
 ///
 /// Converts PointType into the squence of bytes
@@ -40,7 +41,10 @@ impl StreamRead<serde_json::Value, RecvError> for JdsSerialize {
     fn read(&mut self) -> Result<serde_json::Value, RecvError> {
         match self.stream.recv_timeout(RECV_TIMEOUT) {
             Ok(point) => {
-                log::trace!("{}.read | point: {:?}", self.id, point);
+                let re = Regex::new(r#"Inf:/\S+?/\S+?/(?:Connection|Status)"#).unwrap();
+                if re.is_match(&point.name()) {
+                    log::debug!("{}.read | Point to be sent: \n\t{:?}", self.id, point);
+                }
                 match serde_json::to_value(&point) {
                     Ok(point) => Ok(point),
                     Err(err) => Err(RecvError::Error(format!("{}.read | Serialize error: {:?}", self.id, err))),

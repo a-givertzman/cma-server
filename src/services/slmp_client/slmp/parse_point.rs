@@ -1,0 +1,25 @@
+use chrono::{DateTime, Utc};
+use sal_core::error::Error;
+use sal_sync::services::entity::{Point, PointConfAddress, Status};
+///
+/// Returns updated points parsed from the data slice from the S7 device,
+pub trait ParsePoint: Send {
+    ///
+    /// Returns new point parsed from the data slice [bytes] with the given [timestamp] and Status::Ok
+    fn next(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point>;
+    ///
+    /// Returns new point (prevously parsed) with the given [status]
+    fn next_status(&mut self, status: Status, ts: DateTime<Utc>) -> Option<Point>;
+    // ///
+    // /// Returns true if value or status was updated since last call [addRaw()]
+    // fn is_changed(&self) -> bool;
+    ///
+    /// Returns raw protocol specific address
+    fn address(&self) -> PointConfAddress;
+    ///
+    /// Returns size of the type in the bytes
+    fn size(&self) -> usize;
+    ///
+    /// Returns protocol specific bytes ready to write represents [value]
+    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, Error>;
+}

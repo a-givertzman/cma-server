@@ -4,7 +4,7 @@ use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration
 };
 use crate::{
-    domain::{constants::constants::RECV_TIMEOUT},
+    domain::{RECV_TIMEOUT},
     services::server::{
         connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection,
         TcpServerConf,
@@ -94,13 +94,11 @@ impl TcpServer {
                                 log::warn!("{}.setup_connection | Send tcpStream error {:?}", con_info.dbg, err);
                             }
                         }
-                        log::info!("{}.setup_connection | connections.lock...", con_info.dbg);
                         connections.insert(
                             con_info.connection_id,
                             Arc::new(Box::new(connection)),
                             send,
                         );
-                        log::info!("{}.setup_connection | connections.lock - ok", con_info.dbg);
                     }
                     Err(err) => {
                         log::warn!("{}.setup_connection | error: {:?}", con_info.dbg, err);
@@ -224,7 +222,6 @@ impl Service for TcpServer {
             log::info!("{}.run | Exit...", dbg);
             connections.wait();
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {

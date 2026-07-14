@@ -1,6 +1,6 @@
 [package]
 name = "cma-server"
-version = "0.1.3"
+version = "0.3.1"
 edition = "2024"
 
 build = "build.rs"
@@ -11,85 +11,122 @@ build = "build.rs"
 plot = ["dep:winit"]
 
 [dependencies]
-log = "~0.4"
-env_logger = "~0.11"
+log = "^0.4"
+env_logger = "^0.11"
+
 #
 # date & time
-chrono = "~0.4"
+chrono = { version = "^0.4", features = ["serde"] }
+
 #
 # Internal
 sal-core = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-sal-core.git" }
 testing = { tag = "0.1.2", git = "https://github.com/a-givertzman/rust-testing.git" }
-debugging = { tag = "0.0.1", git = "https://github.com/a-givertzman/rust-debuging.git" }
-api-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/rust-api-tools.git" }
+debugging = { tag = "0.1.0", git = "https://github.com/a-givertzman/rust-debuging.git" }
+api-tools = { tag = "0.2.3", git = "https://github.com/a-givertzman/rust-api-tools.git" }
+sal-sync = { tag = "0.3.2", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
+frdm-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/frdm-server.git" }
+
 # sal-sync = { path = "../sal-sync" }
-sal-sync = { tag = "0.3.0", git = "https://github.com/a-givertzman/rust-sal-sync.git" }
-frdm-tools = { tag = "0.1.0", git = "https://github.com/a-givertzman/frdm-server.git" }
+
 #
 # Serde
-serde = { version = "~1.0", features = ["derive"] }
-serde_yaml = "~0.9"
-serde_json = "~1.0"
+serde = { version = "^1.0", features = ["derive"] }
+serde_yaml = "^0.9"
+serde_json = "^1.0"
+postcard = { version = "^1.1", features = ["alloc", "use-std"]}
 
-regex = "~1.11"
+#
+# SQL
+sqlparser = "^0.62"
+
+#
+# Regex
+regex = "^1.12"
+
+#
+# IO
+csv = "^1.4"
+spreadsheet-ods = "^1.0"
+tempfile = "^3.27"
 
 #
 # Math
-rand = "~0.9"
-rustfft = "~6.4"
+rand = "^0.10"
+rustfft = "^6.4"
 
 #
 # Tread safe
-parking_lot = "~0.12"
-once_cell = "~1.21"
-lazy_static = "~1.5"
-kanal = { version = "~0.1", git = "https://github.com/fereidani/kanal.git" }
-dashmap = "~6.1"
-coco = "~0.3"
+parking_lot = "^0.12"
+once_cell = "^1.21"
+lazy_static = "^1.5"
+kanal = { version = "^0.1" }
+dashmap = "^6.1"
+coco = "^0.3"
+arc-swap = "^1.8"
+scc = "^3.7"
 
 #
 # Collections
-linked-hash-map = "~0.5"
-indexmap = "~2.10"
-hashers = "~1.0"
-circular-buffer = "~1.1"
+linked-hash-map = "^0.5"
+indexmap = "^2.14"
+# hashers = "^1.0"
+rustc-hash = "^2.1"
+# circular-buffer = "^2.0"
 
 #
 # CPP integrations
 # snap7 = "~0.0"
 snap7-sys = "~0.1"
-libc = "~0.2"
-libloading = "~0.8"
+libc = "^0.2"
+libloading = "^0.9"
 
 #
 # fast string concatinations
-concat-string = "~1.0"
+concat-string = "^1.0"
 
-signal-hook = "~0.3"
+signal-hook = "^0.4"
 
-strum = "~0.27"
-strum_macros = "~0.27"
+strum = "^0.28"
+strum_macros = "^0.28"
 
 #
 # CLI
-clap = { version = "~4.5", features = ["derive"] }
+clap = { version = "^4.5", features = ["derive"] }
 
 #
 # UI
-egui = "~0.32"
-egui_plot = "~0.33"
-egui_extras = "~0.32"
-eframe = "~0.32"
+egui = "^0.33"
+egui_plot = "^0.34"
+egui_extras = "^0.33"
+eframe = "^0.33"
 hsl = "~0.1"
-winit = { version = "~0.30", optional = true }
+winit = { version = "^0.30", optional = true }
 #winit = { version = "~0.30" }
 
-uid = "~0.1"
+uid = "^0.1"
 
-derivative = "~2.2"
+derivative = "^2.2"
 
-# plotters = "~0.3"
-plotters = { version = "~0.3", features = ["ab_glyph", "fontconfig-dlopen"] }
+function_name = "^0.3"
+
+# plotters
+plotters = { version = "^0.3", features = ["ab_glyph", "fontconfig-dlopen"] }
+
+[dev-dependencies]
 
 [build-dependencies]
 cc = "~1.2"
+
+[profile.release]
+opt-level = 3          # Максимальная оптимизация скорости (по умолчанию 3)
+lto = true             # Включает Link-Time Optimization (оптимизация между крэйтами)
+codegen-units = 1      # Уменьшает параллельные блоки компиляции ради лучшей оптимизации
+panic = "abort"        # Убирает раскрутку стека при панике (уменьшает бинарник и ускоряет код)
+
+[profile.fast-test]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 16
+panic = "unwind"

@@ -1,11 +1,11 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
-     domain::FnInOutRef,
+     domain::{FnInOutRef, FnOutRef},
     services::task::{
-        fn_::FnOut, fn_count::FnCount, fn_input::FnInput,
+        FnCount, FnInput, FnOut
     }
 };
 ///
@@ -21,25 +21,26 @@ fn init_once() {
 ///
 /// returns:
 ///  - ...
-fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
+fn init_each(default: &str, type_: FnConfPointType) -> (FnOutRef, FnInOutRef) {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    let input = Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ));
+    (input.clone(), input)
 }
 ///
 ///
 #[test]
 fn test_single() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_single");
-    let initial = Some(init_each("0", FnConfPointType::Int));
-    let input = init_each("false", FnConfPointType::Bool);
+    let (initial, _) = init_each("0", FnConfPointType::Int);
+    let (input1, input) = init_each("false", FnConfPointType::Bool);
     let mut fn_count = FnCount::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1,
     );
     let test_data = vec![
         (false, 0),
@@ -71,15 +72,15 @@ fn test_single() {
 
 #[test]
 fn test_multiple() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_multiple");
-    let initial = Some(init_each("0", FnConfPointType::Int));
-    let input = init_each("false", FnConfPointType::Bool);
+    let (initial, _) = init_each("0", FnConfPointType::Int);
+    let (input1, input) = init_each("false", FnConfPointType::Bool);
     let mut fn_count = FnCount::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1,
     );
     let test_data = vec![
         (false, 0),
@@ -110,15 +111,15 @@ fn test_multiple() {
 
 #[test]
 fn test_multiple_reset() {
-    DebugSession::init(LogLevel::Info, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Info).init();
     init_once();
     log::info!("test_multiple_reset");
-    let initial = Some(init_each("0", FnConfPointType::Int));
-    let input = init_each("false", FnConfPointType::Bool);
+    let (initial, _) = init_each("0", FnConfPointType::Int);
+    let (input1, input) = init_each("false", FnConfPointType::Bool);
     let mut fn_count = FnCount::new(
         "test",
-        initial,
-        input.clone(),
+        Some(initial),
+        input1,
     );
     let test_data = vec![
         (false, 0, false),
