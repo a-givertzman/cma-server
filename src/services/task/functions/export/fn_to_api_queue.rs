@@ -92,6 +92,7 @@ impl FnOut for FnToApiQueue {
         log::trace!("{}.out | input: {:?}", self.id, input);
         if flow.is_new() {
             let sql: String = (&input).try_to().map_err(|err: sal_core::error::Error| err_pass!(self.id, err).to_string())?;
+            let sql = sql.trim().to_owned();
             if !sql.is_empty() {
                 self.send(self.point_with(&input, sql));
             }
