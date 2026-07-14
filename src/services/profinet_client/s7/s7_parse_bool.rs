@@ -1,58 +1,90 @@
-use sal_core::error::Error;
-use sal_sync::services::{
+use function_name::named;
+use sal_core::{dbg::Dbg, error::Error};
+use sal_sync::{kernel::state::ChangeNotify, services::{
     entity::{Cot, Point, PointConf, PointConfAddress, PointHlr, Status},
     types::Bool,
-};
+}};
 use chrono::{DateTime, Utc};
-use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::profinet_client::parse_point::ParsePoint};
+use crate::{domain::filter::filter::{Filter, FilterEmpty}, err, services::profinet_client::parse_point::ParsePoint};
 
 ///
+/// Состояние парсинга
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ParseState {
+    Ok,
+    Err,
+}
 ///
-#[derive(Debug)]
+/// ### ProfinetClient | S7ParseBool 
+/// 
+/// Парсер булевых значений из пакета данных Profinet S7.
+///
+/// - Извлекает заданный бита из заданного 8-битного слова,
+/// - Реализует фильтрацию, фиксируя:
+///     - Изменения значения
+///     - Изменения статуса (качества).
+// #[derive(Debug)]
 pub struct S7ParseBool {
     txid: usize,
-    name: String,
     value: Box<dyn Filter<Item = bool>>,
     status: Box<dyn Filter<Item = Status>>,
-    offset: Option<u32>,
-    bit: Option<u8>,
+    offset: u32,
+    bit: u8,
+    name: String,
+    notify: ChangeNotify<'static, ParseState, String>,
     // pub history: PointConfHistory,
     // pub alarm: Option<u8>,
     // pub comment: Option<String>,
 }
 impl S7ParseBool {
     ///
-    ///
+    /// ### Creates `S7ParseBool` new instance
+    /// - `parent` - Идентификатор родительского сервиса (для отладки)
+    /// - `txid` - Идентификатор сервиса-отправителя сигнала (например родительский ProfinetClient)
+    /// - `name` - Ниаменование сигнала
+    /// - `conf` - Конфигурация сигнала
+    #[named]
     pub fn new(
+        parent: impl Into<String>,
         txid: usize,
         name: String,
-        config: &PointConf,
-    ) -> S7ParseBool {
-        S7ParseBool {
+        conf: &PointConf,
+    ) -> Result<S7ParseBool, Error> {
+        let dbg = Dbg::new(parent, crate::domain::me::<Self>());
+        let addr = conf.address.clone().ok_or_else(|| err!(dbg, "Address is empty in '{name}'"))?;
+        let offset = addr.offset.ok_or_else(|| err!(dbg, "Address offset is empty in '{name}'"))?;
+        let bit = addr.bit.ok_or_else(|| err!(dbg, "Address bit is empty in '{name}'"))?;
+        if bit > 7 {
+            return Err(err!(dbg, "Bit {bit} is out of bounds (0-7) for S7 Bool in '{name}'"));
+        }
+        Ok(S7ParseBool {
             txid,
-            name,
             value: Box::new(FilterEmpty::<bool>::new(None)),
             status: Box::new(FilterEmpty::<Status>::new(Some(Status::Invalid))),
-            offset: config.clone().address.unwrap_or(PointConfAddress::empty()).offset,
-            bit: config.clone().address.unwrap_or(PointConfAddress::empty()).bit,
+            offset,
+            bit,
+            name,
+            notify: ChangeNotify::builder(&dbg, ParseState::Ok)
+                .on(ParseState::Ok, |msg| log::info!("{msg}"))
+                .on(ParseState::Err, |msg| log::info!("{msg}"))
+                .build(),
             // history: config.history.clone(),
             // alarm: config.alarm,
             // comment: config.comment.clone(),
-        }
+        })
     }
-    //
-    //
+    ///
+    /// Читает один байт из сырого пакета ПЛК и безопасно извлекает целевой бит.
+    #[named]
     fn convert(
         &self,
         bytes: &[u8],
         start: usize,
-        bit: usize,
+        bit: u32,
     ) -> Result<bool, Error> {
-        let value = bytes.get(start..(start + 1))
-            .and_then(|bytes| bytes.try_into().ok())
-            .map(|bytes| (u8::from_be_bytes(bytes) >> bit) & 1)
-            .ok_or_else(|| Error::new(&self.name, "convert").err("Wrong bytes length"))?;
-        Ok(value > 0)
+        let byte = bytes.get(start)
+            .ok_or_else(|| err!(self.name, "Wrong bytes length"))?;
+        Ok((byte >> bit) & 1 != 0)
     }
     ///
     /// Логика фильтра входных евентов
@@ -77,7 +109,7 @@ impl S7ParseBool {
     /// | Some(v)     | Yes           | No             | Yes               | v            | last status   | Point  |
     /// | Some(v)     | Yes           | Yes            | Yes               | v            | new           | Point  |
     /// ```
-    fn to_point(&mut self, value: Option<bool>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
+    fn to_point(&mut self, value: Option<bool>, status: Status, ts: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
         // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.name, value_changed, status_changed);
@@ -97,22 +129,25 @@ impl S7ParseBool {
             Bool(value),
             status,
             Cot::Inf,
-            timestamp,
+            ts,
         )))
     }
-    //
-    //
-    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
+    ///
+    /// ### Парсинг сырых байтов
+    fn add_raw(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
         let result = self.convert(
             bytes,
-            self.offset.unwrap() as usize,
-            self.bit.unwrap() as usize,
+            self.offset as usize,
+            self.bit as u32,
         );
         match result {
-            Ok(value) => self.to_point(Some(value), Status::Ok, timestamp),
+            Ok(value) => {
+                self.notify.update(ParseState::Ok, || format!("{}.add_raw | Conversion is Ok", self.name));
+                self.to_point(Some(value), Status::Ok, ts)
+            }
             Err(e) => {
-                log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
-                self.to_point(None, Status::Invalid, timestamp)
+                self.notify.update(ParseState::Err, || format!("{}.add_raw | Conversion error: {:?}", self.name, e));
+                self.to_point(None, Status::Invalid, ts)
             }
         }
     }
@@ -120,19 +155,16 @@ impl S7ParseBool {
 ///
 impl ParsePoint for S7ParseBool {
     //
-    //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp)
+    fn next(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, ts)
     }
     //
-    //
-    fn next_status(&mut self, status: Status) -> Option<Point> {
-        self.to_point(None, status, Utc::now())
+    fn next_status(&mut self, status: Status, ts: DateTime<Utc>) -> Option<Point> {
+        self.to_point(None, status, ts)
     }
-    //
     //
     fn address(&self) -> PointConfAddress {
-        PointConfAddress { offset: self.offset, bit: self.bit }
+        PointConfAddress { offset: Some(self.offset), bit: Some(self.bit) }
     }
 }
 ///
@@ -219,16 +251,16 @@ mod s7_parse_bool_test {
             (09, Some(false), ok, Some((false, ok))),
             (10, Some(true), ok, Some((true, ok))),
         ];
-        let mut parse = S7ParseBool::new(0, Name::new(&dbg, "S7ParseBool").join(),
+        let mut parse = S7ParseBool::new(&dbg, 0, Name::new(&dbg, "S7ParseBool").join(),
             &PointConf {
                 id: 0,
                 name: Name::new(&dbg, "S7ParseBool").join(),
                 type_: PointType::Bool,
                 history: Default::default(), alarm: Default::default(),
-                address: Some(PointConfAddress {offset: Some(0), bit: None}),
+                address: Some(PointConfAddress {offset: Some(0), bit: Some(0)}),
                 filters: None, comment: None,
             },
-        );
+        ).unwrap();
         let ts = Utc::now();
         for (step, input_value, input_status, target) in test_data {
             log::debug!("{dbg} | step {step} | input: {:?} {:?}", input_value, input_status);
@@ -251,10 +283,7 @@ mod s7_parse_bool_test {
                         target_status
                     );
                 }
-                _ => panic!(
-                    "{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}",
-                    result,
-                    target
+                _ => panic!("{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}", result, target
                 ),
             };
         }
@@ -265,12 +294,12 @@ mod s7_parse_bool_test {
     ///
     #[test]
     fn add_raw() {
-        fn to_be_bytes(bit: u8, v: bool) -> [u8; 2] {
-            let mut x: i16 = 0;
+        fn to_be_bytes(offset: usize, bit: u8, v: bool) -> Vec<u8> {
+            let mut buf = vec![0; offset + 1];
             if v {
-                x |= 1 << bit; // Установить в true (1)
+                buf[offset] |= 1 << bit; // Установить в true (1)
             }
-            x.to_be_bytes()
+            buf
         }
         DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
@@ -284,6 +313,7 @@ mod s7_parse_bool_test {
         // Таблица тестов
         // ----------------------------------------------------------------
         // Бит в котом режит наш bool
+        let offset = 2;
         let bit = 3;
         let test_data = [
             // ------------------------------------------------------------
@@ -291,31 +321,32 @@ mod s7_parse_bool_test {
             // ------------------------------------------------------------
             (
                 0,
-                &[][..],
+                vec![],
                 None,
                 "first packet broken -> no event",
-            ),            (
+            ),
+            (
                 1,
-                &to_be_bytes(bit, false)[..],
+                to_be_bytes(offset, bit, false),
                 Some((false, Status::Ok)),
                 "first value",
             ),
             (
                 2,
-                &to_be_bytes(bit, false)[..],
+                to_be_bytes(offset, bit, false),
                 None,
                 "value not changed",
             ),
             (
                 3,
-                &to_be_bytes(bit, true)[..],
+                to_be_bytes(offset, bit, true),
                 Some((true, Status::Ok)),
                 "value changed",
             ),
             (
                 4,
-                &to_be_bytes(bit, false)[..],
-                Some(( false, Status::Ok)),
+                to_be_bytes(offset, bit, false),
+                Some((false, Status::Ok)),
                 "value changed",
             ),
             // ------------------------------------------------------------
@@ -323,24 +354,25 @@ mod s7_parse_bool_test {
             // ------------------------------------------------------------
             (
                 8,
-                &[0x0],
-                Some(( false, Status::Invalid)),
+                vec![0x00, 0x00], // Неполный пакет, не достает до offset = 2
+                Some((false, Status::Invalid)),
                 "slice too short -> Invalid",
             ),
             (
                 9,
-                &to_be_bytes(bit, false)[..],
-                Some(( false, Status::Ok)),
-                "normal value ->  false",
+                to_be_bytes(offset, bit, false),
+                Some((false, Status::Ok)),
+                "normal value -> false",
             ),
             (
                 10,
-                &[],
-                Some(( false, Status::Invalid)),
+                vec![],
+                Some((false, Status::Invalid)),
                 "empty slice -> error",
             ),
         ];
         let mut parse = S7ParseBool::new(
+            &dbg,
             0,
             Name::new(&dbg, "S7ParseBool").join(),
             &PointConf {
@@ -350,18 +382,18 @@ mod s7_parse_bool_test {
                 history: Default::default(),
                 alarm: Default::default(),
                 address: Some(PointConfAddress {
-                    offset: Some(0),
+                    offset: Some(offset as u32),
                     bit: Some(bit),
                 }),
                 filters: None,
                 comment: None,
             },
-        );
+        ).unwrap();
         let ts = Utc::now();
         for (step, bytes, target, description) in test_data {
             log::debug!("{dbg} | step {step} | {description} | bytes: {:?}", bytes);
             let t = Instant::now();
-            let result = parse.add_raw(bytes, ts);
+            let result = parse.add_raw(&bytes, ts);
             log::debug!("{dbg} | step {step} | elapsed {:?}", t.elapsed());
             match (&result, &target) {
                 (None, None) => {}
@@ -379,13 +411,7 @@ mod s7_parse_bool_test {
                         target_status
                     );
                 }
-                _ => {
-                    panic!(
-                        "{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}",
-                        result,
-                        target
-                    );
-                }
+                _ => panic!("{dbg} | step {step} | \nresult: {:?}\ntarget: {:?}", result, target),
             }
         }
         test_duration.exit();

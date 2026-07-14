@@ -1,0 +1,350 @@
+service Task RecorderTask:
+    wait-started: 100 ms
+    cycle: 250 ms
+    in queue recv-queue:
+        max-length: 10000
+    subscribe:
+        /App/MultiQueue:                    # - multicast subscription to the MultiQueue
+            Inf:                            # - on points having Cot::Inf
+                - /App/ied13/db905_visual_data_fast/Winch1.LoadR0
+                - /App/ied13/db905_visual_data_fast/Winch2.LoadR0
+                - /App/ied13/db905_visual_data_fast/Winch3.LoadR0
+                - /App/ied14/db906_visual_data/Winch1.Load
+                - /App/ied14/db906_visual_data/Winch2.Load
+                - /App/ied14/db906_visual_data/Winch3.Load
+                - /App/ied14/db906_visual_data/Winch1.SWLProtection
+                - /App/ied14/db906_visual_data/Winch2.SWLProtection
+                - /App/ied14/db906_visual_data/Winch3.SWLProtection
+                - /App/ied14/db906_visual_data/CraneMode.AOPS
+                - /App/ied14/db906_visual_data/CraneMode.MOPS
+
+    #
+    # The nominal load of the crane
+    let craneLoadNom:
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok
+    #
+    # The nominal load of the Winch1
+    let winch1LoadNom:
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok
+    #
+    # The nominal load of the Winch2
+    let winch2LoadNom:
+        input: point real '/App/ied13/db905_visual_data_fast/Winch2.LoadR0' status ok
+    #
+    # The nominal load of the Winch3
+    let winch3LoadNom:
+        input: point real '/App/ied13/db905_visual_data_fast/Winch3.LoadR0' status ok
+    #
+    # The nominal load of the crane
+    let craneLoad:
+        input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok
+    #
+    # The nominal load of the Winch1
+    let winch1Load:
+        input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok
+    #
+    # The nominal load of the Winch2
+    let winch2Load:
+        input: point real '/App/ied14/db906_visual_data/Winch2.Load' status ok
+    #
+    # The nominal load of the Winch3
+    let winch3Load:
+        input: point real '/App/ied14/db906_visual_data/Winch3.Load' status ok
+    #
+    #
+    let winch1LoadLimiterTrip:
+        input: point bool '/App/ied14/db906_visual_data/Winch1.SWLProtection' status ok default false
+    #
+    #
+    let winch2LoadLimiterTrip:
+        input: point bool '/App/ied14/db906_visual_data/Winch2.SWLProtection' status ok default false
+    #
+    #
+    let winch3LoadLimiterTrip:
+        input: point bool '/App/ied14/db906_visual_data/Winch3.SWLProtection' status ok default false
+    #
+    # Crane AOPS triggered
+    let craneAopsTriggered:
+        input: point int '/App/ied14/db906_visual_data/CraneMode.AOPS' status ok default 0
+    #
+    # Crane MOPS triggered
+    let craneMopsTriggered:
+        input: point int '/App/ied14/db906_visual_data/CraneMode.MOPS' status ok default 0
+    #
+    # Crane load in relative units
+    let craneLoadRelative:
+        input fn Div:
+            input1: craneLoad
+            input2: craneLoadNom
+    # Winch1 load in relative units
+    let winch1LoadRelative:
+        input fn Div:
+            input1: winch1Load
+            input2: winch1LoadNom
+    # Winch2 load in relative units
+    let winch2LoadRelative:
+        input fn Div:
+            input1: winch2Load
+            input2: winch2LoadNom
+    # Winch3 load in relative units
+    let winch3LoadRelative:
+        input fn Div:
+            input1: winch3Load
+            input2: winch3LoadNom
+    #
+    # 5 % of the nominal crane load - used for Op Cycle detection
+    let opCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: craneLoadNom
+    let winch1OpCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: winch1LoadNom
+    let winch2OpCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: winch2LoadNom
+    let winch3OpCycleThreshold:
+        input fn Mul:
+            input1: const real 0.05
+            input2: winch3LoadNom
+    let craneIsActive:
+        input fn TimerOffDelay:
+            delay: 5000ms
+            input fn TimerOnDelay:
+                delay: 5000ms
+                input fn Ge:
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: opCycleThreshold
+                        input: craneLoad
+                    input2: opCycleThreshold
+    let winch1IsActive:
+        input fn TimerOffDelay:
+            delay: 5000ms
+            input fn TimerOnDelay:
+                delay: 5000ms
+                input fn Ge:
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: winch1OpCycleThreshold
+                        input: winch1Load
+                    input2: winch1OpCycleThreshold
+    let winch2IsActive:
+        input fn TimerOffDelay:
+            delay: 5000ms
+            input fn TimerOnDelay:
+                delay: 5000ms
+                input fn Ge:
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: winch2OpCycleThreshold
+                        input: winch2Load
+                    input2: winch2OpCycleThreshold
+    let winch3IsActive:
+        input fn TimerOffDelay:
+            delay: 5000ms
+            input fn TimerOnDelay:
+                delay: 5000ms
+                input fn Ge:
+                    input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
+                        threshold: winch3OpCycleThreshold
+                        input: winch3Load
+                    input2: winch3OpCycleThreshold
+    #
+    # Detect if operating cycle is active (true - isActive, false - isNotActive)
+    let opCycleIsActive:
+        input fn Or:
+            input0: craneIsActive
+            input1: winch1IsActive
+            input2: winch2IsActive
+            input3: winch3IsActive
+    #
+    # Returns one tic true if operating cycle is begins (isActive false -> true)
+    let opCycleIsStarted:
+        input fn RisingEdge:
+            input: opCycleIsActive
+    #
+    # Returns one tic true if operating cycle is finished (isActive true -> false)
+    let opCycleIsDone:
+        input fn FallingEdge:
+            input: opCycleIsActive
+    #
+    # Count the operating cycle ID (retained localy)
+    let opCycleId:
+        input fn Retain:
+            key: 'OperatingCycleId'
+            input fn Acc:
+                initial fn Retain:
+                    default: const int 0
+                    key: 'OperatingCycleId'
+                input: opCycleIsStarted
+
+
+
+
+    ###############   Operating Cycle Events (Live Data)   ###############
+    #
+    #   table:      operating_event
+    #
+    #
+    # Threshold for Crane load, used to compress leve data
+    let craneLoadThreshold:
+        input fn Mul:
+            input1: craneLoadNom
+            input2 fn PiecewiseLineApprox:
+                input: craneLoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    #
+    # Crane load leve data compressed
+    let craneLoadFiltered:
+        input fn Threshold:
+            threshold: craneLoadThreshold
+            factor: const real 0.05
+            input: craneLoad
+    #
+    # Threshold for Winch1 load, used to compress leve data
+    let winch1LoadThreshold:
+        input fn Mul:
+            input1: winch1LoadNom
+            input2 fn PiecewiseLineApprox:
+                input: winch1LoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    #
+    # Winch1 load leve data compressed
+    let winch1LoadFiltered:
+        input fn Threshold:
+            threshold: winch1LoadThreshold
+            factor: const real 0.05
+            input: winch1Load
+    #
+    # Threshold for Winch2 load, used to compress leve data
+    let winch2LoadThreshold:
+        input fn Mul:
+            input1: winch2LoadNom
+            input2 fn PiecewiseLineApprox:
+                input: winch2LoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    #
+    # Winch2 load leve data compressed
+    let winch2LoadFiltered:
+        input fn Threshold:
+            threshold: winch2LoadThreshold
+            factor: const real 0.05
+            input: winch2Load
+    #
+    # Threshold for Winch3 load, used to compress leve data
+    let winch3LoadThreshold:
+        input fn Mul:
+            input1: winch3LoadNom
+            input2 fn PiecewiseLineApprox:
+                input: winch3LoadRelative
+                piecewise:
+                    0.0: 0.3
+                    0.7: 0.1
+                    0.85: 0.05
+                    0.95: 0.01
+                    1.0: 0.005
+                    1.1: 0.001
+    #
+    # Winch3 load leve data compressed
+    let winch3LoadFiltered:
+        input fn Threshold:
+            threshold: winch3LoadThreshold
+            factor: const real 0.05
+            input: winch3Load
+    #
+    # Export operating events into the database
+    fn Export ExportCraneMopsEvent:
+        enable fn IsChangedValue:
+            input: craneMopsTriggered
+        send-to: /App/ApiClient.in-queue
+        conf point CraneMopsEvent:
+            type: String
+        input fn Sql:   
+            sql: insert into public.rec_operating_event (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneMOPSEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: craneMopsTriggered
+
+    fn Export ExportCraneAopsEvent:
+        enable fn IsChangedValue:
+            input: craneAopsTriggered
+        send-to: /App/ApiClient.in-queue
+        conf point CraneAopsEvent:
+            type: String
+        input fn Sql:   
+            sql: insert into public.rec_operating_event (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneAOPSEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: craneAopsTriggered
+    #
+    fn Export ExportCraneLoadEvent:
+        send-to: /App/ApiClient.in-queue
+        conf point CraneLoadEvent:
+            type: String
+        input fn Sql:   
+            sql: insert into public.rec_operating_event (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'CraneLoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: craneLoadFiltered
+    #
+    fn Export ExportWinch1LoadEvent:
+        send-to: /App/ApiClient.in-queue
+        conf point Winch1LoadEvent:
+            type: String
+        input fn Sql:   
+            sql: insert into public.rec_operating_event (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch1LoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: winch1LoadFiltered
+    #
+    fn Export ExportWinch2LoadEvent:
+        send-to: /App/ApiClient.in-queue
+        conf point Winch2LoadEvent:
+            type: String
+        input fn Sql:   
+            sql: insert into public.rec_operating_event (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch2LoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: winch2LoadFiltered
+    #
+    fn Export ExportWinch3LoadEvent:
+        send-to: /App/ApiClient.in-queue
+        conf point Winch3LoadEvent:
+            type: String
+        input fn Sql:   
+            sql: insert into public.rec_operating_event (operating_cycle_id, timestamp, event_id, value, status) values ({opCycleId.value}, '{input.timestamp}', 'Winch3LoadEvent', {input.value}, 0);
+            opCycleId: opCycleId
+            input: winch3LoadFiltered
+
+
+
+    # # #
+    # # # ========= PLOTTING =========
+    # # fn Plot Plot1:
+    # #     # craneLoadNom: craneLoadNom
+    # #     craneLoad: craneLoad
+    # #     # craneLoadRelative: craneLoadRelative
+    # #     craneLoadFiltered: craneLoadFiltered
+    # #     # winch1LoadRelative: winch1LoadRelative
+    # #     # winch1LoadFiltered: winch1LoadFiltered
+    # #     # winch2LoadRelative: winch2LoadRelative
+    # #     # winch2LoadFiltered: winch2LoadFiltered
+    # #     # winch3LoadRelative: winch3LoadRelative
+    # #     # winch3LoadFiltered: winch3LoadFiltered
+    # #     craneMopsTriggered: craneMopsTriggered
+    # #     craneAopsTriggered: craneAopsTriggered
+    # #     opCycleIsActive: opCycleIsActive
+    # #     opCycleIsDone: opCycleIsDone

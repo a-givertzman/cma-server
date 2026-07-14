@@ -20,6 +20,7 @@ impl ToF64 for f64 { fn to_f64(self) -> f64 { self } }
 /// - с накоплением ошибки, если `factor` указан (`factor > 0.0`)
 #[derive(Debug, Clone)]
 pub struct FilterThreshold<T> {
+    initial: Option<T>,
     last: Option<T>,
     threshold: f64,
     factor: f64,
@@ -36,11 +37,42 @@ impl<T: Copy> FilterThreshold<T> {
     /// - `factor` - Integrated threshold, dipends on the cycle frequence
     pub fn new(initial: Option<T>, threshold: f64, factor: f64) -> Self {
         Self {
+            initial: initial,
             last: initial,
             threshold, 
             factor,
             acc: 0.0,
         }
+    }
+    ///
+    /// Returns [FilterThreshold<T>] instance with updated `threshold`, keeping the state
+    /// - `threshold` - Absolute threshold
+    pub fn with_threshold(&self, threshold: f64) -> Self {
+        Self {
+            initial: self.initial,
+            last: self.last,
+            threshold, 
+            factor: self.factor,
+            acc: self.acc,
+        }
+    }
+    ///
+    /// Returns [FilterThreshold<T>] instance with updated `factor`, keeping the state
+    /// - `factor` - Integrated threshold, dipends on the cycle frequence
+    pub fn with_factor(&self, factor: f64) -> Self {
+        Self {
+            initial: self.initial,
+            last: self.last,
+            threshold: self.threshold, 
+            factor,
+            acc: self.acc,
+        }
+    }
+    ///
+    /// Resets the state to the initial, keeping `threshold` and `factor`
+    pub fn reset(&mut self) {
+        self.last = self.initial;
+        self.acc = 0.0;
     }
 }
 //

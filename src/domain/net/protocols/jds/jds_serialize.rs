@@ -1,7 +1,7 @@
 use regex::Regex;
 use sal_sync::{services::entity::{Name, Object, Point}, sync::channel::{Receiver, RecvTimeoutError}};
 use crate::{
-    domain::{constants::constants::RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
+    domain::{RECV_TIMEOUT, failure::RecvError}, tcp::steam_read::StreamRead
 };
 ///
 /// Converts PointType into the squence of bytes

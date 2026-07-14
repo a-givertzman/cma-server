@@ -4,7 +4,7 @@ use std::{
     fmt::Debug, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::{self}, time::Duration
 };
 use crate::{
-    domain::{constants::constants::RECV_TIMEOUT},
+    domain::{RECV_TIMEOUT},
     services::server::{
         connections::{Action, TcpServerConnections}, jds_cnnection::JdsConnection,
         TcpServerConf,
@@ -222,7 +222,6 @@ impl Service for TcpServer {
             log::info!("{}.run | Exit...", dbg);
             connections.wait();
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {

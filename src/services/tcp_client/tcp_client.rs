@@ -167,7 +167,6 @@ impl Service for TcpClient {
                 }
             }
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {

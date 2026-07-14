@@ -142,7 +142,6 @@ impl Service for SendService {
                     cycle.wait();
                 }
             }
-            Ok(())
         });
         match handle {
             Ok(handle) => {

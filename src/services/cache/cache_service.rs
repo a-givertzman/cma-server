@@ -11,22 +11,16 @@
 //!     suscribe:
 //!         /App/MultiQueue: []
 //! ```
-use std::{
-    env, fmt::Debug, fs, io::{BufReader, BufWriter, Write}, path::{Path, PathBuf}, sync::{Arc, atomic::{AtomicBool, Ordering}},
-};
+use std::{env, fmt::Debug, fs, io::{BufReader, BufWriter, Write}, path::{Path, PathBuf}, sync::{Arc, atomic::{AtomicBool, Ordering}}};
 use chrono::Utc;
-use concat_string::concat_string;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     collections::FxIndexMap, services::{
-        entity::{Cot, Name, Object, Point, PointConf, PointConfType, PointHlr, PointTxId, Status}, future::Future, types::Bool, Service, Services, SubscriptionCriteria
+        entity::{Cot, Name, Object, Point, PointConf, PointType, PointHlr, PointTxId, Status}, future::Future, types::Bool, Service, Services, SubscriptionCriteria
     }, sync::{channel::RecvTimeoutError, Handles}, thread_pool::Scheduler,
 };
 use serde::Serialize;
-use serde_json::json;
-use crate::{
-    domain::{FxDashMap, Sender, constants::constants::RECV_TIMEOUT}, services::{CacheServiceConf, cache::delay_store::DelyStore}
-};
+use crate::{domain::{FxDashMap, Sender, RECV_TIMEOUT}, services::{CacheServiceConf, cache::delay_store::DelyStore}};
 ///
 /// CacheService service
 /// - Subscribe on points by configured criteria
@@ -233,7 +227,7 @@ impl CacheService {
         log::trace!("{}.initial | Initial cashe generated at {:?}", dbg, timestamp);
         for point_config in points {
             let point = match point_config.type_ {
-                PointConfType::Bool => Point::Bool(PointHlr::new(
+                PointType::Bool => Point::Bool(PointHlr::new(
                     txid,
                     &point_config.name,
                     Bool(false),
@@ -241,7 +235,7 @@ impl CacheService {
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfType::Int => Point::Int(PointHlr::new(
+                PointType::Int => Point::Int(PointHlr::new(
                     txid,
                     &point_config.name,
                     0,
@@ -249,7 +243,7 @@ impl CacheService {
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfType::Real => Point::Real(PointHlr::new(
+                PointType::Real => Point::Real(PointHlr::new(
                     txid,
                     &point_config.name,
                     0.0,
@@ -257,7 +251,7 @@ impl CacheService {
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfType::Double => Point::Double(PointHlr::new(
+                PointType::Double => Point::Double(PointHlr::new(
                     txid,
                     &point_config.name,
                     0.0,
@@ -265,7 +259,7 @@ impl CacheService {
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfType::String => Point::String(PointHlr::new(
+                PointType::String => Point::String(PointHlr::new(
                     txid,
                     &point_config.name,
                     String::new(),
@@ -273,7 +267,7 @@ impl CacheService {
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfType::Bytes => Point::Bytes(PointHlr::new(
+                PointType::Bytes => Point::Bytes(PointHlr::new(
                     txid,
                     &point_config.name,
                     vec![],
@@ -281,7 +275,7 @@ impl CacheService {
                     Cot::Inf,
                     timestamp,
                 )),
-                PointConfType::Json => Point::String(PointHlr::new(
+                PointType::Json => Point::String(PointHlr::new(
                     txid,
                     &point_config.name,
                     String::new(),
@@ -392,7 +386,6 @@ impl Service for CacheService {
                 log::error!("{}.run | Unsubscribe error: {:#?}", dbg, err);
             }
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {
@@ -423,7 +416,7 @@ impl Service for CacheService {
                     if let Err(err) = send.send(point) {
                         log::error!("{dbg}.gi | Cant send GI for '{receiver_name}', channel is closed");
                         sink.add(Err(Error::new(&dbg, "gi").pass(err.to_string())));
-                        return Ok(());
+                        return;
                     }
                 }
             } else {
@@ -433,7 +426,7 @@ impl Service for CacheService {
                             if let Err(err) = send.send(point.clone()) {
                                 log::error!("{dbg}.gi | Cant send GI for '{receiver_name}', channel is closed");
                                 sink.add(Err(Error::new(&dbg, "gi").pass(err.to_string())));
-                                return Ok(());
+                                return;
                             }
                         }
                         None => {
@@ -443,11 +436,10 @@ impl Service for CacheService {
                 }
             }
             sink.add(Ok(()));
-            Ok(())
         });
         match handle {
-            Err(err) => log::error!("{}.gi | Can't schedule task: {:?}", self.dbg, err),
             Ok(handle) => self.handles.push(handle),
+            Err(err) => log::error!("{}.gi | Can't schedule task: {:?}", self.dbg, err),
         }
         result
     }

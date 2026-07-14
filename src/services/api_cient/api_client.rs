@@ -241,7 +241,6 @@ impl Service for ApiClient {
                 }
             };
             log::info!("{}.run | Exit", dbg);
-            Ok(())
         });
         match handle {
             Ok(handle) => {

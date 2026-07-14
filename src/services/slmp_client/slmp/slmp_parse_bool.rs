@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicI16, Ordering};
 use chrono::{DateTime, Utc};
 use sal_core::error::Error;
 use sal_sync::services::{
-    entity::{Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status},
+    entity::{Cot, Point, PointConf, PointConfAddress, PointType, PointHlr, Status},
     types::Bool,
 };
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client::slmp::ParsePoint};
@@ -13,7 +13,7 @@ use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::slmp_client
 #[derive(Debug)]
 pub struct SlmpParseBool {
     id: String,
-    typ: PointConfType,
+    typ: PointType,
     txid: usize,
     name: String,
     last: AtomicI16,
@@ -92,7 +92,7 @@ impl SlmpParseBool {
     /// | Some(v)     | Yes           | No             | Yes               | v            | last status   | Point  |
     /// | Some(v)     | Yes           | Yes            | Yes               | v            | new           | Point  |
     /// ```
-    fn to_point(&mut self, value: Option<bool>, status: Status, timestamp: DateTime<Utc>) -> Option<Point> {
+    fn to_point(&mut self, value: Option<bool>, status: Status, ts: DateTime<Utc>) -> Option<Point> {
         let value_changed = value.and_then(|v| self.value.add(v));
         let status_changed = self.status.add(status);
         // log::trace!("{}.to_point | value_changed: {:?}  |  status_changed {:?}", self.name, value_changed, status_changed);
@@ -112,22 +112,22 @@ impl SlmpParseBool {
             Bool(value),
             status,
             Cot::Inf,
-            timestamp,
+            ts,
         )))
     }
     //
     //
-    fn add_raw(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
+    fn add_raw(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
         let result = self.convert(
             bytes,
             self.offset.unwrap() as usize,
             self.bit.unwrap() as usize,
         );
         match result {
-            Ok(value) => self.to_point(Some(value), Status::Ok, timestamp),
+            Ok(value) => self.to_point(Some(value), Status::Ok, ts),
             Err(e) => {
                 log::warn!("{}.add_raw | convertion error: {:?}", self.name, e);
-                self.to_point(None, Status::Invalid, timestamp)
+                self.to_point(None, Status::Invalid, ts)
             }
         }
     }
@@ -156,32 +156,22 @@ impl SlmpParseBool {
 }
 ///
 impl ParsePoint for SlmpParseBool {
-    // //
-    // //
-    // fn type_(&self) -> PointConfType {
-    //     self.typ.clone()
-    // }
     //
-    //
-    fn next(&mut self, bytes: &[u8], timestamp: DateTime<Utc>) -> Option<Point> {
-        self.add_raw(bytes, timestamp)
+    fn next(&mut self, bytes: &[u8], ts: DateTime<Utc>) -> Option<Point> {
+        self.add_raw(bytes, ts)
     }
     //
-    //
-    fn next_status(&mut self, status: Status) -> Option<Point> {
+    fn next_status(&mut self, status: Status, ts: DateTime<Utc>) -> Option<Point> {
         self.to_point(None, status, Utc::now())
     }
-    //
     //
     fn address(&self) -> PointConfAddress {
         PointConfAddress { offset: self.offset, bit: self.bit }
     }
     //
-    //
     fn size(&self) -> usize {
         Self::SIZE
     }
-    //
     //
     fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, Error> {
         match point.try_as_bool() {

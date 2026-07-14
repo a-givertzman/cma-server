@@ -5,7 +5,7 @@ use std::{sync::Once, rc::Rc, cell::RefCell};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, services::task::{
-        FnOut, FnInput, FnVar,
+        EvalCycle, FlowContext, FnInput, FnOut, FnVar
     }
 };
 ///
@@ -23,9 +23,10 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
-        FnInput::new("test", 0, &mut conf)
-    )))
+    let cycle = Rc::new(EvalCycle::new());
+    Rc::new(RefCell::new(
+        FnInput::new("test", 0, &conf, &cycle)
+    ))
 }
 ///
 ///
@@ -55,15 +56,16 @@ fn test_bool() {
         false,
         false,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }
 
@@ -91,15 +93,16 @@ fn test_int() {
         i64::MIN,
         i64::MAX,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }
 ///
@@ -127,15 +130,16 @@ fn test_real() {
         f32::MIN,
         f32::MAX,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }
 ///
@@ -163,14 +167,15 @@ fn test_double() {
         f64::MIN,
         f64::MAX,
     ];
+    let flow = FlowContext::new();
     for value in test_data {
         let point = value.to_point(0, "test");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
-        fn_var.eval();
-        let state = fn_var.out().unwrap();
+        fn_var.out();
+        let state = flow.ignore(fn_var.out()).unwrap();
         // debug!("input: {:?}", &mut input);
         log::debug!("value: {:?}   |   state: {:?}", value, state);
-        assert_eq!(state, point);
+        assert_eq!(state, Some(point));
     }
 }

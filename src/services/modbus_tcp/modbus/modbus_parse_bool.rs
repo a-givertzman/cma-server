@@ -1,15 +1,14 @@
 use chrono::{DateTime, Utc};
-use sal_sync::services::{
-    entity::{Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status},
-    types::Bool,
-};
+use sal_sync::services::
+    entity::{Point, PointConf, PointConfAddress, PointType, Status}
+;
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::modbus_tcp::modbus::ParsePoint};
 ///
 /// Used for parsing configured point from slice of bytes read from device
 #[derive(Debug)]
 pub struct ModbusParseBool {
     id: String,
-    pub type_: PointConfType,
+    pub type_: PointType,
     pub txid: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = bool> + Send>,
@@ -167,7 +166,7 @@ impl ModbusParseBool {
 impl ParsePoint for ModbusParseBool {
     //
     //
-    fn type_(&self) -> PointConfType {
+    fn type_(&self) -> PointType {
         self.type_.clone()
     }
     //
@@ -210,7 +209,7 @@ impl ParsePoint for ModbusParseBool {
         //         }
         //     }
         //     Err(_) => {
-        //         let message = format!("{}.write | Point of type 'Bool' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
+        //         let message = format!("{}.write | Point of type 'Bool' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.typ(), self.name);
         //         log::warn!("{}", message);
         //         Err(message)
         //     }

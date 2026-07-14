@@ -35,7 +35,7 @@ impl<'de> Deserialize<'de> for Config {
                 match FnConfKeywd::from_str(&v) {
                     Ok(keyword) => {
                         log::trace!("Config.deserialize | keyword parsed: {:?}", keyword);
-                        // nodes.insert(key, Config::new(&conf, &Some(keyword.type_())));
+                        // nodes.insert(key, Config::new(&conf, &Some(keyword.typ())));
                         Ok(Self::Value {
                             nodeType: FnConfigType::Unknown,
                             services: HashMap::new(),
@@ -60,7 +60,7 @@ impl<'de> Deserialize<'de> for Config {
                     match FnConfKeywd::from_str(key) {
                         Ok(keyword) => {
                             log::trace!("Config.deserialize | keyword parsed: {:?}", keyword);
-                            // nodes.insert(key, Config::new(&conf, &Some(keyword.type_())));
+                            // nodes.insert(key, Config::new(&conf, &Some(keyword.typ())));
                             Ok(Self::Value {
                                 nodeType: FnConfigType::Unknown,
                                 services: HashMap::new(),
@@ -149,7 +149,7 @@ impl Config {
                         match FnConfKeywd::from_str(key.as_str()) {
                             Ok(keyword) => {
                                 log::trace!("FnConfig.new | keyword parsed: {:?}", keyword);
-                                nodes.insert(key, Config::new(&conf, &Some(keyword.type_())));
+                                nodes.insert(key, Config::new(&conf, &Some(keyword.typ())));
                             }
                             Err(err) => {
                                 log::warn!("FnConfig.new | Unknown keyword: '{:?}' in the conf: {:?}", key, conf);
@@ -173,7 +173,7 @@ impl Config {
                     match FnConfKeywd::from_str(confStr.as_str()) {
                         Ok(keyword) => {
                             log::trace!("FnConfig.new | keyword parsed: {:?}", keyword);
-                            // return Config { nodeType: keyword.type_(), services: HashMap::new() }
+                            // return Config { nodeType: keyword.typ(), services: HashMap::new() }
                             return ()
                         }
                         Err(err) => {

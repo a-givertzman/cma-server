@@ -4,7 +4,7 @@ use std::{sync::Once, rc::Rc, cell::RefCell};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
-    services::task::{FnOut, FnInput, FnBitNot}
+    services::task::{FnOut, FnInput, FnNot}
 };
 ///
 ///
@@ -21,9 +21,9 @@ fn init_once() {
 ///  - ...
 fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
     let mut conf = FnConfig { name: "test".to_owned(), type_, options: FnConfOptions {default: Some(default.into()), ..Default::default()}, ..Default::default()};
-    Rc::new(RefCell::new(Box::new(
+    Rc::new(RefCell::new(
         FnInput::new("test", 0, &mut conf)
-    )))
+    ))
 }
 ///
 /// Testing Task FnNot Bool's
@@ -35,7 +35,7 @@ fn test_bool() {
     log::info!("{}", self_id);
     let mut target: bool;
     let input = init_each("false", FnConfPointType::Bool);
-    let mut fn_bit_not = FnBitNot::new(
+    let mut fn_bit_not = FnNot::new(
         self_id,
         input.clone(),
     );
@@ -64,7 +64,7 @@ fn test_int() {
     log::info!("{}", self_id);
     let mut target: i64;
     let input = init_each("0", FnConfPointType::Int);
-    let mut fn_bit_not = FnBitNot::new(
+    let mut fn_bit_not = FnNot::new(
         self_id,
         input.clone(),
     );

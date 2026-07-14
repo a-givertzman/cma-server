@@ -37,7 +37,7 @@ fn basic() {
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
         dbg, 
         ConfTree::new_root(serde_yaml::from_str(r#""#).unwrap()),
-    ), Some(tp.scheduler())));
+    ), Some(tp.scheduler())).unwrap());
     let conf = r#"
         service MultiQueue:
             in queue in-queue:

@@ -1,9 +1,8 @@
 use std::{
-    hash::BuildHasherDefault, net::TcpStream,
+    net::TcpStream,
     sync::{atomic::{AtomicU32, Ordering}, Arc},
 };
-use hashers::fx_hash::FxHasher;
-use indexmap::IndexMap;
+use function_name::named;
 use sal_core::error::{Error, ErrorLimit};
 use sal_sync::{
     collections::FxIndexMap,
@@ -11,9 +10,7 @@ use sal_sync::{
     services::{entity::{Point, Status}, ServiceCycle}, sync::channel::Sender, thread_pool::{JoinHandle, Scheduler},
 };
 use crate::{
-    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf,
-    domain::Mutex,
-    services::slmp_client::slmp_db::SlmpDb
+    conf::slmp_client_conf::slmp_client_conf::SlmpClientConf, domain::Mutex, err_pass, services::slmp_client::slmp_db::SlmpDb
 };
 ///
 /// Cyclicaly reads SLMP data ranges (DB's) specified in the [conf]
@@ -34,6 +31,7 @@ pub struct SlmpRead {
 impl SlmpRead {
     ///
     /// Creates new instance of the SlpmRead
+    #[named]
     pub fn new(
         parent: impl Into<String>,
         tx_id: usize,
@@ -44,10 +42,10 @@ impl SlmpRead {
         status: Arc<AtomicU32>,
         scheduler: Scheduler,
         exit: Arc<ExitNotify>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let dbg = format!("{}/SlmpRead", parent.into());
-        let dbs = Self::build_dbs(&dbg, tx_id, &conf);
-        Self {
+        let dbs = Self::build_dbs(&dbg, tx_id, &conf).map_err(|err| err_pass!(dbg, err))?;
+        Ok(Self {
             // tx_id,
             dbg: dbg.clone(),
             // name,
@@ -58,32 +56,33 @@ impl SlmpRead {
             status,
             scheduler,
             exit,
-        }
+        })
     }
     ///
     /// Sends all configured points from the current DB with the given status
-    fn yield_status(self_id: &str, status: Status, dbs: &mut FxIndexMap<String, SlmpDb>, dest: &Sender<Point>) {
+    fn yield_status(dbg: &str, status: Status, dbs: &mut FxIndexMap<String, SlmpDb>, dest: &Sender<Point>) {
         for (db_name, db) in dbs {
-            log::debug!("{}.yield_status | DB '{}' - sending Invalid status...", self_id, db_name);
+            log::debug!("{}.yield_status | DB '{}' - sending Invalid status...", dbg, db_name);
             match db.yield_status(status, dest) {
                 Ok(_) => {}
                 Err(err) => {
-                    log::error!("{}.yield_status | send errors: \n\t{:?}", self_id, err);
+                    log::error!("{}.yield_status | send errors: \n\t{:?}", dbg, err);
                 }
             };
         }
     }
     ///
-    ///
-    pub fn build_dbs(self_id: &str, tx_id: usize, conf: &SlmpClientConf) -> FxIndexMap<String, SlmpDb> {
-        let mut dbs = IndexMap::with_hasher(BuildHasherDefault::<FxHasher>::default());
+    /// ### Returns map of `SlmpDb` built from conf
+    #[named]
+    pub fn build_dbs(dbg: &str, tx_id: usize, conf: &SlmpClientConf) -> Result<FxIndexMap<String, SlmpDb>, Error> {
+        let mut dbs = FxIndexMap::default();
         for (db_name, db_conf) in &conf.dbs {
-            log::info!("{}.build_dbs | Configuring SlmpDb: {:?}...", self_id, db_name);
-            let db = SlmpDb::new(self_id, tx_id, &db_conf);
+            log::info!("{}.build_dbs | Configuring SlmpDb: {:?}...", dbg, db_name);
+            let db = SlmpDb::new(dbg, tx_id, &db_conf).map_err(|err| err_pass!(dbg, err))?;
             dbs.insert(db_name.clone(), db);
-            log::info!("{}.build_dbs | Configuring SlmpDb: {:?} - ok", self_id, db_name);
+            log::info!("{}.build_dbs | Configuring SlmpDb: {:?} - ok", dbg, db_name);
         }
-        dbs
+        Ok(dbs)
     }
     ///
     /// Cyclicaly reads data slice from the device,
@@ -98,7 +97,7 @@ impl SlmpRead {
         let cycle = conf.cycle.clone();
         log::info!("{}.read | Preparing thread...", dbg);
         let handle = self.scheduler.spawn(move || {
-            let mut is_connected = ChangeNotify::new(
+            let is_connected = ChangeNotify::new(
                 &dbg,
                 false,
                 vec![
@@ -139,7 +138,6 @@ impl SlmpRead {
                 Self::yield_status(&dbg, Status::Invalid, &mut dbs, &dest);
             }
             log::info!("{}.read | Exit", dbg);
-            Ok(())
         });
         log::info!("{}.read | Started", self.dbg);
         handle.map_err(|err| Error::new(&self.dbg, "run").pass_with("Start failed", err))

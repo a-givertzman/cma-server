@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use sal_sync::services::entity::{
-    Cot, Point, PointConf, PointConfAddress, PointConfType, PointHlr, Status,
+    Cot, Point, PointConf, PointConfAddress, PointType, PointHlr, Status,
 };
 use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::modbus_tcp::modbus::ParsePoint};
 ///
@@ -8,7 +8,7 @@ use crate::{domain::filter::filter::{Filter, FilterEmpty}, services::modbus_tcp:
 #[derive(Debug)]
 pub struct ModbusParseReal {
     id: String,
-    pub type_: PointConfType,
+    pub type_: PointType,
     pub txid: usize,
     pub name: String,
     pub value: Box<dyn Filter<Item = f32> + Send>,
@@ -105,7 +105,7 @@ impl ModbusParseReal {
 impl ParsePoint for ModbusParseReal {
     //
     //
-    fn type_(&self) -> PointConfType {
+    fn type_(&self) -> PointType {
         self.type_.clone()
     }
     //
@@ -135,7 +135,7 @@ impl ParsePoint for ModbusParseReal {
             Point::Real(point) => Ok(point.value.to_le_bytes().to_vec()),
             Point::Double(_) => Ok(point.to_real().as_real().value.to_le_bytes().to_vec()),
             _ => {
-                let message = format!("{}.write | Point of type 'Real / Double' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.type_(), self.name);
+                let message = format!("{}.write | Point of type 'Real / Double' expected, but found '{:?}' in the parse point: {:#?}", self.id, point.typ(), self.name);
                 log::warn!("{}", message);
                 Err(message)
             }

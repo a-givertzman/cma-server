@@ -1,6 +1,5 @@
 mod cma_recorder;
 mod functions;
-mod sql_metric;
 mod task_conf;
 mod task_nodes;
 mod task_points_test;
