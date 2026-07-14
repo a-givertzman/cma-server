@@ -1,6 +1,9 @@
+use function_name::named;
+use sal_core::error::Error;
 use sal_sync::{services::entity::{Point, PointHlr}, sync::channel::Sender};
+use sqlparser::{dialect::PostgreSqlDialect, tokenizer::{Token, Tokenizer}};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
-use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}};
+use crate::{domain::{FnOutRef, TryTo}, err_pass, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}};
 ///
 /// ### Function | `FnToApiQueue`
 /// 
@@ -46,6 +49,38 @@ impl FnToApiQueue {
         }
     }
     ///
+    /// Подготавливает сырой SQL-запрос.
+    /// - Удаляет пробелы по краям
+    /// - Вырезает нулевые байты (\0)
+    /// - Экранирует одинарные кавычки
+    #[named]
+    fn prepare_raw_sql(&self, sql: &str) -> Result<String, Error> {
+        let dialect = PostgreSqlDialect {};
+        let sql: String = sql.trim().chars().filter(|&c| c != '\0').collect();
+        let tokens = Tokenizer::new(&dialect, &sql)
+            .tokenize()
+            .map_err(|err| err_pass!(self.id, err, "Invalid SQL: {}", sql))?;
+        let mut result = String::with_capacity(sql.len() + 16);
+        for token in tokens {
+            match token {
+                // Если токен — это строка в одинарных кавычках 'value'
+                Token::SingleQuotedString(ref text) => {
+                    // Вырезаем нулевые байты для безопасности (как в вашей функции)
+                    // let clean_text: String = text.chars().filter(|&c| c != '\0').collect();
+                    let escaped_text = text.replace('\'', "''");
+                    result.push('\'');
+                    result.push_str(&escaped_text);
+                    result.push('\'');
+                }
+                // Все остальные токены (INSERT, INTO, имена таблиц, скобки) пропускаем "как есть"
+                _ => {
+                    result.push_str(&token.to_string());
+                }
+            }
+        }
+        Ok(result)
+    }
+    ///
     /// Возвращает `Point` с обновленными `txid`, `name` и `value`
     #[inline]
     fn point_with(&self, p: &Point, value: String) -> Point {
@@ -84,14 +119,24 @@ impl FnOut for FnToApiQueue {
         self.input.borrow().inputs()
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
-        log::trace!("{}.out | input: {:?}", self.id, input);
+        // log::trace!("{}.out | input: {:?}", self.id, input);
         if flow.is_new() {
-            let sql = prepare_for_sql(&(&input).to_string().as_string().value);
-            if !sql.is_empty() {
-                self.send(self.point_with(&input, sql));
+            let sql: String = (&input).try_to().map_err(|err: sal_core::error::Error| err_pass!(self.id, err).to_string())?;
+            match self.prepare_raw_sql(&sql) {
+                Ok(sql) => {
+                    if !sql.is_empty() {
+                        self.send(self.point_with(&input, sql));
+                    }
+                }
+                Err(err) => {
+                    if log::max_level() >= log::LevelFilter::Debug {
+                        log::warn!("{}.out | {:?}", self.id, err);
+                    }
+                }
             }
         }
         flow.wrap(input)
@@ -106,24 +151,6 @@ impl FnOut for FnToApiQueue {
 ///
 /// Global static counter of FnToApiQueue instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
-///
-/// Подготавливает сырую строку для безопасной вставки в SQL-запрос.
-/// - Удаляет пробелы по краям
-/// - Вырезает нулевые байты (\0)
-/// - Экранирует одинарные кавычки
-pub fn prepare_for_sql(input: &str) -> String {
-    let trimmed = input.trim();
-    // +8 байт — запас под несколько кавычек
-    let mut result = String::with_capacity(trimmed.len() + 8);
-    for c in trimmed.chars() {
-        match c {
-            '\0' => continue,
-            '\'' => result.push_str("''"),
-            _ => result.push(c),
-        }
-    }
-    result
-}
 ///
 /// Basic Tests
 #[cfg(test)]
@@ -158,16 +185,6 @@ mod tests {
         Point::String(PointHlr::new(0, name, val.to_string(), Status::Ok, Cot::Inf, chrono::Utc::now()))
     }
     #[test]
-    fn test_prepare_for_sql() {
-        assert_eq!(prepare_for_sql("hello"), "hello");
-        assert_eq!(prepare_for_sql("  world  "), "world");
-        assert_eq!(prepare_for_sql("O'Connor"), "O''Connor");
-        assert_eq!(prepare_for_sql("'; DROP TABLE users; --"), "''; DROP TABLE users; --");
-        assert_eq!(prepare_for_sql("''; DROP TABLE users; --"), "''''; DROP TABLE users; --");
-        assert_eq!(prepare_for_sql("bad\0data"), "baddata");
-        assert_eq!(prepare_for_sql("   "), "");
-    }
-    #[test]
     fn test_fntoapiqueue_sends_on_new() {
         let (tx, rx) = channel::bounded(10);
         let input_point = mock_point_string("sql_cmd", "INSERT INTO db");
@@ -197,6 +214,8 @@ mod tests {
         let mut node = FnToApiQueue::new("test", 1, input.clone(), tx);
         let res = node.out().unwrap().unwrap();
         assert!(matches!(res, FnFlow::New(_)));
-        assert!(matches!(rx.try_recv(), Ok(None)), "Empty SQL should not be sent");
+        let res = rx.try_recv();
+        println!("{:?}", res);
+        assert!(matches!(res, Ok(None)), "Empty SQL should not be sent");
     }
 }
