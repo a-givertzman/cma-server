@@ -11,11 +11,11 @@ pub(crate) trait TryTo<T>: Sized {
 impl TryTo<bool> for &sal_sync::services::entity::Point {
     type Error = sal_core::error::Error;
     fn try_to(self) -> Result<bool, Self::Error> {
-        match self.typ() {
-            sal_sync::services::entity::PointType::Bool |
-            sal_sync::services::entity::PointType::Int |
-            sal_sync::services::entity::PointType::Real |
-            sal_sync::services::entity::PointType::Double => Ok(self.to_bool().as_bool().value.0),
+        match self {
+            Point::Bool(p) => Ok(p.value.0),
+            Point::Int(p) => Ok(p.value != 0),
+            Point::Real(p) => Ok(p.value.is_finite() && p.value != 0.0),
+            Point::Double(p) => Ok(p.value.is_finite() && p.value != 0.0),
             _ => return Err(sal_core::error::Error::new("Point", "try_to<bool>").err(concat_string::concat_string!("Invalid type '", self.typ().to_string(), "'"))),
         }
     }
@@ -23,11 +23,11 @@ impl TryTo<bool> for &sal_sync::services::entity::Point {
 impl TryTo<i64> for &sal_sync::services::entity::Point {
     type Error = sal_core::error::Error;
     fn try_to(self) -> Result<i64, Self::Error> {
-        match self.typ() {
-            sal_sync::services::entity::PointType::Bool |
-            sal_sync::services::entity::PointType::Int |
-            sal_sync::services::entity::PointType::Real |
-            sal_sync::services::entity::PointType::Double => Ok(self.to_int().as_int().value),
+        match self {
+            Point::Bool(p) => Ok(if p.value.0 {1} else {0}),
+            Point::Int(p) => Ok(p.value),
+            Point::Real(p) => Ok(p.value.round() as i64),
+            Point::Double(p) => Ok(p.value.round() as i64),
             _ => return Err(sal_core::error::Error::new("Point", "try_to<i64>").err(concat_string::concat_string!("Invalid type '", self.typ().to_string(), "'"))),
         }
     }
@@ -35,11 +35,11 @@ impl TryTo<i64> for &sal_sync::services::entity::Point {
 impl TryTo<f32> for &sal_sync::services::entity::Point {
     type Error = sal_core::error::Error;
     fn try_to(self) -> Result<f32, Self::Error> {
-        match self.typ() {
-            sal_sync::services::entity::PointType::Bool |
-            sal_sync::services::entity::PointType::Int |
-            sal_sync::services::entity::PointType::Real |
-            sal_sync::services::entity::PointType::Double => Ok(self.to_real().as_real().value),
+        match self {
+            Point::Bool(p) => Ok(if p.value.0 {1.0} else {0.0}),
+            Point::Int(p) => Ok(p.value as f32),
+            Point::Real(p) => Ok(p.value),
+            Point::Double(p) => Ok(p.value as f32),
             _ => return Err(sal_core::error::Error::new("Point", "try_to<f32>").err(concat_string::concat_string!("Invalid type '", self.typ().to_string(), "'"))),
         }
     }
@@ -47,13 +47,27 @@ impl TryTo<f32> for &sal_sync::services::entity::Point {
 impl TryTo<f64> for &sal_sync::services::entity::Point {
     type Error = sal_core::error::Error;
     fn try_to(self) -> Result<f64, Self::Error> {
-        match self.typ() {
-            sal_sync::services::entity::PointType::Bool |
-            sal_sync::services::entity::PointType::Int |
-            sal_sync::services::entity::PointType::Real |
-            sal_sync::services::entity::PointType::Double => Ok(self.to_double().as_double().value),
+        match self {
+            Point::Bool(p) => Ok(if p.value.0 {1.0} else {0.0}),
+            Point::Int(p) => Ok(p.value as f64),
+            Point::Real(p) => Ok(p.value as f64),
+            Point::Double(p) => Ok(p.value),
             _ => return Err(sal_core::error::Error::new("Point", "try_to<f64>").err(concat_string::concat_string!("Invalid type '", self.typ().to_string(), "'"))),
         }
+    }
+}
+impl TryTo<String> for &sal_sync::services::entity::Point {
+    type Error = sal_core::error::Error;
+    fn try_to(self) -> Result<String, Self::Error> {
+        let value = match self {
+            Point::Bool(p) => p.value.0.to_string(),
+            Point::Int(p) => p.value.to_string(),
+            Point::Real(p) => p.value.to_string(),
+            Point::Double(p) => p.value.to_string(),
+            Point::String(p) => p.value.clone(),
+            _ => return Err(sal_core::error::Error::new("Point", "try_to<f64>").err(concat_string::concat_string!("Invalid type '", self.typ().to_string(), "'"))),
+        };
+        Ok(value)
     }
 }
 ///
@@ -72,13 +86,13 @@ impl PointMeta {
         Self {
             status: p.status(),
             cot: p.cot(),
-            ts: p.timestamp(),
+            ts: p.ts(),
         }
     }
     ///
     /// Returns `PointMeta` updated with passed `Point`: `status`, `cot`, `timestamp` only if it has latest `timestamp`
     pub fn update_latest(self, p: &Point) -> Self {
-        if p.timestamp() > self.ts {
+        if p.ts() > self.ts {
             self.update(p)
         } else {
             self

@@ -128,7 +128,8 @@ impl FormatPoint {
     }
     ///
     /// Returns formatted string? replacing configured markers with the associated values by them keys
-    pub fn out(&self) -> String {
+    /// - String values will passed into `escape` to be processed with the external escaper
+    pub fn escaped(&self, escape: impl Fn(&str) -> String) -> String {
         let mut out = String::with_capacity(256);
         for token in &self.tokens {
             match token {
@@ -136,22 +137,32 @@ impl FormatPoint {
                 Token::Dynamic { name, prefix: _, suffix, precision } => {
                     if let Some(point) = self.values.get(name) {
                         let value = match suffix {
-                            Sufix::Name => point.name(),
+                            Sufix::Name => &point.name(),
                             Sufix::Value | Sufix::None => {
                                 if let Some(prec) = precision {
                                     match point {
-                                        Point::Real(p) => format!("{:.*}", prec, p.value),
-                                        Point::Double(p) => format!("{:.*}", prec, p.value),
-                                        _ => point.value().to_string(),
+                                        Point::Bool(p) => &p.value.to_string(),
+                                        Point::Int(p) => &p.value.to_string(),
+                                        Point::Real(p) => &format!("{:.*}", prec, p.value),
+                                        Point::Double(p) => &format!("{:.*}", prec, p.value),
+                                        Point::String(p) => &escape(&p.value),
+                                        Point::Bytes(p) => &format!("{:?}", p.value),
                                     }
                                 } else {
-                                    point.value().to_string()
+                                    match point {
+                                        Point::Bool(p) => &p.value.to_string(),
+                                        Point::Int(p) => &p.value.to_string(),
+                                        Point::Real(p) => &p.value.to_string(),
+                                        Point::Double(p) => &p.value.to_string(),
+                                        Point::String(p) => &escape(&p.value),
+                                        Point::Bytes(p) => &format!("{:?}", p.value),
+                                    }
                                 }
                             }
-                            Sufix::Ts => point.ts().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
-                            Sufix::Status => point.status().to_string(),
+                            Sufix::Ts => &point.ts().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
+                            Sufix::Status => &point.status().to_string(),
                         };
-                        out.push_str(&value);
+                        out.push_str(value);
                     } else {
                         out.push_str("{");
                         out.push_str(name);
@@ -161,6 +172,11 @@ impl FormatPoint {
             }
         }
         out
+    }
+    ///
+    /// Returns formatted string? replacing configured markers with the associated values by them keys
+    pub fn out(&self) -> String {
+        self.escaped(|v| v.to_owned())
     }
     ///
     /// Returns List of all names & sufixes in the following format:

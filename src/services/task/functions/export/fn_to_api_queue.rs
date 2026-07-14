@@ -1,6 +1,7 @@
+use function_name::named;
 use sal_sync::{services::entity::{Point, PointHlr}, sync::channel::Sender};
 use std::sync::{atomic::{AtomicUsize, Ordering}};
-use crate::{domain::FnOutRef, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}};
+use crate::{domain::{FnOutRef, TryTo}, err_pass, services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult}};
 ///
 /// ### Function | `FnToApiQueue`
 /// 
@@ -84,12 +85,13 @@ impl FnOut for FnToApiQueue {
         self.input.borrow().inputs()
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
         log::trace!("{}.out | input: {:?}", self.id, input);
         if flow.is_new() {
-            let sql = prepare_for_sql(&(&input).to_string().as_string().value);
+            let sql: String = (&input).try_to().map_err(|err: sal_core::error::Error| err_pass!(self.id, err).to_string())?;
             if !sql.is_empty() {
                 self.send(self.point_with(&input, sql));
             }
@@ -106,24 +108,6 @@ impl FnOut for FnToApiQueue {
 ///
 /// Global static counter of FnToApiQueue instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
-///
-/// Подготавливает сырую строку для безопасной вставки в SQL-запрос.
-/// - Удаляет пробелы по краям
-/// - Вырезает нулевые байты (\0)
-/// - Экранирует одинарные кавычки
-pub fn prepare_for_sql(input: &str) -> String {
-    let trimmed = input.trim();
-    // +8 байт — запас под несколько кавычек
-    let mut result = String::with_capacity(trimmed.len() + 8);
-    for c in trimmed.chars() {
-        match c {
-            '\0' => continue,
-            '\'' => result.push_str("''"),
-            _ => result.push(c),
-        }
-    }
-    result
-}
 ///
 /// Basic Tests
 #[cfg(test)]
@@ -156,16 +140,6 @@ mod tests {
     }
     fn mock_point_string(name: &str, val: &str) -> Point {
         Point::String(PointHlr::new(0, name, val.to_string(), Status::Ok, Cot::Inf, chrono::Utc::now()))
-    }
-    #[test]
-    fn test_prepare_for_sql() {
-        assert_eq!(prepare_for_sql("hello"), "hello");
-        assert_eq!(prepare_for_sql("  world  "), "world");
-        assert_eq!(prepare_for_sql("O'Connor"), "O''Connor");
-        assert_eq!(prepare_for_sql("'; DROP TABLE users; --"), "''; DROP TABLE users; --");
-        assert_eq!(prepare_for_sql("''; DROP TABLE users; --"), "''''; DROP TABLE users; --");
-        assert_eq!(prepare_for_sql("bad\0data"), "baddata");
-        assert_eq!(prepare_for_sql("   "), "");
     }
     #[test]
     fn test_fntoapiqueue_sends_on_new() {
