@@ -56,7 +56,8 @@ impl FnToApiQueue {
     #[named]
     fn prepare_raw_sql(&self, sql: &str) -> Result<String, Error> {
         let dialect = PostgreSqlDialect {};
-        let tokens = Tokenizer::new(&dialect, sql.trim())
+        let sql: String = sql.trim().chars().filter(|&c| c != '\0').collect();
+        let tokens = Tokenizer::new(&dialect, &sql)
             .tokenize()
             .map_err(|err| err_pass!(self.id, err, "Invalid SQL: {}", sql))?;
         let mut result = String::with_capacity(sql.len() + 16);
@@ -65,15 +66,14 @@ impl FnToApiQueue {
                 // Если токен — это строка в одинарных кавычках 'value'
                 Token::SingleQuotedString(ref text) => {
                     // Вырезаем нулевые байты для безопасности (как в вашей функции)
-                    let clean_text: String = text.chars().filter(|&c| c != '\0').collect();
-                    let escaped_text = clean_text.replace('\'', "''");
+                    // let clean_text: String = text.chars().filter(|&c| c != '\0').collect();
+                    let escaped_text = text.replace('\'', "''");
                     result.push('\'');
                     result.push_str(&escaped_text);
                     result.push('\'');
                 }
                 // Все остальные токены (INSERT, INTO, имена таблиц, скобки) пропускаем "как есть"
                 _ => {
-                    // Восстанавливаем исходное форматирование токена
                     result.push_str(&token.to_string());
                 }
             }
@@ -123,12 +123,20 @@ impl FnOut for FnToApiQueue {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
-        log::trace!("{}.out | input: {:?}", self.id, input);
+        // log::trace!("{}.out | input: {:?}", self.id, input);
         if flow.is_new() {
             let sql: String = (&input).try_to().map_err(|err: sal_core::error::Error| err_pass!(self.id, err).to_string())?;
-            let sql = self.prepare_raw_sql(&sql).map_err(|err: sal_core::error::Error| err_pass!(self.id, err).to_string())?;
-            if !sql.is_empty() {
-                self.send(self.point_with(&input, sql));
+            match self.prepare_raw_sql(&sql) {
+                Ok(sql) => {
+                    if !sql.is_empty() {
+                        self.send(self.point_with(&input, sql));
+                    }
+                }
+                Err(err) => {
+                    if log::max_level() >= log::LevelFilter::Debug {
+                        log::warn!("{}.out | {:?}", self.id, err);
+                    }
+                }
             }
         }
         flow.wrap(input)
@@ -206,6 +214,8 @@ mod tests {
         let mut node = FnToApiQueue::new("test", 1, input.clone(), tx);
         let res = node.out().unwrap().unwrap();
         assert!(matches!(res, FnFlow::New(_)));
-        assert!(matches!(rx.try_recv(), Ok(None)), "Empty SQL should not be sent");
+        let res = rx.try_recv();
+        println!("{:?}", res);
+        assert!(matches!(res, Ok(None)), "Empty SQL should not be sent");
     }
 }
