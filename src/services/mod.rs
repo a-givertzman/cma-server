@@ -15,8 +15,9 @@ pub mod app;
 mod cache;
 pub use cache::*;
 pub mod diagnosis;
-mod frdm_service;
-pub use frdm_service::*;
+// By Anton Lobanov 6.07.2026 FRDM disabled for GAZ-192103-release-with-registrator
+// mod frdm_service;
+// pub use frdm_service::*;
 pub mod history;
 mod modbus_tcp;
 pub use modbus_tcp::*;

@@ -3,8 +3,7 @@ mod tests {
     use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}, thread};
     use std::{sync::Once, time::Duration};
     use debugging::session::debug_session::{DebugSession, LogLevel};
-use rand::RngExt;
-
+    use rand::RngExt;
     use crate::domain::Mutex;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.

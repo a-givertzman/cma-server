@@ -11,7 +11,7 @@ mod tcp_stream_write {
         tests::unit::tcp::tcp_stream_write_test::MockStreamRead,
     };
     use debugging::session::debug_session::{DebugSession, LogLevel};
-use rand::RngExt;
+    use rand::RngExt;
     use std::{
         io::Read,
         net::{TcpListener, TcpStream},

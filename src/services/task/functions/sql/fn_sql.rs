@@ -1,6 +1,7 @@
 use function_name::named;
 use sal_core::error::Error;
 use sal_sync::{collections::FxIndexMap, services::{Services, entity::{Name, Point, PointHlr}, task::functions::FnConfig}};
+use sqlparser::{dialect::PostgreSqlDialect, tokenizer::{Token, Tokenizer}};
 use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}};
 use crate::{
     domain::{
@@ -132,7 +133,7 @@ impl FnOut for FnSql {
             // log::trace!("{}.out | input: {:?} - found", self.id, _name);
             self.sql.insert(marker, input);
         }
-        let value = self.sql.out();
+        let value = self.sql.escaped(|v| escape_for_sql(v));
         log::trace!("{}.out | sql: {:?}", self.id, value);
         let point = Point::String(Self::point_with(self.txid, &meta, &self.id, value));
         self.cache = Some(point.clone());
@@ -153,6 +154,24 @@ impl FnOut for FnSql {
 ///
 /// Global static counter of FnSql instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
+///
+/// Подготавливает сырую строку для безопасной вставки в SQL-запрос.
+/// - Удаляет пробелы по краям
+/// - Вырезает нулевые байты (\0)
+/// - Экранирует одинарные кавычки
+pub fn escape_for_sql(input: &str) -> String {
+    let trimmed = input.trim();
+    // +8 байт — запас под несколько кавычек
+    let mut result = String::with_capacity(trimmed.len() + 8);
+    for c in trimmed.chars() {
+        match c {
+            '\0' => continue,
+            '\'' => result.push_str("''"),
+            _ => result.push(c),
+        }
+    }
+    result
+}
 ///
 /// Basic Tests
 #[cfg(test)]
@@ -185,6 +204,16 @@ mod tests {
         Point::String(PointHlr::new(0, name, val.to_string(), Status::Ok, Cot::Inf, chrono::Utc::now()))
     }
     #[test]
+    fn test_prepare_for_sql() {
+        assert_eq!(escape_for_sql("hello"), "hello");
+        assert_eq!(escape_for_sql("  world  "), "world");
+        assert_eq!(escape_for_sql("O'Connor"), "O''Connor");
+        assert_eq!(escape_for_sql("'; DROP TABLE users; --"), "''; DROP TABLE users; --");
+        assert_eq!(escape_for_sql("''; DROP TABLE users; --"), "''''; DROP TABLE users; --");
+        assert_eq!(escape_for_sql("bad\0data"), "baddata");
+        assert_eq!(escape_for_sql("   "), "");
+    }
+    #[test]
     fn test_sql_metric_evaluation_new() {
         let template = "UPDATE test SET status = '{st.value}', val = {val.value} WHERE id = '{id.name}';";
         let sql = FormatPoint::new(template).unwrap();
@@ -201,7 +230,7 @@ mod tests {
             inputs,
             sql,
             cache: None,
-            id: "parent/SqlMetric_test".to_string(),
+            id: "parent/FnSql_test".to_string(),
         };
         let res = metric.out().unwrap().unwrap();
         assert!(matches!(res, FnFlow::New(_)), "Ожидаем статус New при новых данных");
@@ -220,7 +249,7 @@ mod tests {
             inputs,
             sql,
             cache: None,
-            id: "parent/SqlMetric_test".to_string(),
+            id: "parent/FnSql_test".to_string(),
         };
         let res = metric.out().unwrap().unwrap();
         assert!(matches!(res, FnFlow::Old(_)), "Если источник отдал Old, узел обязан пробросить Old");
@@ -239,7 +268,7 @@ mod tests {
             inputs,
             sql,
             cache: None,
-            id: "parent/SqlMetric_test".to_string(),
+            id: "parent/FnSql_test".to_string(),
         };
         let res = metric.out().unwrap();
         assert!(res.is_none(), "При отсутствии сигнала (Ok(None)) узел должен молча уснуть");
