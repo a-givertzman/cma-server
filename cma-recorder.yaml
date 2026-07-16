@@ -19,35 +19,35 @@ service Task RecorderTask:
                 - /App/ied14/db906_visual_data/CraneMode.MOPS
 
     #
-    # The nominal load of the crane
+    # The nominal load of the crane, Ton
     let craneLoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok default 0.0
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok # default 100000
     #
-    # The nominal load of the Winch1
+    # The nominal load of the Winch1, Ton
     let winch1LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok default 0.0
+        input: point real '/App/ied13/db905_visual_data_fast/Winch1.LoadR0' status ok # default 100000
     #
-    # The nominal load of the Winch2
+    # The nominal load of the Winch2, Ton
     let winch2LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch2.LoadR0' status ok default 0.0
+        input: point real '/App/ied13/db905_visual_data_fast/Winch2.LoadR0' status ok # default 100000
     #
-    # The nominal load of the Winch3
+    # The nominal load of the Winch3, Ton
     let winch3LoadNom:
-        input: point real '/App/ied13/db905_visual_data_fast/Winch3.LoadR0' status ok default 0.0
+        input: point real '/App/ied13/db905_visual_data_fast/Winch3.LoadR0' status ok # default 100000
     #
-    # The nominal load of the crane
+    # The nominal load of the crane, Ton
     let craneLoad:
         input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok default 0.0
     #
-    # The nominal load of the Winch1
+    # The nominal load of the Winch1, Ton
     let winch1Load:
         input: point real '/App/ied14/db906_visual_data/Winch1.Load' status ok default 0.0
     #
-    # The nominal load of the Winch2
+    # The nominal load of the Winch2, Ton
     let winch2Load:
         input: point real '/App/ied14/db906_visual_data/Winch2.Load' status ok default 0.0
     #
-    # The nominal load of the Winch3
+    # The nominal load of the Winch3, Ton
     let winch3Load:
         input: point real '/App/ied14/db906_visual_data/Winch3.Load' status ok default 0.0
     #
@@ -115,52 +115,48 @@ service Task RecorderTask:
             input fn TimerOnDelay:
                 delay: 5000ms
                 input fn Ge:
-                    # input1: craneLoad
-                    input2: opCycleThreshold
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: opCycleThreshold
                         input: craneLoad
+                    input2: opCycleThreshold
     let winch1IsActive:
         input fn TimerOffDelay:
             delay: 5000ms
             input fn TimerOnDelay:
                 delay: 5000ms
                 input fn Ge:
-                    # input1: winch1Load
-                    input2: winch1OpCycleThreshold
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch1OpCycleThreshold
                         input: winch1Load
+                    input2: winch1OpCycleThreshold
     let winch2IsActive:
         input fn TimerOffDelay:
             delay: 5000ms
             input fn TimerOnDelay:
                 delay: 5000ms
                 input fn Ge:
-                    # input1: winch2Load
-                    input2: winch2OpCycleThreshold
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch2OpCycleThreshold
                         input: winch2Load
+                    input2: winch2OpCycleThreshold
     let winch3IsActive:
         input fn TimerOffDelay:
             delay: 5000ms
             input fn TimerOnDelay:
                 delay: 5000ms
                 input fn Ge:
-                    # input1: winch3Load
-                    input2: winch3OpCycleThreshold
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch3OpCycleThreshold
                         input: winch3Load
+                    input2: winch3OpCycleThreshold
     #
     # Detect if operating cycle is active (true - isActive, false - isNotActive)
     let opCycleIsActive:
         input fn Or:
             input0: craneIsActive
-            input1: winch1IsActive
-            input2: winch2IsActive
-            input3: winch3IsActive
+            input1: winch1IsActive  
+            input2: winch2IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
+            input3: winch3IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
     #
     # Returns one tic true if operating cycle is begins (isActive false -> true)
     let opCycleIsStarted:
@@ -170,6 +166,7 @@ service Task RecorderTask:
     # Returns one tic true if operating cycle is finished (isActive true -> false)
     let opCycleIsDone:
         input fn FallingEdge:
+            # input fn Debug:
             input: opCycleIsActive
     #
     # Detect if pump is active (true - isActive, false - isNotActive)
@@ -184,7 +181,8 @@ service Task RecorderTask:
                 initial fn Retain:
                     default: const int 0
                     key: 'OperatingCycleId'
-                input: opCycleIsStarted
+                input fn Debug:
+                    input: opCycleIsStarted
     #
     # Crane Average load in operating cycle, ??? unit ???
     let craneCycleAverageLoad:
@@ -305,7 +303,6 @@ service Task RecorderTask:
     let craneOperatingCycleSecs:
         input fn Timer:
             reset: opCycleIsStarted
-            initial: const real 0.0
             input: opCycleIsActive
     #
     # winch1-characteristic-number  |  текущее характеристическое число лебедка 1
@@ -1098,137 +1095,137 @@ service Task RecorderTask:
         #                !!! IN SECONDS
         # 3.1   | real | crane-total-operating-secs  | общее количество часов работы крана (мото-секунды)
         input31 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'crane-total-operating-secs';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'crane-total-operating-secs';
             input fn Timer:
                 reset: opCycleIsStarted
                 input: opCycleIsActive
         #
         # 3.2.0 | real | pump-total-operating-secs   | общее количество часов работы насосной станции (мото-секунды)
         input320 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'pump-total-operating-secs';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'pump-total-operating-secs';
             input fn Timer:
                 input: pumpIsActive
         #
         # 3.2.1 | real | winch1-total-operating-secs | общее количество часов работы лебедки 1 (мото-секунды)
         input321 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch1-total-operating-secs';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-total-operating-secs';
             input fn Timer:
                 input: winch1IsActive
         #
         # 3.2.2 | real | winch2-total-operating-secs | общее количество часов работы лебедки 2 (мото-секунды)
         input322 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch2-total-operating-secs';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-total-operating-secs';
             input fn Timer:
                 input: winch2IsActive
         #
         # 3.2.3 | real | winch3-total-operating-secs | общее количество часов работы лебедки 3 (мото-секунды)
         input323 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch3-total-operating-secs';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-total-operating-secs';
             input fn Timer:
                 input: winch3IsActive
         #
         # 3.3 | int | total-operating-cycles-count | суммарное число рабочих циклов
         input33 fn Sql:
-            sql: update public.rec_basic_metric set value = value + 1 where name = 'total-operating-cycles-count';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'total-operating-cycles-count';
             input: opCycleIsDone
         #
         # 3.4  |  cycles-distribution-by-load-ranges  |  распределение циклов по диапазонам нагрузки
         #
         # 3.4.1  |  распределение циклов по диапазонам нагрузки для Крана
         input34_1 fn Sql:
-            sql: update public.rec_basic_metric set value = value + 1 where name = 'cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'cycles-{range.value}_load-range';
             range: cycleLoadRange
         input34_1_L fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = '{range.value}-load';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = '{range.value}-load';
             input: craneCycleAverageLoadRelative
             range: cycleLoadRange
         #
         # 3.4.2  |  распределение циклов по диапазонам нагрузки для Лебедки 1
         input34_2 fn Sql:
-            sql: update public.rec_basic_metric set value = value + 1 where name = 'winch1-cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch1-cycles-{range.value}_load-range';
             range: winch1CycleLoadRange
         input34_2_L fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch1-{range.value}-load';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-{range.value}-load';
             input: winch1CycleAverageLoadRelative
             range: winch1CycleLoadRange
         #
         # 3.4.3  |  распределение циклов по диапазонам нагрузки для Лебедки 2
         input34_3 fn Sql:
-            sql: update public.rec_basic_metric set value = value + 1 where name = 'winch2-cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch2-cycles-{range.value}_load-range';
             range: winch2CycleLoadRange
         input34_3_L fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch2-{range.value}-load';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-{range.value}-load';
             input: winch2CycleAverageLoadRelative
             range: winch2CycleLoadRange
         #
         # 3.4.4  |  распределение циклов по диапазонам нагрузки для Лебедки 3
         input34_4 fn Sql:
-            sql: update public.rec_basic_metric set value = value + 1 where name = 'winch3-cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch3-cycles-{range.value}_load-range';
             range: winch3CycleLoadRange
         input34_4_L fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch3-{range.value}-load';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-{range.value}-load';
             input: winch3CycleAverageLoadRelative
             range: winch3CycleLoadRange
         #
         # 3.5  |  real  |  crane-total-lifted-mass  |  суммарная масса поднятых грузов. тонн  |  0.0
         input35 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'crane-total-lifted-mass';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'crane-total-lifted-mass';
             input: craneCycleAverageLoad
         #
         # 3.5.1  |  real  |  winch1-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 1  |  0.0
         input351 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch1-total-lifted-mass';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-total-lifted-mass';
             input: winch1CycleAverageLoad
         #
         # 3.5.2  |  real  |  winch2-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 2  |  0.0
         input352 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch2-total-lifted-mass';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-total-lifted-mass';
             input: winch2CycleAverageLoad
         #
         # 3.5.3  |  real  |  winch3-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 3
         input353 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch3-total-lifted-mass';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-total-lifted-mass';
             input: winch3CycleAverageLoad
         #
         # 3.6.1  |  int  |  winch1-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 1
         input361 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch1-load-limiter-trip-count';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-load-limiter-trip-count';
             input fn Acc:
                 input fn RisingEdge:
                     input: winch1LoadLimiterTrip
         #
         # 3.6.2  |  int  |  winch2-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 2
         input362 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch2-load-limiter-trip-count';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-load-limiter-trip-count';
             input fn Acc:
                 input fn RisingEdge:
                     input: winch2LoadLimiterTrip
         #
         # 3.6.3  |  int  |  winch3-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 3
         input363 fn Sql:
-            sql: update public.rec_basic_metric set value = value + {input.value} where name = 'winch3-load-limiter-trip-count';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-load-limiter-trip-count';
             input fn Acc:
                 input fn RisingEdge:
                     input: winch3LoadLimiterTrip
         #
         # 3.7  |  real  |  crane-characteristic-number  |  текущее характеристическое число для крана
         input37 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'crane-characteristic-number';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'crane-characteristic-number';
             input: craneEigenValue
         #
         # 3.7.1  |  real  |  winch1-characteristic-number  |  текущее характеристическое число лебедка 1
         input371 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'winch1-characteristic-number';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-characteristic-number';
             input: winch1EigenValue
         #
         # 3.7.2  |  real  |  winch2-characteristic-number  |  текущее характеристическое число лебедка 2
         input372 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'winch2-characteristic-number';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-characteristic-number';
             input: winch2EigenValue
         #
         # 3.7.3  |  real  |  winch3-characteristic-number  |  текущее характеристическое число лебедка 3
         input373 fn Sql:
-            sql: update public.rec_basic_metric set value = {input.value} where name = 'winch3-characteristic-number';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-characteristic-number';
             input: winch3EigenValue
         #
         # 3.8  |  real  |  crane-load-spectrum-factor  |  коэффициент распределения нагрузок для крана

@@ -144,37 +144,37 @@ service Task HistoryTask:
             input2 fn PointId:
                 input: point any every
 
-service Task RecorderTask:
-    wait-started: 100 ms
-    cycle: 10 ms
-    in queue recv-queue:
-        max-length: 10000
-    subscribe:
-        /App/MultiQueue:                    # - multicast subscription to the MultiQueue
-            Inf:                            # - on points having Cot::Inf
-                - /App/ied13/db905_visual_data_fast/Winch1.LoadR0
-                - /App/ied13/db905_visual_data_fast/Winch2.LoadR0
-                - /App/ied13/db905_visual_data_fast/Winch3.LoadR0
-                - /App/ied14/db906_visual_data/Winch1.Load
-                - /App/ied14/db906_visual_data/Winch2.Load
-                - /App/ied14/db906_visual_data/Winch3.Load
-                - /App/ied14/db906_visual_data/Winch1.SWLProtection
-                - /App/ied14/db906_visual_data/Winch2.SWLProtection
-                - /App/ied14/db906_visual_data/Winch3.SWLProtection
-                - /App/ied14/db906_visual_data/CraneMode.AOPS
-                - /App/ied14/db906_visual_data/CraneMode.MOPS
-    fn Debug:
-        input00: point real /App/ied13/db905_visual_data_fast/Winch1.LoadR0
-        input01: point real /App/ied13/db905_visual_data_fast/Winch2.LoadR0
-        input02: point real /App/ied13/db905_visual_data_fast/Winch3.LoadR0
-        input03: point real /App/ied14/db906_visual_data/Winch1.Load
-        input04: point real /App/ied14/db906_visual_data/Winch2.Load
-        input05: point real /App/ied14/db906_visual_data/Winch3.Load
-        input06: point bool /App/ied14/db906_visual_data/Winch1.SWLProtection
-        input07: point bool /App/ied14/db906_visual_data/Winch2.SWLProtection
-        input08: point bool /App/ied14/db906_visual_data/Winch3.SWLProtection
-        input09: point int /App/ied14/db906_visual_data/CraneMode.AOPS
-        input10: point int /App/ied14/db906_visual_data/CraneMode.MOPS
+# service Task RecorderTask:
+#     wait-started: 100 ms
+#     cycle: 10 ms
+#     in queue recv-queue:
+#         max-length: 10000
+#     subscribe:
+#         /App/MultiQueue:                    # - multicast subscription to the MultiQueue
+#             Inf:                            # - on points having Cot::Inf
+#                 - /App/ied13/db905_visual_data_fast/Winch1.LoadR0
+#                 - /App/ied13/db905_visual_data_fast/Winch2.LoadR0
+#                 - /App/ied13/db905_visual_data_fast/Winch3.LoadR0
+#                 - /App/ied14/db906_visual_data/Winch1.Load
+#                 - /App/ied14/db906_visual_data/Winch2.Load
+#                 - /App/ied14/db906_visual_data/Winch3.Load
+#                 - /App/ied14/db906_visual_data/Winch1.SWLProtection
+#                 - /App/ied14/db906_visual_data/Winch2.SWLProtection
+#                 - /App/ied14/db906_visual_data/Winch3.SWLProtection
+#                 - /App/ied14/db906_visual_data/CraneMode.AOPS
+#                 - /App/ied14/db906_visual_data/CraneMode.MOPS
+#     fn Debug:
+#         input00: point real /App/ied13/db905_visual_data_fast/Winch1.LoadR0
+#         input01: point real /App/ied13/db905_visual_data_fast/Winch2.LoadR0
+#         input02: point real /App/ied13/db905_visual_data_fast/Winch3.LoadR0
+#         input03: point real /App/ied14/db906_visual_data/Winch1.Load
+#         input04: point real /App/ied14/db906_visual_data/Winch2.Load
+#         input05: point real /App/ied14/db906_visual_data/Winch3.Load
+#         input06: point bool /App/ied14/db906_visual_data/Winch1.SWLProtection
+#         input07: point bool /App/ied14/db906_visual_data/Winch2.SWLProtection
+#         input08: point bool /App/ied14/db906_visual_data/Winch3.SWLProtection
+#         input09: point int /App/ied14/db906_visual_data/CraneMode.AOPS
+#         input10: point int /App/ied14/db906_visual_data/CraneMode.MOPS
 
 
 service ApiClient:

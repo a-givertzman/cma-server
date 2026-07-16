@@ -113,7 +113,7 @@ impl FnOut for FnExport {
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let Some(input) = flow.map(self.input.borrow_mut().out())? else { return Ok(None) };
-        log::debug!("{}.out | input: {:?}", self.id, input);
+        // log::debug!("{}.out | input: {:?}", self.id, input);
         if flow.is_new() {
             let point = match &self.conf {
                 Some(conf) => self.convert_to(&conf.name, &input, &conf.type_)
