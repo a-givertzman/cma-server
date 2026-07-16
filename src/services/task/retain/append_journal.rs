@@ -100,9 +100,7 @@ where
             buf.clear();
         }
         if let Some(event) = event {
-            if let Err(err) = ctx.cache.insert_sync(event.key.clone(), event.p.clone()) {
-                log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
-            }
+            _ = ctx.cache.upsert_sync(event.key.clone(), event.p.clone());
             if buf.len() >= Self::MAX_BUFFER_SIZE {
                 if buf.pop_front().is_some() {
                     self.buf_notify.update(BufState::Err, || format!("{}.run | Buffer state: Overflow. Dropping oldest events to protect memory", self.dbg));

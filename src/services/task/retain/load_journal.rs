@@ -84,9 +84,7 @@ impl<Child> LoadJournal<Child> {
                         Ok(IoState::Done) => break,
                         Ok(IoState::Continue((name, state))) => {
                             let val = Self::point(&state, txid, &name);
-                            if let Err(err) = cache.insert_sync(name, val) {
-                                log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
-                            }
+                            _ = cache.upsert_sync(name, val);
                         }
                         Err(err) => {
                             log::error!("{}.load | Retain файл журнала оборван или поврежден '{}'.\n\tОшибка: {:?}.\n\tТолько часть данных загружено: {:#?}.",
