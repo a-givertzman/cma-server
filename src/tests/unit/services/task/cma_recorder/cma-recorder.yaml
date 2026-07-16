@@ -1,5 +1,7 @@
 service Task RecorderTask:
     wait-started: 100 ms
+    retain:
+        mode: debug
     cycle: 250 ms
     in queue recv-queue:
         max-length: 10000
