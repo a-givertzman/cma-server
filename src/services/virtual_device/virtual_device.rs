@@ -12,7 +12,7 @@
 use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, time::{Duration, Instant}};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, PointTxId, PointType}}, sync::{Handles, Owner}, thread_pool::Scheduler
+    collections::FxIndexMap, services::{Service, ServiceWaiting, Services, entity::{Name, Object, Point, PointConf, PointHlr, PointTxId, PointType}}, sync::{Handles, Owner}, thread_pool::Scheduler
 };
 use crate::{domain::RECV_TIMEOUT, infra::ApiClient, services::{CmdKind, Header, InputBlock, ResultBlock, Table, VirtualDeviceConf}};
 ///
@@ -62,7 +62,7 @@ impl VirtualDevice {
                         .map(|r| r.first())
                         .flatten()
                         .map(|r| match typ {
-                            sal_sync::services::entity::PointConfType::Bool => match r.1 {
+                            sal_sync::services::entity::PointType::Bool => match r.1 {
                                 serde_json::Value::Null => spreadsheet_ods::Value::Text("Empty".to_owned()),
                                 serde_json::Value::Bool(v) => spreadsheet_ods::Value::Boolean(*v),
                                 serde_json::Value::Number(v) => spreadsheet_ods::Value::Number(v.as_f64().unwrap()),
@@ -73,8 +73,8 @@ impl VirtualDevice {
                                 serde_json::Value::Array(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                                 serde_json::Value::Object(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                             }
-                            sal_sync::services::entity::PointConfType::Bytes => todo!(),
-                            sal_sync::services::entity::PointConfType::Int => match r.1 {
+                            sal_sync::services::entity::PointType::Bytes => todo!(),
+                            sal_sync::services::entity::PointType::Int => match r.1 {
                                 serde_json::Value::Null => spreadsheet_ods::Value::Text("Empty".to_owned()),
                                 serde_json::Value::Bool(v) => spreadsheet_ods::Value::Boolean(*v),
                                 serde_json::Value::Number(v) => spreadsheet_ods::Value::Number(v.as_f64().unwrap()),
@@ -85,7 +85,7 @@ impl VirtualDevice {
                                 serde_json::Value::Array(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                                 serde_json::Value::Object(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                             }
-                            sal_sync::services::entity::PointConfType::Real => match r.1 {
+                            sal_sync::services::entity::PointType::Real => match r.1 {
                                 serde_json::Value::Null => spreadsheet_ods::Value::Text("Empty".to_owned()),
                                 serde_json::Value::Bool(v) => spreadsheet_ods::Value::Boolean(*v),
                                 serde_json::Value::Number(v) => spreadsheet_ods::Value::Number(v.as_f64().unwrap()),
@@ -96,7 +96,7 @@ impl VirtualDevice {
                                 serde_json::Value::Array(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                                 serde_json::Value::Object(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                             }
-                            sal_sync::services::entity::PointConfType::Double => match r.1 {
+                            sal_sync::services::entity::PointType::Double => match r.1 {
                                 serde_json::Value::Null => spreadsheet_ods::Value::Text("Empty".to_owned()),
                                 serde_json::Value::Bool(v) => spreadsheet_ods::Value::Boolean(*v),
                                 serde_json::Value::Number(v) => spreadsheet_ods::Value::Number(v.as_f64().unwrap()),
@@ -107,7 +107,7 @@ impl VirtualDevice {
                                 serde_json::Value::Array(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                                 serde_json::Value::Object(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                             }
-                            sal_sync::services::entity::PointConfType::String => match r.1 {
+                            sal_sync::services::entity::PointType::String => match r.1 {
                                 serde_json::Value::Null => spreadsheet_ods::Value::Text("Empty".to_owned()),
                                 serde_json::Value::Bool(v) => spreadsheet_ods::Value::Boolean(*v),
                                 serde_json::Value::Number(v) => spreadsheet_ods::Value::Number(v.as_f64().unwrap()),
@@ -115,7 +115,7 @@ impl VirtualDevice {
                                 serde_json::Value::Array(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                                 serde_json::Value::Object(v) => spreadsheet_ods::Value::Text(format!("{:?}", v)),
                             }
-                            sal_sync::services::entity::PointConfType::Json => todo!(),
+                            sal_sync::services::entity::PointType::Json => todo!(),
                         }).unwrap_or(spreadsheet_ods::Value::Text("Missed".to_string()))
                 }
                 Err(err) => {
@@ -219,7 +219,8 @@ impl Service for VirtualDevice {
                                         Ok(event) => {
                                             log::trace!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
                                             match conf.inputs.get(&event.name) {
-                                                Some(_) => {
+                                                Some(point_conf) => {
+
                                                     let time_elapsed = time.elapsed();
                                                     if time_elapsed > event.time {
                                                         log::warn!("{dbg}.run | row {} | Index {} | Elapsed {:?} Event.time {:?}, Exceeded {:?}", row_ix - 1, ix - 1.0, time_elapsed, event.time, time_elapsed - event.time);
@@ -227,76 +228,81 @@ impl Service for VirtualDevice {
                                                         log::debug!("{dbg}.run | row {} | Index {} | Elapsed {:?} Event.time {:?}", row_ix - 1, ix - 1.0, time_elapsed, event.time);
                                                     }
                                                     log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Input '{}': {:?}", event.name, event.value);
-                                                    let point = event.to_point(txid);
-                                                    if time_elapsed + Duration::from_millis(1) < event.time {
-                                                        std::thread::sleep(event.time - time_elapsed);
-                                                    }
-                                                    match send_to.send(point) {
-                                                        Ok(_) => {
-                                                            time = Instant::now();
-                                                            let mut results = FxIndexMap::default();
-                                                            let delay = 2 * event.time / 3;
-                                                            log::trace!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events in {:?}...", delay);
-                                                            let t = Instant::now();
-                                                            while !exit.load(Ordering::Acquire) && (t.elapsed() <= delay) {
-                                                                match recv.recv_timeout(RECV_TIMEOUT) {
-                                                                    Ok(point) => {
-                                                                        // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
-                                                                        results.insert(point.name().split("/").last().unwrap().to_owned(), point);
-                                                                    }
-                                                                    Err(err) => match err {
-                                                                        kanal::ReceiveErrorTimeout::Timeout => {}
-                                                                        _ => {
-                                                                            log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
-                                                                            exit.store(true, Ordering::Release);
+                                                    match event_to_point(txid, &event, &point_conf) {
+                                                        Err(err) => log::error!("{dbg}.run | {:?}", err),
+                                                        Ok(point) => {
+                                                            if time_elapsed + Duration::from_millis(1) < event.time {
+                                                                std::thread::sleep(event.time - time_elapsed);
+                                                            }
+                                                            match send_to.send(point) {
+                                                                Ok(_) => {
+                                                                    time = Instant::now();
+                                                                    let mut results = FxIndexMap::default();
+                                                                    let delay = 2 * event.time / 3;
+                                                                    log::trace!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events in {:?}...", delay);
+                                                                    let t = Instant::now();
+                                                                    while !exit.load(Ordering::Acquire) && (t.elapsed() <= delay) {
+                                                                        match recv.recv_timeout(RECV_TIMEOUT) {
+                                                                            Ok(point) => {
+                                                                                // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
+                                                                                results.insert(point.name().split("/").last().unwrap().to_owned(), point);
+                                                                            }
+                                                                            Err(err) => match err {
+                                                                                kanal::ReceiveErrorTimeout::Timeout => {}
+                                                                                _ => {
+                                                                                    log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
+                                                                                    exit.store(true, Ordering::Release);
+                                                                                }
+                                                                            }
                                                                         }
                                                                     }
-                                                                }
-                                                            }
-                                                            match results.is_empty() {
-                                                                true => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | No result events received"),
-                                                                false => log::trace!("{dbg}.run | row {row_ix} | Index {ix} | {} result events received", results.len()),
-                                                            }
-                                                            if exit.load(Ordering::Acquire) {
-                                                                break 'main;
-                                                            }
-                                                            for (result_name, result_kind) in &conf.results {
-                                                                let result_block_name = result_name.split('/').last().unwrap();
-                                                                // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}', block '{}'...", result_name, result_block_name);
-                                                                let result_block = ResultBlock::new(result_block_name, "target", "result", "status", &header);
-                                                                match result_kind {
-                                                                    crate::services::ResultKind::Event(_) => {
-                                                                        match results.get(result_block_name) {
-                                                                            Some(point) => {
-                                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, point.value());
-                                                                                let result = point.to_double().as_double().value;
+                                                                    match results.is_empty() {
+                                                                        true => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | No result events received"),
+                                                                        false => log::trace!("{dbg}.run | row {row_ix} | Index {ix} | {} result events received", results.len()),
+                                                                    }
+                                                                    if exit.load(Ordering::Acquire) {
+                                                                        break 'main;
+                                                                    }
+                                                                    for (result_name, result_kind) in &conf.results {
+                                                                        let result_block_name = result_name.split('/').last().unwrap();
+                                                                        // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}', block '{}'...", result_name, result_block_name);
+                                                                        let result_block = ResultBlock::new(result_block_name, "target", "result", "status", &header);
+                                                                        match result_kind {
+                                                                            crate::services::ResultKind::Event(_) => {
+                                                                                match results.get(result_block_name) {
+                                                                                    Some(point) => {
+                                                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, point.value());
+                                                                                        let result = point.to_double().as_double().value;
+                                                                                        result_block.write_result(row_ix, result, &mut table);
+                                                                                    }
+                                                                                    None => {
+                                                                                        log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}' - is missed", result_block_name);
+                                                                                        result_block.write_result(row_ix, "Missed", &mut table);
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                            crate::services::ResultKind::Sql(sql_result) => {
+                                                                                // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}'", sql_result.name);
+                                                                                let result = Self::fetch(&dbg, &api_client, &sql_result.typ, &sql_result.sql, sql_result.delay.to_duration()).into();
+                                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, result);
                                                                                 result_block.write_result(row_ix, result, &mut table);
                                                                             }
-                                                                            None => {
-                                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}' - is missed", result_block_name);
-                                                                                result_block.write_result(row_ix, "Missed", &mut table);
-                                                                            }
+                                                                        }
+                                                                        if let Err(err) = table.store() {
+                                                                            log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
+                                                                        }
+                                                                        if exit.load(Ordering::Acquire) {
+                                                                            break;
                                                                         }
                                                                     }
-                                                                    crate::services::ResultKind::Sql(sql_result) => {
-                                                                        // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}'", sql_result.name);
-                                                                        let result = Self::fetch(&dbg, &api_client, &sql_result.typ, &sql_result.sql, sql_result.delay.to_duration()).into();
-                                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, result);
-                                                                        result_block.write_result(row_ix, result, &mut table);
-                                                                    }
                                                                 }
-                                                                if let Err(err) = table.store() {
-                                                                    log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
-                                                                }
-                                                                if exit.load(Ordering::Acquire) {
-                                                                    break;
+                                                                Err(err) => {
+                                                                    log::warn!("{dbg}.run | Can't send Event {:?}, error: {:?}", event, err);
                                                                 }
                                                             }
-                                                        }
-                                                        Err(err) => {
-                                                            log::warn!("{dbg}.run | Can't send Event {:?}, error: {:?}", event, err);
-                                                        }
-                                                    }
+                                                        },
+                                                    };
+                                                    
                                                 }
                                                 None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Skipped. Event '{}' isn't configured", event.name),
                                             }
@@ -379,3 +385,43 @@ impl Service for VirtualDevice {
     }    
 }
 
+fn event_to_point(txid: usize, event: &InputBlock, conf: &PointConf) -> Result<Point, Error> {
+    match conf.type_ {
+        PointType::Bool => Ok(Point::Bool(PointHlr::new_bool(txid, &event.name, enent_value_bool(&event.value)?))),
+        PointType::Int => Ok(Point::Int(PointHlr::new_int(txid, &event.name, enent_value_int(&event.value)?))),
+        PointType::Real => Ok(Point::Real(PointHlr::new_real(txid, &event.name, enent_value_real(&event.value)?))),
+        PointType::Double => Ok(Point::Double(PointHlr::new_double(txid, &event.name, enent_value_double(&event.value)?))),
+        PointType::String => Ok(Point::String(PointHlr::new_string(txid, &event.name, enent_value_string(&event.value)?))),
+        _ => Err(Error::new("VirtualDevice", "event_to_point").err(format!("Unsupported type in config '{}': {:?}", conf.name, conf.type_))),
+    }
+}
+fn enent_value_bool(val: &spreadsheet_ods::Value) -> Result<bool, Error> {
+    match val {
+        spreadsheet_ods::Value::Boolean(v) => Ok(*v),
+        _ => Err(Error::new("VirtualDevice", "enent_value_bool").err(format!("Expected BOOL, found: {:?}", val))),
+    }
+}
+fn enent_value_real(val: &spreadsheet_ods::Value) -> Result<f32, Error> {
+    match val {
+        spreadsheet_ods::Value::Number(v) => Ok(*v as f32),
+        _ => Err(Error::new("VirtualDevice", "enent_value_real").err(format!("Expected REAL (f32), found: {:?}", val))),
+    }
+}
+fn enent_value_double(val: &spreadsheet_ods::Value) -> Result<f64, Error> {
+    match val {
+        spreadsheet_ods::Value::Number(v) => Ok(*v),
+        _ => Err(Error::new("VirtualDevice", "enent_value_double").err(format!("Expected DOUBLE (f64), found: {:?}", val))),
+    }
+}
+fn enent_value_int(val: &spreadsheet_ods::Value) -> Result<i64, Error> {
+    match val {
+        spreadsheet_ods::Value::Number(v) => Ok(v.round() as i64),
+        _ => Err(Error::new("VirtualDevice", "enent_value_int").err(format!("Expected INT (i64), found: {:?}", val))),
+    }
+}
+fn enent_value_string(val: &spreadsheet_ods::Value) -> Result<String, Error> {
+    match val {
+        spreadsheet_ods::Value::Text(v) => Ok(v.clone()),
+        _ => Err(Error::new("VirtualDevice", "enent_value_string").err(format!("Expected String, found: {:?}", val))),
+    }
+}
