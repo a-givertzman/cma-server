@@ -138,8 +138,6 @@ service Task HistoryTask:
     fn ToApiQueue:
         queue: /App/ApiClient.in-queue
         input fn SqlMetric:
-            initial: 0.123      # начальное значение
-            # table: public.event
             sql: "insert into public.event (pid,value,status,timestamp) values ({input2.value},{input1.value},{input1.status},'{input1.timestamp}');"
             input1 fn ToInt:
                 input: point any every      # point: every point of any type
@@ -167,17 +165,17 @@ service Task RecorderTask:
                 - /App/ied14/db906_visual_data/CraneMode.MOPS
     fn Debug:
         input fn Debug:
-                input: point real - /App/ied13/db905_visual_data_fast/Winch1.LoadR0
-                input: point real - /App/ied13/db905_visual_data_fast/Winch2.LoadR0
-                input: point real - /App/ied13/db905_visual_data_fast/Winch3.LoadR0
-                input: point real - /App/ied14/db906_visual_data/Winch1.Load
-                input: point real - /App/ied14/db906_visual_data/Winch2.Load
-                input: point real - /App/ied14/db906_visual_data/Winch3.Load
-                input: point bool - /App/ied14/db906_visual_data/Winch1.SWLProtection
-                input: point bool - /App/ied14/db906_visual_data/Winch2.SWLProtection
-                input: point bool - /App/ied14/db906_visual_data/Winch3.SWLProtection
-                input: point int - /App/ied14/db906_visual_data/CraneMode.AOPS
-                input: point int - /App/ied14/db906_visual_data/CraneMode.MOPS
+                input: point real /App/ied13/db905_visual_data_fast/Winch1.LoadR0
+                input: point real /App/ied13/db905_visual_data_fast/Winch2.LoadR0
+                input: point real /App/ied13/db905_visual_data_fast/Winch3.LoadR0
+                input: point real /App/ied14/db906_visual_data/Winch1.Load
+                input: point real /App/ied14/db906_visual_data/Winch2.Load
+                input: point real /App/ied14/db906_visual_data/Winch3.Load
+                input: point bool /App/ied14/db906_visual_data/Winch1.SWLProtection
+                input: point bool /App/ied14/db906_visual_data/Winch2.SWLProtection
+                input: point bool /App/ied14/db906_visual_data/Winch3.SWLProtection
+                input: point int /App/ied14/db906_visual_data/CraneMode.AOPS
+                input: point int /App/ied14/db906_visual_data/CraneMode.MOPS
 
 
 service ApiClient:
