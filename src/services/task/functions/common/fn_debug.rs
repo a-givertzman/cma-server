@@ -56,10 +56,10 @@ impl FnOut for FnDebug {
     //
     #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
-        let mut flow = FlowContext::new();
         if self.inputs.len() > 1 {
             for (name, input) in &self.inputs {
-                match flow.ignore(input.borrow_mut().out()) {
+                let mut flow = FlowContext::new();
+                match flow.map(input.borrow_mut().out()) {
                     Ok(Some(v)) => {
                         log::debug!(
                             "{}.out | {name}: Value {} | {}:{}\n  └─ Val: {:?} | {:?} | {:?} | {}",
@@ -73,6 +73,7 @@ impl FnOut for FnDebug {
             return Ok(None);
         }
         if let Some((name, input)) = self.inputs.first() {
+            let mut flow = FlowContext::new();
             match flow.map(input.borrow_mut().out()) {
                 Ok(Some(v)) => {
                     log::debug!(
