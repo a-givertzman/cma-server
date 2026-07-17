@@ -52,12 +52,12 @@ impl VirtualDevice {
     /// - Returns value or error in the string
     fn fetch(dbg: &Dbg, api_client: &Arc<ApiClient>, typ: &PointType, sql: impl Into<String>, delay: Duration) -> impl Into<spreadsheet_ods::Value> {
         let sql = sql.into();
-        log::trace!("{dbg}.select | Fetching sql: '{sql}'");
+        log::trace!("{dbg}.fetch | Fetching sql: '{sql}'");
         std::thread::sleep(delay);
         match api_client.fetch(&sql).wait() {
             Ok(reply) => match reply {
                 Ok(reply) => {
-                    log::trace!("{dbg}.select | Reply: '{:?}'", reply);
+                    log::debug!("{dbg}.fetch | Reply: '{:?}'", reply);
                     reply.first()
                         .map(|r| r.first())
                         .flatten()
@@ -119,13 +119,13 @@ impl VirtualDevice {
                         }).unwrap_or(spreadsheet_ods::Value::Text("Missed".to_string()))
                 }
                 Err(err) => {
-                    let err = format!("{dbg}.select | Sql '{sql}' returns error: {:?}", err);
+                    let err = format!("{dbg}.fetch | Sql '{sql}' returns error: {:?}", err);
                     log::warn!("{err}");
                     spreadsheet_ods::Value::Text(err)
                 }
             },
             Err(err) => {
-                let err = format!("{dbg}.select | Fetch sql '{sql}' error: {:?}", err);
+                let err = format!("{dbg}.fetch | Fetch sql '{sql}' error: {:?}", err);
                 log::warn!("{err}");
                 spreadsheet_ods::Value::Text(err)
             }
@@ -220,7 +220,6 @@ impl Service for VirtualDevice {
                                             log::trace!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
                                             match conf.inputs.get(&event.name) {
                                                 Some(point_conf) => {
-
                                                     let time_elapsed = time.elapsed();
                                                     if time_elapsed > event.time {
                                                         log::warn!("{dbg}.run | row {} | Index {} | Elapsed {:?} Event.time {:?}, Exceeded {:?}", row_ix - 1, ix - 1.0, time_elapsed, event.time, time_elapsed - event.time);

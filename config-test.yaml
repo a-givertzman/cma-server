@@ -94,7 +94,7 @@ service VirtualDevice VirtualIed15:
         #     delay:  10ms                 # Optional delay, to be awaited before select apears
         sql winch1CycleAverageLoad:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: 'select winch1-total-lifted-mass from rec_basic_metric'
+            sql: "select value from rec_basic_metric where name = 'winch1-total-lifted-mass';"
             delay:  10ms                 # Optional delay, to be awaited before select apears
 
 
