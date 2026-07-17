@@ -1,5 +1,6 @@
 
-INSERT INTO public.rec_basic_metric VALUES ('1.1                             ', 'string', 'crane-type', 'тип крана', 'unknown'
+
+INSERT INTO public.rec_basic_metric VALUES ('1.1                             ', 'string', 'crane-type', 'тип крана', 'unknown')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
 INSERT INTO public.rec_basic_metric VALUES ('1.2                             ', 'string', 'crane-index', 'индекс крана', 'unknown')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
@@ -61,7 +62,7 @@ INSERT INTO public.rec_basic_metric VALUES ('3.7.2                           ', 
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
 INSERT INTO public.rec_basic_metric VALUES ('3.5                             ', 'real', 'crane-total-lifted-mass', 'суммарная масса поднятых грузов. тонн', '0.0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
-INSERT INTO public.rec_basic_metric VALUES ('3.5.1                           ', 'real', 'winch1-total-lifted-mass', 'суммарная масса поднятых грузов лебедка 1', '0.0'
+INSERT INTO public.rec_basic_metric VALUES ('3.5.1                           ', 'real', 'winch1-total-lifted-mass', 'суммарная масса поднятых грузов лебедка 1', '0.0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
 INSERT INTO public.rec_basic_metric VALUES ('3.5.2                           ', 'real', 'winch2-total-lifted-mass', 'суммарная масса поднятых грузов лебедка 2', '0.0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
