@@ -154,7 +154,7 @@ INSERT INTO public.rec_basic_metric VALUES ('3.4.1.02.L                      ', 
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
 INSERT INTO public.rec_basic_metric VALUES ('3.4.2.03                        ', 'real', 'winch1-cycles-0_25-0_35-load-range', 'циклов в диапазоне загрузки 0,25 - 0,35', '0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
-INSERT INTO public.rec_basic_metric VALUES ('3.4.2.03.L                      ', 'real', 'winch1-0_25-0_35-load', 'нагрузка в диапазоне загрузки 0,25 - 0,35', '0.28')
+INSERT INTO public.rec_basic_metric VALUES ('3.4.2.03.L                      ', 'real', 'winch1-0_25-0_35-load', 'нагрузка в диапазоне загрузки 0,25 - 0,35', '0.0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
 INSERT INTO public.rec_basic_metric VALUES ('3.4.2.04                        ', 'real', 'winch1-cycles-0_35-0_45-load-range', 'циклов в диапазоне загрузки 0,35 - 0,45', '0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
