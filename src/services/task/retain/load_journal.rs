@@ -75,6 +75,7 @@ impl<Child> LoadJournal<Child> {
         // let file = File::open(&dat_path).map_err(|err| err_pass!(self.dbg, err, "Can't open file '{}'", dat_path.display()))?;
         match File::open(&dat_path) {
             Ok(file) => {
+                log::debug!("{}.load | Reading retain cache from '{}'...", self.dbg, dat_path.display());
                 let mut reader = BufReader::new(file);
                 let mut len_buf = [0u8; 4];
                 let mut key_buf = Vec::with_capacity(1024);
@@ -93,6 +94,7 @@ impl<Child> LoadJournal<Child> {
                         }
                     }
                 }
+                log::debug!("{}.load | Reading retain cache from '{}' - Ok", self.dbg, dat_path.display());
                 return Ok(());
             }
             Err(err) => if err.kind() != std::io::ErrorKind::NotFound {
@@ -102,6 +104,7 @@ impl<Child> LoadJournal<Child> {
         let json_path = path.with_extension("json");
         match File::open(&json_path) {
             Ok(file) => {
+                log::debug!("{}.load | Reading retain cache from '{}'...", self.dbg, json_path.display());
                 let reader = BufReader::new(file);
                 let mut lines = reader.lines();
                 while let Some(line) = lines.next() {
@@ -111,9 +114,7 @@ impl<Child> LoadJournal<Child> {
                                 Ok(parsed) => {
                                     if let Some((key, state)) = parsed.into_iter().next() {
                                         let val = Self::point(&state, txid, &key);
-                                        if let Err(err) = cache.insert_sync(key, val) {
-                                            log::warn!("{}.load | Can't extend cache: {:?}", self.dbg, err);
-                                        }
+                                        _ = cache.upsert_sync(key, val);
                                     }
                                 }
                                 Err(err) => log::warn!("{}.load | Can't parse entry in {}, error: {:?}", self.dbg, json_path.display(), err),
@@ -122,6 +123,7 @@ impl<Child> LoadJournal<Child> {
                         Err(err) => log::warn!("{}.load | Can't read entry from {}, error: {:?}", self.dbg, json_path.display(), err),
                     }
                 }
+                log::debug!("{}.load | Reading retain cache from '{}' - Ok", self.dbg, json_path.display());
             }
             Err(err) => if err.kind() != std::io::ErrorKind::NotFound {
                 log::warn!("{}.load | Can't read cache '{}': {:?}", self.dbg, json_path.display(), err);
@@ -136,8 +138,9 @@ where
     Child: Eval<RetainCtx, EvalResult>, {
     #[named]
     fn eval(&self, ctx: RetainCtx) -> EvalResult {
+        let ctx = self.child.eval(ctx).map_err(|err: Error| err_pass!(self.dbg, err))?;
         self.load(&ctx.path, ctx.txid, &ctx.cache).map_err(|err| err_pass!(self.dbg, err))?;
-        self.child.eval(ctx).map_err(|err: Error| err_pass!(self.dbg, err))
+        Ok(ctx)
     }
 }
 ///

@@ -110,7 +110,10 @@ uid = "^0.1"
 
 derivative = "^2.2"
 
+#
+# For strings & types
 function_name = "^0.3"
+pretty-type-name = "^1.0"
 
 # plotters
 plotters = { version = "^0.3", features = ["ab_glyph", "fontconfig-dlopen"] }

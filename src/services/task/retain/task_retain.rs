@@ -162,7 +162,7 @@ impl Service for TaskRetain {
                                 }
                             }
                             Err(err) => {
-                                log::error!("{dbg}.run | Receiv error: {:?}", err);
+                                log::debug!("{dbg}.run | Receiv error: {:?}", err);
                                 break 'main;
                             }
                         }
@@ -189,14 +189,12 @@ impl Service for TaskRetain {
                     'main: while !exit.get() {
                         match rx_recv.recv_timeout(RECV_TIMEOUT) {
                             Ok(event) => {
-                                log::trace!("{dbg}.run | point '{}': {:?}", event.key, event.p);
-                                if let Err(err) = cache.insert_sync(event.key, event.p) {
-                                    log::error!("{dbg}.run | Can't update retain cache: {:?}", err);
-                                }
+                                // log::trace!("{dbg}.run | point '{}': {:?}", event.key, event.p);
+                                _ = cache.upsert_sync(event.key, event.p);
                             }
                             Err(RecvTimeoutError::Timeout) => {}
                             Err(err) => {
-                                log::error!("{dbg}.run | Receiv error: {:?}", err);
+                                log::trace!("{dbg}.run | Receiv error: {:?}", err);
                                 break 'main;
                             }
                         };

@@ -997,6 +997,7 @@ dependencies = [
  "parking_lot",
  "plotters",
  "postcard",
+ "pretty-type-name",
  "rand 0.10.2",
  "regex",
  "rustc-hash 2.1.2",
@@ -3979,6 +3980,12 @@ name = "presser"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
+
+[[package]]
+name = "pretty-type-name"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0f73cdaf19b52e6143685c3606206e114a4dfa969d6b14ec3894c88eb38bd4b"
 
 [[package]]
 name = "prettyplease"
