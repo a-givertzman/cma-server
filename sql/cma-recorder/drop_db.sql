@@ -1,0 +1,1 @@
+DROP DATABASE IF EXISTS "crane_data_server" WITH (FORCE);

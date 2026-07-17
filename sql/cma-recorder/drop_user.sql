@@ -1,0 +1,7 @@
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "crane_data_server";
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "crane_data_server";
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM "crane_data_server";
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA custom_metadata FROM "crane_data_server";
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA custom_metadata FROM "crane_data_server";
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA custom_metadata FROM "crane_data_server";
+DROP USER IF EXISTS "crane_data_server";

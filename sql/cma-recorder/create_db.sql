@@ -1,0 +1,2 @@
+SELECT 'CREATE DATABASE "crane_data_server" WITH OWNER "crane_data_server" TEMPLATE = template0 ENCODING = "UTF8" LOCALE = "en_US.UTF-8"'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'crane_data_server')\gexec
