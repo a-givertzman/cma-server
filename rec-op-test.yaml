@@ -92,22 +92,31 @@ service VirtualDevice VirtualIed15:
         # sql Result.Val4:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
         #     sql: 'select Name2 from table_name'
         #     delay:  10ms                 # Optional delay, to be awaited before select apears
-        sql winch1CycleAverageLoad:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-total-lifted-mass';"
-            delay:  10ms                 # Optional delay, to be awaited before select apears
-        sql winch2CycleAverageLoad:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            type: Real
-            sql: "select value from rec_basic_metric where name = 'winch2-total-lifted-mass';"
-            delay:  10ms                 # Optional delay, to be awaited before select apears
-        sql winch3CycleAverageLoad:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            type: Real
-            sql: "select value from rec_basic_metric where name = 'winch3-total-lifted-mass';"
-            delay:  10ms                 # Optional delay, to be awaited before select apears
+        # sql winch1CycleAverageLoad:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        #     type: Real
+        #     sql: "select value from rec_basic_metric where name = 'winch1-total-lifted-mass';"
+        #     delay:  10ms                 # Optional delay, to be awaited before select apears
+        # sql winch2CycleAverageLoad:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        #     type: Real
+        #     sql: "select value from rec_basic_metric where name = 'winch2-total-lifted-mass';"
+        #     delay:  10ms                 # Optional delay, to be awaited before select apears
+        # sql winch3CycleAverageLoad:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        #     type: Real
+        #     sql: "select value from rec_basic_metric where name = 'winch3-total-lifted-mass';"
+        #     delay:  10ms                 # Optional delay, to be awaited before select apears
         sql timestamp_start:
             type: String
             sql: "select timestamp_start from rec_operating_cycle order by id desc limit 1;"
             delay:  10ms
+        sql timestamp_stop:
+            type: String
+            sql: "select timestamp_stop from rec_operating_cycle order by id desc limit 1;"
+            delay:  10ms
+        sql alarm_class:
+            type: Int
+            sql: "select alarm_class from rec_operating_cycle order by id desc limit 1;"
+            delay:  10ms
+        
 
 # service Task TestTask:
 #     cycle: 1 ms
