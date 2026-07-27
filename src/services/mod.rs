@@ -31,4 +31,7 @@ mod virtual_device;
 pub use virtual_device::*;
 mod services_factory;
 pub use services_factory::*;
-
+mod wear_monitor;
+pub use wear_monitor::*;
+mod vibro_monitor;
+pub use vibro_monitor::*;
