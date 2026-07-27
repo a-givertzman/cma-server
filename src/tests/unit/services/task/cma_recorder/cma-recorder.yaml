@@ -205,6 +205,33 @@ service Task RecorderTask:
             input fn Max:
                 reset: opCycleIsStarted
                 input: craneLoad   # ??? unit ???
+    # Crane Total load in operating cycle, ??? unit ???
+    let craneCycleTotalLoad:
+        input fn Hold:
+            input fn Max:
+                reset: opCycleIsStarted
+                input fn Add:    # ??? unit ???
+                    input1: winch1Load
+                    input2: winch2Load
+                    input3: winch3Load
+    # Winch1 Total load in operating cycle, ??? unit ???
+    let winch1CycleTotalLoad:
+        input fn Hold:
+            input fn Max:
+                reset: opCycleIsStarted
+                input: winch1Load    # ??? unit ???
+    # Winch2 Total load in operating cycle, ??? unit ???
+    let winch2CycleTotalLoad:
+        input fn Hold:
+            input fn Max:
+                reset: opCycleIsStarted
+                input: winch2Load    # ??? unit ???
+    # Winch1 Total load in operating cycle, ??? unit ???
+    let winch3CycleTotalLoad:
+        input fn Hold:
+            input fn Max:
+                reset: opCycleIsStarted
+                input: winch3Load    # ??? unit ???
     # Winch1 Average load in operating cycle, ??? unit ???
     let winch1CycleAverageLoad:
         input fn Hold:
@@ -278,11 +305,18 @@ service Task RecorderTask:
                     input2 fn ToInt:
                         input fn Or:
                             # Overload in 10..25 %
-                            input1 fn Ge:
-                                input1: craneCycleMaxLoad
-                                input2 fn Mul:
-                                    input1: const real 1.10
-                                    input2: craneLoadNom
+                            input1 fn And:
+                                input1 fn Ge:
+                                    input1: craneCycleMaxLoad
+                                    input2 fn Mul:
+                                        input1: const real 1.10
+                                        input2: craneLoadNom
+                                input2 fn Lt:
+                                    input1: craneCycleMaxLoad
+                                    input2 fn Mul:
+                                        input1: const real 1.25
+                                        input2: craneLoadNom
+
                 # Alarm class 2 - Importent Event
                 # ...to be extended
     #
@@ -1172,22 +1206,22 @@ service Task RecorderTask:
         # 3.5  |  real  |  crane-total-lifted-mass  |  суммарная масса поднятых грузов. тонн  |  0.0
         input35 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'crane-total-lifted-mass';
-            input: craneCycleAverageLoad
+            input: craneCycleTotalLoad
         #
         # 3.5.1  |  real  |  winch1-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 1  |  0.0
         input351 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-total-lifted-mass';
-            input: winch1CycleAverageLoad
+            input: winch1CycleTotalLoad
         #
         # 3.5.2  |  real  |  winch2-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 2  |  0.0
         input352 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-total-lifted-mass';
-            input: winch2CycleAverageLoad
+            input: winch2CycleTotalLoad
         #
         # 3.5.3  |  real  |  winch3-total-lifted-mass  |  суммарная масса поднятых грузов лебедка 3
         input353 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-total-lifted-mass';
-            input: winch3CycleAverageLoad
+            input: winch3CycleTotalLoad
         #
         # 3.6.1  |  int  |  winch1-load-limiter-trip-count  |  количество срабатываний ограничителя грузоподъемности лебедка 1
         input361 fn Sql:
