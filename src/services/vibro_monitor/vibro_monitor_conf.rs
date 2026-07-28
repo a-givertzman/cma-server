@@ -1,6 +1,7 @@
 use sal_sync::services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::Name};
 use std::{fs, str::FromStr, time::Duration};
-use crate::{infra::ApiClientConf, services::{SensorConf, UdpClientConf}};
+use crate::{infra::ApiClientConf};
+use super::SensorConf;
 
 /// Config for VibroMonitor format:
 /// ```yaml
@@ -22,6 +23,7 @@ use crate::{infra::ApiClientConf, services::{SensorConf, UdpClientConf}};
 ///     sensor Motor-AC1:
 ///         target: Motor-AC1               # Уникальный идентификатор целевого механизма
 ///         connection:                     # Параметры связи с датчиком
+///             channel: 1                              # Number of channel inside ADC (0..255)
 ///             reconnect: 1000 ms                      # reconnect timeout when connection is lost
 ///             protocol: 'udp-raw'                     # udp-raw
 ///             local-address: 192.168.100.100:15180    # Local machine address

@@ -75,13 +75,13 @@ pub struct UdpClientConnect {
 impl UdpClientConnect {
     ///
     /// Crteates new instance of the [UdpClientConnect] 
-    pub fn new(parent: impl Into<String>, local_addr: String, remote_addr: String, mtu: usize) -> Self {
+    pub fn new(parent: impl Into<String>, local_addr: impl Into<String>, remote_addr: impl Into<String>, mtu: usize) -> Self {
         let name = Name::new(parent, "UdpClientConnect");
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
-            local_addr,
-            remote_addr,
+            local_addr: local_addr.into(),
+            remote_addr: remote_addr.into(),
             mtu,
             dbg,
         }

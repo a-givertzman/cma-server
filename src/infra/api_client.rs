@@ -89,10 +89,13 @@ impl Service for ApiClient {
                 true,
                 false,
             );
+            let mut timeout = Duration::from_millis(500);
             while let Err(err) = request.fetch(true) {
                 log::warn!("{dbg}.run | Can't connect to the database '{}', \n\terror: {:?}", conf.address, err);
-                std::thread::sleep(Duration::from_millis(1000));
+                std::thread::sleep(timeout);
+                timeout = (timeout * 2).min(Duration::from_secs(10));
                 if exit.load(Ordering::Acquire) {
+                    timeout = Duration::ZERO;
                     break;
                 }
             }
@@ -116,14 +119,16 @@ impl Service for ApiClient {
                             Err(err) => sink.add(Err(error.pass_with("Fetch error", err.to_string()))),
                         }
                     }
-                    Err(err) => match err {
-                        RecvTimeoutError::Timeout => {}
-                        _ => {
-                            log::error!("{dbg}.run | Receive sql error: {:?}", err);
-                            break;
-                        }
+                    Err(RecvTimeoutError::Timeout) => {}
+                    Err(_) => {
+                        log::debug!("{dbg}.run | Can't receive sql, channel closed");
+                        break;
                     }
                 }
+            }
+            while let Ok(Some((_sql, sink))) = recv.try_recv() {
+                // TODO: Store SQLs instead of deleting them 
+                drop(sink);
             }
             is_started.store(false, Ordering::Release);
             log::info!("{dbg}.run | Exit");
