@@ -136,9 +136,9 @@ impl UdpClient {
             }
             Ok(len) => {
                 let buff = self.buff.borrow();
-                match buff[..len] {
+                match &buff[..len] {
                     // Data message received
-                    [UdpClient::DAT, channels, typ, c1,c2,c3, c4, ..] => {
+                    &[UdpClient::DAT, channels, typ, c1,c2,c3, c4, ..] => {
                         let count = u32::from_le_bytes([c1, c2, c3, c4]) as usize;
                         // log::debug!("{dbg}.parse | channels: {}, count: {}", channels, count);
                         let typ = InputType::try_from(typ)
@@ -157,13 +157,13 @@ impl UdpClient {
                         }
                         Ok(())
                     }
-                    [UdpClient::ERR, err] | [UdpClient::ERR, err, ..] => {
+                    &[UdpClient::ERR, err] | &[UdpClient::ERR, err, ..] => {
                         Err(err_pass!(self.dbg, err, "Error received from ADC"))
                     }
-                    [UdpClient::SYN] | [UdpClient::SYN, ..] => {
+                    &[UdpClient::SYN] | &[UdpClient::SYN, ..] => {
                         Err(err!(self.dbg, "Data message expected, but SYN received: {:?}...", &buff[..=10]))
                     }
-                    [] => {
+                    &[] => {
                         Err(err!(self.dbg, "Empty message received"))
                     }
                     _ => {
