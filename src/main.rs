@@ -8,6 +8,7 @@ mod tcp;
 mod tests;
 
 pub(crate) use domain::short_type_name;
+pub(crate) use domain::short_type_name as me;
 pub(crate) use sal_core::error::Error;
 
 use std::path::PathBuf;

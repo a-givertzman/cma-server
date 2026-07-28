@@ -10,4 +10,4 @@ mod slmp_client;
 mod task;
 mod tcp_client;
 mod tcp_server;
-mod udp_client;
+// mod udp_client;      // Перенес функционал в vibro_monitir, оригинальный код оставил на месте
