@@ -1,10 +1,10 @@
-use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
+use std::sync::Arc;
 use dashmap::DashMap;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ExitNotify, services::{Service, Services, entity::{Name, Object}}, thread_pool::Scheduler
 };
-use crate::infra::ApiClient;
+use crate::{err_pass, infra::ApiClient};
 use super::VibroMonitorConf;
 
 ///
@@ -107,20 +107,9 @@ impl Service for VibroMonitor {
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
-        let storage_path = Path::new("assets/files").join(
-            self.name.join()
-                .chars()
-                .enumerate()
-                .filter(|(ix, ch)| !((*ix == 0) & (*ch == '/')))
-                .map(|(_, ch)| ch)
-                .collect::<String>()
-        );
-        // if let Err(err) = self.create_rope_defects_dir(&storage_path) {
-        //     log::warn!("{}.run | Can't create folder for rope defects images: {:?}", self.dbg, err);
-        // }
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
         self.tasks.insert(api_client.name().join(), api_client.clone());
-        api_client.run()?;
+        api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
         self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
         // let subscription: Vec<SubscriptionCriteria> = [
@@ -142,8 +131,17 @@ impl Service for VibroMonitor {
         //     })
         //     .collect();
         // let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &subscription);
-        // let inputs = Arc::new(Inputs::new(&name, &conf, services.clone(), scheduler.clone(), self.exit.clone()));
-        // self.tasks.insert(inputs.name().join(), inputs.clone());
+        let event_values = Arc::new(super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone()));
+        self.tasks.insert(event_values.name().join(), event_values.clone());
+        for sensor_conf in &conf.sensors {
+            super::Analysis::new(
+                &self.dbg,
+                sensor_conf.clone(),
+                event_values.clone(),
+                scheduler.clone(),
+                self.exit.clone(),
+            );
+        }
         // let rope_deprecation = Arc::new(RopeDeprecation::new(
         //     &self.name,
         //     conf.rope_deprecation,
@@ -173,7 +171,7 @@ impl Service for VibroMonitor {
         // } else {
         //     log::warn!("{}.run | No Camera's configured", self.dbg);
         // }
-        // inputs.run()?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
+        event_values.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
         log::info!("{}.run | RopeDefect's ready", self.dbg);
         log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())

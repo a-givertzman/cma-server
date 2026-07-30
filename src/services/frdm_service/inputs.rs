@@ -92,7 +92,7 @@ impl Inputs {
     /// Used for internal or testing purposes only
     /// 
     /// In nornal operation events should be received by the subscription
-    #[allow(unused)]
+    #[cfg(test)]
     pub(crate) fn insert(&self, key: impl Into<String>, val: f64) {
         let key = key.into();
         if key == self.conf.rope_deprecation.crane.rope.pos {
@@ -115,9 +115,9 @@ impl Inputs {
         recv
     }
     ///
-    /// Add a subscription, as a name of the event, which later can be requested via `get()`
-    pub fn subscribe(&self, name: impl Into<String>) {
-        self.inputs.insert(name.into(), None);
+    /// Add a subscription, as a `key` of the event, which later can be requested via `get(key)`
+    pub fn subscribe(&self, key: impl Into<String>) {
+        self.inputs.insert(key.into(), None);
     }
     ///
     /// Returns current value from inputs by the key if exists

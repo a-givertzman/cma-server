@@ -103,7 +103,7 @@ impl UdpClient {
     /// Читает то АЦП пакеты из сети (UDP) и распаковывает в сэмплы `u16`
     /// - `values` Сырые сэмплы из АЦП, разложенные по каналам
     #[named]
-    fn read(&self, values: &mut Vec<Vec<u16>>) -> Result<(), Error> {
+    pub fn read(&self, values: &mut Vec<Vec<u16>>) -> Result<(), Error> {
         let len = self.receive().map_err(|err| err_pass!(self.dbg, err))?;
         self.parse(values, len).map_err(|err| err_pass!(self.dbg, err))?;
         Ok(())

@@ -22,8 +22,8 @@ use super::SensorConf;
 ///         trends: 'public.vibration_trends'
 ///     sensor Motor-AC1:
 ///         target: Motor-AC1               # Уникальный идентификатор целевого механизма
+///         channel: 1                      # Номер канала в АЦП (0..255). 0 - первый канал.
 ///         connection:                     # Параметры связи с датчиком
-///             channel: 1                              # Number of channel inside ADC (0..255)
 ///             reconnect: 1000 ms                      # reconnect timeout when connection is lost
 ///             protocol: 'udp-raw'                     # udp-raw
 ///             local-address: 192.168.100.100:15180    # Local machine address
@@ -47,9 +47,8 @@ pub struct VibroMonitorConf {
     pub name: Name,
     /// Next service will wait until current completely started plus specified time, optional
     pub wait_started: Option<Duration>,
-    // pub cycle: Option<Duration>,
-    // /// Service name, to subscribe for rope positin and crane angles event's
-    // pub subscribe: String,
+    /// Name of the service for subscribing to RPM event's
+    pub subscribe: String,
     /// API configuration parametes
     pub api: ApiClientConf,
     /// Names of the database table used for storing common settings for the clients
@@ -69,8 +68,8 @@ impl VibroMonitorConf {
         log::trace!("{dbg}.new | name: {:?}", name);
         let wait_started: Option<Duration> = conf.get_duration("wait-started").ok();
         log::trace!("{}.new | wait-started: {:?}", dbg, wait_started);
-        // let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
-        // log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
+        let subscribe = conf.get("subscribe").expect(&format!("{dbg}.new | 'subscribe' - not found or wrong config"));
+        log::trace!("{dbg}.new | subscribe: {:?}", subscribe);
         let api: ConfTree = conf.get("api-client").expect(&format!("{dbg}.new | 'api-client' - not found or wrong config"));
         let api = ApiClientConf::new(&name, api);
         log::trace!("{dbg}.new | api: {:#?}", api);
@@ -86,17 +85,21 @@ impl VibroMonitorConf {
                             log::warn!("{dbg}.new | Sensor '{name}' | 'target' - not found");
                             return None;
                         };
-                        let Some(connection) = ConfTreeGet::<ConfTree>::get(&node, "connection") else {
+                        let Some(channel): Option<u64> = node.get("channel") else {
+                            log::warn!("{dbg}.new | Sensor '{name}' | 'channel' - not found");
+                            return None;
+                        };
+                        let Some(connection): Option<ConfTree> = node.get("connection") else {
                             log::warn!("{dbg}.new | Sensor '{name}' | 'connection' - not found");
                             return None;
                         };
                         let connection = serde_yaml::from_value(connection.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'connection' - wrong config"));
-                        let Some(adc) = ConfTreeGet::<ConfTree>::get(&node, "adc") else {
+                        let Some(adc): Option<ConfTree> = node.get("adc") else {
                             log::warn!("{dbg}.new | Sensor '{name}' | 'adc' - not found");
                             return None;
                         };
                         let adc = serde_yaml::from_value(adc.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'adc' - wrong config"));
-                        let Some(analysis) = ConfTreeGet::<ConfTree>::get(&node, "analysis") else {
+                        let Some(analysis): Option<ConfTree> = node.get("analysis") else {
                             log::warn!("{dbg}.new | Sensor '{name}' | 'analysis' - not found");
                             return None;
                         };
@@ -104,6 +107,7 @@ impl VibroMonitorConf {
                         let dsp = vibro_core::Conf { adc, analysis };
                         let sensor = SensorConf {
                             target,
+                            channel: channel as usize,
                             connection,
                             dsp,
                         };
@@ -118,7 +122,7 @@ impl VibroMonitorConf {
         Self {
             name,
             wait_started,
-            // subscribe,
+            subscribe,
             api,
             tables,
             sensors,
@@ -164,7 +168,7 @@ impl Default for VibroMonitorConf {
         Self {
             name: Name::new("", "VibroMonitorConf"),
             wait_started: Default::default(),
-            // subscribe: Default::default(),
+            subscribe: Default::default(),
             api: Default::default(),
             tables: super::Tables {
                 faults: Default::default(),
