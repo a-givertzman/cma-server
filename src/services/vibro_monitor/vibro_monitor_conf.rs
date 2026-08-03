@@ -1,4 +1,4 @@
-use sal_sync::services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::Name};
+use sal_sync::{collections::FxIndexMap, services::{conf::{ConfCustomKeywd, ConfTree, ConfTreeGet}, entity::Name}};
 use std::{fs, str::FromStr, time::Duration};
 use crate::{infra::ApiClientConf};
 use super::SensorConf;
@@ -53,8 +53,8 @@ pub struct VibroMonitorConf {
     pub api: ApiClientConf,
     /// Names of the database table used for storing common settings for the clients
     pub tables: super::Tables,
-    /// Параметры датчика виброаналитики цифровой обработки
-    pub sensors: Vec<SensorConf>,
+    /// Параметры датчиков виброаналитики цифровой обработки
+    pub sensors: FxIndexMap<AdcIp, Vec<SensorConf>>,
 }
 // 
 impl VibroMonitorConf {
@@ -76,48 +76,46 @@ impl VibroMonitorConf {
         let tables: ConfTree = conf.get("tables").expect(&format!("{dbg}.new | 'tables' - not found or wrong config"));
         let tables: super::Tables = serde_yaml::from_value(tables.conf).expect(&format!("{dbg}.new | 'tables' - wrong config"));
         log::trace!("{dbg}.new | tables: {:?}", tables);
-        let sensors = conf.nodes().filter_map(|node| {
-            match ConfCustomKeywd::from_str(&node.key) {
-                Ok(keywd) => {
-                    if keywd.name().to_lowercase() == "sensor" {
-                        let name = keywd.title();
-                        let Some(target) = node.get("target") else {
-                            log::warn!("{dbg}.new | Sensor '{name}' | 'target' - not found");
-                            return None;
-                        };
-                        let Some(channel): Option<u64> = node.get("channel") else {
-                            log::warn!("{dbg}.new | Sensor '{name}' | 'channel' - not found");
-                            return None;
-                        };
-                        let Some(connection): Option<ConfTree> = node.get("connection") else {
-                            log::warn!("{dbg}.new | Sensor '{name}' | 'connection' - not found");
-                            return None;
-                        };
-                        let connection = serde_yaml::from_value(connection.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'connection' - wrong config"));
-                        let Some(adc): Option<ConfTree> = node.get("adc") else {
-                            log::warn!("{dbg}.new | Sensor '{name}' | 'adc' - not found");
-                            return None;
-                        };
-                        let adc = serde_yaml::from_value(adc.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'adc' - wrong config"));
-                        let Some(analysis): Option<ConfTree> = node.get("analysis") else {
-                            log::warn!("{dbg}.new | Sensor '{name}' | 'analysis' - not found");
-                            return None;
-                        };
-                        let analysis = serde_yaml::from_value(analysis.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'analysis' - wrong config"));
-                        let dsp = vibro_core::Conf { adc, analysis };
-                        let sensor = SensorConf {
-                            target,
-                            channel: channel as usize,
-                            connection,
-                            dsp,
-                        };
-                        return Some(sensor)
-                    }
-                    None
+        let mut sensors = FxIndexMap::default();
+        for node in conf.nodes() {
+            if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
+                if keywd.name().to_lowercase() == "sensor" {
+                    let name = keywd.title();
+                    let Some(target) = node.get("target") else {
+                        log::warn!("{dbg}.new | Sensor '{name}' | 'target' - not found");
+                        continue;
+                    };
+                    let Some(channel): Option<u64> = node.get("channel") else {
+                        log::warn!("{dbg}.new | Sensor '{name}' | 'channel' - not found");
+                        continue;
+                    };
+                    let Some(connection): Option<ConfTree> = node.get("connection") else {
+                        log::warn!("{dbg}.new | Sensor '{name}' | 'connection' - not found");
+                        continue;
+                    };
+                    let connection = serde_yaml::from_value(connection.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'connection' - wrong config"));
+                    let Some(adc): Option<ConfTree> = node.get("adc") else {
+                        log::warn!("{dbg}.new | Sensor '{name}' | 'adc' - not found");
+                        continue;
+                    };
+                    let adc = serde_yaml::from_value(adc.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'adc' - wrong config"));
+                    let Some(analysis): Option<ConfTree> = node.get("analysis") else {
+                        log::warn!("{dbg}.new | Sensor '{name}' | 'analysis' - not found");
+                        continue;
+                    };
+                    let analysis = serde_yaml::from_value(analysis.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'analysis' - wrong config"));
+                    let dsp = vibro_core::Conf { adc, analysis };
+                    let sensor = SensorConf {
+                        target,
+                        channel: channel as usize,
+                        connection,
+                        dsp,
+                    };
+                    let adc_ip = AdcIp(connection.remote_addr.clone());
+                    sensors.entry(adc_ip).or_default().push(sensor);
                 }
-                Err(_) => None,
             }
-        }).collect();
+        }
         log::trace!("{dbg}.new | sensors: {:#?}", sensors);
         Self {
             name,
@@ -178,3 +176,6 @@ impl Default for VibroMonitorConf {
         }
     }
 }
+/// ### Уникальный идентификатор контроллера АЦП (IP адрес)
+#[derive(Debug, Clone, PartialEq, Hash)]
+pub struct AdcIp(pub String);

@@ -8,6 +8,8 @@ pub struct SensorConf {
     pub target: String,
     /// Номер канала в АЦП (0..255). 0 - первый канал.
     pub channel: usize,
+    // /// Общее количество каналов в АЦП
+    // pub channels: usize,
     /// Параметры связи с датчиком.
     pub connection: UdpClientConf,
     /// Параметры сбора данных с АЦП и цифровой обработки и виброаналитики.

@@ -8,7 +8,7 @@ use crate::{err_pass, infra::ApiClient};
 use super::VibroMonitorConf;
 
 ///
-/// VibroMonitor Service | Сервис вибродиагностики
+/// ### VibroMonitor Service | Сервис вибродиагностики
 pub struct VibroMonitor {
     name: Name,
     conf: VibroMonitorConf,
@@ -80,14 +80,12 @@ impl VibroMonitor {
     }
 }
 //
-//
 impl Object for VibroMonitor {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
-// 
 impl std::fmt::Debug for VibroMonitor {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -97,10 +95,8 @@ impl std::fmt::Debug for VibroMonitor {
     }
 }
 //
-//
 impl Service for VibroMonitor {
     //
-    // 
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let name = self.name.clone();
@@ -111,72 +107,28 @@ impl Service for VibroMonitor {
         self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
+        // Конфигурация БД
         self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
-        // let subscription: Vec<SubscriptionCriteria> = [
-        //         conf.rope_deprecation.crane.rope.pos.clone(),
-        //         conf.rope_deprecation.crane.rope.load.clone(),
-        //     ]
-        //     .iter().chain(
-        //         conf.rope_deprecation.crane.booms.iter().filter_map(|(_, b)| {
-        //             match &b.angle {
-        //                 crate::services::frdm_service::InputKind::Const(_) => None,
-        //                 crate::services::frdm_service::InputKind::Point(v) => Some(v),
-        //             }
-        //         }),
-        //     )
-        //     .map(|point| {
-        //         let subscription = SubscriptionCriteria::new(point, Cot::Inf);
-        //         log::trace!("{dbg}.run | Subscription: {:?}", subscription);
-        //         subscription
-        //     })
-        //     .collect();
-        // let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &subscription);
+        let retain = Arc::new(vibro_core::Retain::mock(dbg, []));
         let event_values = Arc::new(super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone()));
         self.tasks.insert(event_values.name().join(), event_values.clone());
-        for sensor_conf in &conf.sensors {
-            super::Analysis::new(
+        // Настройка диагностики для датчиков, датчики сгруппированы по IP адресам
+        // Передаем группу датчиков с одним IP в один модуль
+        for (adc_id, sensors_conf) in &conf.sensors {
+            super::VibroAdc::new(
                 &self.dbg,
-                sensor_conf.clone(),
+                sensors_conf.clone(),
                 event_values.clone(),
+                retain.clone(),
                 scheduler.clone(),
                 self.exit.clone(),
             );
         }
-        // let rope_deprecation = Arc::new(RopeDeprecation::new(
-        //     &self.name,
-        //     conf.rope_deprecation,
-        //     inputs.clone(),
-        //     api_client.clone(),
-        //     scheduler.clone(),
-        // ));
-        // self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
-        // rope_deprecation.run()?;
-        // log::info!("{}.run | RopeDeprecation ready", self.dbg);
-        // if !conf.rope_defect.cameras.is_empty() {
-        //     log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.cameras.len());
-        //     for (camera_id, camera_conf) in &conf.rope_defect.cameras {
-        //         log::info!("{}.run | Camera '{}' [{}]", self.dbg, camera_conf.name, **camera_id);
-        //         let defect_detection = Arc::new(RopeDefect::new(
-        //             &self.name,
-        //             conf.rope_defect.clone(),
-        //             **camera_id,
-        //             storage_path.clone(),
-        //             inputs.clone(),
-        //             api_client.clone(),
-        //             scheduler.clone(),
-        //         ));
-        //         self.tasks.insert(defect_detection.name().join(), defect_detection.clone());
-        //         defect_detection.run()?; 
-        //     }
-        // } else {
-        //     log::warn!("{}.run | No Camera's configured", self.dbg);
-        // }
         event_values.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
         log::info!("{}.run | RopeDefect's ready", self.dbg);
         log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())
     }
-    //
     //
     fn wait(&self) -> Result<(), Error> {
         let mut errors = vec![];
@@ -196,7 +148,6 @@ impl Service for VibroMonitor {
             )
     }
     //
-    //
     fn is_finished(&self) -> bool {
         let mut is_finished = false;
         for task in self.tasks.iter() {
@@ -204,7 +155,6 @@ impl Service for VibroMonitor {
         }
         is_finished
     }
-    //
     //
     fn exit(&self) {
         self.exit.exit();

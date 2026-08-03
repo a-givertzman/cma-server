@@ -2444,9 +2444,9 @@ checksum = "575fb7f1167f3b88ed825e90eb14918ac460461fdeaa3965c6a50951dee1c970"
 
 [[package]]
 name = "hybrid-array"
-version = "0.4.13"
+version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "818356c5132c1fede50f837ca96afbe78ff42413047f4abb886217845e1b6c8c"
+checksum = "707114b52a152fa7bdb290cd7cd5912d9467273b6d74e21b8d81aca1f8533f6b"
 dependencies = [
  "typenum",
 ]
@@ -5567,7 +5567,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vibro-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#82fd5ee51596c8a6ba923401ce19af1907575a87"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#1263c503f676513ff058d52a96da7660e3c23171"
 dependencies = [
  "chrono",
  "debugging",
@@ -5831,7 +5831,7 @@ dependencies = [
 [[package]]
 name = "wear-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#82fd5ee51596c8a6ba923401ce19af1907575a87"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#1263c503f676513ff058d52a96da7660e3c23171"
 dependencies = [
  "debugging",
  "env_logger",

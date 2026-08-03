@@ -1,10 +1,11 @@
 use std::{sync::Arc, time::Duration, fmt::Write};
+use chrono::Utc;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, RegistryConf, Service, ServiceWaiting, Services, SubscriptionCriteria, conf::ServicesConf, entity::{Cot, Name, Object, Point}}, sync::Handles, thread_pool::{Scheduler, ThreadPool}};
+use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
 use vibro_core::{AngularGrid, Autocorrelation, Context, Eval, Frame, ImbContext, ImbalanceDetector, LowPassSignal, OrderDomainSamples, OrderFeatureFilter, OrderSpectrum, Pass, ReadInputs, Severity, WindowFn};
-use crate::domain::{FxSccHashMap, RECV_TIMEOUT, Receiver, RecvTimeoutError, Sender, unbounded};
+use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError, }, err_pass};
 
-/// ### Analysis | Расчетный модуль вибродиагностики
+/// ### VibroSensor | Расчетный вибродиагностики для одного датчика
 /// 
 /// Алгоритмы анализа и диагностики разделены на три частотных диапазона:
 ///  
@@ -35,42 +36,50 @@ use crate::domain::{FxSccHashMap, RECV_TIMEOUT, Receiver, RecvTimeoutError, Send
 ///    * Вычисляет упорядоченный спектр огибающей (Order Spectrum) с заданным размером окна БПФ (FFT Size).
 ///    * Реализует автоматическую идентификацию зарождающихся дефектов подшипников (BPFI, BPFO, FTF, BSF) детектором по высокочастотным порогам.
 ///    * Формирует SQL-запросы с результатами анализа и экспортирует их в базу данных через API-клиент.
-pub struct Analysis<T> {
+pub struct VibroAdc<F> {
     name: Name,
-    /// Конфигурация модкля виброаналитики
+    /// Конфигурация модуля виброаналитики
     conf: super::SensorConf,
     /// Провайдер среза входных евентов
-    event_values: Arc<T>,
+    event_values: Arc<F>,
+    /// Хранение пар Key-Value на диске
+    retain: Arc<vibro_core::Retain>,
     /// Thread scheduler
     scheduler: Scheduler,
     /// Handles of the internaly executed threads 
     handles: Handles<()>,
     /// Exit signal
     exit: Arc<ExitNotify>,
+    /// Для отладки
     dbg: Dbg,
 }
 //
 //
-impl<T> Analysis<T> {
+impl<F> VibroAdc<F>
+where
+    F: EventValueAccess<str, f64> {
     ///
-    /// ### Returns [Analysis] new instance
+    /// ### Returns [VibroSensor] new instance
     /// - `parent` - Parent entity identifier (for debugging).
-    /// - `equipment_id` - Идентификатор наблюдаемого механизма.
     /// - `conf` - Конфигурация конвейера обработки вибросигнала.
-    /// - `event_values` - Агрегатор входных эвентов
+    /// - `event_values` - Агрегатор входных эвентов.
+    /// - `retain` - Хранение пар Key-Value на диске.
+    /// - `api_link` - Провайдер отправки SQL запросов
     pub fn new(
         parent: impl Into<String>,
         conf: super::SensorConf,
-        event_values: Arc<T>,
+        event_values: Arc<F>,
+        retain: Arc<vibro_core::Retain>,
         scheduler: Scheduler,
         exit: Arc<ExitNotify>,
     ) -> Self {
-        let name = Name::new(parent, "Analysis");
+        let name = Name::new(parent, "VibroSensor");
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
             conf,
             event_values,
+            retain,
             scheduler,
             handles: Handles::new(&dbg),
             exit,
@@ -78,23 +87,25 @@ impl<T> Analysis<T> {
         }
     }
 }
-//
-impl<T> Object for Analysis<T> {
+// 
+impl<F> Object for VibroAdc<F> {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
-// 
-impl<T> std::fmt::Debug for Analysis<T> {
+//
+impl<F> std::fmt::Debug for VibroAdc<F> {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("Analysis")
-            .field("dbg", &self.dbg)
+            .debug_struct("VibroAdc")
+            .field("name", &self.name)
             .finish()
     }
 }
 //
-impl<T: EventValueAccess<str, f64> + Send + Sync> Service for Analysis<T> {
+impl<F> Service for VibroAdc<F>
+where
+    F: EventValueAccess<str, f64> + Sync + Send {
     // 
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
@@ -103,19 +114,21 @@ impl<T: EventValueAccess<str, f64> + Send + Sync> Service for Analysis<T> {
         let conf = self.conf.clone();
         // Идентификатор наблюдаемого механизма
         let equipment_id = conf.target.clone();
+        let event_values = self.event_values.clone();
+        let retain = self.retain.clone();
+        let scheduler = self.scheduler.clone();
+        let exit = self.exit.clone();
+        // Ожидание пока сервис запустится
         let wait_started = Some(Duration::from_millis(1));
         let service_waiting = ServiceWaiting::new(&name, wait_started);
         let service_release = service_waiting.release();
-        let event_values = self.event_values.clone();
-        let scheduler = self.scheduler.clone();
-        let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
-            let dbg = &dbg;
             service_release.add(Ok(()));
-            let mut samples = conf vec![
-                [0u16; Frame::SIZE],
+            let dbg = &dbg;
+            let mut samples = vec![
+                vec![0u16; conf.dsp.adc.chunk_size],
             ];
-            let mut ctx = Context::new();
+            let mut angular_ctx = Context::new();
             let angular_grid = AngularGrid::new(dbg,
                 Autocorrelation::new(&dbg,
                     conf.dsp.adc.sample_rate_hz,
@@ -208,8 +221,7 @@ impl<T: EventValueAccess<str, f64> + Send + Sync> Service for Analysis<T> {
                 ),
             );
             let mut udp = super::UdpClient::new(dbg, conf.connection);
-            let retain = Arc::new(vibro_core::Retain::mock(dbg, []));
-            let mut low_range_ctx = ImbContext::new(dbg, conf.dsp.analysis.samples_per_rev(), conf.analysis.n_fft(), retain);
+            let mut low_range_ctx = ImbContext::new(dbg, conf.dsp.analysis.samples_per_rev(), conf.dsp.analysis.n_fft(), retain.clone());
             let (low_send, low_recv) = crate::domain::bounded(1);
             let (mid_send, mid_recv) = crate::domain::bounded(1);
             let (high_send, high_recv) = crate::domain::bounded(1);
@@ -256,28 +268,26 @@ impl<T: EventValueAccess<str, f64> + Send + Sync> Service for Analysis<T> {
             while !exit.get() {
                 // Получение АЦП-выборки из сети
                 udp.read(&mut samples);
-                ctx.push_chunk(&samples);
-                let phases;
-                (ctx, phases) = angular_grid.eval(ctx);
-                match &ctx.err {
-                    Some(err) => log::warn!("{}", err),
-                    None => {
-                        if ctx.ac_samples.is_full() {
-                            let ts = Utc::now();
-                            let frame = Frame::new(ts, &samples, phases);
-                            _ = low_send.send(frame.clone());
-                            _ = mid_send.send(frame.clone());
-                            _ = high_send.send(frame.clone());
+                for channel_samples in samples {
+                    angular_ctx.push_chunk(&channel_samples);
+                    let phases;
+                    (angular_ctx, phases) = angular_grid.eval(angular_ctx);
+                    match &angular_ctx.err {
+                        Some(err) => log::warn!("{}", err),
+                        None => {
+                            if angular_ctx.ac_samples.is_full() {
+                                let ts = Utc::now();
+                                let frame = Frame::new(ts, &samples, phases);
+                                _ = low_send.send(frame.clone());
+                                _ = mid_send.send(frame.clone());
+                                _ = high_send.send(frame.clone());
+                            }
                         }
                     }
                 }
             }
             log::info!("{dbg}.run | Exit");
-        });
-        match handle {
-            Ok(handle) => self.handles.push(handle),
-            Err(err) => return Err(Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string())),
-        }
+        }).map_err(|err| err_pass!(self.dbg, err, "Start failed"))?;
         let r = match wait_started {
             Some(_) => {
                 log::info!("{}.run | Waiting while starting...", self.dbg);
@@ -289,12 +299,12 @@ impl<T: EventValueAccess<str, f64> + Send + Sync> Service for Analysis<T> {
         r
     }
     //
-    fn wait(&self) -> Result<(), Error> {
-        self.handles.wait()
-    }
-    //
     fn is_finished(&self) -> bool {
         self.handles.is_finished()
+    }
+    //
+    fn wait(&self) -> Result<(), Error> {
+        self.handles.wait()
     }
     //
     fn exit(&self) {
