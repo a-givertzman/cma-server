@@ -116,9 +116,10 @@ impl Service for VibroMonitor {
         self.tasks.insert(event_values.name().join(), event_values.clone());
         let (api_link, api_queue) = crate::domain::bounded(4096);
         // TODO: Переместить в микросервис
-        let handle = scheduler.spawn(move || {
+        let handle = scheduler.spawn({
             let dbg = self.dbg.clone();
-            let exit = self.exit.clone(); {
+            let exit = self.exit.clone();
+            move || {
             while !exit.get() {
                 match api_queue.recv_timeout(RECV_TIMEOUT) {
                     Ok(sql) => {
