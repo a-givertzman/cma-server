@@ -133,7 +133,15 @@ where
             let udp = super::UdpClient::new(dbg, connection_conf);
             let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
             let sensors: Vec<(_, _)> = conf.iter().map(|conf| {
-                let sensor = VibroSensor::new(dbg, conf.dsp.clone(), conf.rpm, &event_values, &retain,
+                let rpm_key = match conf.rpm {
+                    crate::services::vibro_monitor::InputKind::Const(rpm) => {
+                        let key = format!("{name}/rpm");
+                        event_values.insert(key.clone(), rpm);
+                        key
+                    }
+                    crate::services::vibro_monitor::InputKind::Point(k) => k,
+                };
+                let sensor = VibroSensor::new(dbg, &conf.dsp, rpm_key, &event_values, &retain,
                     |ctx| {
                         if ctx.is_err() { return; }
                         let equipment_id = &conf.target;
