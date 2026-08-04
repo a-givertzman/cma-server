@@ -2,9 +2,7 @@ use std::{sync::Arc, time::Duration};
 use dashmap::DashMap;
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{
-    kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler
-};
+use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
 use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
 use super::VibroMonitorConf;
 
@@ -39,7 +37,6 @@ impl VibroMonitor {
     /// Configuration of the database
     #[named]
     fn configure_database(&self, api_client: &Arc<ApiClient>, exit: &Arc<ExitNotify>) -> Result<(), Error> {
-        let dbg = self.dbg.clone();
         let fetch_timeout = Duration::from_secs(10);
         let vibration_trends = &self.conf.tables.trends;
         let vibration_faults = &self.conf.tables.faults;
@@ -187,7 +184,6 @@ impl Service for VibroMonitor {
         // self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
         let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
         let event_values = Arc::new(super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone()));
-        event_values.subscribe(conf.);
         self.tasks.insert(event_values.name().join(), event_values.clone());
         let (api_link, api_queue) = crate::domain::bounded(4096);
         // TODO: Переместить в микросервис

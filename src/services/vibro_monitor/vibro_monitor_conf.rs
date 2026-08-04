@@ -85,6 +85,13 @@ impl VibroMonitorConf {
                         log::warn!("{dbg}.new | Sensor '{name}' | 'target' - not found");
                         continue;
                     };
+                    let Some(rpm) = ConfTreeGet::<f64>::get(&node, "rpm").map(InputKind::Const)
+                        .or_else(|| ConfTreeGet::<i64>::get(&node, "rpm").map(|rpm| InputKind::Const(rpm as f64)))
+                        .or_else(|| node.get_fn_config(&dbg, "rpm", &mut vec![]).map(|rpm| InputKind::Point(rpm.name())))
+                    else {
+                        log::warn!("{dbg}.new | Sensor '{name}' | 'rpm' - not found or wrong format, point or f64 expected");
+                        continue;
+                    };
                     let Some(channel): Option<u64> = node.get("channel") else {
                         log::warn!("{dbg}.new | Sensor '{name}' | 'channel' - not found");
                         continue;
@@ -108,6 +115,7 @@ impl VibroMonitorConf {
                     let adc_ip = AdcIp(connection.remote_addr.clone());
                     let sensor = SensorConf {
                         target,
+                        rpm,
                         channel: channel as usize,
                         connection,
                         dsp,
@@ -179,3 +187,18 @@ impl Default for VibroMonitorConf {
 /// ### Уникальный идентификатор контроллера АЦП (IP адрес)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AdcIp(pub String);
+
+///
+/// Variants of the service input
+/// - Const: Value
+/// - Point: point real 'App/MultiQueue/Load.MainBoomAngle'
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum InputKind<T> {
+    Const(T),
+    Point(String),
+}
+impl<T: vibro_core::Zero> Default for InputKind<T> {
+    fn default() -> Self {
+        Self::Const(T::zero())
+    }
+}

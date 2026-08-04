@@ -133,7 +133,7 @@ where
             let udp = super::UdpClient::new(dbg, connection_conf);
             let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
             let sensors: Vec<(_, _)> = conf.iter().map(|conf| {
-                let sensor = VibroSensor::new(dbg, conf.dsp.clone(), event_values.clone(), retain.clone(),
+                let sensor = VibroSensor::new(dbg, conf.dsp.clone(), conf.rpm, &event_values, &retain,
                     |ctx| {
                         if ctx.is_err() { return; }
                         let equipment_id = &conf.target;

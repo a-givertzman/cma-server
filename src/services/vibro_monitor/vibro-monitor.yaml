@@ -45,6 +45,7 @@ service VibroMonitor VibroMonitor-01:
         trends: 'public.vibration_trends'
     sensor Motor-AC1:
         target: Motor-AC1               # Уникальный идентификатор целевого механизма
+        rpm: point real '/App/Ied01/Motor.AC1.RPM'  # Текущая скорость вращения вала механизма, об/мин
         channel: 1                      # Номер канала в АЦП (0..255). 0 - первый канал.
         connection:                     # Параметры связи с датчиком
             reconnect: 1000 ms                      # reconnect timeout when connection is lost

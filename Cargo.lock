@@ -5567,7 +5567,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vibro-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#2e096ced456dbd68a7063c4866cc3e3024649072"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#f5af330ba24c6ffd95203c88e698c98f0a192175"
 dependencies = [
  "chrono",
  "debugging",
@@ -5831,7 +5831,7 @@ dependencies = [
 [[package]]
 name = "wear-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#2e096ced456dbd68a7063c4866cc3e3024649072"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#f5af330ba24c6ffd95203c88e698c98f0a192175"
 dependencies = [
  "debugging",
  "env_logger",
