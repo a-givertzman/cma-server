@@ -7,7 +7,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::Scheduler};
 use crate::{
     conf::{profinet_client_conf::profinet_client_conf::ProfinetClientConf, slmp_client_conf::slmp_client_conf::SlmpClientConf, tcp_client_conf::TcpClientConf}, err_pass, services::{
-        ApiClient, ApiClientConf, CacheService, CacheServiceConf, VirtualDevice, VirtualDeviceConf, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient
+        ApiClient, ApiClientConf, CacheService, CacheServiceConf, VibroMonitor, VibroMonitorConf, VirtualDevice, VirtualDeviceConf, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient
     }
 };
 
@@ -32,6 +32,7 @@ impl ServicesFactory {
     const CACHE_SERVICE: &'static str = "CacheService";
     const SLMP_CLIENT: &'static str = "SlmpClient";
     const VIRTUAL_DEVICE: &'static str = "VirtualDevice";
+    const VIBRO_MONITOR: &'static str = "VibroMonitor";
     ///
     /// Crteates [ServicesFactory] new instance
     pub fn new(parent: &Name) -> Self {
@@ -109,6 +110,11 @@ impl ServicesFactory {
                 let conf = VirtualDeviceConf::new(&self.parent, conf);
                 log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Ok(Arc::new(VirtualDevice::new(conf, services, scheduler.clone())))
+            }
+            Self::VIBRO_MONITOR => {
+                let conf = VibroMonitorConf::new(&self.parent, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
+                Ok(Arc::new(VibroMonitor::new(conf, services, scheduler.clone())))
             }
             _ => {
                 panic!("{}.service | Unknown service: {}({})", self.dbg, kind, name);

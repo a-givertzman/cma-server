@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use dashmap::DashMap;
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
-    kernel::state::ExitNotify, services::{Service, Services, entity::{Name, Object}}, thread_pool::Scheduler
+    kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler
 };
-use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err_pass, infra::ApiClient};
+use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
 use super::VibroMonitorConf;
 
 ///
@@ -36,48 +36,121 @@ impl VibroMonitor {
         }
     }
     ///
-    /// Stores rope parameters from local settings to thr database
-    fn update_db_settings(&self, winch: usize, api_client: Arc<ApiClient>, exit: Arc<ExitNotify>) -> Result<(), Error> {
-        todo!();
-        // let dbg = self.dbg.clone();
-        // let table = self.conf.table_settings.clone();
-        // let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
-        // let defect_slices = (rope_length / self.conf.rope_defect.segment.as_m()).round() as usize;
-        // let deprecation_slices = (rope_length / self.conf.rope_deprecation.crane.rope.segment.as_m()).round() as usize;
-        // let _ = self.scheduler.spawn(move || {
-        //     log::debug!("{dbg}.update_db_settings | Updating db settings...");
-        //     let sql = format!(r"
-        //         do $$
-        //         begin
-        //             insert into {table} (id, value) values ('winch{winch}-rope_length', {rope_length})
-        //             on conflict (id) do
-        //                 update set value = {rope_length} where {table}.id = 'winch{winch}-rope_length';
-        //             insert into {table} (id, value) values ('winch{winch}-defect_slices', {defect_slices})
-        //             on conflict (id) do
-        //                 update set value = {defect_slices} where {table}.id = 'winch{winch}-defect_slices';
-        //             insert into {table} (id, value) values ('winch{winch}-deprecation_slices', {deprecation_slices})
-        //             on conflict (id) do
-        //                 update set value = {deprecation_slices} where {table}.id = 'winch{winch}-deprecation_slices';
-        //         end; $$
-        //         language plpgsql;
-        //     ");
-        //     log::trace!("{dbg}.update_db_settings | Fetching sql: {:?}", sql);
-        //     while !exit.load(Ordering::Acquire) {
-        //         match api_client.fetch(&sql).wait() {
-        //             Ok(reply) => {
-        //                 if reply.is_ok() {
-        //                     log::debug!("{dbg}.update_db_settings | Updating db settings - Ok {:?}", reply.unwrap());
-        //                     break;
-        //                 }
-        //                 log::warn!("{dbg}.update_db_settings | Sql reply: {:?}", reply);
-        //             },
-        //             Err(err) => {
-        //                 log::error!("{dbg}.update_db_settings | Fetch error: {:?}", err);
-        //             }
-        //         }
-        //     }
-        // })?;
-        Ok(())
+    /// Configuration of the database
+    #[named]
+    fn configure_database(&self, api_client: &Arc<ApiClient>, exit: &Arc<ExitNotify>) -> Result<(), Error> {
+        let dbg = self.dbg.clone();
+        let fetch_timeout = Duration::from_secs(10);
+        let vibration_trends = &self.conf.tables.trends;
+        let vibration_faults = &self.conf.tables.faults;
+        let sql = format!(r#"
+do $$
+begin
+-- 1. Справочник оборудования
+CREATE TABLE IF NOT EXISTS equipment (
+    id          integer GENERATED ALWAYS AS IDENTITY,
+    name        VARCHAR(255) NOT NULL,       -- Наименование (например, 'Насос НП-101')
+    model       VARCHAR(100),                -- Модель/Тип агрегата
+    created_at  TIMESTAMPTZ DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT pk_equipment PRIMARY KEY (id),
+    CONSTRAINT uq_equipment_name UNIQUE (name)
+);
+
+-- 2. Таблица учета наработки и ресурса (Wear & Lifespan)
+CREATE TABLE equipment_wear (
+    equipment_id       INTEGER PRIMARY KEY REFERENCES equipment(id) ON DELETE CASCADE,
+    operating_hours    REAL NOT NULL DEFAULT 0.0,  -- Фактическая наработка (моточасы)
+    nominal_resource   REAL NOT NULL,              -- Номинальный ресурс до кап. ремонта (моточасы)
+    updated_at         TIMESTAMPTZ NOT NULL        -- Время последнего обновления наработки
+);
+
+-- 3. Обновленная таблица трендов вибрации
+CREATE TABLE {vibration_trends} (
+    timestamp      TIMESTAMPTZ NOT NULL,
+    equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
+    order_id       VARCHAR(10) NOT NULL,       -- '1x', '2x', '3x', '0.5x' и т.д.
+    rms_value      REAL NOT NULL,              -- Амплитуда (RMS)
+    phase          REAL,                       -- Фаза в градусах [0..360)
+    rpm            REAL NOT NULL,              -- Текущие обороты вала
+    
+    PRIMARY KEY (timestamp, equipment_id, order_id)
+);
+
+-- Индекс для быстрой фильтрации по конкретному агрегату и гармонике
+CREATE INDEX idx_equip_order_trends ON {vibration_trends} (equipment_id, order_id, timestamp DESC);
+
+-- Справочник видов дефектов
+CREATE TABLE fault_kind (
+    id          VARCHAR(64) NOT NULL,
+    description TEXT NOT NULL,
+
+    PRIMARY KEY (id)
+)
+INSERT INTO fault_kind (id, description) VALUES
+    ('Imbalance', 'Дисбаланс'),
+    ('Misalignment', 'Расцентровка'),
+    ('MechanicalLooseness', 'Механический люфт');
+
+-- Степень развития дефекта (Зоны ISO 10816 / 20816)
+CREATE TYPE vibration_severity AS ENUM (
+    'green',   -- Отличное или новое состояние.
+    'yellow',  -- Пригодно для длительной эксплуатации без ограничений.
+    'orange',  -- Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.
+    'red'      -- Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.
+);
+COMMENT ON TYPE vibration_severity VALUE 'green' IS 'Отличное или новое состояние.';
+COMMENT ON TYPE vibration_severity VALUE 'yellow' IS 'Пригодно для длительной эксплуатации без ограничений.';
+COMMENT ON TYPE vibration_severity VALUE 'orange' IS 'Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.';
+COMMENT ON TYPE vibration_severity VALUE 'red' IS 'Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.';
+
+-- Оценка состояния оборудования на основании вибрации
+CREATE TABLE {vibration_faults} (
+    timestamp      TIMESTAMPTZ NOT NULL,
+    equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
+    -- Вид неисправности
+    fault_kind     VARCHAR(64) NOT NULL REFERENCES fault_kind(id),
+    -- Метрика сходства с патерном дефекта [0.0, 1.0]
+    score          DOUBLE PRECISION NOT NULL,
+    -- Степень опасности текущего дефекта
+    -- Green, Yellow, Orange, Red
+    severity       vibration_severity NOT NULL,
+    -- Текущие обороты расчете, для валидации диагноза
+    rpm            DOUBLE PRECISION NOT NULL 
+    -- Гарантирует, что для каждого оборудования 
+    -- хранится ровно ОДНА запись по конкретному дефекту
+    PRIMARY KEY (equipment_id, fault_kind)
+);
+
+
+-- SQL-запрос для вывода списка оборудования с худшим статусом
+SELECT 
+    e.id AS equipment_id,
+    e.name AS equipment_name,
+    -- MAX() для ENUM в Postgres выберет самое критическое состояние (последнее в списке ENUM)
+    MAX(vf.severity) AS overall_severity,
+    -- Собираем список всех обнаруженных дефектов, которые вышли из зоны 'green'
+    STRING_AGG(
+        CASE WHEN vf.severity != 'green' THEN fk.description END, 
+        ', '
+    ) AS active_faults,
+    MAX(vf.timestamp) AS last_update
+FROM equipment e
+LEFT JOIN vibration_faults vf ON e.id = vf.equipment_id
+LEFT JOIN fault_kind fk ON vf.fault_kind = fk.id
+GROUP BY e.id, e.name
+ORDER BY 
+    -- Сначала показываем самое "красное" и "оранжевое" оборудование
+    overall_severity DESC NULLS LAST, 
+    e.name;
+end; $$
+language plpgsql;
+        "#);
+        match api_client.fetch(sql).timeout(fetch_timeout) {
+            Ok(Some(Ok(_))) => Ok(()),
+            Ok(Some(Err(err))) => Err(err_pass!(self.dbg, err)),
+            Ok(None) => Err(err!(self.dbg, "Timeout {:?}", fetch_timeout)),
+            Err(err) => Err(err_pass!(self.dbg, err)),
+        }
     }
 }
 //
@@ -105,28 +178,32 @@ impl Service for VibroMonitor {
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
+        let fetch_timeout = Duration::from_secs(3);
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
         self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
         // Конфигурация БД
-        self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
+        // self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
         let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
         let event_values = Arc::new(super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone()));
+        event_values.subscribe(conf.);
         self.tasks.insert(event_values.name().join(), event_values.clone());
         let (api_link, api_queue) = crate::domain::bounded(4096);
         // TODO: Переместить в микросервис
-        let handle = scheduler.spawn({
+        scheduler.spawn({
             let dbg = self.dbg.clone();
             let exit = self.exit.clone();
             move || {
             while !exit.get() {
                 match api_queue.recv_timeout(RECV_TIMEOUT) {
                     Ok(sql) => {
-                        if let Err(err) = api_client.fetch(&sql).wait().flatten() {
-                            log::warn!("{dbg}.run | Database returns error on sql '{sql}': \n{:?}", err)
+                        match api_client.fetch(&sql).timeout(fetch_timeout) {
+                            Ok(Some(Err(err))) => log::warn!("{dbg}.run | Error on sql '{sql}': \n{:?}", err),
+                            Ok(None) => log::warn!("{dbg}.run | Timeout ({:?}) on sql '{sql}'", fetch_timeout),
+                            Err(err) => log::warn!("{dbg}.run | Error on sql '{sql}': \n{:?}", err),
+                            _ => {}
                         }
-                        // TODO: Отправить запросы в БД, ошибки залогировать
                     }
                     Err(RecvTimeoutError::Timeout) => {}
                     _ => break,
@@ -135,7 +212,7 @@ impl Service for VibroMonitor {
         }}).map_err(|err| err_pass!(self.dbg, err))?;
         // Настройка диагностики для датчиков, датчики сгруппированы по IP адресам
         // Передаем группу датчиков с одним IP в один модуль
-        for (adc_id, sensors_conf) in &conf.sensors {
+        for (_adc_id, sensors_conf) in &conf.sensors {
             let sensor = Arc::new(super::VibroAdc::new(
                 &self.dbg,
                 sensors_conf.clone(),
