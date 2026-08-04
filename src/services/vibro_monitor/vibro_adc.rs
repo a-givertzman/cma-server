@@ -1,9 +1,10 @@
 use std::{sync::Arc, time::Duration, fmt::Write};
 use chrono::Utc;
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
-use vibro_core::{AngularGrid, Autocorrelation, Context, Eval, Frame, ImbContext, ImbalanceDetector, LowPassSignal, OrderDomainSamples, OrderFeatureFilter, OrderSpectrum, Pass, ReadInputs, Severity, WindowFn};
-use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError, }, err_pass};
+use vibro_core::{Eval, Severity, VibroSensor};
+use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError, Sender, }, err, err_pass};
 
 /// ### VibroSensor | Расчетный вибродиагностики для одного датчика
 /// 
@@ -39,11 +40,13 @@ use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError, }, err_pass};
 pub struct VibroAdc<F> {
     name: Name,
     /// Конфигурация модуля виброаналитики
-    conf: super::SensorConf,
+    conf: Vec<super::SensorConf>,
     /// Провайдер среза входных евентов
     event_values: Arc<F>,
     /// Хранение пар Key-Value на диске
     retain: Arc<vibro_core::Retain>,
+    /// Очередь для SQL запросов
+    api_link: Sender<String>,
     /// Thread scheduler
     scheduler: Scheduler,
     /// Handles of the internaly executed threads 
@@ -61,15 +64,16 @@ where
     ///
     /// ### Returns [VibroSensor] new instance
     /// - `parent` - Parent entity identifier (for debugging).
-    /// - `conf` - Конфигурация конвейера обработки вибросигнала.
+    /// - `conf` - Конфигурации цифровой обработки вибросигналов.
     /// - `event_values` - Агрегатор входных эвентов.
     /// - `retain` - Хранение пар Key-Value на диске.
     /// - `api_link` - Провайдер отправки SQL запросов
     pub fn new(
         parent: impl Into<String>,
-        conf: super::SensorConf,
+        conf: Vec<super::SensorConf>,
         event_values: Arc<F>,
         retain: Arc<vibro_core::Retain>,
+        api_link: Sender<String>,
         scheduler: Scheduler,
         exit: Arc<ExitNotify>,
     ) -> Self {
@@ -80,6 +84,7 @@ where
             conf,
             event_values,
             retain,
+            api_link,
             scheduler,
             handles: Handles::new(&dbg),
             exit,
@@ -105,18 +110,18 @@ impl<F> std::fmt::Debug for VibroAdc<F> {
 //
 impl<F> Service for VibroAdc<F>
 where
-    F: EventValueAccess<str, f64> + Sync + Send {
+    F: EventValueAccess<str, f64> + Sync + Send + 'static {
     // 
+    #[named]
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
         let name = self.name.clone();
         let conf = self.conf.clone();
-        // Идентификатор наблюдаемого механизма
-        let equipment_id = conf.target.clone();
+        let connection_conf = conf.first().ok_or(err!(dbg, "Configuration is empty, no sensors configured"))?.connection.clone();
+        let api_link = self.api_link.clone();
         let event_values = self.event_values.clone();
         let retain = self.retain.clone();
-        let scheduler = self.scheduler.clone();
         let exit = self.exit.clone();
         // Ожидание пока сервис запустится
         let wait_started = Some(Duration::from_millis(1));
@@ -125,169 +130,83 @@ where
         let handle = self.scheduler.spawn(move || {
             service_release.add(Ok(()));
             let dbg = &dbg;
-            let mut samples = vec![
-                vec![0u16; conf.dsp.adc.chunk_size],
-            ];
-            let mut angular_ctx = Context::new();
-            let angular_grid = AngularGrid::new(dbg,
-                Autocorrelation::new(&dbg,
-                    conf.dsp.adc.sample_rate_hz,
-                    ReadInputs::new(&dbg, event_values.clone())
-                ),
-            );
-            let window_size = conf.dsp.analysis.n_fft();
-            let window_fn = WindowFn::<f32>::kaiser(&dbg, window_size, window_size, 0, 5.65).unwrap();
-            let api_client: Arc<crate::infra::ApiClient>;
-            let low_range = super::SqlExport::new(&dbg,
-                api_client,
-                |mut ctx| {
-                    if ctx.is_err() {
-                        return Err(ctx.pass_err(&self.dbg, "eval"));
-                    }
-                    Ok(ctx)
-                },
-                move |ctx| {
-                    if ctx.is_err() { return vec![]; }
-                    let mut sqls = Vec::with_capacity(2);
-                    let mut sql = String::with_capacity(ctx.results.len() * 120 + 150);
-                    let mut results = ctx.results.iter().filter(|r| r.severity != Severity::Green).peekable();
-                    if results.peek().is_some() {
-                        "WITH target_item AS (
-                            -- Находим id товара по его имени из справочника Items
-                            SELECT id FROM Items WHERE name = 'Ноутбук' LIMIT 1
-                        )
-                        INSERT INTO vibration_faults (timestamp, equipment_id, fault_kind, score, severity, rpm)
-                        SELECT id, 50000 FROM target_item
-                        WHERE id IS NOT NULL -- Защита на случай, если имя не найдено в Items
-                        ON CONFLICT (item_id) 
-                        DO UPDATE SET value = EXCLUDED.value;";
-                        
-                        sql.push_str("INSERT INTO vibration_faults (timestamp, equipment_id, fault_kind, score, severity, rpm) VALUES ");
-                        for (i, r) in results.enumerate() {
-                            if i > 0 { sql.push_str(", "); }
-                            _ = write!( // use std::fmt::Write - Required
-                                sql,
-                                "('{}', {}, '{}', {}, '{}', {})",
-                                r.ts.to_rfc3339(),
-                                equipment_id,
-                                r.fault,
-                                r.score,
-                                r.severity,
-                                r.rpm.value()
-                            );
+            let udp = super::UdpClient::new(dbg, connection_conf);
+            let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
+            let sensors: Vec<(_, _)> = conf.iter().map(|conf| {
+                let sensor = VibroSensor::new(dbg, conf.dsp.clone(), event_values.clone(), retain.clone(),
+                    |ctx| {
+                        if ctx.is_err() { return; }
+                        let equipment_id = &conf.target;
+                        let mut sql = String::with_capacity(ctx.results.len() * 120 + 150);
+                        let mut results = ctx.results.iter().filter(|r| r.severity != Severity::Green).peekable();
+                        if results.peek().is_some() {
+                            "WITH target_item AS (
+                                -- Находим id товара по его имени из справочника Items
+                                SELECT id FROM Items WHERE name = 'Ноутбук' LIMIT 1
+                            )
+                            INSERT INTO vibration_faults (timestamp, equipment_id, fault_kind, score, severity, rpm)
+                            SELECT id, 50000 FROM target_item
+                            WHERE id IS NOT NULL -- Защита на случай, если имя не найдено в Items
+                            ON CONFLICT (item_id) 
+                            DO UPDATE SET value = EXCLUDED.value;";
+                            
+                            sql.push_str("INSERT INTO vibration_faults (timestamp, equipment_id, fault_kind, score, severity, rpm) VALUES ");
+                            for (i, r) in results.enumerate() {
+                                if i > 0 { sql.push_str(", "); }
+                                _ = write!( // use std::fmt::Write - Required
+                                    sql,
+                                    "('{}', {}, '{}', {}, '{}', {})",
+                                    r.ts.to_rfc3339(),
+                                    equipment_id,
+                                    r.fault,
+                                    r.score,
+                                    r.severity,
+                                    r.rpm.value()
+                                );
+                            }
+                            sql.push_str(" ON CONFLICT (equipment_id, fault_kind) DO UPDATE SET ");
+                            sql.push_str("timestamp = EXCLUDED.timestamp, score = EXCLUDED.score, severity = EXCLUDED.severity, rpm = EXCLUDED.rpm;");
+                            _ = api_link.send(sql);
                         }
-                        sql.push_str(" ON CONFLICT (equipment_id, fault_kind) DO UPDATE SET ");
-                        sql.push_str("timestamp = EXCLUDED.timestamp, score = EXCLUDED.score, severity = EXCLUDED.severity, rpm = EXCLUDED.rpm;");
-                        sqls.push(sql);
-                    }
-                    if !ctx.features.is_empty() {
-                        let mut sql = String::with_capacity(ctx.features.len() * 120 + 150);
-                        sql.push_str("INSERT INTO order_vibration_trends (timestamp, equipment_id, order_id, rms_value, phase, rpm) VALUES ");
-                        for (i, r) in ctx.features.iter().enumerate() {
-                            if i > 0 { sql.push_str(", "); }
-                            _ = write!(
-                                sql,
-                                "('{}', {}, '{}', {}, {}, {})",
-                                r.ts.to_rfc3339(),
-                                equipment_id,
-                                r.order_id,
-                                r.rms.value(),
-                                r.phase.to_degrees(),
-                                r.rpm.value()
-                            );
+                        if !ctx.features.is_empty() {
+                            let mut sql = String::with_capacity(ctx.features.len() * 120 + 150);
+                            sql.push_str("INSERT INTO order_vibration_trends (timestamp, equipment_id, order_id, rms_value, phase, rpm) VALUES ");
+                            for (i, r) in ctx.features.iter().enumerate() {
+                                if i > 0 { sql.push_str(", "); }
+                                _ = write!(
+                                    sql,
+                                    "('{}', {}, '{}', {}, {}, {})",
+                                    r.ts.to_rfc3339(),
+                                    equipment_id,
+                                    r.order_id,
+                                    r.rms.value(),
+                                    r.phase.to_degrees(),
+                                    r.rpm.value()
+                                );
+                            }
+                            sql.push_str(" ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;");
+                            _ = api_link.send(sql);
                         }
-                        sql.push_str(" ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;");
-                        sqls.push(sql);
-                    }
-                    sqls
-                },
-                ImbalanceDetector::new(dbg,
-                    OrderFeatureFilter::new(dbg,
-                        conf.dsp.analysis.n_fft(),
-                        conf.dsp.analysis.angular_step_rad(),
-                        OrderSpectrum::new(dbg,
-                            conf.dsp.analysis.n_fft(),
-                            Some(window_fn),
-                            OrderDomainSamples::new(dbg,
-                                conf.dsp.analysis.samples_per_rev(),
-                                LowPassSignal::new(dbg,
-                                    conf.dsp.adc.sample_rate_hz,
-                                    conf.dsp.analysis.bands.low_cutoff_order(),
-                                    Pass::new(),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            );
-            let mut udp = super::UdpClient::new(dbg, conf.connection);
-            let mut low_range_ctx = ImbContext::new(dbg, conf.dsp.analysis.samples_per_rev(), conf.dsp.analysis.n_fft(), retain.clone());
-            let (low_send, low_recv) = crate::domain::bounded(1);
-            let (mid_send, mid_recv) = crate::domain::bounded(1);
-            let (high_send, high_recv) = crate::domain::bounded(1);
-            _ = scheduler.spawn({
-                move || {
-                loop {
-                    match low_recv.recv_timeout(RECV_TIMEOUT) {
-                        Ok(frame) => {
-                            low_range_ctx.update(frame);
-                            low_range_ctx = low_range.eval(low_range_ctx);
-                        }
-                        Err(RecvTimeoutError::Timeout) => {}
-                        _ => break,
-                    }
-                }
-            }});
-            _ = scheduler.spawn({
-                move || {
-                loop {
-                    match mid_recv.recv_timeout(RECV_TIMEOUT) {
-                        Ok(frame) => {
-                            // mid_range_ctx.update(frame);
-                            // mid_range_ctx = mid_range.eval(mid_range_ctx);
-                        }
-                        Err(RecvTimeoutError::Timeout) => {}
-                        _ => break,
-                    }
-                }
-            }});
-            _ = scheduler.spawn({
-                move || {
-                loop {
-                    match high_recv.recv_timeout(RECV_TIMEOUT) {
-                        Ok(frame) => {
-                            // high_range_ctx.update(frame);
-                            // high_range_ctx = high_range.eval(high_range_ctx);
-                        }
-                        Err(RecvTimeoutError::Timeout) => {}
-                        _ => break,
-                    }
-                }
-            }});
-        
+                    },
+                    exit.clone(),
+                ).unwrap();
+                (conf.clone(), sensor)
+            }).collect();
             while !exit.get() {
                 // Получение АЦП-выборки из сети
                 udp.read(&mut samples);
-                for channel_samples in samples {
-                    angular_ctx.push_chunk(&channel_samples);
-                    let phases;
-                    (angular_ctx, phases) = angular_grid.eval(angular_ctx);
-                    match &angular_ctx.err {
-                        Some(err) => log::warn!("{}", err),
-                        None => {
-                            if angular_ctx.ac_samples.is_full() {
-                                let ts = Utc::now();
-                                let frame = Frame::new(ts, &samples, phases);
-                                _ = low_send.send(frame.clone());
-                                _ = mid_send.send(frame.clone());
-                                _ = high_send.send(frame.clone());
-                            }
-                        }
-                    }
+                // Запускаем расчеты
+                for ((_conf, sensor), channel_samples) in sensors.iter().zip(&mut samples) {
+                    sensor.eval(channel_samples);
                 }
+            }
+            udp.exit();
+            for (_, sensor) in &sensors {
+                sensor.exit();
             }
             log::info!("{dbg}.run | Exit");
         }).map_err(|err| err_pass!(self.dbg, err, "Start failed"))?;
+        self.handles.push(handle);
         let r = match wait_started {
             Some(_) => {
                 log::info!("{}.run | Waiting while starting...", self.dbg);

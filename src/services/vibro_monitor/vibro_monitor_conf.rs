@@ -76,7 +76,7 @@ impl VibroMonitorConf {
         let tables: ConfTree = conf.get("tables").expect(&format!("{dbg}.new | 'tables' - not found or wrong config"));
         let tables: super::Tables = serde_yaml::from_value(tables.conf).expect(&format!("{dbg}.new | 'tables' - wrong config"));
         log::trace!("{dbg}.new | tables: {:?}", tables);
-        let mut sensors = FxIndexMap::default();
+        let mut sensors: FxIndexMap<AdcIp, Vec<SensorConf>> = FxIndexMap::default();
         for node in conf.nodes() {
             if let Ok(keywd) = ConfCustomKeywd::from_str(&node.key) {
                 if keywd.name().to_lowercase() == "sensor" {
@@ -93,7 +93,7 @@ impl VibroMonitorConf {
                         log::warn!("{dbg}.new | Sensor '{name}' | 'connection' - not found");
                         continue;
                     };
-                    let connection = serde_yaml::from_value(connection.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'connection' - wrong config"));
+                    let connection: super::UdpClientConf = serde_yaml::from_value(connection.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'connection' - wrong config"));
                     let Some(adc): Option<ConfTree> = node.get("adc") else {
                         log::warn!("{dbg}.new | Sensor '{name}' | 'adc' - not found");
                         continue;
@@ -105,13 +105,13 @@ impl VibroMonitorConf {
                     };
                     let analysis = serde_yaml::from_value(analysis.conf).expect(&format!("{dbg}.new | Sensor '{name}' | 'analysis' - wrong config"));
                     let dsp = vibro_core::Conf { adc, analysis };
+                    let adc_ip = AdcIp(connection.remote_addr.clone());
                     let sensor = SensorConf {
                         target,
                         channel: channel as usize,
                         connection,
                         dsp,
                     };
-                    let adc_ip = AdcIp(connection.remote_addr.clone());
                     sensors.entry(adc_ip).or_default().push(sensor);
                 }
             }
@@ -177,5 +177,5 @@ impl Default for VibroMonitorConf {
     }
 }
 /// ### Уникальный идентификатор контроллера АЦП (IP адрес)
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AdcIp(pub String);

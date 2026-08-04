@@ -1,10 +1,11 @@
 use std::sync::Arc;
 use dashmap::DashMap;
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     kernel::state::ExitNotify, services::{Service, Services, entity::{Name, Object}}, thread_pool::Scheduler
 };
-use crate::{err_pass, infra::ApiClient};
+use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err_pass, infra::ApiClient};
 use super::VibroMonitorConf;
 
 ///
@@ -97,6 +98,7 @@ impl std::fmt::Debug for VibroMonitor {
 //
 impl Service for VibroMonitor {
     //
+    #[named]
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let name = self.name.clone();
@@ -109,20 +111,41 @@ impl Service for VibroMonitor {
         log::info!("{}.run | ApiClient ready", self.dbg);
         // Конфигурация БД
         self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
-        let retain = Arc::new(vibro_core::Retain::mock(dbg, []));
+        let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
         let event_values = Arc::new(super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone()));
         self.tasks.insert(event_values.name().join(), event_values.clone());
+        let (api_link, api_queue) = crate::domain::bounded(4096);
+        // TODO: Переместить в микросервис
+        let handle = scheduler.spawn(move || {
+            let dbg = self.dbg.clone();
+            let exit = self.exit.clone(); {
+            while !exit.get() {
+                match api_queue.recv_timeout(RECV_TIMEOUT) {
+                    Ok(sql) => {
+                        if let Err(err) = api_client.fetch(&sql).wait().flatten() {
+                            log::warn!("{dbg}.run | Database returns error on sql '{sql}': \n{:?}", err)
+                        }
+                        // TODO: Отправить запросы в БД, ошибки залогировать
+                    }
+                    Err(RecvTimeoutError::Timeout) => {}
+                    _ => break,
+                }
+            }
+        }}).map_err(|err| err_pass!(self.dbg, err))?;
         // Настройка диагностики для датчиков, датчики сгруппированы по IP адресам
         // Передаем группу датчиков с одним IP в один модуль
         for (adc_id, sensors_conf) in &conf.sensors {
-            super::VibroAdc::new(
+            let sensor = Arc::new(super::VibroAdc::new(
                 &self.dbg,
                 sensors_conf.clone(),
                 event_values.clone(),
                 retain.clone(),
+                api_link.clone(),
                 scheduler.clone(),
                 self.exit.clone(),
-            );
+            ));
+            self.tasks.insert(sensor.name().join(), sensor.clone());
+            sensor.run().map_err(|err| err_pass!(self.dbg, err))?;
         }
         event_values.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
         log::info!("{}.run | RopeDefect's ready", self.dbg);

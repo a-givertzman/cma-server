@@ -222,6 +222,12 @@ impl UdpClient {
             }
         }
     }
+    ///
+    pub fn exit(&self) {
+        if let Some(s) = self.socket.borrow_mut().take() {
+            drop(s)
+        }
+    }
 }
 ///
 /// Basic Tests
