@@ -232,13 +232,12 @@ impl UdpClient {
 ///
 /// Basic Tests
 mod tests {
-    use std::time::Duration;
+    use sal_sync::services::conf::{ConfDuration, ConfDurationUnit};
     use super::*;
     fn mock_conf() -> UdpClientConf {
         UdpClientConf {
-            description: "test_convert_empty_bytes_returns_error".into(),
-            cycle: None,
-            reconnect: Duration::from_millis(1000),
+            description: Some("test_convert_empty_bytes_returns_error".into()),
+            reconnect: ConfDuration::new(1000, ConfDurationUnit::Millis),
             protocol: "udp-raw".into(),
             local_addr: "0.0.0.0".into(),
             remote_addr: "0.0.0.0".into(),

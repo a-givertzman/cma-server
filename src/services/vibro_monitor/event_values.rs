@@ -54,7 +54,7 @@ impl EventValues {
         }
     }
     ///
-    /// Returns fake [Inputs] new instance for testing purposes
+    /// ### Returns fake [Inputs] new instance for testing purposes
     /// - `init` - Collection with pairs key - value, represents an initial state of required values
     #[cfg(test)]
     pub(crate) fn fake(
@@ -85,15 +85,8 @@ impl EventValues {
             dbg,
         }
     }
-    ///
-    /// ### Apply new value into the current state
-    /// Used for internal or testing purposes only.
-    /// In nornal operation events should be received by the subscription.
-    #[cfg(test)]
-    pub(crate) fn insert(&self, key: impl Into<String>, val: f64) {
-        _ = self.state.upsert_sync(key.into(), Some(val));
-    }
     /// ### Real-time event broadcast stream
+    /// 
     /// Returns a receiving channel that forwards all points processed by the internal loop.
     /// Automatically cleans up dropped or disconnected receivers.
     pub fn listen(&self) -> Receiver<Point> {
@@ -106,7 +99,7 @@ impl EventValues {
 //
 impl EventValueAccess<str, f64> for EventValues {    
     //
-    fn subscribe(&self, key: &str) {
+    fn register(&mut self, key: &str) {
         if self.handles.is_finished() {
             log::error!("Subscriptions must be completed before the service is launched!");
         }
@@ -119,6 +112,10 @@ impl EventValueAccess<str, f64> for EventValues {
             return None;
         };
         val
+    }
+    //
+    fn insert(&self, key: &str, val: f64) {
+        _ = self.state.upsert_sync(key.to_owned(), Some(val));
     }
 }
 //

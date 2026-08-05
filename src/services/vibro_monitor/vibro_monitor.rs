@@ -3,7 +3,7 @@ use dashmap::DashMap;
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
-use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
+use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient, services::vibro_monitor::InputKind};
 use super::VibroMonitorConf;
 
 ///
@@ -183,7 +183,15 @@ impl Service for VibroMonitor {
         // Конфигурация БД
         // self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
         let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
-        let event_values = Arc::new(super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone()));
+        let mut event_values = super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone());
+        for (_adc_id, sensors_conf) in &conf.sensors {
+            for sensor in sensors_conf {
+                if let InputKind::Point(rpm) = &sensor.rpm {
+                    event_values.register(rpm);
+                }
+            }
+        }
+        let event_values = Arc::new(event_values);
         self.tasks.insert(event_values.name().join(), event_values.clone());
         let (api_link, api_queue) = crate::domain::bounded(4096);
         // TODO: Переместить в микросервис

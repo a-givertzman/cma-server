@@ -124,7 +124,7 @@ where
         let retain = self.retain.clone();
         let exit = self.exit.clone();
         // Ожидание пока сервис запустится
-        let wait_started = Some(Duration::from_millis(1));
+        let wait_started = Some(Duration::from_millis(10));
         let service_waiting = ServiceWaiting::new(&name, wait_started);
         let service_release = service_waiting.release();
         let handle = self.scheduler.spawn(move || {
@@ -133,13 +133,13 @@ where
             let udp = super::UdpClient::new(dbg, connection_conf);
             let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
             let sensors: Vec<(_, _)> = conf.iter().map(|conf| {
-                let rpm_key = match conf.rpm {
+                let rpm_key = match &conf.rpm {
                     crate::services::vibro_monitor::InputKind::Const(rpm) => {
                         let key = format!("{name}/rpm");
-                        event_values.insert(key.clone(), rpm);
+                        event_values.insert(&key, *rpm);
                         key
                     }
-                    crate::services::vibro_monitor::InputKind::Point(k) => k,
+                    crate::services::vibro_monitor::InputKind::Point(k) => k.clone(),
                 };
                 let sensor = VibroSensor::new(dbg, &conf.dsp, rpm_key, &event_values, &retain,
                     |ctx| {
@@ -174,14 +174,14 @@ where
                             }
                             sql.push_str(" ON CONFLICT (equipment_id, fault_kind) DO UPDATE SET ");
                             sql.push_str("timestamp = EXCLUDED.timestamp, score = EXCLUDED.score, severity = EXCLUDED.severity, rpm = EXCLUDED.rpm;");
-                            _ = api_link.send(sql);
+                            let _ = api_link.send(sql);
                         }
                         if !ctx.features.is_empty() {
                             let mut sql = String::with_capacity(ctx.features.len() * 120 + 150);
                             sql.push_str("INSERT INTO order_vibration_trends (timestamp, equipment_id, order_id, rms_value, phase, rpm) VALUES ");
                             for (i, r) in ctx.features.iter().enumerate() {
                                 if i > 0 { sql.push_str(", "); }
-                                _ = write!(
+                                let _ = write!(
                                     sql,
                                     "('{}', {}, '{}', {}, {}, {})",
                                     r.ts.to_rfc3339(),
@@ -193,19 +193,25 @@ where
                                 );
                             }
                             sql.push_str(" ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;");
-                            _ = api_link.send(sql);
+                            let _ = api_link.send(sql);
                         }
                     },
-                    exit.clone(),
+                    &exit,
                 ).unwrap();
                 (conf.clone(), sensor)
             }).collect();
             while !exit.get() {
                 // Получение АЦП-выборки из сети
-                udp.read(&mut samples);
-                // Запускаем расчеты
-                for ((_conf, sensor), channel_samples) in sensors.iter().zip(&mut samples) {
-                    sensor.eval(channel_samples);
+                match udp.read(&mut samples) {
+                    Err(err) => log::warn!("{dbg}.run | {}", err),
+                    Ok(_) => {
+                        // Запускаем расчеты
+                        for ((_conf, sensor), channel_samples) in sensors.iter().zip(&mut samples) {
+                            if let Err(err) = sensor.eval(channel_samples) {
+                                log::info!("{dbg}.run | Waiting while starting...");
+                            }
+                        }
+                    }
                 }
             }
             udp.exit();

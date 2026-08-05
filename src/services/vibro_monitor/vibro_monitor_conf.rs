@@ -6,7 +6,8 @@ use super::SensorConf;
 /// Config for VibroMonitor format:
 /// ```yaml
 /// service VibroMonitor VibroMonitor-01:
-///     wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+///     wait-started: 10 ms                 # optional, next service will wait until current completely started plus specified time
+///     subscribe: /App/MultiQueue          # Subscriptions will be to the MultiQueue
 ///     diagnosis:                          # internal diagnosis
 ///         point Status:                   # Ok(0) / Invalid(10)
 ///             type: 'Int'
@@ -14,22 +15,24 @@ use super::SensorConf;
 ///             type: 'Int'
 ///     api-client:
 ///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
-///         address: "0.0.0.0:8081",
-///         auth-token: "123!@#",
-///         database: "cma",
+///         address: "0.0.0.0:8081"
+///         auth-token: "123!@#"
+///         database: "cma"
 ///     tables:
 ///         faults: 'public.vibration_faults'
 ///         trends: 'public.vibration_trends'
 ///     sensor Motor-AC1:
 ///         target: Motor-AC1               # Уникальный идентификатор целевого механизма
+///         rpm: point real '/App/Ied01/Motor.AC1.RPM'  # Текущая скорость вращения вала механизма, об/мин
 ///         channel: 1                      # Номер канала в АЦП (0..255). 0 - первый канал.
 ///         connection:                     # Параметры связи с датчиком
 ///             reconnect: 1000 ms                      # reconnect timeout when connection is lost
 ///             protocol: 'udp-raw'                     # udp-raw
-///             local-address: 192.168.100.100:15180    # Local machine address
-///             remote-address: 192.168.100.241:15180   # IP Address of the vibro-sensor ADC unit
+///             local-addr: 192.168.100.100:15180    # Local machine address
+///             remote-addr: 192.168.100.241:15180   # IP Address of the vibro-sensor ADC unit
 ///             mtu: 1500                               # Maximum Transmission Unit, default 1500
 ///         adc:                            # Параметры сбора сырых данных с АЦП
+///             ds-offset: 2048             # Постоянная составляющая сигнала. Будет вычитаться из сырых сэмплов.
 ///             sample-rate-hz: 320000
 ///             chunk-size: 512             # Размер выборки, поступающей из АЦП (сэмплов u16).
 ///         analysis:                       # Параметры цифровой обработки и виброаналитики

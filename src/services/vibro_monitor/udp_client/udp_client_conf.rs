@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use sal_sync::services::conf::ConfDuration;
+use serde::{Deserialize, Deserializer, Serialize};
+use std::{str::FromStr, time::Duration};
 ///
 /// ### Creates `UdpClient` config from serde_yaml::Value
 /// 
@@ -13,13 +14,15 @@ use std::time::Duration;
 /// mtu: 1500                               # Maximum Transmission Unit, default 1500
 /// ```
 /// 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct UdpClientConf {
-    pub description: String,
-    pub cycle: Option<Duration>,
-    pub reconnect: Duration,
+    pub description: Option<String>,
+    pub reconnect: ConfDuration,
     pub protocol: String,
+    #[serde(alias = "local-address")]
     pub local_addr: String,
+    #[serde(alias = "remote-address")]
     pub remote_addr: String,
     /// Maximum Transmission Unit, default 1500, [Resolve IPv4 Fragmentation, MTU...](https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/25885-pmtud-ipfrag.html)
     pub mtu: usize,

@@ -4533,7 +4533,7 @@ dependencies = [
 [[package]]
 name = "sal-sync"
 version = "0.3.2"
-source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.2#47198682fde9b51a189169c87f989af939cbf8f6"
+source = "git+https://github.com/a-givertzman/rust-sal-sync.git?tag=0.3.2#a0e73fca4097ab48f7f22d52590e56641dccbbf5"
 dependencies = [
  "api-tools",
  "arc-swap",
@@ -5567,7 +5567,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vibro-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#f5af330ba24c6ffd95203c88e698c98f0a192175"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#4b54559743e1c7537ebdf969e732423b1fb2e928"
 dependencies = [
  "chrono",
  "debugging",
@@ -5831,7 +5831,7 @@ dependencies = [
 [[package]]
 name = "wear-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#f5af330ba24c6ffd95203c88e698c98f0a192175"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#4b54559743e1c7537ebdf969e732423b1fb2e928"
 dependencies = [
  "debugging",
  "env_logger",
@@ -5866,9 +5866,9 @@ dependencies = [
 
 [[package]]
 name = "webbrowser"
-version = "1.2.3"
+version = "1.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d6eb50cc7b133f0c7720a64661fbd8e520b882f8ab9015deea5e00d5cd809c4"
+checksum = "62c35be770821a214dbc362fc26908c853e776c0004294d0b10b8a6bad582f94"
 dependencies = [
  "jni",
  "log",
