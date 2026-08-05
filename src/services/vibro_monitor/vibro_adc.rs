@@ -169,22 +169,6 @@ where
                             let sql = vibration_faults_sql(&equipment, &vibration_faults, equipment_name, results, count);
                             let _ = api_link.send(sql);
                         }
-                        // let mut sql = String::with_capacity(ctx.features.len() * 120 + 150);
-                        // sql.push_str(&format!("INSERT INTO {vibration_trends} (timestamp, equipment_id, order_id, rms_value, phase, rpm) VALUES "));
-                        // for (i, r) in ctx.features.iter().enumerate() {
-                        //     if i > 0 { sql.push_str(", "); }
-                        //     let _ = write!(
-                        //         sql,
-                        //         "('{}', {}, '{}', {}, {}, {})",
-                        //         r.ts.to_rfc3339(),
-                        //         equipment_name,
-                        //         r.order_id,
-                        //         r.rms.value(),
-                        //         r.phase.to_degrees(),
-                        //         r.rpm.value()
-                        //     );
-                        // }
-                        // sql.push_str(" ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;");
                         if !ctx.features.is_empty() {
                             let sql = vibration_trends_sql(&equipment, &vibration_trends, equipment_name, &ctx.features);
                             let _ = api_link.send(sql);
