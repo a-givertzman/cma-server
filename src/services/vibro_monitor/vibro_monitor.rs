@@ -225,6 +225,9 @@ impl Service for VibroMonitor {
                 event_values.clone(),
                 retain.clone(),
                 api_link.clone(),
+                &conf.tables.equipment,
+                &conf.tables.trends,
+                &conf.tables.faults,
                 scheduler.clone(),
                 self.exit.clone(),
             ));

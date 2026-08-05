@@ -1,10 +1,10 @@
-use std::{sync::Arc, time::Duration, fmt::Write};
-use chrono::Utc;
+use std::{cell::Cell, fmt::Write, sync::Arc, time::Duration};
+use chrono::{DateTime, Utc};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
-use vibro_core::{Eval, Severity, VibroSensor};
-use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError, Sender, }, err, err_pass};
+use vibro_core::{DiagFeatures, DiagnosticResult, Eval, FaultKind, Severity, VibroSensor};
+use crate::{domain::Sender , err, err_pass};
 
 /// ### VibroSensor | Расчетный вибродиагностики для одного датчика
 /// 
@@ -39,21 +39,27 @@ use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError, Sender, }, err, err_pass};
 ///    * Формирует SQL-запросы с результатами анализа и экспортирует их в базу данных через API-клиент.
 pub struct VibroAdc<F> {
     name: Name,
-    /// Конфигурация модуля виброаналитики
+    /// Конфигурация модуля виброаналитики.
     conf: Vec<super::SensorConf>,
-    /// Провайдер среза входных евентов
+    /// Провайдер среза входных евентов.
     event_values: Arc<F>,
-    /// Хранение пар Key-Value на диске
+    /// Хранение пар Key-Value на диске.
     retain: Arc<vibro_core::Retain>,
-    /// Очередь для SQL запросов
+    /// Очередь для SQL запросов.
     api_link: Sender<String>,
-    /// Thread scheduler
+    /// Таблица | Справочник оборудования.
+    equipment: String,
+    /// Таблица | Тренды вибрации.
+    vibration_trends: String,
+    /// Таблица | Состояния оборудования на основании вибрации.
+    vibration_faults: String,
+    /// Thread scheduler.
     scheduler: Scheduler,
-    /// Handles of the internaly executed threads 
+    /// Handles of the internaly executed threads. 
     handles: Handles<()>,
-    /// Exit signal
+    /// Exit signal.
     exit: Arc<ExitNotify>,
-    /// Для отладки
+    /// Для отладки.
     dbg: Dbg,
 }
 //
@@ -67,13 +73,19 @@ where
     /// - `conf` - Конфигурации цифровой обработки вибросигналов.
     /// - `event_values` - Агрегатор входных эвентов.
     /// - `retain` - Хранение пар Key-Value на диске.
-    /// - `api_link` - Провайдер отправки SQL запросов
+    /// - `api_link` - Провайдер отправки SQL запросов.
+    /// - `equipment` - Таблица | Справочник оборудования.
+    /// - `vibration_trends` - Таблица | Тренды вибрации.
+    /// - `vibration_faults` - Таблица | Состояния оборудования на основании вибрации.
     pub fn new(
         parent: impl Into<String>,
         conf: Vec<super::SensorConf>,
         event_values: Arc<F>,
         retain: Arc<vibro_core::Retain>,
         api_link: Sender<String>,
+        equipment: impl AsRef<str>,
+        vibration_trends: impl AsRef<str>,
+        vibration_faults: impl AsRef<str>,
         scheduler: Scheduler,
         exit: Arc<ExitNotify>,
     ) -> Self {
@@ -85,6 +97,9 @@ where
             event_values,
             retain,
             api_link,
+            equipment: equipment.as_ref().to_string(),
+            vibration_trends: vibration_trends.as_ref().to_string(),
+            vibration_faults: vibration_faults.as_ref().to_string(),
             scheduler,
             handles: Handles::new(&dbg),
             exit,
@@ -120,6 +135,9 @@ where
         let conf = self.conf.clone();
         let connection_conf = conf.first().ok_or(err!(dbg, "Configuration is empty, no sensors configured"))?.connection.clone();
         let api_link = self.api_link.clone();
+        let equipment = self.equipment.clone();
+        let vibration_trends = self.vibration_trends.clone();
+        let vibration_faults = self.vibration_faults.clone();
         let event_values = self.event_values.clone();
         let retain = self.retain.clone();
         let exit = self.exit.clone();
@@ -144,55 +162,31 @@ where
                 let sensor = VibroSensor::new(dbg, &conf.dsp, rpm_key, &event_values, &retain,
                     |ctx| {
                         if ctx.is_err() { return; }
-                        let equipment_id = &conf.target;
-                        let mut sql = String::with_capacity(ctx.results.len() * 120 + 150);
-                        let mut results = ctx.results.iter().filter(|r| r.severity != Severity::Green).peekable();
-                        if results.peek().is_some() {
-                            "WITH target_item AS (
-                                -- Находим id товара по его имени из справочника Items
-                                SELECT id FROM Items WHERE name = 'Ноутбук' LIMIT 1
-                            )
-                            INSERT INTO vibration_faults (timestamp, equipment_id, fault_kind, score, severity, rpm)
-                            SELECT id, 50000 FROM target_item
-                            WHERE id IS NOT NULL -- Защита на случай, если имя не найдено в Items
-                            ON CONFLICT (item_id) 
-                            DO UPDATE SET value = EXCLUDED.value;";
-                            
-                            sql.push_str("INSERT INTO vibration_faults (timestamp, equipment_id, fault_kind, score, severity, rpm) VALUES ");
-                            for (i, r) in results.enumerate() {
-                                if i > 0 { sql.push_str(", "); }
-                                _ = write!( // use std::fmt::Write - Required
-                                    sql,
-                                    "('{}', {}, '{}', {}, '{}', {})",
-                                    r.ts.to_rfc3339(),
-                                    equipment_id,
-                                    r.fault,
-                                    r.score,
-                                    r.severity,
-                                    r.rpm.value()
-                                );
-                            }
-                            sql.push_str(" ON CONFLICT (equipment_id, fault_kind) DO UPDATE SET ");
-                            sql.push_str("timestamp = EXCLUDED.timestamp, score = EXCLUDED.score, severity = EXCLUDED.severity, rpm = EXCLUDED.rpm;");
+                        let equipment_name = &conf.target;
+                        let count = ctx.results.iter().filter(|r| r.severity != Severity::Green).count();
+                        if count > 0 {
+                            let results = ctx.results.iter().filter(|r| r.severity != Severity::Green);
+                            let sql = vibration_faults_sql(&equipment, &vibration_faults, equipment_name, results, count);
                             let _ = api_link.send(sql);
                         }
+                        // let mut sql = String::with_capacity(ctx.features.len() * 120 + 150);
+                        // sql.push_str(&format!("INSERT INTO {vibration_trends} (timestamp, equipment_id, order_id, rms_value, phase, rpm) VALUES "));
+                        // for (i, r) in ctx.features.iter().enumerate() {
+                        //     if i > 0 { sql.push_str(", "); }
+                        //     let _ = write!(
+                        //         sql,
+                        //         "('{}', {}, '{}', {}, {}, {})",
+                        //         r.ts.to_rfc3339(),
+                        //         equipment_name,
+                        //         r.order_id,
+                        //         r.rms.value(),
+                        //         r.phase.to_degrees(),
+                        //         r.rpm.value()
+                        //     );
+                        // }
+                        // sql.push_str(" ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;");
                         if !ctx.features.is_empty() {
-                            let mut sql = String::with_capacity(ctx.features.len() * 120 + 150);
-                            sql.push_str("INSERT INTO order_vibration_trends (timestamp, equipment_id, order_id, rms_value, phase, rpm) VALUES ");
-                            for (i, r) in ctx.features.iter().enumerate() {
-                                if i > 0 { sql.push_str(", "); }
-                                let _ = write!(
-                                    sql,
-                                    "('{}', {}, '{}', {}, {}, {})",
-                                    r.ts.to_rfc3339(),
-                                    equipment_id,
-                                    r.order_id,
-                                    r.rms.value(),
-                                    r.phase.to_degrees(),
-                                    r.rpm.value()
-                                );
-                            }
-                            sql.push_str(" ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;");
+                            let sql = vibration_trends_sql(&equipment, &vibration_trends, equipment_name, &ctx.features);
                             let _ = api_link.send(sql);
                         }
                     },
@@ -208,7 +202,7 @@ where
                         // Запускаем расчеты
                         for ((_conf, sensor), channel_samples) in sensors.iter().zip(&mut samples) {
                             if let Err(err) = sensor.eval(channel_samples) {
-                                log::info!("{dbg}.run | Waiting while starting...");
+                                log::warn!("{dbg}.run | {:?}", err);
                             }
                         }
                     }
@@ -243,4 +237,112 @@ where
     fn exit(&self) {
         self.exit.exit();
     }    
+}
+
+/// ### Формирует SQL для таблицы трендов вибрации.
+/// - `table_equipment` - Таблица | Справочник оборудования.
+/// - `table_trends` - Таблица | Тренды вибрации.
+/// - `equipment_name` - Уникальное наименование целевого механизма.
+/// - `features` - Признаки целевых порядков.
+fn vibration_trends_sql(
+    table_equipment: &str,
+    table_trends: &str,
+    equipment_name: &str,
+    features: &[DiagFeatures],
+) -> String {
+    let mut sql = String::with_capacity(750 + features.len() * 120);
+    sql.push_str("WITH new_data (eq_name, timestamp, order_id, rms_value, phase, rpm) AS (\n        VALUES ");
+    for (i, r) in features.iter().enumerate() {
+        if i > 0 { sql.push_str(", "); }
+        _ = write!( // use std::fmt::Write - Required
+            sql,
+            "('{}', '{}'::timestamptz, '{}', {}, {}, {})",
+            equipment_name,
+            r.ts.to_rfc3339(),
+            r.order_id,
+            r.rms.value(),
+            r.phase.to_degrees(),
+            r.rpm.value()
+        );
+    }
+    _ = write!(
+        sql,
+        r#"
+), 
+target_equipment AS (
+    SELECT 
+        d.timestamp,
+        e.id AS equipment_id,
+        d.order_id,
+        d.rms_value,
+        d.phase,
+        d.rpm
+    FROM new_data d
+    JOIN {} e ON e.name = d.eq_name
+)
+INSERT INTO {} (timestamp, equipment_id, order_id, rms_value, phase, rpm) 
+SELECT timestamp, equipment_id, order_id, rms_value, phase, rpm 
+FROM target_equipment 
+ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;"#,
+    table_equipment,
+    table_trends
+    );
+    sql
+}
+
+/// ### Формирует SQL для таблицы состояния оборудования на основании вибрации.
+/// - `table_equipment` - Таблица | Справочник оборудования.
+/// - `table_faults` - Таблица | Оценка состояния оборудования на основании вибрации
+/// - `equipment_name` - Уникальное наименование целевого механизма.
+/// - `results` - Итератор по результатам диагностики для данного механизма.
+/// - `count` - Количество записей в итераторе.
+fn vibration_faults_sql<'a>(
+    table_equipment: &str,
+    table_faults: &str,
+    equipment_name: &str,
+    results: impl Iterator<Item = &'a DiagnosticResult>,
+    count: usize,
+) -> String {
+    let mut sql = String::with_capacity(750 + count * 120);
+    sql.push_str(r#"WITH new_data (eq_name, timestamp, fault_kind, score, severity, rpm) AS ( 
+        VALUES 
+    "#);
+    for (i, r) in results.enumerate() {
+        if i > 0 { sql.push_str(", "); }
+        _ = write!( // use std::fmt::Write - Required
+            sql,
+            "('{}', '{}'::timestamptz, '{}', {}, '{}'::vibration_severity, {})",
+            equipment_name,
+            r.ts.to_rfc3339(),
+            r.fault,
+            r.score,
+            r.severity,
+            r.rpm.value()
+        );
+    }
+    _ = write!(sql, r#"
+), 
+target_equipment AS (
+    -- Связываем имена с ID за один проход
+    SELECT 
+        d.timestamp,
+        e.id AS equipment_id,
+        d.fault_kind,
+        d.score,
+        d.severity,
+        d.rpm
+    FROM new_data d
+    JOIN {} e ON e.name = d.eq_name
+)
+INSERT INTO {} (timestamp, equipment_id, fault_kind, score, severity, rpm)
+SELECT timestamp, equipment_id, fault_kind, score, severity, rpm 
+FROM target_equipment
+ON CONFLICT (equipment_id, fault_kind) 
+DO UPDATE SET 
+    timestamp = EXCLUDED.timestamp,
+    score     = EXCLUDED.score,
+    severity  = EXCLUDED.severity,
+    rpm       = EXCLUDED.rpm;
+"#, table_equipment, table_faults);
+    sql
 }

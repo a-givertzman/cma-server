@@ -19,6 +19,7 @@ use super::SensorConf;
 ///         auth-token: "123!@#"
 ///         database: "cma"
 ///     tables:
+///         equipment: 'public.equipment'
 ///         faults: 'public.vibration_faults'
 ///         trends: 'public.vibration_trends'
 ///     sensor Motor-AC1:
@@ -180,6 +181,7 @@ impl Default for VibroMonitorConf {
             subscribe: Default::default(),
             api: Default::default(),
             tables: super::Tables {
+                equipment: Default::default(),
                 faults: Default::default(),
                 trends: Default::default(),
             },

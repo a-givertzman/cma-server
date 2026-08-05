@@ -42,6 +42,7 @@ service VibroMonitor VibroMonitor-01:
         auth-token: "123!@#"
         database: "cma"
     tables:
+        equipment: 'public.equipment'
         faults: 'public.vibration_faults'
         trends: 'public.vibration_trends'
     sensor Motor-AC1:
