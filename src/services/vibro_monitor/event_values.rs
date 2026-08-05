@@ -35,9 +35,9 @@ impl EventValues {
     pub fn new(
         parent: impl Into<String>,
         subscribe: impl Into<String>,
-        services: Arc<Services>,
-        scheduler: Scheduler,
-        exit: Arc<ExitNotify>,
+        services: &Arc<Services>,
+        scheduler: &Scheduler,
+        exit: &Arc<ExitNotify>,
     ) -> Self {
         let name = Name::new(parent, "Inputs");
         let dbg = Dbg::new(name.parent(), name.me());
@@ -46,10 +46,10 @@ impl EventValues {
             subscribe: subscribe.into(),
             state: Arc::new(FxSccHashMap::default()),
             listeners: Arc::new(FxSccHashMap::default()),
-            services,
-            scheduler,
+            services: services.clone(),
+            scheduler: scheduler.clone(),
             handles: Handles::new(&dbg),
-            exit,
+            exit: exit.clone(),
             dbg,
         }
     }

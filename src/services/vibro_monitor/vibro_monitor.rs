@@ -180,10 +180,12 @@ impl Service for VibroMonitor {
         self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
-        // Конфигурация БД
+        // Конфигурация БД. TODO: Нужно довести SQL что бы он при повторном запуске адекватно срабатывал  
         // self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
         let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
-        let mut event_values = super::EventValues::new(&name, &conf.subscribe, services.clone(), scheduler.clone(), self.exit.clone());
+        let mut event_values = super::EventValues::new(&name, &conf.subscribe, &services, &scheduler, &self.exit);
+        // Регистрация настроенных входных сигналов (RPM) для последующей подписки на них в сервисе conf.subscribe.
+        // Выполняется до запуска сервиса!
         for (_adc_id, sensors_conf) in &conf.sensors {
             for sensor in sensors_conf {
                 if let InputKind::Point(rpm) = &sensor.rpm {
@@ -194,7 +196,7 @@ impl Service for VibroMonitor {
         let event_values = Arc::new(event_values);
         self.tasks.insert(event_values.name().join(), event_values.clone());
         let (api_link, api_queue) = crate::domain::bounded(4096);
-        // TODO: Переместить в микросервис
+        // TODO: Может вынести в отдельный сервис
         scheduler.spawn({
             let dbg = self.dbg.clone();
             let exit = self.exit.clone();
