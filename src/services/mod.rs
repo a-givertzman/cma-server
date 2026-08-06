@@ -35,3 +35,5 @@ mod wear_monitor;
 pub use wear_monitor::*;
 mod vibro_monitor;
 pub use vibro_monitor::*;
+mod event_values;
+pub use event_values::*;

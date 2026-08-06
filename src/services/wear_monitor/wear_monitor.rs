@@ -4,13 +4,13 @@ use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
 use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
-use super::{VibroMonitorConf, InputKind};
+use super::{WearMonitorConf, InputKind};
 
 ///
-/// ### VibroMonitor Service | Сервис вибродиагностики
-pub struct VibroMonitor {
+/// ### WearMonitor Service | Сервис вибродиагностики
+pub struct WearMonitor {
     name: Name,
-    conf: VibroMonitorConf,
+    conf: WearMonitorConf,
     services: Arc<Services>,
     scheduler: Scheduler,
     tasks: Arc<DashMap<String, Arc<dyn Service>>>,
@@ -18,10 +18,10 @@ pub struct VibroMonitor {
     dbg: Dbg,
 }
 //
-impl VibroMonitor {
+impl WearMonitor {
     ///
-    /// Crteates [VibroMonitor] new instance
-    pub fn new(conf: VibroMonitorConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
+    /// Crteates [WearMonitor] new instance
+    pub fn new(conf: WearMonitorConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), conf.name.me());
         Self {
             name: conf.name.clone(),
@@ -52,47 +52,56 @@ CREATE TABLE IF NOT EXISTS equipment (
     CONSTRAINT pk_equipment PRIMARY KEY (id),
     CONSTRAINT uq_equipment_name UNIQUE (name)
 );
+
 -- 2. Таблица учета наработки и ресурса (Wear & Lifespan)
-CREATE TABLE IF NOT EXISTS equipment_wear (
+CREATE TABLE equipment_wear (
     equipment_id       INTEGER PRIMARY KEY REFERENCES equipment(id) ON DELETE CASCADE,
     operating_hours    REAL NOT NULL DEFAULT 0.0,  -- Фактическая наработка (моточасы)
     nominal_resource   REAL NOT NULL,              -- Номинальный ресурс до кап. ремонта (моточасы)
     updated_at         TIMESTAMPTZ NOT NULL        -- Время последнего обновления наработки
 );
+
 -- 3. Обновленная таблица трендов вибрации
-CREATE TABLE IF NOT EXISTS {vibration_trends} (
+CREATE TABLE {vibration_trends} (
     timestamp      TIMESTAMPTZ NOT NULL,
     equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
     order_id       VARCHAR(10) NOT NULL,       -- '1x', '2x', '3x', '0.5x' и т.д.
     rms_value      REAL NOT NULL,              -- Амплитуда (RMS)
-    phase          REAL NOT NULL,              -- Фаза в градусах [0..360)
+    phase          REAL,                       -- Фаза в градусах [0..360)
     rpm            REAL NOT NULL,              -- Текущие обороты вала
+    
     PRIMARY KEY (timestamp, equipment_id, order_id)
 );
+
 -- Индекс для быстрой фильтрации по конкретному агрегату и гармонике
-CREATE INDEX IF NOT EXISTS idx_equip_order_trends ON {vibration_trends} (equipment_id, order_id, timestamp DESC);
+CREATE INDEX idx_equip_order_trends ON {vibration_trends} (equipment_id, order_id, timestamp DESC);
+
 -- Справочник видов дефектов
-CREATE TABLE IF NOT EXISTS fault_kind (
+CREATE TABLE fault_kind (
     id          VARCHAR(64) NOT NULL,
     description TEXT NOT NULL,
+
     PRIMARY KEY (id)
-);
+)
 INSERT INTO fault_kind (id, description) VALUES
     ('Imbalance', 'Дисбаланс'),
     ('Misalignment', 'Расцентровка'),
-    ('MechanicalLooseness', 'Механический люфт')
-ON CONFLICT (id) DO NOTHING;
+    ('MechanicalLooseness', 'Механический люфт');
+
 -- Степень развития дефекта (Зоны ISO 10816 / 20816)
-IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vibration_severity') THEN
-    CREATE TYPE vibration_severity AS ENUM (
-        'green',   -- Отличное или новое состояние.
-        'yellow',  -- Пригодно для длительной эксплуатации без ограничений.
-        'orange',  -- Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.
-        'red'      -- Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.
-    );
-END IF;
+CREATE TYPE vibration_severity AS ENUM (
+    'green',   -- Отличное или новое состояние.
+    'yellow',  -- Пригодно для длительной эксплуатации без ограничений.
+    'orange',  -- Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.
+    'red'      -- Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.
+);
+COMMENT ON TYPE vibration_severity VALUE 'green' IS 'Отличное или новое состояние.';
+COMMENT ON TYPE vibration_severity VALUE 'yellow' IS 'Пригодно для длительной эксплуатации без ограничений.';
+COMMENT ON TYPE vibration_severity VALUE 'orange' IS 'Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.';
+COMMENT ON TYPE vibration_severity VALUE 'red' IS 'Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.';
+
 -- Оценка состояния оборудования на основании вибрации
-CREATE TABLE IF NOT EXISTS {vibration_faults} (
+CREATE TABLE {vibration_faults} (
     timestamp      TIMESTAMPTZ NOT NULL,
     equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
     -- Вид неисправности
@@ -108,6 +117,28 @@ CREATE TABLE IF NOT EXISTS {vibration_faults} (
     -- хранится ровно ОДНА запись по конкретному дефекту
     PRIMARY KEY (equipment_id, fault_kind)
 );
+
+
+-- SQL-запрос для вывода списка оборудования с худшим статусом
+SELECT 
+    e.id AS equipment_id,
+    e.name AS equipment_name,
+    -- MAX() для ENUM в Postgres выберет самое критическое состояние (последнее в списке ENUM)
+    MAX(vf.severity) AS overall_severity,
+    -- Собираем список всех обнаруженных дефектов, которые вышли из зоны 'green'
+    STRING_AGG(
+        CASE WHEN vf.severity != 'green' THEN fk.description END, 
+        ', '
+    ) AS active_faults,
+    MAX(vf.timestamp) AS last_update
+FROM equipment e
+LEFT JOIN vibration_faults vf ON e.id = vf.equipment_id
+LEFT JOIN fault_kind fk ON vf.fault_kind = fk.id
+GROUP BY e.id, e.name
+ORDER BY 
+    -- Сначала показываем самое "красное" и "оранжевое" оборудование
+    overall_severity DESC NULLS LAST, 
+    e.name;
 end; $$
 language plpgsql;
         "#);
@@ -120,22 +151,22 @@ language plpgsql;
     }
 }
 //
-impl Object for VibroMonitor {
+impl Object for WearMonitor {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
-impl std::fmt::Debug for VibroMonitor {
+impl std::fmt::Debug for WearMonitor {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("VibroMonitor")
+            .debug_struct("WearMonitor")
             .field("dbg", &self.dbg)
             .finish()
     }
 }
 //
-impl Service for VibroMonitor {
+impl Service for WearMonitor {
     //
     #[named]
     fn run(&self) -> Result<(), Error> {

@@ -262,11 +262,7 @@ impl ServiceTestPlanner {
     /// To finish the Service call exit
     #[allow(unused)]
     pub fn is_finished(&self) -> bool {
-        let mut is_finished = false;
-        for (_, service) in self.services.all() {
-            is_finished = is_finished & service.is_finished();
-        }
-        is_finished
+        self.services.is_finished()
     }
     ///
     /// Sends "exit" signal to all service's 

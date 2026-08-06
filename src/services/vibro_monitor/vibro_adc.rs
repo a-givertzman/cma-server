@@ -1,9 +1,8 @@
-use std::{cell::Cell, fmt::Write, sync::Arc, time::Duration};
-use chrono::{DateTime, Utc};
+use std::{fmt::Write, sync::Arc, time::Duration};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
-use vibro_core::{DiagFeatures, DiagnosticResult, Eval, FaultKind, Severity, VibroSensor};
+use vibro_core::{DiagFeatures, DiagnosticResult, Eval, Severity, VibroSensor};
 use crate::{domain::Sender , err, err_pass};
 
 /// ### VibroSensor | Расчетный вибродиагностики для одного датчика

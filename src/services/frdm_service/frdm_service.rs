@@ -220,11 +220,7 @@ impl Service for FrdmService {
     //
     //
     fn is_finished(&self) -> bool {
-        let mut is_finished = false;
-        for task in self.tasks.iter() {
-            is_finished = is_finished & task.value().is_finished();
-        }
-        is_finished
+        self.tasks.iter().all(|task| task.value().is_finished())
     }
     //
     //

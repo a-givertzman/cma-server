@@ -1,0 +1,70 @@
+name: App
+description: Short explanation / purpose etc.
+services:
+    retain:
+        path: assets/retain/
+        point:
+            path: point/id.json
+            api:
+                table: public.tags
+                address: 0.0.0.0:8080
+                auth-token: 123!@#
+                database: crane_data_server
+
+
+service MultiQueue:
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
+    in queue in-queue:
+        max-length: 10000
+    send-to:
+        # - TaskTestReceiver.queue
+
+
+service CacheService MainCache:
+    wait-started: 100 ms         # optional, next service will wait until current completely started plus specified time
+    retain: true
+    retain-dely: 30s    # default 30s
+    subscribe:
+        /App/MultiQueue:
+            Inf: []             # IMPORTENT !!!
+
+service VibroMonitor VibroMonitor-01:
+    wait-started: 10 ms                 # optional, next service will wait until current completely started plus specified time
+    subscribe: /App/MultiQueue          # Subscriptions will be to the MultiQueue
+    diagnosis:                          # internal diagnosis
+        point Status:                   # Ok(0) / Invalid(10)
+            type: 'Int'
+        point Connection:               # Ok(0) / Invalid(10)
+            type: 'Int'
+    api-client:
+        wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
+        address: "0.0.0.0:8081"
+        auth-token: "123!@#"
+        database: "cma"
+    tables:
+        equipment: 'public.equipment'
+        faults: 'public.vibration_faults'
+        trends: 'public.vibration_trends'
+    sensor Motor-AC1:
+        target: Motor-AC1               # Уникальный идентификатор целевого механизма
+        rpm: point real '/App/Ied01/Motor.AC1.RPM'  # Текущая скорость вращения вала механизма, об/мин
+        channel: 1                      # Номер канала в АЦП (0..255). 0 - первый канал.
+        connection:                     # Параметры связи с датчиком
+            reconnect: 1000 ms                      # reconnect timeout when connection is lost
+            protocol: 'udp-raw'                     # udp-raw
+            local-addr: 192.168.100.100:15180    # Local machine address
+            remote-addr: 192.168.100.241:15180   # IP Address of the vibro-sensor ADC unit
+            mtu: 1500                               # Maximum Transmission Unit, default 1500
+        adc:                            # Параметры сбора сырых данных с АЦП
+            ds-offset: 2048             # Постоянная составляющая сигнала. Будет вычитаться из сырых сэмплов.
+            sample-rate-hz: 320000
+            chunk-size: 512             # Размер выборки, поступающей из АЦП (сэмплов u16).
+        analysis:                       # Параметры цифровой обработки и виброаналитики
+            order-tracking:             
+                max-order: 300              # Максимальный порядок (кратность частоты вращения), до которого производится спектральный анализ.
+                order-resolution: 0.05      # Требуемая спектральное разрешение в угловом домене.
+                # samples-per-rev: 256      # Плотность угловой дискретизации (сэмплов на оборот).
+            bands:
+                low-order: 0.5..10.0        # Границы низкочастотной зоны в порядках (Orders)
+                mid-hz: ..5000              # Верхняя граница среднего диапазона в Герцах (нижняя определяется порядками).
+                high-hz: 5000..10000        # Границы высокочастотной зоны в Герцах.

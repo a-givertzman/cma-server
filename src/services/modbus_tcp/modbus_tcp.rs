@@ -89,7 +89,7 @@ impl Service for ModbusTcp {
     //
     //
     fn is_finished(&self) -> bool {
-        self.tasks.iter().fold(false, |is_finished, task| is_finished & task.value().is_finished())
+        self.tasks.iter().all(|task| task.value().is_finished())
     }
     //
     //

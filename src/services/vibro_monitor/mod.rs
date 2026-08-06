@@ -39,8 +39,6 @@ mod sensor_conf;
 pub(crate) use sensor_conf::*;
 mod udp_client;
 pub(crate) use udp_client::*;
-mod event_values;
-pub use event_values::*;
 mod sql_export;
 pub(self) use sql_export::*;
 mod vibro_adc;
