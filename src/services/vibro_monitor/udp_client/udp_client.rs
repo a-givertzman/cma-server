@@ -59,6 +59,9 @@ enum State {
 ///     `...` - To be extended if necessary
 pub struct UdpClient {
     name: Name,
+    /// Количество каналов в АЦП
+    channels: usize,
+    /// Параметры связи с АЦП
     conf: UdpClientConf,
     /// Связь с устройством по сети
     socket: RefCell<Option<UdpSocket>>,
@@ -86,12 +89,13 @@ impl UdpClient {
     /// - app - string represents application name, for point path
     /// - parent - parent id, used for debugging
     /// - conf - configuration of the [UdpClient]
-    pub fn new(parent: impl Into<String>, conf: UdpClientConf) -> Self {
+    pub fn new(parent: impl Into<String>, channels: usize, conf: UdpClientConf) -> Self {
         let name = Name::new(parent, crate::me::<Self>());
         let dbg = Dbg::new(name.parent(), name.me());
         let mtu = conf.mtu;
         Self {
             name,
+            channels,
             conf,
             socket: RefCell::new(None),
             buff: RefCell::new(vec![0; mtu]),
@@ -144,27 +148,35 @@ impl UdpClient {
         let buff = &self.buff.borrow()[..len];
         match buff {
             [UdpClient::DAT, channels, typ, c1, c2, c3, c4, ..] => {
+                if *channels as usize != self.channels {
+                    log::error!("{}.parse | ADC has {channels} channels, but expected {}", self.dbg, self.channels);
+                }
                 let count = u32::from_le_bytes([*c1, *c2, *c3, *c4]) as usize;
                 // log::debug!("{dbg}.parse | channels: {}, count: {}", channels, count);
                 let typ = InputType::try_from(*typ)
                     .map_err(|err| err_pass!(self.dbg, err, "Wrong value type {}", typ))?;
                 // log::debug!("{dbg}.parse | channels: {}, count: {} values of type {}", channels, count, typ);
                 // log::debug!("{dbg}.parse | channels: {} type: {} count: {}  |  {:?}", channels, typ, count, &buf[UdpClient::HEAD_LEN..(if buf.len() < 10 {buf.len()} else {10})]);
-                let bytes = buff.get(UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count))
-                    .ok_or(err!(self.dbg, "Wrong message length: {}, expected {}", buff.len(), UdpClient::HEAD_LEN + count))?;
-                // let bytes: &Vec<u8> = bytes;
-                // log::trace!("{}.parse | bytes: {:?}", dbg, bytes);
-                // log::trace!("{}.parse | points: {:?}", dbg, points.iter().map(|(id, point)| format!("{}[{}]", point.name(), id)).collect::<Vec<String>>());
-                if *channels as usize > values.len() {
-                    values.resize_with(*channels as usize, Vec::new);
-                }
-                for channel in 0..*channels {
-                    let channel_values = &mut values[channel as usize];
-                    if let Err(err) = self.convert(channel as usize, *channels as usize, bytes, channel_values) {
-                        return Err(err_pass!(self.dbg, err));
+                match &typ {
+                    InputType::U16 => {
+                        let bytes = buff.get(UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count))
+                            .ok_or(err!(self.dbg, "Wrong message length: {}, expected {}", buff.len(), UdpClient::HEAD_LEN + count))?;
+                        // let bytes: &Vec<u8> = bytes;
+                        // log::trace!("{}.parse | bytes: {:?}", dbg, bytes);
+                        // log::trace!("{}.parse | points: {:?}", dbg, points.iter().map(|(id, point)| format!("{}[{}]", point.name(), id)).collect::<Vec<String>>());
+                        if *channels as usize > values.len() {
+                            values.resize_with(*channels as usize, Vec::new);
+                        }
+                        for channel in 0..*channels {
+                            let channel_values = &mut values[channel as usize];
+                            if let Err(err) = self.convert(channel as usize, *channels as usize, bytes, channel_values) {
+                                return Err(err_pass!(self.dbg, err));
+                            }
+                        }
+                        Ok(())
                     }
+                    _ => Err(err!(self.dbg, "Unsupported sample format received from ADC: {:?}", typ)),
                 }
-                Ok(())
             }
             [UdpClient::ERR, err] | [UdpClient::ERR, err, ..] => {
                 Err(err_pass!(self.dbg, err, "Error received from ADC"))
@@ -252,7 +264,7 @@ mod tests {
     }
     #[test]
     fn test_convert_empty_bytes_returns_error() {
-        let client = UdpClient::new("test_convert_empty_bytes_returns_error", mock_conf());
+        let client = UdpClient::new("test_convert_empty_bytes_returns_error", 2, mock_conf());
         let mut values = Vec::new();
         let result = client.convert(0, 2, &[], &mut values);
         assert!(result.is_err());
@@ -271,7 +283,7 @@ mod tests {
         bytes.extend_from_slice(&ch1_s1);
         bytes.extend_from_slice(&ch0_s2);
         bytes.extend_from_slice(&ch1_s2);
-        let client = UdpClient::new("test_convert_demux_logic", mock_conf());
+        let client = UdpClient::new("test_convert_demux_logic", 2, mock_conf());
         // Проверяем извлечение для нулевого канала (CH0)
         let mut values_ch0 = Vec::new();
         let res_ch0 = client.convert(0, 2, &bytes, &mut values_ch0);
@@ -285,7 +297,7 @@ mod tests {
     }
     #[test]
     fn test_convert_resizes_existing_vector() {
-        let client = UdpClient::new("test_convert_resizes_existing_vector", mock_conf());
+        let client = UdpClient::new("test_convert_resizes_existing_vector", 1, mock_conf());
         // Вектор изначально имеет емкость 1 элемент
         let mut values = vec![999]; 
         let sample1 = 42u16.to_le_bytes();
@@ -302,7 +314,7 @@ mod tests {
     // ТЕСТЫ ДЛЯ МЕТОДА PARSE
     #[test]
     fn test_parse_empty_udp_packet_returns_error() {
-        let client = UdpClient::new("test_parse_empty_udp_packet_returns_error", mock_conf());
+        let client = UdpClient::new("test_parse_empty_udp_packet_returns_error", 2, mock_conf());
         let mut values = Vec::new();
         // Имитируем пустое чтение из сети
         client.buff.borrow_mut().clear(); 
@@ -312,7 +324,7 @@ mod tests {
     }
     #[test]
     fn test_parse_error_packet_returns_err() {
-        let client = UdpClient::new("test_parse_error_packet_returns_err", mock_conf());
+        let client = UdpClient::new("test_parse_error_packet_returns_err", 2, mock_conf());
         let mut values = Vec::new();
         // Записываем в пакет маркер ошибки (0x02 — имитирует UdpClient::ERR)
         client.buff.borrow_mut().extend_from_slice(&[0x02, 0x15]); 
@@ -321,7 +333,7 @@ mod tests {
     }
     #[test]
     fn test_parse_err_packet_returns_error_result() {
-        let client = UdpClient::new("test_parse_err_packet_returns_error_result", mock_conf());
+        let client = UdpClient::new("test_parse_err_packet_returns_error_result", 2, mock_conf());
         let mut values = Vec::new();
         // Формируем пакет ошибки: FUN(0x07) + код ошибки АЦП (например, 0x02 - ADC Error)
         let packet = vec![UdpClient::ERR, 0x02];
@@ -333,7 +345,7 @@ mod tests {
     }
     #[test]
     fn test_parse_wrong_head_len_returns_error() {
-        let client = UdpClient::new("test_parse_wrong_head_len_returns_error", mock_conf());
+        let client = UdpClient::new("test_parse_wrong_head_len_returns_error", 2, mock_conf());
         let mut values = Vec::new();
         // Посылаем обрезанный пакет DAT, в котором указано, что данных 100 байт, а физически их нет
         let packet = make_udp_header(UdpClient::DAT, 2, 16, 100);
@@ -344,7 +356,7 @@ mod tests {
     }
     #[test]
     fn test_parse_valid_dat_packet() {
-        let client = UdpClient::new("test_parse_valid_dat_packet", mock_conf());
+        let client = UdpClient::new("test_parse_valid_dat_packet", 3, mock_conf());
         let mut values: Vec<Vec<u16>> = Vec::new();
         // Настройка данных: 3 канала, тип 16 (u16), по 1 сэмплу на канал (всего 3 сэмпла = 6 байт)
         let channels_count = 3u8;

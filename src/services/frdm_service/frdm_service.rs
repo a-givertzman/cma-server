@@ -207,15 +207,12 @@ impl Service for FrdmService {
                 errors.push(err);
             }
         }
-        errors
-            .is_empty()
-            .then(|| {
-                log::info!("{}.run | Exit", self.dbg);
-                ()
-            })
-            .ok_or(
-                Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err)))
-            )
+        if errors.is_empty() {
+            log::info!("{}.run | Exit", self.dbg);
+            ()
+        } else {
+            Err(Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
+        }
     }
     //
     //

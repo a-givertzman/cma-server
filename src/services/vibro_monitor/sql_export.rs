@@ -77,7 +77,7 @@ where
 /// - Удаляет пробелы по краям
 /// - Вырезает нулевые байты (\0)
 /// - Экранирует одинарные кавычки
-pub fn escape(input: &str) -> String {
+pub(super) fn escape(input: &str) -> String {
     let trimmed = input.trim();
     // +8 байт — запас под несколько кавычек
     let mut result = String::with_capacity(trimmed.len() + 8);

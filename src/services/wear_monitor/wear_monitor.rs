@@ -7,7 +7,7 @@ use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiC
 use super::{WearMonitorConf, InputKind};
 
 ///
-/// ### WearMonitor Service | Сервис вибродиагностики
+/// ### WearMonitor Service | Сервис вычисления износа
 pub struct WearMonitor {
     name: Name,
     conf: WearMonitorConf,
@@ -52,56 +52,47 @@ CREATE TABLE IF NOT EXISTS equipment (
     CONSTRAINT pk_equipment PRIMARY KEY (id),
     CONSTRAINT uq_equipment_name UNIQUE (name)
 );
-
 -- 2. Таблица учета наработки и ресурса (Wear & Lifespan)
-CREATE TABLE equipment_wear (
+CREATE TABLE IF NOT EXISTS equipment_wear (
     equipment_id       INTEGER PRIMARY KEY REFERENCES equipment(id) ON DELETE CASCADE,
     operating_hours    REAL NOT NULL DEFAULT 0.0,  -- Фактическая наработка (моточасы)
     nominal_resource   REAL NOT NULL,              -- Номинальный ресурс до кап. ремонта (моточасы)
     updated_at         TIMESTAMPTZ NOT NULL        -- Время последнего обновления наработки
 );
-
 -- 3. Обновленная таблица трендов вибрации
-CREATE TABLE {vibration_trends} (
+CREATE TABLE IF NOT EXISTS {vibration_trends} (
     timestamp      TIMESTAMPTZ NOT NULL,
     equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
     order_id       VARCHAR(10) NOT NULL,       -- '1x', '2x', '3x', '0.5x' и т.д.
     rms_value      REAL NOT NULL,              -- Амплитуда (RMS)
-    phase          REAL,                       -- Фаза в градусах [0..360)
+    phase          REAL NOT NULL,              -- Фаза в градусах [0..360)
     rpm            REAL NOT NULL,              -- Текущие обороты вала
-    
     PRIMARY KEY (timestamp, equipment_id, order_id)
 );
-
 -- Индекс для быстрой фильтрации по конкретному агрегату и гармонике
-CREATE INDEX idx_equip_order_trends ON {vibration_trends} (equipment_id, order_id, timestamp DESC);
-
+CREATE INDEX IF NOT EXISTS idx_equip_order_trends ON {vibration_trends} (equipment_id, order_id, timestamp DESC);
 -- Справочник видов дефектов
-CREATE TABLE fault_kind (
+CREATE TABLE IF NOT EXISTS fault_kind (
     id          VARCHAR(64) NOT NULL,
     description TEXT NOT NULL,
-
     PRIMARY KEY (id)
-)
+);
 INSERT INTO fault_kind (id, description) VALUES
     ('Imbalance', 'Дисбаланс'),
     ('Misalignment', 'Расцентровка'),
-    ('MechanicalLooseness', 'Механический люфт');
-
+    ('MechanicalLooseness', 'Механический люфт')
+ON CONFLICT (id) DO NOTHING;
 -- Степень развития дефекта (Зоны ISO 10816 / 20816)
-CREATE TYPE vibration_severity AS ENUM (
-    'green',   -- Отличное или новое состояние.
-    'yellow',  -- Пригодно для длительной эксплуатации без ограничений.
-    'orange',  -- Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.
-    'red'      -- Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.
-);
-COMMENT ON TYPE vibration_severity VALUE 'green' IS 'Отличное или новое состояние.';
-COMMENT ON TYPE vibration_severity VALUE 'yellow' IS 'Пригодно для длительной эксплуатации без ограничений.';
-COMMENT ON TYPE vibration_severity VALUE 'orange' IS 'Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.';
-COMMENT ON TYPE vibration_severity VALUE 'red' IS 'Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.';
-
+IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vibration_severity') THEN
+    CREATE TYPE vibration_severity AS ENUM (
+        'green',   -- Отличное или новое состояние.
+        'yellow',  -- Пригодно для длительной эксплуатации без ограничений.
+        'orange',  -- Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.
+        'red'      -- Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.
+    );
+END IF;
 -- Оценка состояния оборудования на основании вибрации
-CREATE TABLE {vibration_faults} (
+CREATE TABLE IF NOT EXISTS {vibration_faults} (
     timestamp      TIMESTAMPTZ NOT NULL,
     equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
     -- Вид неисправности
@@ -117,28 +108,6 @@ CREATE TABLE {vibration_faults} (
     -- хранится ровно ОДНА запись по конкретному дефекту
     PRIMARY KEY (equipment_id, fault_kind)
 );
-
-
--- SQL-запрос для вывода списка оборудования с худшим статусом
-SELECT 
-    e.id AS equipment_id,
-    e.name AS equipment_name,
-    -- MAX() для ENUM в Postgres выберет самое критическое состояние (последнее в списке ENUM)
-    MAX(vf.severity) AS overall_severity,
-    -- Собираем список всех обнаруженных дефектов, которые вышли из зоны 'green'
-    STRING_AGG(
-        CASE WHEN vf.severity != 'green' THEN fk.description END, 
-        ', '
-    ) AS active_faults,
-    MAX(vf.timestamp) AS last_update
-FROM equipment e
-LEFT JOIN vibration_faults vf ON e.id = vf.equipment_id
-LEFT JOIN fault_kind fk ON vf.fault_kind = fk.id
-GROUP BY e.id, e.name
-ORDER BY 
-    -- Сначала показываем самое "красное" и "оранжевое" оборудование
-    overall_severity DESC NULLS LAST, 
-    e.name;
 end; $$
 language plpgsql;
         "#);
@@ -180,16 +149,21 @@ impl Service for WearMonitor {
         self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
-        // Конфигурация БД. TODO: Нужно довести SQL что бы он при повторном запуске адекватно срабатывал  
-        // self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
+        self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
         let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
         let mut event_values = crate::services::EventValues::new(&name, &conf.subscribe, &services, &scheduler, &self.exit);
-        // Регистрация настроенных входных сигналов (RPM) для последующей подписки на них в сервисе conf.subscribe.
+        // Регистрация настроенных входных сигналов (RPM, Load, Temp, ...) для последующей подписки на них в сервисе conf.subscribe.
         // Выполняется до запуска сервиса!
         for (_adc_id, sensors_conf) in &conf.sensors {
             for sensor in sensors_conf {
                 if let InputKind::Point(rpm) = &sensor.rpm {
                     event_values.register(rpm);
+                }
+                if let InputKind::Point(load) = &sensor.load {
+                    event_values.register(load);
+                }
+                if let InputKind::Point(temp) = &sensor.temp {
+                    event_values.register(temp);
                 }
             }
         }
@@ -247,15 +221,12 @@ impl Service for WearMonitor {
                 errors.push(err);
             }
         }
-        errors
-            .is_empty()
-            .then(|| {
-                log::info!("{}.run | Exit", self.dbg);
-                ()
-            })
-            .ok_or(
-                Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err)))
-            )
+        if errors.is_empty() {
+            log::info!("{}.run | Exit", self.dbg);
+            Ok(())
+        } else {
+            Err(err_pass!(self.dbg, errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
+        }
     }
     //
     fn is_finished(&self) -> bool {

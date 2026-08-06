@@ -3,7 +3,7 @@ use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
 use vibro_core::{DiagFeatures, DiagnosticResult, Eval, Severity, VibroSensor};
-use crate::{domain::Sender , err, err_pass};
+use crate::{domain::Sender, err, err_pass};
 
 /// ### VibroSensor | Расчетный вибродиагностики для одного датчика
 /// 
@@ -147,9 +147,9 @@ where
         let handle = self.scheduler.spawn(move || {
             service_release.add(Ok(()));
             let dbg = &dbg;
-            let udp = super::UdpClient::new(dbg, connection_conf);
+            let udp = super::UdpClient::new(dbg, conf.len(), connection_conf);
             let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
-            let sensors: Vec<(_, _)> = conf.iter().map(|conf| {
+            let sensors: Vec<(_, _)> = conf.iter().filter_map(|conf| {
                 let rpm_key = match &conf.rpm {
                     crate::services::vibro_monitor::InputKind::Const(rpm) => {
                         let key = format!("{name}/rpm");
@@ -166,16 +166,28 @@ where
                         if count > 0 {
                             let results = ctx.results.iter().filter(|r| r.severity != Severity::Green);
                             let sql = vibration_faults_sql(&equipment, &vibration_faults, equipment_name, results, count);
-                            let _ = api_link.send(sql);
+                            if let Some(sql) = sql {
+                                // TODO: Добавить разовое логирование в момент перехода в состояние ошибки
+                                let _ = api_link.try_send(sql);
+                            }
                         }
                         if !ctx.features.is_empty() {
                             let sql = vibration_trends_sql(&equipment, &vibration_trends, equipment_name, &ctx.features);
-                            let _ = api_link.send(sql);
+                            if let Some(sql) = sql {
+                                // TODO: Добавить разовое логирование в момент перехода в состояние ошибки
+                                let _ = api_link.try_send(sql);
+                            }
                         }
                     },
                     &exit,
-                ).unwrap();
-                (conf.clone(), sensor)
+                );
+                match sensor {
+                    Ok(sensor) => Some((conf.clone(), sensor)),
+                    Err(err) => {
+                        log::warn!("{dbg}.run | Can't create vibro sensor for '{}': {:?}", conf.target, err);
+                        None
+                    }
+                }
             }).collect();
             while !exit.get() {
                 // Получение АЦП-выборки из сети
@@ -232,7 +244,9 @@ fn vibration_trends_sql(
     table_trends: &str,
     equipment_name: &str,
     features: &[DiagFeatures],
-) -> String {
+) -> Option<String> {
+    if features.is_empty() { return None; }
+    let equipment_name = super::escape(equipment_name);
     let mut sql = String::with_capacity(750 + features.len() * 120);
     sql.push_str("WITH new_data (eq_name, timestamp, order_id, rms_value, phase, rpm) AS (\n        VALUES ");
     for (i, r) in features.iter().enumerate() {
@@ -243,9 +257,9 @@ fn vibration_trends_sql(
             equipment_name,
             r.ts.to_rfc3339(),
             r.order_id,
-            r.rms.value(),
-            r.phase.to_degrees(),
-            r.rpm.value()
+            wrap_nan(&r.rms.value()),
+            wrap_nan(&r.phase.to_degrees()),
+            wrap_nan(&r.rpm.value())
         );
     }
     _ = write!(
@@ -270,7 +284,7 @@ ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;"#,
     table_equipment,
     table_trends
     );
-    sql
+    Some(sql)
 }
 
 /// ### Формирует SQL для таблицы состояния оборудования на основании вибрации.
@@ -285,7 +299,9 @@ fn vibration_faults_sql<'a>(
     equipment_name: &str,
     results: impl Iterator<Item = &'a DiagnosticResult>,
     count: usize,
-) -> String {
+) -> Option<String> {
+    if count == 0 { return None; }
+    let equipment_name = super::escape(equipment_name);
     let mut sql = String::with_capacity(750 + count * 120);
     sql.push_str(r#"WITH new_data (eq_name, timestamp, fault_kind, score, severity, rpm) AS ( 
         VALUES 
@@ -298,9 +314,9 @@ fn vibration_faults_sql<'a>(
             equipment_name,
             r.ts.to_rfc3339(),
             r.fault,
-            r.score,
+            wrap_nan(&r.score),
             r.severity,
-            r.rpm.value()
+            wrap_nan(&r.rpm.value())
         );
     }
     _ = write!(sql, r#"
@@ -327,5 +343,12 @@ DO UPDATE SET
     severity  = EXCLUDED.severity,
     rpm       = EXCLUDED.rpm;
 "#, table_equipment, table_faults);
-    sql
+    Some(sql)
+}
+/// Подготовка NaN для БД
+fn wrap_nan(v: &f64) -> &dyn std::fmt::Display {
+    if v.is_nan() {
+        return &"'NaN'";
+    }
+    v
 }

@@ -46,7 +46,7 @@
 //!         - 32 - u32, 4 byte unsigned integer value
 //!         - 33 - i32, 4 byte signed integer value
 //!         - 132 - f32, 4 bytes float value
-//!     - `COUNT` - length of the array in the `DATA` field, number of values of type specified in the `TYPE` field
+//!     - `COUNT` - length of the `DATA` field in bytes
 //!     - `DATA` - array of values of type specified in the `TYPE` field
 //! 
 //! - **Error codes**
@@ -95,15 +95,11 @@
 //! ```
 //! 
 mod input_type;
-mod parse_point;
 mod udp_client_conf;
 mod udp_client_connect;
 mod udp_client;
-mod udpc_parse_u16;
 
 pub(crate) use input_type::*;
-pub(crate) use parse_point::*;
 pub use udp_client_conf::*;
 pub(crate) use udp_client_connect::*;
 pub use udp_client::*;
-pub(crate) use udpc_parse_u16::*;

@@ -1,6 +1,5 @@
 use sal_sync::services::conf::ConfDuration;
-use serde::{Deserialize, Deserializer, Serialize};
-use std::{str::FromStr, time::Duration};
+use serde::{Deserialize};
 ///
 /// ### Creates `UdpClient` config from serde_yaml::Value
 /// 

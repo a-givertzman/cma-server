@@ -1,8 +1,7 @@
 use std::{sync::Arc, time::Duration};
-use dashmap::DashMap;
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
+use sal_sync::{collections::FxDashMap, kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
 use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
 use super::{VibroMonitorConf, InputKind};
 
@@ -13,7 +12,7 @@ pub struct VibroMonitor {
     conf: VibroMonitorConf,
     services: Arc<Services>,
     scheduler: Scheduler,
-    tasks: Arc<DashMap<String, Arc<dyn Service>>>,
+    tasks: Arc<FxDashMap<String, Arc<dyn Service>>>,
     exit: Arc<ExitNotify>,
     dbg: Dbg,
 }
@@ -28,7 +27,7 @@ impl VibroMonitor {
             conf,
             services,
             scheduler,
-            tasks: Arc::new(DashMap::new()),
+            tasks: Arc::new(FxDashMap::default()),
             exit: Arc::new(ExitNotify::new(&dbg, None, None)),
             dbg,
         }
@@ -103,7 +102,7 @@ CREATE TABLE IF NOT EXISTS {vibration_faults} (
     -- Green, Yellow, Orange, Red
     severity       vibration_severity NOT NULL,
     -- Текущие обороты расчете, для валидации диагноза
-    rpm            DOUBLE PRECISION NOT NULL 
+    rpm            DOUBLE PRECISION NOT NULL,
     -- Гарантирует, что для каждого оборудования 
     -- хранится ровно ОДНА запись по конкретному дефекту
     PRIMARY KEY (equipment_id, fault_kind)
@@ -144,13 +143,12 @@ impl Service for VibroMonitor {
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
-        let fetch_timeout = Duration::from_secs(3);
+        let fetch_timeout = Duration::from_secs(1);
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
-        self.tasks.insert(api_client.name().join(), api_client.clone());
+        _ = self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
-        // Конфигурация БД. TODO: Нужно довести SQL что бы он при повторном запуске адекватно срабатывал  
-        // self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
+        self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
         let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
         let mut event_values = crate::services::EventValues::new(&name, &conf.subscribe, &services, &scheduler, &self.exit);
         // Регистрация настроенных входных сигналов (RPM) для последующей подписки на них в сервисе conf.subscribe.
@@ -163,7 +161,7 @@ impl Service for VibroMonitor {
             }
         }
         let event_values = Arc::new(event_values);
-        self.tasks.insert(event_values.name().join(), event_values.clone());
+        _ = self.tasks.insert(event_values.name().join(), event_values.clone());
         let (api_link, api_queue) = crate::domain::bounded(4096);
         // TODO: Может вынести в отдельный сервис
         scheduler.spawn({
@@ -200,7 +198,7 @@ impl Service for VibroMonitor {
                 scheduler.clone(),
                 self.exit.clone(),
             ));
-            self.tasks.insert(sensor.name().join(), sensor.clone());
+            _ = self.tasks.insert(sensor.name().join(), sensor.clone());
             sensor.run().map_err(|err| err_pass!(self.dbg, err))?;
         }
         event_values.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
@@ -209,22 +207,20 @@ impl Service for VibroMonitor {
         Ok(())
     }
     //
+    #[named]
     fn wait(&self) -> Result<(), Error> {
         let mut errors = vec![];
         for task in self.tasks.iter() {
-            if let Err(err) = task.value().wait() {
+            if let Err(err) = task.wait() {
                 errors.push(err);
             }
         }
-        errors
-            .is_empty()
-            .then(|| {
-                log::info!("{}.run | Exit", self.dbg);
-                ()
-            })
-            .ok_or(
-                Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err)))
-            )
+        if errors.is_empty() {
+            log::info!("{}.run | Exit", self.dbg);
+            Ok(())
+        } else {
+            Err(err_pass!(self.dbg, errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
+        }
     }
     //
     fn is_finished(&self) -> bool {

@@ -1,9 +1,8 @@
 mod vibro_monitor {
 use std::{sync::Arc, time::Duration};
-use dashmap::DashMap;
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
+use sal_sync::{collections::FxDashMap, kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
 use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
 use super::{VibroMonitorConf, InputKind};
 pub struct VibroMonitor {
@@ -11,7 +10,7 @@ pub struct VibroMonitor {
     conf: VibroMonitorConf,
     services: Arc<Services>,
     scheduler: Scheduler,
-    tasks: Arc<DashMap<String, Arc<dyn Service>>>,
+    tasks: Arc<FxDashMap<String, Arc<dyn Service>>>,
     exit: Arc<ExitNotify>,
     dbg: Dbg,
 }
@@ -23,7 +22,7 @@ impl VibroMonitor {
             conf,
             services,
             scheduler,
-            tasks: Arc::new(DashMap::new()),
+            tasks: Arc::new(FxDashMap::default()),
             exit: Arc::new(ExitNotify::new(&dbg, None, None)),
             dbg,
         }
@@ -46,47 +45,46 @@ CREATE TABLE IF NOT EXISTS equipment (
     CONSTRAINT uq_equipment_name UNIQUE (name)
 );
 -- 2. Таблица учета наработки и ресурса (Wear & Lifespan)
-CREATE TABLE equipment_wear (
+CREATE TABLE IF NOT EXISTS equipment_wear (
     equipment_id       INTEGER PRIMARY KEY REFERENCES equipment(id) ON DELETE CASCADE,
     operating_hours    REAL NOT NULL DEFAULT 0.0,  -- Фактическая наработка (моточасы)
     nominal_resource   REAL NOT NULL,              -- Номинальный ресурс до кап. ремонта (моточасы)
     updated_at         TIMESTAMPTZ NOT NULL        -- Время последнего обновления наработки
 );
 -- 3. Обновленная таблица трендов вибрации
-CREATE TABLE {vibration_trends} (
+CREATE TABLE IF NOT EXISTS {vibration_trends} (
     timestamp      TIMESTAMPTZ NOT NULL,
     equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
     order_id       VARCHAR(10) NOT NULL,       -- '1x', '2x', '3x', '0.5x' и т.д.
     rms_value      REAL NOT NULL,              -- Амплитуда (RMS)
-    phase          REAL,                       -- Фаза в градусах [0..360)
+    phase          REAL NOT NULL,              -- Фаза в градусах [0..360)
     rpm            REAL NOT NULL,              -- Текущие обороты вала
     PRIMARY KEY (timestamp, equipment_id, order_id)
 );
 -- Индекс для быстрой фильтрации по конкретному агрегату и гармонике
-CREATE INDEX idx_equip_order_trends ON {vibration_trends} (equipment_id, order_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_equip_order_trends ON {vibration_trends} (equipment_id, order_id, timestamp DESC);
 -- Справочник видов дефектов
-CREATE TABLE fault_kind (
+CREATE TABLE IF NOT EXISTS fault_kind (
     id          VARCHAR(64) NOT NULL,
     description TEXT NOT NULL,
     PRIMARY KEY (id)
-)
+);
 INSERT INTO fault_kind (id, description) VALUES
     ('Imbalance', 'Дисбаланс'),
     ('Misalignment', 'Расцентровка'),
-    ('MechanicalLooseness', 'Механический люфт');
+    ('MechanicalLooseness', 'Механический люфт')
+ON CONFLICT (id) DO NOTHING;
 -- Степень развития дефекта (Зоны ISO 10816 / 20816)
-CREATE TYPE vibration_severity AS ENUM (
-    'green',   -- Отличное или новое состояние.
-    'yellow',  -- Пригодно для длительной эксплуатации без ограничений.
-    'orange',  -- Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.
-    'red'      -- Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.
-);
-COMMENT ON TYPE vibration_severity VALUE 'green' IS 'Отличное или новое состояние.';
-COMMENT ON TYPE vibration_severity VALUE 'yellow' IS 'Пригодно для длительной эксплуатации без ограничений.';
-COMMENT ON TYPE vibration_severity VALUE 'orange' IS 'Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.';
-COMMENT ON TYPE vibration_severity VALUE 'red' IS 'Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.';
+IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vibration_severity') THEN
+    CREATE TYPE vibration_severity AS ENUM (
+        'green',   -- Отличное или новое состояние.
+        'yellow',  -- Пригодно для длительной эксплуатации без ограничений.
+        'orange',  -- Предупреждение (Warn). Пригодно для ограниченной эксплуатации, требуется планирование ремонта.
+        'red'      -- Преждевременный отказ (Alarm). Опасные вибрации, требуется немедленная остановка.
+    );
+END IF;
 -- Оценка состояния оборудования на основании вибрации
-CREATE TABLE {vibration_faults} (
+CREATE TABLE IF NOT EXISTS {vibration_faults} (
     timestamp      TIMESTAMPTZ NOT NULL,
     equipment_id   INTEGER NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
     -- Вид неисправности
@@ -97,31 +95,11 @@ CREATE TABLE {vibration_faults} (
     -- Green, Yellow, Orange, Red
     severity       vibration_severity NOT NULL,
     -- Текущие обороты расчете, для валидации диагноза
-    rpm            DOUBLE PRECISION NOT NULL
+    rpm            DOUBLE PRECISION NOT NULL,
     -- Гарантирует, что для каждого оборудования
     -- хранится ровно ОДНА запись по конкретному дефекту
     PRIMARY KEY (equipment_id, fault_kind)
 );
--- SQL-запрос для вывода списка оборудования с худшим статусом
-SELECT
-    e.id AS equipment_id,
-    e.name AS equipment_name,
-    -- MAX() для ENUM в Postgres выберет самое критическое состояние (последнее в списке ENUM)
-    MAX(vf.severity) AS overall_severity,
-    -- Собираем список всех обнаруженных дефектов, которые вышли из зоны 'green'
-    STRING_AGG(
-        CASE WHEN vf.severity != 'green' THEN fk.description END,
-        ', '
-    ) AS active_faults,
-    MAX(vf.timestamp) AS last_update
-FROM equipment e
-LEFT JOIN vibration_faults vf ON e.id = vf.equipment_id
-LEFT JOIN fault_kind fk ON vf.fault_kind = fk.id
-GROUP BY e.id, e.name
-ORDER BY
-    -- Сначала показываем самое "красное" и "оранжевое" оборудование
-    overall_severity DESC NULLS LAST,
-    e.name;
 end; $$
 language plpgsql;
         "#);
@@ -156,13 +134,12 @@ impl Service for VibroMonitor {
         let conf = self.conf.clone();
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
-        let fetch_timeout = Duration::from_secs(3);
+        let fetch_timeout = Duration::from_secs(1);
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
-        self.tasks.insert(api_client.name().join(), api_client.clone());
+        _ = self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
-        // Конфигурация БД. TODO: Нужно довести SQL что бы он при повторном запуске адекватно срабатывал
-        // self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
+        self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
         let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
         let mut event_values = crate::services::EventValues::new(&name, &conf.subscribe, &services, &scheduler, &self.exit);
         // Регистрация настроенных входных сигналов (RPM) для последующей подписки на них в сервисе conf.subscribe.
@@ -175,7 +152,7 @@ impl Service for VibroMonitor {
             }
         }
         let event_values = Arc::new(event_values);
-        self.tasks.insert(event_values.name().join(), event_values.clone());
+        _ = self.tasks.insert(event_values.name().join(), event_values.clone());
         let (api_link, api_queue) = crate::domain::bounded(4096);
         // TODO: Может вынести в отдельный сервис
         scheduler.spawn({
@@ -212,7 +189,7 @@ impl Service for VibroMonitor {
                 scheduler.clone(),
                 self.exit.clone(),
             ));
-            self.tasks.insert(sensor.name().join(), sensor.clone());
+            _ = self.tasks.insert(sensor.name().join(), sensor.clone());
             sensor.run().map_err(|err| err_pass!(self.dbg, err))?;
         }
         event_values.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
@@ -224,27 +201,20 @@ impl Service for VibroMonitor {
     fn wait(&self) -> Result<(), Error> {
         let mut errors = vec![];
         for task in self.tasks.iter() {
-            if let Err(err) = task.value().wait() {
+            if let Err(err) = task.wait() {
                 errors.push(err);
             }
         }
-        errors
-            .is_empty()
-            .then(|| {
-                log::info!("{}.run | Exit", self.dbg);
-                ()
-            })
-            .ok_or(
-                Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err)))
-            )
+        if errors.is_empty() {
+            log::info!("{}.run | Exit", self.dbg);
+            Ok(())
+        } else {
+            Err(err_pass!(self.dbg, errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
+        }
     }
     //
     fn is_finished(&self) -> bool {
-        let mut is_finished = false;
-        for task in self.tasks.iter() {
-            is_finished = is_finished & task.value().is_finished();
-        }
-        is_finished
+        self.tasks.iter().all(|task| task.value().is_finished())
     }
     //
     fn exit(&self) {
@@ -546,7 +516,7 @@ mod udp_client {
 //!         - 32 - u32, 4 byte unsigned integer value
 //!         - 33 - i32, 4 byte signed integer value
 //!         - 132 - f32, 4 bytes float value
-//!     - `COUNT` - length of the array in the `DATA` field, number of values of type specified in the `TYPE` field
+//!     - `COUNT` - length of the `DATA` field in bytes
 //!     - `DATA` - array of values of type specified in the `TYPE` field
 //!
 //! - **Error codes**
@@ -675,34 +645,9 @@ impl Display for InputType {
         }
     }
 }}
-mod parse_point {
-use chrono::{DateTime, Utc};
-use sal_core::error::Error;
-use sal_sync::services::entity::{{Point, PointType}, Status};
-///
-/// Returns updated points parsed from the data slice from the S7 device,
-pub trait ParsePoint: Send {
-    ///
-    /// Returns the type of the configured point
-    fn typ(&self) -> PointType;
-    ///
-    /// Adding new raw data to be parsed
-    fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) -> Result<Vec<Point>, Error> ;
-    ///
-    /// Returns raw protocol specific address
-    fn name(&self) -> String;
-    ///
-    /// Returns size of the type in the bytes
-    fn size(&self) -> usize;
-    ///
-    /// Returns protocol specific bytes ready to write represents [value]
-    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String>;
-}
-}
 mod udp_client_conf {
 use sal_sync::services::conf::ConfDuration;
-use serde::{Deserialize, Deserializer, Serialize};
-use std::{str::FromStr, time::Duration};
+use serde::{Deserialize};
 ///
 /// ### Creates `UdpClient` config from serde_yaml::Value
 ///
@@ -936,6 +881,7 @@ enum State {
 }
 pub struct UdpClient {
     name: Name,
+    channels: usize,
     conf: UdpClientConf,
     socket: RefCell<Option<UdpSocket>>,
     buff: RefCell<Vec<u8>>,
@@ -950,12 +896,13 @@ impl UdpClient {
     pub const ERR: u8 = 0x07;
     pub const HEAD_LEN: usize = 7;
     const SAMPLE_SIZE: usize = 2;
-    pub fn new(parent: impl Into<String>, conf: UdpClientConf) -> Self {
+    pub fn new(parent: impl Into<String>, channels: usize, conf: UdpClientConf) -> Self {
         let name = Name::new(parent, crate::me::<Self>());
         let dbg = Dbg::new(name.parent(), name.me());
         let mtu = conf.mtu;
         Self {
             name,
+            channels,
             conf,
             socket: RefCell::new(None),
             buff: RefCell::new(vec![0; mtu]),
@@ -999,21 +946,29 @@ impl UdpClient {
         let buff = &self.buff.borrow()[..len];
         match buff {
             [UdpClient::DAT, channels, typ, c1, c2, c3, c4, ..] => {
+                if *channels as usize != self.channels {
+                    log::error!("{}.parse | ADC has {channels} channels, but expected {}", self.dbg, self.channels);
+                }
                 let count = u32::from_le_bytes([*c1, *c2, *c3, *c4]) as usize;
                 let typ = InputType::try_from(*typ)
                     .map_err(|err| err_pass!(self.dbg, err, "Wrong value type {}", typ))?;
-                let bytes = buff.get(UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count))
-                    .ok_or(err!(self.dbg, "Wrong message length: {}, expected {}", buff.len(), UdpClient::HEAD_LEN + count))?;
-                if *channels as usize > values.len() {
-                    values.resize_with(*channels as usize, Vec::new);
-                }
-                for channel in 0..*channels {
-                    let channel_values = &mut values[channel as usize];
-                    if let Err(err) = self.convert(channel as usize, *channels as usize, bytes, channel_values) {
-                        return Err(err_pass!(self.dbg, err));
+                match &typ {
+                    InputType::U16 => {
+                        let bytes = buff.get(UdpClient::HEAD_LEN..(UdpClient::HEAD_LEN + count))
+                            .ok_or(err!(self.dbg, "Wrong message length: {}, expected {}", buff.len(), UdpClient::HEAD_LEN + count))?;
+                        if *channels as usize > values.len() {
+                            values.resize_with(*channels as usize, Vec::new);
+                        }
+                        for channel in 0..*channels {
+                            let channel_values = &mut values[channel as usize];
+                            if let Err(err) = self.convert(channel as usize, *channels as usize, bytes, channel_values) {
+                                return Err(err_pass!(self.dbg, err));
+                            }
+                        }
+                        Ok(())
                     }
+                    _ => Err(err!(self.dbg, "Unsupported sample format received from ADC: {:?}", typ)),
                 }
-                Ok(())
             }
             [UdpClient::ERR, err] | [UdpClient::ERR, err, ..] => {
                 Err(err_pass!(self.dbg, err, "Error received from ADC"))
@@ -1083,119 +1038,10 @@ mod tests {
     }
 }
 }
-mod udpc_parse_u16 {
-use chrono::{DateTime, Utc};
-use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::services::entity::{
-    Cot, Point, PointConf, PointHlr, PointType, Status,
-};
-use super::ParsePoint;
-#[derive(Debug)]
-pub struct UdpcParseU16 {
-    pub txid: usize,
-    pub typ: PointType,
-    pub name: String,
-    pub status: Status,
-    dbg: Dbg,
-}
-impl UdpcParseU16 {
-    const SIZE: usize = 2;
-    pub fn new(
-        txid: usize,
-        parent: impl Into<String>,
-        conf: &PointConf,
-    ) -> UdpcParseU16 {
-        let dbg =  Dbg::new(parent, format!("UdpcParseU16({})", conf.name));
-        UdpcParseU16 {
-            txid,
-            typ: conf.type_.clone(),
-            name: conf.name.clone(),
-            status: Status::Invalid,
-            dbg,
-        }
-    }
-    fn convert(&mut self, bytes: &[u8]) -> Result<impl Iterator<Item = u16>, Error> {
-        log::trace!("{}.convert | bytes: {:?}", self.dbg, bytes);
-        if !bytes.is_empty() {
-            let (words, remainder) = bytes.as_chunks::<{ Self::SIZE }>();
-            log::trace!("{}.convert | words: {:?}", self.dbg, words.len());
-            if remainder.len() > 0 {
-                Err(Error::new(&self.name, "convert").err(format!("Wrong input len {}, must be divisible by 2", remainder.len())))
-            } else {
-                let values = words.iter().enumerate().map(|(index, word)| {
-                    log::trace!("{}.convert | index: {}  |  word: {:?}", self.dbg, index, word);
-                    u16::from_be_bytes(*word)
-                });
-                log::trace!("{}.convert | values: {:?}", self.dbg, values);
-                Ok(values)
-            }
-        } else {
-            Err(Error::new(&self.name, "convert").err("Input is empty"))
-        }
-    }
-    fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) -> Result<Vec<Point>, Error> {
-        let dbg = self.dbg.clone();
-        self.status = status;
-        let name = self.name.clone();
-        let txid = self.txid;
-        match self.convert(bytes) {
-            Ok(values) => {
-                Ok(values.map(move |value| Point::Int(PointHlr::new(
-                    txid,
-                    &name,
-                    value as i64,
-                    status,
-                    Cot::Inf,
-                    timestamp,
-                ))).collect())
-            }
-            Err(err) => Err(Error::new(dbg, "add").pass(err))
-        }
-    }
-}
-impl ParsePoint for UdpcParseU16 {
-    fn typ(&self) -> PointType {
-        self.typ.clone()
-    }
-    fn add(&mut self, bytes: &[u8], status: Status, timestamp: DateTime<Utc>) -> Result<Vec<Point>, Error> {
-        self.add(bytes, status, timestamp)
-    }
-    fn name(&self) -> String {
-        self.name.clone()
-    }
-    fn size(&self) -> usize {
-        Self::SIZE
-    }
-    fn to_bytes(&self, point: &Point) -> Result<Vec<u8>, String> {
-        match point.try_as_int() {
-            Ok(point) => {
-                log::trace!("{}.write | converting '{}' into i16...", self.dbg, point.value);
-                match i16::try_from(point.value) {
-                    Ok(value) => {
-                        Ok(value.to_le_bytes().to_vec())
-                    }
-                    Err(err) => {
-                        let message = format!("{}.write | '{}' to i16 conversion error: {:#?} in the parse point: {:#?}", self.dbg, point.value, err, self.name);
-                        log::warn!("{}", message);
-                        Err(message)
-                    }
-                }
-            }
-            Err(_) => {
-                let message = format!("{}.write | Point of type 'Int' expected, but found '{:?}' in the parse point: {:#?}", self.dbg, point.typ(), self.name);
-                log::warn!("{}", message);
-                Err(message)
-            }
-        }
-    }
-}
-}
 pub(crate) use input_type::*;
-pub(crate) use parse_point::*;
 pub use udp_client_conf::*;
 pub(crate) use udp_client_connect::*;
 pub use udp_client::*;
-pub(crate) use udpc_parse_u16::*;
 }
 pub(crate) use udp_client::*;
 mod sql_export {
@@ -1265,7 +1111,7 @@ where
         self.child.exit();
     }
 }
-pub fn escape(input: &str) -> String {
+pub(super) fn escape(input: &str) -> String {
     let trimmed = input.trim();
     let mut result = String::with_capacity(trimmed.len() + 8);
     for c in trimmed.chars() {
@@ -1280,13 +1126,12 @@ pub fn escape(input: &str) -> String {
 }
 pub(self) use sql_export::*;
 mod vibro_adc {
-use std::{cell::Cell, fmt::Write, sync::Arc, time::Duration};
-use chrono::{DateTime, Utc};
+use std::{fmt::Write, sync::Arc, time::Duration};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
-use vibro_core::{DiagFeatures, DiagnosticResult, Eval, FaultKind, Severity, VibroSensor};
-use crate::{domain::Sender , err, err_pass};
+use vibro_core::{DiagFeatures, DiagnosticResult, Eval, Severity, VibroSensor};
+use crate::{domain::Sender, err, err_pass};
 pub struct VibroAdc<F> {
     name: Name,
     conf: Vec<super::SensorConf>,
@@ -1371,9 +1216,9 @@ where
         let handle = self.scheduler.spawn(move || {
             service_release.add(Ok(()));
             let dbg = &dbg;
-            let udp = super::UdpClient::new(dbg, connection_conf);
+            let udp = super::UdpClient::new(dbg, conf.len(), connection_conf);
             let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
-            let sensors: Vec<(_, _)> = conf.iter().map(|conf| {
+            let sensors: Vec<(_, _)> = conf.iter().filter_map(|conf| {
                 let rpm_key = match &conf.rpm {
                     crate::services::vibro_monitor::InputKind::Const(rpm) => {
                         let key = format!("{name}/rpm");
@@ -1390,16 +1235,26 @@ where
                         if count > 0 {
                             let results = ctx.results.iter().filter(|r| r.severity != Severity::Green);
                             let sql = vibration_faults_sql(&equipment, &vibration_faults, equipment_name, results, count);
-                            let _ = api_link.send(sql);
+                            if let Some(sql) = sql {
+                                let _ = api_link.try_send(sql);
+                            }
                         }
                         if !ctx.features.is_empty() {
                             let sql = vibration_trends_sql(&equipment, &vibration_trends, equipment_name, &ctx.features);
-                            let _ = api_link.send(sql);
+                            if let Some(sql) = sql {
+                                let _ = api_link.try_send(sql);
+                            }
                         }
                     },
                     &exit,
-                ).unwrap();
-                (conf.clone(), sensor)
+                );
+                match sensor {
+                    Ok(sensor) => Some((conf.clone(), sensor)),
+                    Err(err) => {
+                        log::warn!("{dbg}.run | Can't create vibro sensor for '{}': {:?}", conf.target, err);
+                        None
+                    }
+                }
             }).collect();
             while !exit.get() {
                 match udp.read(&mut samples) {
@@ -1445,7 +1300,9 @@ fn vibration_trends_sql(
     table_trends: &str,
     equipment_name: &str,
     features: &[DiagFeatures],
-) -> String {
+) -> Option<String> {
+    if features.is_empty() { return None; }
+    let equipment_name = super::escape(equipment_name);
     let mut sql = String::with_capacity(750 + features.len() * 120);
     sql.push_str("WITH new_data (eq_name, timestamp, order_id, rms_value, phase, rpm) AS (\n        VALUES ");
     for (i, r) in features.iter().enumerate() {
@@ -1456,9 +1313,9 @@ fn vibration_trends_sql(
             equipment_name,
             r.ts.to_rfc3339(),
             r.order_id,
-            r.rms.value(),
-            r.phase.to_degrees(),
-            r.rpm.value()
+            wrap_nan(&r.rms.value()),
+            wrap_nan(&r.phase.to_degrees()),
+            wrap_nan(&r.rpm.value())
         );
     }
     _ = write!(
@@ -1483,7 +1340,7 @@ ON CONFLICT (timestamp, equipment_id, order_id) DO NOTHING;"#,
     table_equipment,
     table_trends
     );
-    sql
+    Some(sql)
 }
 fn vibration_faults_sql<'a>(
     table_equipment: &str,
@@ -1491,7 +1348,9 @@ fn vibration_faults_sql<'a>(
     equipment_name: &str,
     results: impl Iterator<Item = &'a DiagnosticResult>,
     count: usize,
-) -> String {
+) -> Option<String> {
+    if count == 0 { return None; }
+    let equipment_name = super::escape(equipment_name);
     let mut sql = String::with_capacity(750 + count * 120);
     sql.push_str(r#"WITH new_data (eq_name, timestamp, fault_kind, score, severity, rpm) AS (
         VALUES
@@ -1504,9 +1363,9 @@ fn vibration_faults_sql<'a>(
             equipment_name,
             r.ts.to_rfc3339(),
             r.fault,
-            r.score,
+            wrap_nan(&r.score),
             r.severity,
-            r.rpm.value()
+            wrap_nan(&r.rpm.value())
         );
     }
     _ = write!(sql, r#"
@@ -1533,7 +1392,12 @@ DO UPDATE SET
     severity  = EXCLUDED.severity,
     rpm       = EXCLUDED.rpm;
 "#, table_equipment, table_faults);
-    sql
+    Some(sql)
 }
-}
+fn wrap_nan(v: &f64) -> &dyn std::fmt::Display {
+    if v.is_nan() {
+        return &"'NaN'";
+    }
+    v
+}}
 pub(self) use vibro_adc::*;

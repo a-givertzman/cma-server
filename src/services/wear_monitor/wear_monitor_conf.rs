@@ -255,11 +255,11 @@ impl Default for WearMonitorConf {
         }
     }
 }
+
 /// ### Уникальный идентификатор контроллера АЦП (IP адрес)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AdcIp(pub String);
 
-///
 /// Variants of the service input
 /// - Const: Value
 /// - Point: point real 'App/MultiQueue/Load.MainBoomAngle'
@@ -272,4 +272,12 @@ impl<T: vibro_core::Zero> Default for InputKind<T> {
     fn default() -> Self {
         Self::Const(T::zero())
     }
+}
+
+/// Варианты механизмов и их специфичные конфигурации
+pub(super) enum EquipmentKind {
+    /// Подшипник
+    Bearing(wear_core::BearingWearConf),
+    /// Редуктор
+    Gearbox(wear_core::GearboxWearConf),
 }
