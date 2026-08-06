@@ -917,9 +917,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.6.5"
+version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "301b56658598e48f3648647ac6fc887be7e7108eddfa4e9b63fcf3ec58c0cadf"
+checksum = "473c7e07f409a8d772161724aa8db6a765a2532a70f9667eeb7b49d3d02fbdca"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -927,9 +927,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.6.5"
+version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94a65403d1a1bd28f7dc68eb8506e8874808ee5eecb59298de588e2e1407a078"
+checksum = "7b48fea5a88e9ae728a2dcbedbfc0e730f7d60da42e1cb049a83c9fb8b789889"
 dependencies = [
  "anstream",
  "anstyle",
@@ -5567,7 +5567,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vibro-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#6cfd7ac4344fce0fac8d1d83cc51cc5a0ef92c6d"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#c4a30089b0ee4c577f649adffe9f066e567e3e20"
 dependencies = [
  "chrono",
  "debugging",
@@ -5831,7 +5831,7 @@ dependencies = [
 [[package]]
 name = "wear-core"
 version = "0.1.0"
-source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#6cfd7ac4344fce0fac8d1d83cc51cc5a0ef92c6d"
+source = "git+https://github.com/a-givertzman/sal-wear.git?tag=0.1.0#c4a30089b0ee4c577f649adffe9f066e567e3e20"
 dependencies = [
  "debugging",
  "env_logger",
@@ -6620,9 +6620,9 @@ checksum = "b9cc00251562a284751c9973bace760d86c0276c471b4be569fe6b068ee97a56"
 
 [[package]]
 name = "xml-rs"
-version = "0.8.28"
+version = "0.8.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae8337f8a065cfc972643663ea4279e04e7256de865aa66fe25cec5fb912d3f"
+checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 
 [[package]]
 name = "yeslogic-fontconfig-sys"

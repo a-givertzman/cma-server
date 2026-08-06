@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{collections::FxDashMap, kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
+use sal_sync::{collections::FxDashMap, kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, conf::ConfTree, entity::{Name, Object, PointTxId}}, thread_pool::Scheduler};
 use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
 use super::{VibroMonitorConf, InputKind};
 
@@ -149,7 +149,7 @@ impl Service for VibroMonitor {
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
         self.configure_database(&api_client, &self.exit).map_err(|err| err_pass!(self.dbg, err))?;
-        let retain = Arc::new(vibro_core::Retain::mock(&self.dbg, []));
+        let retain = Arc::new(vibro_core::Retain::release(&self.dbg, &services, &scheduler).map_err(|err| err_pass!(self.dbg, err))?);
         let mut event_values = crate::services::EventValues::new(&name, &conf.subscribe, &services, &scheduler, &self.exit);
         // Регистрация настроенных входных сигналов (RPM) для последующей подписки на них в сервисе conf.subscribe.
         // Выполняется до запуска сервиса!
