@@ -13,7 +13,7 @@ use crate::services::frdm_service::{BlockBind, BlockScheme, Offset};
 ///     lf: 1830.0 mm, 710.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
 ///     D: 844.0 mm                 # Диаметры блоков, мм
 ///     scheme: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-///     bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+///     bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Drum - Барабан, Fixed - Неподвижные блоки, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockConf {
@@ -23,7 +23,7 @@ pub struct BlockConf {
     pub d: ConfDistance,
     /// Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
     pub scheme: BlockScheme,
-    /// Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+    /// Привязка блока к стреле (нумерация с 0), Drum - Барабан, Fixed - Неподвижные блоки, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
     pub bind: BlockBind,
     /// Блок включается в работу только когда стрела проходит положение перекидывания.
     pub deflector: Option<ConfAngle>

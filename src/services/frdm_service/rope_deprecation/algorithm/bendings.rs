@@ -32,7 +32,7 @@ impl Bendings {
                     let len = blocks.iter().fold(rope_len, |len, block| {
                         log::debug!("{dbg}.new | Block[{}] {:?} len {:.3} mm - wrap {:.3} mm - rope {:.3}", block.name, block.bind, len, block.wrap_length, block.rope_len_fwd);
                         match block.bind {
-                            BlockBind::Fixed => {
+                            BlockBind::Drum => {
                                 log::debug!("{dbg}.new | Block[{}] rope bck {:.3}", block.name, block.rope_len_bck);
                                 len - block.rope_len_bck - block.wrap_length - block.rope_len_fwd
                             }
@@ -83,7 +83,7 @@ impl Bendings {
                                 true => None,
                                 false => {
                                     start = match block.bind {
-                                        BlockBind::Fixed => self.winch_len - self.segment,  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
+                                        BlockBind::Drum => self.winch_len - self.segment,  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
                                         BlockBind::Boom(_) => prev_bend.end,
                                         BlockBind::BoomPair(_) => prev_bend.end,
                                         // L_winch_eff = L_winch_nom + dL_drum
@@ -93,7 +93,7 @@ impl Bendings {
                                         }
                                     };
                                     end = match block.bind {
-                                        BlockBind::Fixed => self.winch_len + block.rope_len_bck + block.wrap_length - rope_pos, // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
+                                        BlockBind::Drum => self.winch_len + block.rope_len_bck + block.wrap_length - rope_pos, // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
                                         BlockBind::Hook => {
                                             start + block.wrap_length
                                         }

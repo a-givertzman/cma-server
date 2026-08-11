@@ -39,7 +39,7 @@ impl BlockArcs {
                         }
                         false => {
                             let wrap_alpha = match block.bind {
-                                BlockBind::Fixed => 0.0,
+                                BlockBind::Drum => 0.0,
                                 BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                                 BlockBind::BoomPair(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
                                 BlockBind::Hook => 0.0,     // TODO: implement caclultions for Hook block if exists

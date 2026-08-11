@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfDistance;
 use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBind, BlockConf, Boom, Booms, Offset};
@@ -9,8 +8,8 @@ use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBin
 /// 4. Координаты блоков X, Y и угол наклона каната
 /// - Коордтнаты блоков в ГСК
 /// - Углы наклона к горизонту прямолинейных участков каната
-/// - First one is always a `Winch drum`
-/// - Next - are regular block from `Winch` towards `Hook`
+/// - First one is always a `Winch Drum`
+/// - Next - are fixed and regular block from `Winch` towards `Hook`
 pub struct Blocks {
     items: Vec<Block>,
     aux_length: f64,
@@ -23,7 +22,6 @@ pub struct Blocks {
     #[allow(unused)]
     dbg: Dbg,
 }
-//
 //
 impl Blocks {
     ///
@@ -61,12 +59,12 @@ impl Blocks {
                 let mut blocks = VecDeque::from(self.items.clone());
                 match blocks.pop_front() {
                     Some(mut block) => {
-                        block.pos = self.blocks_pos(&block, &booms, &Block::default(), 0.0, false);
+                        block.pos = self.blocks_pos(&block, &booms, &Block::default(), false);
                         let mut result = vec![];
                         let mut skipped = None;
                         let mut winch_dl = 0.0;
                         while let Some(mut next) = blocks.pop_front() {
-                            next.pos = self.blocks_pos(&next, &booms, &block, winch_dl, skipped.is_some());
+                            next.pos = self.blocks_pos(&next, &booms, &block, skipped.is_some());
                             // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
                             let (k, j) = block.scheme.kj();
                             let l_block = block.pos.distance(next.pos);
@@ -74,13 +72,15 @@ impl Blocks {
                             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
-                            if let BlockBind::Fixed = block.bind {
+                            if let BlockBind::Drum = block.bind {
                                 if self.parking {
                                     self.winch_rope_alpha = rope_alpha_fwd;
                                     log::debug!("{}.eval | Block: {}: winch_rope_alpha: {:.3}", self.dbg, block.name, rope_alpha_fwd);
                                     self.parking = false;
                                 }
                                 winch_dl = (rope_alpha_fwd - self.winch_rope_alpha).to_radians() * block.diameter * 0.5;
+                                // Изменение длины каната на лебедке за счет изменения угла первой стрелы, мм
+                                // Сохраняем его в расстояние от блока назад, в Bendings будет учтено в расчете длин
                                 block.rope_len_bck = winch_dl;
                             }
                             // if rope_alpha_fwd.is_nan() {
@@ -116,10 +116,15 @@ impl Blocks {
     ///
     /// 4. Координаты блоков X, Y
     /// 'winch_dl' - Изменение длины каната на лебедке за счет изменения угла первой стрелы, мм
-    fn blocks_pos(&self, block: &Block, booms: &Vec<Boom>, prev: &Block, winch_dl: f64, skipped: bool) -> Offset<f64> {
+    fn blocks_pos(&self, block: &Block, booms: &Vec<Boom>, prev: &Block, skipped: bool) -> Offset<f64> {
         match block.bind {
-            BlockBind::Fixed => {
+            BlockBind::Drum => {
                 // Формула из алгоритма:
+                let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
+                let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
+                Offset::new(dx1 + dx2, dy1 + dy2)
+            }
+            BlockBind::Fixed => {
                 let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
                 let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
                 Offset::new(dx1 + dx2, dy1 + dy2)

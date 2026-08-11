@@ -209,7 +209,7 @@ impl Service for FrdmService {
         }
         if errors.is_empty() {
             log::info!("{}.run | Exit", self.dbg);
-            ()
+            Ok(())
         } else {
             Err(Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
         }

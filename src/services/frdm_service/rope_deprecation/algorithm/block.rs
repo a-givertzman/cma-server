@@ -78,7 +78,9 @@ impl FromStr for BlockScheme {
 /// Привязка блока стреле (нумерация с 0)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockBind {
-    /// Блок вне стрелы, барабан
+    /// Барабан лебедки
+    Drum,
+    /// Неподвижный блок вне стрелы
     Fixed,
     /// Блок на стреле
     Boom(usize),
@@ -113,6 +115,7 @@ impl BlockBind {
     #[allow(unused)]
     pub fn is(&self, other: Self) -> bool {
         match (self, other) {
+            (BlockBind::Drum, BlockBind::Drum) => true,
             (BlockBind::Fixed, BlockBind::Fixed) => true,
             (BlockBind::Boom(_), BlockBind::Boom(_)) => true,
             (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
@@ -127,7 +130,7 @@ impl FromStr for BlockBind {
     /// Retirns [BlockBind] from str like `Fixed`, `Boom(0)`, `Hook`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase() {
-            key if key == "fixed" => Ok(Self::Fixed),
+            key if key == "fixed" => Ok(Self::Drum),
             key if key.starts_with("boom") => Self::boom(&key),
             key if key == "hook" => Ok(Self::Hook),
             _ => Err(Error::new("BlockBind", "from_str").err(format!("Unknown variant '{s}'"))),
@@ -223,7 +226,7 @@ impl Default for Block {
             lf: Offset::new(0.0, 0.0),
             diameter: Default::default(),
             scheme: BlockScheme::top_top(),
-            bind: BlockBind::Fixed,
+            bind: BlockBind::Drum,
             pos: Offset::new(0.0, 0.0),
             rope_alpha_fwd: Default::default(),
             rope_alpha_bck: Default::default(),

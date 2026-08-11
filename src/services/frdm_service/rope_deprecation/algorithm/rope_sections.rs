@@ -30,7 +30,7 @@ impl RopeSections {
                 let mut blocks = VecDeque::from(blocks);
                 match blocks.pop_front() {
                     Some(mut block) => {
-                        if block.bind.is(BlockBind::Fixed) {
+                        if block.bind.is(BlockBind::Drum) {
                             let mut result = vec![];
                             while let Some(mut next) = blocks.pop_front() {
                                 if next.skipped {

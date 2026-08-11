@@ -29,7 +29,7 @@ sal-sync = { tag = "0.3.2", git = "https://github.com/a-givertzman/rust-sal-sync
 #
 # By Anton Lobanov 6.07.2026 FRDM disabled for GAZ-192103-release-with-registrator
 # Диагностика каната по изображению
-#frdm-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/frdm-server.git" }
+frdm-tools = { tag = "0.2.1", git = "https://github.com/a-givertzman/frdm-server.git" }
 #
 # sal-wear | Износ и Вибро-Диагностика
 wear-core = { tag = "0.1.0", git = "https://github.com/a-givertzman/sal-wear.git" }
