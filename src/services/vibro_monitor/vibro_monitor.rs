@@ -201,8 +201,8 @@ impl Service for VibroMonitor {
             _ = self.tasks.insert(sensor.name().join(), sensor.clone());
             sensor.run().map_err(|err| err_pass!(self.dbg, err))?;
         }
-        event_values.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
-        log::info!("{}.run | RopeDefect's ready", self.dbg);
+        // Have to be started after all subscription being added, then it will subscribe all them on MultiQueue.
+        event_values.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())
     }
