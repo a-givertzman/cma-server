@@ -80,8 +80,8 @@ impl FromStr for BlockScheme {
 pub enum BlockBind {
     /// Барабан лебедки
     Drum,
-    /// Неподвижный блок вне стрелы
-    Fixed,
+    // /// Неподвижный блок вне стрелы
+    // Fixed,
     /// Блок на стреле
     Boom(usize),
     /// Блок на стреле, работает впаре, подразумевается что пара соседних блоков имеет такой тип
@@ -116,7 +116,7 @@ impl BlockBind {
     pub fn is(&self, other: Self) -> bool {
         match (self, other) {
             (BlockBind::Drum, BlockBind::Drum) => true,
-            (BlockBind::Fixed, BlockBind::Fixed) => true,
+            // (BlockBind::Fixed, BlockBind::Fixed) => true,
             (BlockBind::Boom(_), BlockBind::Boom(_)) => true,
             (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
             (BlockBind::Hook, BlockBind::Hook) => true,

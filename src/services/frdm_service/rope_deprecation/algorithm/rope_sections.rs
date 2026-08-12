@@ -31,7 +31,7 @@ impl RopeSections {
                 match blocks.pop_front() {
                     Some(mut block) => {
                         if block.bind.is(BlockBind::Drum) {
-                            let mut result = vec![];
+                            let mut result = Vec::with_capacity(blocks.len());
                             while let Some(mut next) = blocks.pop_front() {
                                 if next.skipped {
                                     continue;
@@ -52,7 +52,7 @@ impl RopeSections {
                             // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
                             Some(result)
                         } else {
-                            log::warn!("{}.eval | Ferst block expected 'Fixed', but found {:?}", self.dbg, block.bind);
+                            log::warn!("{}.eval | First block expected 'Fixed', but found {:?}", self.dbg, block.bind);
                             None
                         }
                     }

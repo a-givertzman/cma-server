@@ -60,7 +60,7 @@ impl Blocks {
                 match blocks.pop_front() {
                     Some(mut block) => {
                         block.pos = self.blocks_pos(&block, &booms, &Block::default(), false);
-                        let mut result = vec![];
+                        let mut result = Vec::with_capacity(blocks.len());
                         let mut skipped = None;
                         let mut winch_dl = 0.0;
                         while let Some(mut next) = blocks.pop_front() {
@@ -124,11 +124,11 @@ impl Blocks {
                 let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
                 Offset::new(dx1 + dx2, dy1 + dy2)
             }
-            BlockBind::Fixed => {
-                let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
-                let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
-                Offset::new(dx1 + dx2, dy1 + dy2)
-            }
+//            BlockBind::Fixed => {
+//                let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
+//                let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
+//                Offset::new(dx1 + dx2, dy1 + dy2)
+//            }
             BlockBind::Boom(index) => {
                 let base_point = booms[index].gpt;  // точка G
                 let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[index].alpha);
