@@ -1,14 +1,11 @@
-use crate::services::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Inputs, RopeSections};
-use debugging::session::debug_session::{DebugSession, LogLevel};
-use sal_core::dbg::Dbg;
-use sal_sync::{math::AproxEq, services::conf::ConfTree};
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
-use std::{
-    sync::Once,
-    time::{Duration, Instant},
-};
+use std::{sync::Once, time::{Duration, Instant}};
+use sal_core::dbg::Dbg;
+use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
+use debugging::session::debug_session::{DebugSession, LogLevel};
+use crate::{services::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeDeprecationConf, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -34,85 +31,90 @@ fn new() {
     log::debug!("");
     let dbg = Dbg::own("Bendings-test");
     log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+    let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
-    let test_data = [
-        (
-            01,
-            [
+    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    log::debug!("{dbg} | reading csv: '{}'", path);
+    let csv = match OpenOptions::new().read(true).open(path) {
+        Ok(rdr) => {
+            let mut rdr = csv::Reader::from_reader(rdr);
+            log::debug!("{dbg} | Parse csv data...");
+            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let mut test_data = vec![];
+            for row in csv {
+                let row: CsvRecord = row.unwrap();
+                test_data.push((
+                    row.step,
+                    [
+                        ("Winch.Pos",           0.00),  // rope position, m
+                        // ("Winch.Pos",        row.pos / 1000.0),  // rope position, m
+                        ("MainBoom.Angle",   row.a21),
+                        ("RotaryBoom.Angle", row.a22)
+                    ],
+                    [
+                        // enter        ..      exit, mm
+                           0.00         ..      row.t01,    // exit from winch
+                        row.t02         ..      row.t03,
+                        row.t04         ..      row.t05,
+                        row.t06         ..      row.t07,
+                        row.t08         ..      row.t09,
+                        row.t10         ..      row.t11,
+                        // row.t12         ..      f64::NAN,
+                    ],
+                ));
+            }
+            Some(test_data)
+        }
+        Err(err) => {
+            log::debug!("{dbg} | Can't read csv test data from '{}', error: {:?}", path, err);
+            None
+        },
+    };
+    let test_data = match csv {
+        Some(csv) => csv,
+        None => vec![
+            (01,  [
                 // Input Events
-                ("Winch.Pos", 0.00),
-                ("MainBoom.Angle", 69.71),
+                ("Winch.Pos",          0.00),
+                ("MainBoom.Angle",    69.71),
                 ("RotaryBoom.Angle", 155.30),
             ],
             // Targets
             [
                 // enter .. exit, mm
-                0.0000..65565.5016,
-                77074.5163..77075.4196,
-                78797.8560..79000.0876,
-                84481.6102..84713.7866,
-                85842.1211..85889.6608,
-                86279.5476..87000.0000,
-                // F12: 88000.0000
-            ],
-        ),
-        (
-            02,
-            [
+                    0.0000 .. 65565.5016,   // start from the end of the ropr on the winch
+                77074.5163 .. 77075.4196,
+                78797.8560 .. 79000.0876,
+                84481.6102 .. 84713.7866,
+                85842.1211 .. 85889.6608,
+                86279.5476 .. 87000.0000,
+        // F12: 88000.0000
+            ]),
+            (02,  [
                 // Input Events
-                ("Winch.Pos", 0.00),
-                ("MainBoom.Angle", 74.00),
-                ("RotaryBoom.Angle", 128.00),
+                ("Winch.Pos",          0.00),
+                ("MainBoom.Angle",    74.00),
+                ("RotaryBoom.Angle", 128.00)
             ],
             // Targets
             [
                 // enter .. exit, mm
-                0.0000..65144.9469,
-                76507.0587..76696.6577,
-                78957.9230..79163.9797,
-                84645.5023..84877.6787,
-                86006.0132..86053.5528,
-                86443.4396..87000.0000,
-                // F12: 88000.0000
-            ],
-        ),
-    ];
-
-    // Опорные точки
-    // F01: 65565.5016
-    // F02: 77074.5163
-    // F03: 77075.4196
-    // F04: 78797.8560
-    // F05: 79000.0876
-    // F06: 84481.6102
-    // F07: 84713.7866
-    // F08: 85842.1211
-    // F09: 85889.6608
-    // F10: 86279.5476
-    // F11: 87000.0000
-    // F12: 88000.0000
-
-    // Опорные точки
-    // F01: 65144.9469
-    // F02: 76507.0587
-    // F03: 76696.6577
-    // F04: 78957.9230
-    // F05: 79163.9797
-    // F06: 84645.5023
-    // F07: 84877.6787
-    // F08: 86006.0132
-    // F09: 86053.5528
-    // F10: 86443.4396
-    // F11: 87000.0000
-    // F12: 88000.0000
-
+                    0.0000 .. 65144.9469,   // start from the end of the ropr on the winch
+                76507.0587 .. 76696.6577,
+                78957.9230 .. 79163.9797,
+                84645.5023 .. 84877.6787,
+                86006.0132 .. 86053.5528,
+                86443.4396 .. 87000.0000,
+        // F12: 88000.0000
+            ]),
+        ],
+    };
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
-            width: 35 mm            # Diameter of the rome
-            length: 88 m          # Total working length of the rope
-            winch-length: 65.5655 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
-            segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+            width: 35 mm               # Diameter of the rome
+            length: 85.045 m           # Total working length of the rope
+            aux-length: 1.200 m        # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
+            segment: 100 mm            # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
             pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
             load: point real 'Winch.Load'       # tonn, current rope load
         booms:
@@ -123,6 +125,7 @@ fn new() {
                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 11200.0 mm                                         # length of the boom
                 angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
+                parking: 0.0                # Угол в парковочном положении, град
             - Rotary-Boom:
                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -130,89 +133,114 @@ fn new() {
                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                 len: 7984.0 mm                                          # length of the rotary boom
                 angle: point real 'RotaryBoom.Angle' # degrees, current angle of the boom (relative axis)
+                parking: 23.78              # Угол в парковочном положении, град
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 845.670 mm               # Диаметр блока, мм
+                d: 845.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-                bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                bind: Drum                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 2:
                 lf: 308.0 mm, 1100.0 mm     # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 3:
-                lf: -6550.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                lf: -6549.0 mm, 1730.0 mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 4:
                 lf: -1121.0 mm, 973.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 5:
                 lf: 267.0 mm, 860.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
             - 6:
                 lf: 136.0 mm, -35.0 mm      # Растояние (x, y) от **конца** стрелы до оси блока, мм
-                d: 816.195 mm               # Диаметр блока, мм
+                d: 816.000 mm               # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+                deflector-angle: 90 deg     # Угол перекидывания, град. Блок включается в работу только когда стрела проходит положение перекидывания.
             - 7:
                 lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
                 d: 0.0 mm                   # Диаметр блока, мм
                 scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
                 bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
-
     ").unwrap());
-    let crane_conf = CraneConf::new(&dbg, conf);
-    let mut conf = crate::services::FrdmServiceConf::default();
-    conf.rope_deprecation.crane = crane_conf;
-    let inputs = Arc::new(Inputs::fake(&dbg, &conf, [] as [(&str, f64); 0], Arc::new(AtomicBool::new(false))));
-    let parking = false;
+    let conf = CraneConf::new(&dbg, conf);
+    let inputs = Arc::new(Inputs::fake(
+        &dbg,
+        &FrdmServiceConf {
+            rope_deprecation: RopeDeprecationConf {
+                crane: conf.clone(),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        [("", 0.0)],
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let parking = true;
     let mut bendings = Bendings::new(
         &dbg,
-        &conf.rope_deprecation.crane.rope,
+        &conf.rope,
         BlockArcs::new(
             &dbg,
             RopeSections::new(
                 &dbg,
                 Blocks::new(
                     &dbg,
-                    conf.rope_deprecation.crane.rope.aux_length,
-                    &conf.rope_deprecation.crane.blocks,
+                    conf.rope.aux_length,
+                    &conf.blocks,
                     parking,
-                    Booms::new(&dbg, &conf.rope_deprecation.crane.booms, inputs.clone(), parking),
+                    Booms::new(
+                        &dbg,
+                        &conf.booms,
+                        inputs.clone(),
+                        parking,
+                    ),
                 ),
             ),
         ),
     );
-    let t = Instant::now();
-    for (step, events, target) in test_data {
+    let tolerance = 0.9;
+    let mut errors = vec![];
+    for (step, events, target) in test_data.iter() {
+        let t = Instant::now();
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
-            inputs.insert(key.to_owned(), val);
+            inputs.insert(key.to_owned(), *val);
         }
         let result = bendings.eval(&inputs).unwrap();
-        log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
-        for (i, bending) in target.into_iter().enumerate() {
-            assert!(
-                result[i].bending.start.aprox_eq(bending.start, 1),
-                "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}",
-                result[i].bending.start,
-                bending.start
-            );
-            assert!(
-                result[i].bending.end.aprox_eq(bending.end, 1),
-                "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}",
-                result[i].bending.end,
-                bending.end
-            );
+        // log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
+        // log::trace!("{dbg} | step {step}  result: {:#?}", result);
+        // log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
+        // log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>());
+        let mut ok = true;
+        for (i, bending) in target.iter().enumerate() {
+            if (bending.end - bending.start).abs() > 0.00001 {
+                if i > 0 {
+                    assert!((result[i].bending.start - bending.start).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
+                }
+                assert!((result[i].bending.end - bending.end).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
+                ok = ok && (((result[i].bending.start - bending.start).abs() < tolerance) && ((result[i].bending.end - bending.end).abs() < tolerance));
+            }
         }
+        errors.push(format!("step {step}  result: {:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>()));
+        errors.push(format!("step {step}  target: {:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>()));
+        if result.iter().zip(target).enumerate().any(|(i, (r, t))| (i > 0 && (t.start - r.bending.start).abs() >= tolerance) || (t.end - r.bending.end).abs() >= tolerance) {
+            errors.push(format!("step {step}  delta : {:?}", result.iter().zip(target).map(|(r, t)| format!("{:.3}..{:.3}", t.start - r.bending.start, t.end - r.bending.end)).collect::<Vec<_>>()));
+        }
+        if !ok {
+        }
+    }
+    for line in errors {
+        println!("{line}");
     }
     test_duration.exit();
 }

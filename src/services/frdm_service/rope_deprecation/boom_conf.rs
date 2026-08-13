@@ -1,10 +1,10 @@
 use sal_core::dbg::Dbg;
 use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
-
 use crate::services::frdm_service::InputKind;
+
 ///
 /// ## The configuration parameters for the crane's boom
-/// 
+///
 /// ### Example:
 /// ```yaml
 /// boom:
@@ -34,7 +34,7 @@ pub struct BoomConf {
     pub parking: f64,
 }
 //
-// 
+//
 impl BoomConf {
     ///
     /// Returns [BoomConf] built from `ConfTree`:

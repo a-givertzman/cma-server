@@ -5,7 +5,7 @@ use crate::services::frdm_service::{Bendings, CraneConf, Inputs};
 
 ///
 /// ## Evaluation for the crane rope Deprecation
-/// 
+///
 /// ### Use [Inputs] to pass a new Event contains a value for the calculation
 /// - Expected boom len / angle, rope pos / load events, for example:
 ///     - [Load.MainBoomAngle], current angle of the boom (relative axis), degrees
@@ -79,6 +79,8 @@ impl<'a> Deprecation<'a> {
                     (Some(pos), Some(load)) => {
                         log::debug!("{}.eval | pos {pos} mm,  load {load} tonn", self.dbg);
                         for (block_ix, block) in blocks.iter().enumerate() {
+                            // TODO: Расчет износа сознательно упрощен
+                            // Но в будущем следует учесть диаметр каната
                             let deprecation = load / (block.diameter * 0.001);
                             let current = self.slices(&block.bending);
                             // Exit: the Slices that are in self.slices but not in current
@@ -142,7 +144,7 @@ fn slices() {
     let test_data: &[(i32, Range<f64>, Vec<usize>)] = &[
         (01,  0.0.. 5.0, vec![0]),
         (02,  0.0..10.0, vec![0]),
-        
+
         (10, 08.0..10.0, vec![0]),
         (11, 09.0..11.0, vec![0, 1]),
         (12, 10.0..12.0, vec![1]),

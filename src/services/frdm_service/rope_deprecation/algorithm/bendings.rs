@@ -56,7 +56,7 @@ impl Bendings {
     ///
     /// Возвращает опорные точки каната в миллиметрах,
     /// то есть точки входа и выхода каната с блоков
-    /// 
+    ///
     /// Формируем опорных точек:
     ///     F1  = L_winch // длина каната на барабане до точки схода
     ///     F2  = F1 + l_rope_1
@@ -85,7 +85,7 @@ impl Bendings {
                                     start = match block.bind {
                                         BlockBind::Drum => self.winch_len - self.segment,  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
                                         BlockBind::Boom(_) => prev_bend.end,
-                                        BlockBind::BoomPair(_) => prev_bend.end,
+                                        // BlockBind::BoomPair(_) => prev_bend.end,
                                         // L_winch_eff = L_winch_nom + dL_drum
                                         // l_hook_new = Lfact - L_winch_eff - l_sections_wo_hook - L_sys_arc
                                         BlockBind::Hook => {

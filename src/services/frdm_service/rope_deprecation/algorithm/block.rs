@@ -84,8 +84,8 @@ pub enum BlockBind {
     // Fixed,
     /// Блок на стреле
     Boom(usize),
-    /// Блок на стреле, работает впаре, подразумевается что пара соседних блоков имеет такой тип
-    BoomPair(usize),
+    // /// Блок на стреле, работает впаре, подразумевается что пара соседних блоков имеет такой тип
+    // BoomPair(usize),
     /// Блок на подвесе (крюке)
     Hook,
 }
@@ -106,7 +106,7 @@ impl BlockBind {
             .map_err(|_| Error::new("BlockBind", "from_str").err(format!("Wring Block number in '{s}', Expecting integer >= 0")))?;
         match kind.as_str() {
             "boom" => Ok(Self::Boom(bind)),
-            "boompair" => Ok(Self::BoomPair(bind)),
+            // "boompair" => Ok(Self::BoomPair(bind)),
             _ => Err(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'"))),
         }
     }
@@ -118,7 +118,7 @@ impl BlockBind {
             (BlockBind::Drum, BlockBind::Drum) => true,
             // (BlockBind::Fixed, BlockBind::Fixed) => true,
             (BlockBind::Boom(_), BlockBind::Boom(_)) => true,
-            (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
+            // (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
             (BlockBind::Hook, BlockBind::Hook) => true,
             _ => false,
         }
@@ -130,43 +130,46 @@ impl FromStr for BlockBind {
     /// Retirns [BlockBind] from str like `Fixed`, `Boom(0)`, `Hook`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase() {
-            key if key == "fixed" => Ok(Self::Drum),
+            key if key == "drum" => Ok(Self::Drum),
+            // key if key == "fixed" => Ok(Self::Fixed),
             key if key.starts_with("boom") => Self::boom(&key),
             key if key == "hook" => Ok(Self::Hook),
             _ => Err(Error::new("BlockBind", "from_str").err(format!("Unknown variant '{s}'"))),
         }
     }
 }
-/// 
+///
 /// Crane Block
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub name: String,
-    /// Block position relative to boom G (end of boom)
+    /// Block position relative to boom G (end of boom).
     pub lf: Offset<f64>,
-    /// Block diameter, mm
+    /// Block diameter, mm.
     pub diameter: f64,
-    /// Схема схода каната с блоком к следующему
+    /// Схема схода каната с блоком к следующему.
     pub scheme: BlockScheme,
-    /// Привязка блока к стреле (нумерация с 0)
+    /// Привязка блока к стреле (нумерация с 0).
     pub bind: BlockBind,
-    /// Координаты блока в ГСК
+    /// Координаты блока в ГСК.
     pub pos: Offset<f64>,
-    /// Угол линии каната между текущим блоком и следующим к горизонту, градусы
+    /// Угол линии каната между текущим блоком и следующим к горизонту, градусы.
     pub rope_alpha_fwd: f64,
-    /// Угол линии каната между текущим блоком и предыдущим к горизонту, градусы
+    /// Угол линии каната между текущим блоком и предыдущим к горизонту, градусы.
     pub rope_alpha_bck: f64,
-    /// угол обхвата каната огибающего блок
+    /// угол обхвата каната огибающего блок.
     pub wrap_alpha: f64,
-    /// Длина каната огибающего блок, для барабана длина каната на барабане до точки схода
+    /// Длина каната огибающего блок, для барабана длина каната на барабане до точки схода.
     pub wrap_length: f64,
-    /// Длина каната от точки схода с текущего блока до точки входа на следующий, мм
+    /// Длина каната от точки схода с текущего блока до точки входа на следующий, мм.
     pub rope_len_fwd: f64,
-    /// Длина каната от точки входа на текущий блок до точки схода с предыдущего, мм
+    /// Длина каната от точки входа на текущий блок до точки схода с предыдущего, мм.
     pub rope_len_bck: f64,
-    /// Текущие точки входа и схода каната с блока, считая от его начала каната 
+    /// Текущие точки входа и схода каната с блока, считая от его начала каната.
     pub bending: Range<f64>,
-    /// Блок исключен из вычислений
+    /// Угол перекидывания, град. Блок включается в работу только когда стрела проходит положение перекидывания.
+    pub deflector: Option<f64>,
+    /// Блок исключен из вычислений.
     pub skipped: bool,
 }
 //
@@ -184,7 +187,8 @@ impl Block {
     /// - `wrap_length` - Длина дуги каната огибающего блок, мм
     /// - `rope_len_fwd` - Длина каната от точки схода с текущего блока до точки входа на следующий, мм
     /// - `rope_len_bck` - Длина каната от точки входа на текущий блок до точки схода с предыдущего, мм
-    /// - `bending` - 
+    /// - `bending` - Текущие точки входа и схода каната с блока, считая от его начала каната.
+    /// - `deflector` - Угол перекидывания, град. Блок включается в работу только когда стрела проходит положение перекидывания.
     pub fn new(
         name: impl Into<String>,
         lf: Offset<f64>,
@@ -198,6 +202,7 @@ impl Block {
         rope_len_fwd: f64,
         rope_len_bck: f64,
         bending: Range<f64>,
+        deflector: Option<f64>,
     ) -> Self {
         Self {
             name: name.into(),
@@ -213,6 +218,7 @@ impl Block {
             rope_len_fwd,
             rope_len_bck,
             bending,
+            deflector,
             skipped: false,
         }
     }
@@ -235,6 +241,7 @@ impl Default for Block {
             rope_len_fwd: Default::default(),
             rope_len_bck: Default::default(),
             bending: Default::default(),
+            deflector: Default::default(),
             skipped: Default::default(),
         }
     }

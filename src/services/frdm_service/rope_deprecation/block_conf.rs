@@ -6,7 +6,7 @@ use crate::services::frdm_service::{BlockBind, BlockScheme, Offset};
 
 ///
 /// ## The configuration parameters for the crane's block
-/// 
+///
 /// ### Example:
 /// ```yaml
 /// block:
@@ -29,7 +29,7 @@ pub struct BlockConf {
     pub deflector: Option<ConfAngle>
 }
 //
-// 
+//
 impl BlockConf {
     ///
     /// Returns [BlockConf] built from `ConfTree`:
@@ -52,12 +52,14 @@ impl BlockConf {
         let scheme = BlockScheme::from_str(&scheme).expect(&format!("{dbg}.new | 'scheme' - wrong config"));
         let bind: String = conf.get("bind").expect(&format!("{dbg}.new | 'bind' - not found or wrong config"));
         let bind = BlockBind::from_str(&bind).expect(&format!("{dbg}.new | 'bind' - wrong config"));
+        let deflector: Option<String> = conf.get("deflector-angle");
+        let deflector = deflector.map(|deflector| ConfAngle::from_str(&deflector).expect(&format!("{dbg}.new | 'deflector-angle' - wrong config")));
         Self {
             lf: Offset::new(lfx, lfy),
             d,
             scheme,
             bind,
-            deflector: todo!(),
+            deflector,
         }
     }
 }

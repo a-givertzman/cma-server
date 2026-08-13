@@ -46,6 +46,7 @@ impl Blocks {
                 0.0,
                 0.0,
                 0.0..0.0,
+                conf.deflector.map(|angle| angle.as_deg()),
             )).collect(),
             booms,
             dbg: Dbg::new(parent, "Blocks"),
@@ -62,7 +63,7 @@ impl Blocks {
                         block.pos = self.blocks_pos(&block, &booms, &Block::default(), false);
                         let mut result = Vec::with_capacity(blocks.len());
                         let mut skipped = None;
-                        let mut winch_dl = 0.0;
+                        let mut winch_dl;
                         while let Some(mut next) = blocks.pop_front() {
                             next.pos = self.blocks_pos(&next, &booms, &block, skipped.is_some());
                             // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
@@ -87,7 +88,8 @@ impl Blocks {
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
                             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
                             // }
-                            if next.bind.is(BlockBind::BoomPair(0)) && rope_alpha_fwd > 90.0 {
+                            if let Some(deflection) = next.deflector && rope_alpha_fwd > deflection {
+                            // if next.bind.is(BlockBind::BoomPair(0)) && rope_alpha_fwd > 90.0 {
                                 // log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
                                 next.skipped = true;
                                 skipped = Some(next);
@@ -134,11 +136,11 @@ impl Blocks {
                 let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[index].alpha);
                 Offset::new(base_point.x + dx, base_point.y + dy)
             }
-            BlockBind::BoomPair(index) => {
-                let base_point = booms[index].gpt;  // точка G
-                let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[index].alpha);
-                Offset::new(base_point.x + dx, base_point.y + dy)
-            }
+            // BlockBind::BoomPair(index) => {
+            //     let base_point = booms[index].gpt;  // точка G
+            //     let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[index].alpha);
+            //     Offset::new(base_point.x + dx, base_point.y + dy)
+            // }
             BlockBind::Hook => {
                 // log::debug!("{}.blocks_pos | Prev  {} bind: {:?}  pos: {:.3}, {:.3}, D: {:.3}, new X: {:.3}", self.dbg, prev.name, prev.bind, prev.pos.x, prev.pos.y, prev.diameter * 0.5, prev.pos.x - 0.5 * prev.diameter);
                 // log::debug!("{}.blocks_pos | Block {} bind: {:?}", self.dbg, block.name, block.bind);
