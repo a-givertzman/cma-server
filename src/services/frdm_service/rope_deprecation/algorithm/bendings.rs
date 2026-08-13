@@ -84,6 +84,7 @@ impl Bendings {
                                 false => {
                                     start = match block.bind {
                                         BlockBind::Drum => self.winch_len - self.segment,  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
+                                        BlockBind::Fixed => todo!(),
                                         BlockBind::Boom(_) => prev_bend.end,
                                         // BlockBind::BoomPair(_) => prev_bend.end,
                                         // L_winch_eff = L_winch_nom + dL_drum

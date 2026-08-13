@@ -80,8 +80,8 @@ impl FromStr for BlockScheme {
 pub enum BlockBind {
     /// Барабан лебедки
     Drum,
-    // /// Неподвижный блок вне стрелы
-    // Fixed,
+    /// Неподвижный блок вне стрелы
+    Fixed,
     /// Блок на стреле
     Boom(usize),
     // /// Блок на стреле, работает впаре, подразумевается что пара соседних блоков имеет такой тип
@@ -93,7 +93,7 @@ pub enum BlockBind {
 //
 impl BlockBind {
     ///
-    /// Returns Boom or BoomFixed from corresponding string
+    /// Returns Boom from corresponding string
     fn boom(s: &str) -> Result<Self, Error> {
         let re = Regex::new(r"(boom|boompair)[ \t](\d+)").unwrap();
         let caps = re.captures(s)
@@ -116,7 +116,7 @@ impl BlockBind {
     pub fn is(&self, other: Self) -> bool {
         match (self, other) {
             (BlockBind::Drum, BlockBind::Drum) => true,
-            // (BlockBind::Fixed, BlockBind::Fixed) => true,
+            (BlockBind::Fixed, BlockBind::Fixed) => true,
             (BlockBind::Boom(_), BlockBind::Boom(_)) => true,
             // (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
             (BlockBind::Hook, BlockBind::Hook) => true,
@@ -131,7 +131,7 @@ impl FromStr for BlockBind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase() {
             key if key == "drum" => Ok(Self::Drum),
-            // key if key == "fixed" => Ok(Self::Fixed),
+            key if key == "fixed" => Ok(Self::Fixed),
             key if key.starts_with("boom") => Self::boom(&key),
             key if key == "hook" => Ok(Self::Hook),
             _ => Err(Error::new("BlockBind", "from_str").err(format!("Unknown variant '{s}'"))),

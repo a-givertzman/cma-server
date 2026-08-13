@@ -73,6 +73,9 @@ impl Blocks {
                             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
                             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
                             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
+                            if (block.bind.is(BlockBind::Drum) || block.bind.is(BlockBind::Fixed)) && next.bind.is(BlockBind::Boom(0)) {
+
+                            }
                             if let BlockBind::Drum = block.bind {
                                 if self.parking {
                                     self.winch_rope_alpha = rope_alpha_fwd;
@@ -126,11 +129,11 @@ impl Blocks {
                 let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
                 Offset::new(dx1 + dx2, dy1 + dy2)
             }
-//            BlockBind::Fixed => {
-//                let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
-//                let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
-//                Offset::new(dx1 + dx2, dy1 + dy2)
-//            }
+           BlockBind::Fixed => {
+               let Offset{x: dx1, y: dy1} = rotate_xy(- block.lf.x, block.lf.y, 0.0);
+               let Offset{x: dx2, y: dy2} = rotate_xy(booms[0].l4, booms[0].l3, 90.0);  // от первой стрелы
+               Offset::new(dx1 + dx2, dy1 + dy2)
+           }
             BlockBind::Boom(index) => {
                 let base_point = booms[index].gpt;  // точка G
                 let Offset{x: dx, y: dy} = rotate_xy(block.lf.x, block.lf.y, booms[index].alpha);
