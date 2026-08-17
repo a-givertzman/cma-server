@@ -25,6 +25,7 @@ pub struct Deprecation<'a> {
     inputs: Arc<Inputs>,
     conf: CraneConf,
     segment: f64,
+    /// Индексы блоков и слайсов, лежащих на них
     ///                Block     Slices
     blocks: FxIndexMap<usize, Vec<usize>>,
     bendings: Bendings,
