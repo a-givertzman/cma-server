@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 use sal_core::dbg::Dbg;
+use sal_sync::services::conf::ConfDistance;
 use crate::services::frdm_service::{Block, BlockBind, RopeSections};
 
 ///
@@ -10,6 +11,8 @@ use crate::services::frdm_service::{Block, BlockBind, RopeSections};
 /// - Дуги обхвата канатом всех блоков
 pub struct BlockArcs {
     rope_sections: RopeSections,
+    /// Длина сегмента, мм
+    segment: f64,
     #[allow(unused)]
     dbg: Dbg,
 }
@@ -18,9 +21,11 @@ pub struct BlockArcs {
 impl BlockArcs {
     ///
     /// Returns [BlockArcs] new instance
-    pub fn new(parent: impl Into<String>, rope_sections: RopeSections) -> Self {
+    /// - `segment` - Rope segmetn length. Whole rope will divided by the segments for the Depreciation Rate calculation.
+    pub fn new(parent: impl Into<String>, segment: &ConfDistance, rope_sections: RopeSections) -> Self {
         Self {
             rope_sections,
+            segment: segment.as_mm(),
             dbg: Dbg::new(parent, "BlockArcs"),
         }
     }
@@ -42,7 +47,10 @@ impl BlockArcs {
                         BlockBind::Hook => 0.0,     // TODO: implement caclultions for Hook block if exists
                     };
                     // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
-                    let wrap_length = (PI * block.diameter * 0.5 * wrap_alpha) / 180.0;
+                    let wrap_length = match block.bind {
+                        BlockBind::Drum => self.segment,
+                        _ => (PI * block.diameter * 0.5 * wrap_alpha) / 180.0,
+                    };
                     // log::trace!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
                     Some(Block::new(
                         block.name.clone(),

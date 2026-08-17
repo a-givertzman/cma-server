@@ -203,6 +203,7 @@ fn eval() {
             &conf.rope,
             BlockArcs::new(
                 &dbg,
+                &conf.rope.segment,
                 RopeSections::new(
                     &dbg,
                     Blocks::new(

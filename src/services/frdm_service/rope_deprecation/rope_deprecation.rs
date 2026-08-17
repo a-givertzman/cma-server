@@ -58,7 +58,7 @@ impl Object for RopeDeprecation {
     }
 }
 //
-// 
+//
 impl std::fmt::Debug for RopeDeprecation {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -76,10 +76,10 @@ impl std::fmt::Debug for RopeDeprecation {
 //     SendError,
 // }
 //
-// 
+//
 impl Service for RopeDeprecation where {
     //
-    // 
+    //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
@@ -105,6 +105,7 @@ impl Service for RopeDeprecation where {
                     &conf.crane.rope,
                     BlockArcs::new(
                         dbg,
+                        &conf.crane.rope.segment,
                         RopeSections::new(
                             dbg,
                             Blocks::new(
@@ -121,7 +122,7 @@ impl Service for RopeDeprecation where {
                     log::debug!("{dbg}.run | Deprecation at slice {slice_ix}: {:?}", deprecation);
                     let sql = format!(r"
                         insert into {conf_table} (id, deprecation) values ({slice_ix}, {deprecation})
-                        on conflict (id) do update 
+                        on conflict (id) do update
                             set deprecation = {conf_table}.deprecation + {deprecation} where {conf_table}.id = {slice_ix};
                     ");
                     // log::trace!("{dbg}.run | Fetching sql: {:?}", sql);
@@ -191,5 +192,5 @@ impl Service for RopeDeprecation where {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-    }    
+    }
 }

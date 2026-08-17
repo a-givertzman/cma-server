@@ -175,6 +175,7 @@ fn new() {
     let parking = true;
     let mut block_arcs = BlockArcs::new(
         &dbg,
+        &conf.rope.segment,
         RopeSections::new(
             &dbg,
             Blocks::new(

@@ -9,8 +9,6 @@ pub struct Bendings {
     rope_len: f64,
     /// Длина каната на лебедке в парковочном положении, мм
     winch_len: f64,
-    /// Длина сегмента, мм
-    segment: f64,
     block_arcs: BlockArcs,
     dbg: Dbg,
 }
@@ -34,7 +32,7 @@ impl Bendings {
                         match block.bind {
                             BlockBind::Drum => {
                                 log::debug!("{dbg}.new | Block[{}] rope bck {:.3}", block.name, block.rope_len_bck);
-                                len - block.rope_len_bck - block.wrap_length - block.rope_len_fwd
+                                len - block.rope_len_bck - block.rope_len_fwd
                             }
                             _ => len - block.wrap_length - block.rope_len_fwd,
                         }
@@ -48,7 +46,6 @@ impl Bendings {
                     0.0
                 }
             },
-            segment: conf.segment.as_mm(),
             block_arcs,
             dbg,
         }
@@ -84,19 +81,19 @@ impl Bendings {
                 true => None,
                 false => {
                     start = match block.bind {
-                        BlockBind::Drum => (self.winch_len - self.segment - rope_pos).max(0.0),  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
+                        BlockBind::Drum => (self.winch_len - block.wrap_length - rope_pos).max(0.0),  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
                         BlockBind::Fixed => prev_bend.end,
                         BlockBind::Boom(_) => prev_bend.end,
-                        // BlockBind::BoomPair(_) => prev_bend.end,
-                        // L_winch_eff = L_winch_nom + dL_drum
-                        // l_hook_new = Lfact - L_winch_eff - l_sections_wo_hook - L_sys_arc
                         BlockBind::Hook => {
                             prev_bend.end
                         }
                     };
+                    if block.wrap_delta > f64::EPSILON {
+                        log::debug!("{}.eval | Block {}: {:?}, wrap_delta: {:.3}", self.dbg, block.name, block.bind, block.wrap_delta);
+                    }
                     end = match block.bind {
                         BlockBind::Drum => start + block.wrap_length - block.wrap_delta,
-                        BlockBind::Fixed => start + block.wrap_length - block.wrap_delta,
+                        BlockBind::Fixed => start + block.wrap_length,
                         BlockBind::Boom(_) => start + block.wrap_length,
                         BlockBind::Hook => {
                             start + block.wrap_length

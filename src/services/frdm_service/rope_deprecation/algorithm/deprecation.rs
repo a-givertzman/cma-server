@@ -210,6 +210,7 @@ fn slices() {
             &conf.rope_deprecation.crane.rope,
             BlockArcs::new(
                 &dbg,
+                &conf.rope_deprecation.crane.rope.segment,
                 RopeSections::new(
                     &dbg,
                     Blocks::new(
