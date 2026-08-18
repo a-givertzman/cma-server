@@ -1,7 +1,8 @@
 use std::{ops::Range, sync::Arc};
-use sal_core::dbg::Dbg;
+use function_name::named;
+use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::collections::FxIndexMap;
-use crate::services::frdm_service::{Bendings, CraneConf, Inputs};
+use crate::{err, services::frdm_service::{Bendings, CraneConf, Inputs}};
 
 ///
 /// ## Evaluation for the crane rope Deprecation
@@ -24,7 +25,11 @@ use crate::services::frdm_service::{Bendings, CraneConf, Inputs};
 pub struct Deprecation<'a> {
     inputs: Arc<Inputs>,
     conf: CraneConf,
+    /// The length of the each rope segmetn
+    /// The entair rope is divided into these segments to calculate Depreciation Rate.
     segment: f64,
+    /// The total number of segments of `segment`-length fitting the entire rope.
+    slices: usize,
     /// Индексы блоков и слайсов, лежащих на них
     ///                Block     Slices
     blocks: FxIndexMap<usize, Vec<usize>>,
@@ -47,6 +52,7 @@ impl<'a> Deprecation<'a> {
             inputs,
             conf: conf.clone(),
             segment: conf.rope.segment.as_mm(),
+            slices: (conf.rope.length.as_mm() / conf.rope.segment.as_mm()).floor() as usize,
             blocks: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
             bendings,
             results: Box::new(results),
@@ -80,26 +86,33 @@ impl<'a> Deprecation<'a> {
                     (Some(pos), Some(load)) => {
                         log::debug!("{}.eval | pos {pos} mm,  load {load} tonn", self.dbg);
                         for (block_ix, block) in blocks.iter().enumerate() {
-                            // TODO: Расчет износа сознательно упрощен
-                            // Но в будущем следует учесть диаметр каната
-                            let deprecation = load / (block.diameter * 0.001);
-                            let current = self.slices(&block.bending);
-                            // Exit: the Slices that are in self.slices but not in current
-                            for slice in &self.blocks[block_ix] {
-                                // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
-                                if let Err(_) = current.binary_search(slice) {
-                                    (self.results)(&slice, deprecation);
+                            // TODO: Расчет износа сознательно упрощен.
+                            // И учитывает "количество перегибов каната под нашрузкой".
+                            // Но в будущем следует так же учесть и диаметр каната.
+                            if !block.skipped {
+                                let deprecation = load / (block.diameter * 0.001);
+                                match self.slices(&block.bending) {
+                                    Err(err) => log::warn!("{}.eval | Block {}: Can't evaluate slices: {:?}", self.dbg, block.name, err),
+                                    Ok(current) => {
+                                        // Exit: the Slices that are in self.slices but not in current
+                                        for slice in &self.blocks[block_ix] {
+                                            // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
+                                            if let Err(_) = current.binary_search(slice) {
+                                                (self.results)(&slice, deprecation);
+                                            }
+                                        }
+                                        // Enter: the Slices that are in current but not in self.slices
+                                        for slice in &current {
+                                            if let Err(_) = self.blocks[block_ix].binary_search(slice) {
+                                            // log::debug!("{dbg} | Slice[{}] -> Enter ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
+                                                (self.results)(&slice, deprecation);
+                                            }
+                                        }
+                                        self.blocks[block_ix] = current;
+                                        // log::debug!("{} | Slices: {:?}", self.dbg, self.slices);
+                                    }
                                 }
                             }
-                            // Enter: the Slices that are in current but not in self.slices
-                            for slice in &current {
-                                if let Err(_) = self.blocks[block_ix].binary_search(slice) {
-                                // log::debug!("{dbg} | Slice[{}] -> Enter ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
-                                    (self.results)(&slice, deprecation);
-                                }
-                            }
-                            self.blocks[block_ix] = current;
-                            // log::debug!("{} | Slices: {:?}", self.dbg, self.slices);
                         }
                         Some(())
                     }
@@ -110,28 +123,39 @@ impl<'a> Deprecation<'a> {
     }
     ///
     /// Returns slices (indexes) sorted ASC, intersects with the bend range
-    fn slices(&self, bend: &Range<f64>) -> Vec<usize> {
+    #[named]
+    fn slices(&self, bend: &Range<f64>) -> Result<Vec<usize>, Error> {
         // Количество Слайсов которые приходятся на начало Бенда
         // log::debug!("{}.slices | rope_len: {}", self.dbg, self.rope_len);
         // log::debug!("{}.slices | segment: {}", self.dbg, self.segment);
         // log::debug!("{}.slices | bend: {:?}", self.dbg, bend);
+        if !bend.start.is_finite() || bend.start < 0.0 {
+            return Err(err!(self.dbg, "Invalid Bend start: {}", bend.start));
+        }
         let first_slice = (bend.start / self.segment).trunc() as usize;
         // log::debug!("{}.slices | first_slice: {first_slice}", self.dbg);
         // Точка начала первого Слайса в Бенде
         let start_point = (first_slice as f64) * self.segment;
         // log::debug!("{}.slices | start_point: {start_point}", self.dbg);
         let delta = bend.end - start_point;
+        if !delta.is_finite() || delta < 0.0 {
+            return Err(err!(self.dbg, "Invalid Bend delta: {}", delta));
+        }
         // log::debug!("{}.slices | delta: {delta}", self.dbg);
-        let slices = (delta / self.segment).ceil() as usize;
+        let slices = (delta / self.segment).ceil() as usize;    // self.segment - доверяем этому значению, проверяется в конфиге
+        let end = first_slice.saturating_add(slices);
+        if end > self.slices {
+            return Err(err!(self.dbg, "Invalid slice range: end {} exceeds maximum {}", slices, self.slices));
+        }
         // log::debug!("{}.slices | slices: {slices}", self.dbg);
-        Vec::from_iter(first_slice..first_slice + slices)
+        Ok(Vec::from_iter(first_slice..end))
     }
 }
-#[cfg(test)]
 ///
 /// Testing such functionality / behavior
+#[cfg(test)]
 #[test]
-fn slices() {
+fn test_slices() {
     use std::{sync::atomic::AtomicBool, time::{Duration, Instant}};
     use sal_sync::{services::{conf::{ConfTree, ServicesConf}, Services}, thread_pool::ThreadPool};
     use testing::stuff::max_test_duration::TestDuration;
@@ -172,7 +196,7 @@ fn slices() {
         rope:
             width: 35 mm
             length: 1 m
-            winch-length: 1 m
+            aux-length: 1 m
             segment: 10 mm
             pos: point real 'Winch.Pos'
             load: point real 'Winch.Load'
@@ -184,14 +208,18 @@ fn slices() {
                 l4: 10330.0 mm
                 len: 11200.0 mm
                 angle: point real 'MainBoom.Angle'
+                parking: 0.0 deg
         blocks:
             - 1:
                 lf: 1830.0 mm,  710.0 mm
                 d: 845.670 mm
                 scheme: TopTop
-                bind: Fixed
+                bind: Drum
     ").unwrap());
-    let conf = FrdmServiceConf::new(&dbg, conf);
+
+    let crane_conf = CraneConf::new(&dbg, conf);
+    let mut conf = FrdmServiceConf::default();
+    conf.rope_deprecation.crane = crane_conf;
     let tp = ThreadPool::new(&dbg, Some(4));
     let services = Arc::new(Services::new(
         &dbg,
@@ -228,7 +256,7 @@ fn slices() {
     let mut t;
     for (step, bendings, target) in test_data {
         t = Instant::now();
-        let result = deprecation.slices(&bendings);
+        let result = deprecation.slices(&bendings).unwrap();
         log::debug!("{dbg} | {step}  result: {:?}, target: {:?},  elapsed: {:?}", result, target, t.elapsed());
         assert!(result == target.to_owned(), "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     }

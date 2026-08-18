@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfDistance;
 use crate::services::frdm_service::{rope_deprecation::rotate_xy, Block, BlockBind, BlockConf, Boom, Booms, Offset};
@@ -63,8 +62,10 @@ impl Blocks {
             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
             let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
-            if (block.bind.is(BlockBind::Drum) || block.bind.is(BlockBind::Fixed)) && next.bind.is(BlockBind::Boom(0)) {
-                // Определили место перехода каната от неподвижного блока к первому подвижному
+            if block.bind.is(BlockBind::Drum) && next.bind.is(BlockBind::Boom(0)) {
+                // Если место перехода каната Drum -> Boom (от барабана лебедки к первому подвижному)
+                // То закладываем это значение, Если место перехода Fixed -> Boom,
+                // то учтется автоматически по ходу расчета. TODO: Проверь так ли это!
                 if self.parking {
                     self.parking = false;
                     self.winch_rope_alpha = rope_alpha_fwd;

@@ -1,5 +1,7 @@
+use std::str::FromStr;
+
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
+use sal_sync::services::{conf::{ConfAngle, ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
 use crate::services::frdm_service::InputKind;
 
 ///
@@ -14,7 +16,7 @@ use crate::services::frdm_service::InputKind;
 ///     l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
 ///     len: 11200.0 mm             # Length of the boom
 ///     angle: point real 'App/MultiQueue/Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
-///     parking: 0.0                # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
+///     parking: 0.0 deg            # Угол в парковочном положении, град (обязателен для главной стрелы, для остальных может быть опущен)
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoomConf {
@@ -31,7 +33,7 @@ pub struct BoomConf {
     /// Current angle of the boom (relative axis), degrees
     pub angle: InputKind<f64>,
     /// Угол в парковочном положении, град
-    pub parking: f64,
+    pub parking: ConfAngle,
 }
 //
 //
@@ -61,8 +63,10 @@ impl BoomConf {
                 .expect(&format!("{dbg}.new | 'angle' - can be Const: 11200.0 mm or point real 'App/MultiQueue/Load.MainBoomAngle', but found '{:?}'", ConfTreeGet::<String>::get(&conf, "len")))
                 .name()),
         };
-        let parking = conf.get("parking")
+        let parking: String = conf.get("parking")
             .expect(&format!("{dbg}.new | 'parking' - missed or wrong config", ));
+        let parking = ConfAngle::from_str(&parking)
+            .expect(&format!("{dbg}.new | 'parking' - wrong config", ));
         Self {
             l1,
             l2,

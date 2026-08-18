@@ -5,8 +5,8 @@ use crate::services::frdm_service::{Block, BlockArcs, BlockBind, Inputs, RopeCon
 ///
 /// 10. Определение опорных точек по длине каната
 pub struct Bendings {
-    /// Total working length of the rope, mm
-    rope_len: f64,
+    // /// Total working length of the rope, mm
+    // rope_len: f64,
     /// Длина каната на лебедке в парковочном положении, мм
     winch_len: f64,
     block_arcs: BlockArcs,
@@ -22,7 +22,7 @@ impl Bendings {
         let rope_len = conf.length.as_mm();
         log::debug!("{dbg}.new | Evaluating parking position...");
         Self {
-            rope_len,
+            // rope_len,
             winch_len: match block_arcs.eval() {
                 Some(blocks) => {
                     // для парковочного положения
@@ -67,7 +67,6 @@ impl Bendings {
     pub fn eval(&mut self, inputs: &Arc<Inputs>) -> Option<Vec<Block>> {
         let t = Instant::now();
         let mut blocks = self.block_arcs.eval()?;
-        blocks.retain(|block| !block.skipped);
         let Some(rope_pos) = inputs.rope_pos() else {
             log::warn!("{}.eval | Rope position isn't ready", self.dbg);
             return None;
@@ -77,6 +76,7 @@ impl Bendings {
         let mut end = 0.0;                               // Точка схода каната с блока (по направлению от барабана к крюку)
         let mut prev_bend = start .. end;                 // Первый вход..сход считаем на крюке
         blocks.iter_mut().for_each(|block| {
+            if block.skipped { return; }
             // log::debug!("{}.eval | Block {} {:?}, rope_len_fwd: {:.3}, wrap_length: {:.3}", self.dbg, block.name, block.bind, block.rope_len_fwd, block.wrap_length);
             start = match block.bind {
                 BlockBind::Drum => (self.winch_len - block.wrap_length - rope_pos).max(0.0),  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
@@ -89,7 +89,7 @@ impl Bendings {
             }
             end = match block.bind {
                 BlockBind::Drum => start + block.wrap_length + block.wrap_delta,
-                BlockBind::Fixed => start + block.wrap_length,
+                BlockBind::Fixed => start + block.wrap_length,  // wrap_delta не добавлена, так как должна автоматически быть учтена по ходу расчета. TODO: Проверь это!
                 BlockBind::Boom(_) => start + block.wrap_length,
                 BlockBind::Hook => start + block.wrap_length,
             };
