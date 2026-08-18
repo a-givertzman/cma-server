@@ -66,7 +66,8 @@ impl Bendings {
     ///     F12 = F11 + l_rope_6
     pub fn eval(&mut self, inputs: &Arc<Inputs>) -> Option<Vec<Block>> {
         let t = Instant::now();
-        let blocks = self.block_arcs.eval()?;
+        let mut blocks = self.block_arcs.eval()?;
+        blocks.retain(|block| !block.skipped);
         let Some(rope_pos) = inputs.rope_pos() else {
             log::warn!("{}.eval | Rope position isn't ready", self.dbg);
             return None;
@@ -75,57 +76,30 @@ impl Bendings {
         let mut start = 0.0;           // Точка входа каната на блок (по направлению от барабана к крюку)
         let mut end = 0.0;                               // Точка схода каната с блока (по направлению от барабана к крюку)
         let mut prev_bend = start .. end;                 // Первый вход..сход считаем на крюке
-        let result: Vec<Block> = blocks.into_iter().filter_map(|mut block| {
+        blocks.iter_mut().for_each(|block| {
             // log::debug!("{}.eval | Block {} {:?}, rope_len_fwd: {:.3}, wrap_length: {:.3}", self.dbg, block.name, block.bind, block.rope_len_fwd, block.wrap_length);
-            match block.skipped {
-                true => None,
-                false => {
-                    start = match block.bind {
-                        BlockBind::Drum => (self.winch_len - block.wrap_length - rope_pos).max(0.0),  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
-                        BlockBind::Fixed => prev_bend.end,
-                        BlockBind::Boom(_) => prev_bend.end,
-                        BlockBind::Hook => {
-                            prev_bend.end
-                        }
-                    };
-                    if block.wrap_delta > f64::EPSILON {
-                        log::debug!("{}.eval | Block {}: {:?}, wrap_delta: {:.3}", self.dbg, block.name, block.bind, block.wrap_delta);
-                    }
-                    end = match block.bind {
-                        BlockBind::Drum => start + block.wrap_length - block.wrap_delta,
-                        BlockBind::Fixed => start + block.wrap_length,
-                        BlockBind::Boom(_) => start + block.wrap_length,
-                        BlockBind::Hook => {
-                            start + block.wrap_length
-                        }
-                    };
-                    prev_bend = start .. end + block.rope_len_fwd;
-                    match (end - start).abs() > 0.0 {
-                        true => {
-                            block.bending = start .. end;
-                            Some(block)
-                        }
-                        false => None,
-                    }
-                }
+            start = match block.bind {
+                BlockBind::Drum => (self.winch_len - block.wrap_length - rope_pos).max(0.0),  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
+                BlockBind::Fixed => prev_bend.end,
+                BlockBind::Boom(_) => prev_bend.end,
+                BlockBind::Hook => prev_bend.end,
+            };
+            if block.wrap_delta > f64::EPSILON {
+                log::debug!("{}.eval | Block {}: {:?}, wrap_delta: {:.3}", self.dbg, block.name, block.bind, block.wrap_delta);
             }
-        }).collect();
+            end = match block.bind {
+                BlockBind::Drum => start + block.wrap_length + block.wrap_delta,
+                BlockBind::Fixed => start + block.wrap_length,
+                BlockBind::Boom(_) => start + block.wrap_length,
+                BlockBind::Hook => start + block.wrap_length,
+            };
+            prev_bend = start .. end + block.rope_len_fwd;
+            if (end - start).abs() > 0.0 {
+                block.bending = start .. end;
+            }
+        });
         // log::debug!("{}.eval | Elapsed: {:?}", self.dbg, t.elapsed());
         // log::debug!("{} | Blocks: {:?}", self.dbg, result.len());
-        Some(result)
-
-        //     {
-        //     Some(blocks) => {
-        //         match inputs.rope_pos() {
-        //             Some(rope_pos) => {
-        //             }
-        //             None => {
-        //                 log::warn!("{}.eval | Rope position isn't ready", self.dbg);
-        //                 return None;
-        //             }
-        //         }
-        //     }
-        //     None => None,
-        // };
+        Some(blocks)
     }
 }

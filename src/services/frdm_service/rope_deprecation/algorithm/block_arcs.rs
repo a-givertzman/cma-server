@@ -32,45 +32,27 @@ impl BlockArcs {
     ///
     /// Evaluates Block arck's
     pub fn eval(&mut self) -> Option<Vec<Block>> {
-        let blocks = self.rope_sections.eval()?;
-        let blocks: Vec<Block> = blocks.iter().filter_map(|block| {
-            match block.skipped {
-                true => {
-                    log::debug!("{}.eval | Block {} SKIPED", self.dbg, block.name);
-                    None
-                }
-                false => {
-                    let wrap_alpha = match block.bind {
-                        BlockBind::Drum => 0.0,
-                        BlockBind::Fixed => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
-                        BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
-                        BlockBind::Hook => 0.0,     // TODO: implement caclultions for Hook block if exists
-                    };
-                    // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
-                    let wrap_length = match block.bind {
-                        BlockBind::Drum => self.segment,
-                        _ => (PI * block.diameter * 0.5 * wrap_alpha) / 180.0,
-                    };
-                    // log::trace!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
-                    Some(Block::new(
-                        block.name.clone(),
-                        block.lf,
-                        block.diameter,
-                        block.scheme,
-                        block.bind,
-                        block.rope_alpha_fwd,
-                        block.rope_alpha_bck,
-                        wrap_alpha,
-                        wrap_length,
-                        block.rope_len_fwd,
-                        block.rope_len_bck,
-                        0.0..0.0,
-                        block.deflector,
-                    ))
-                }
+        let mut blocks = self.rope_sections.eval()?;
+        blocks.iter_mut().for_each(|block| {
+            if block.skipped {
+                log::debug!("{}.eval | Block {} SKIPED", self.dbg, block.name);
+                return;   // Пропускаем элемент
             }
-        }).collect();
-        // log::debug!("{} | Blocks: {:?}", self.dbg, blocks.len());
+            let wrap_alpha = match block.bind {
+                BlockBind::Drum => 0.0,
+                BlockBind::Fixed => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
+                BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
+                BlockBind::Hook => 0.0,     // TODO: implement caclultions for Hook block if exists
+            };
+            // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);
+            let wrap_length = match block.bind {
+                BlockBind::Drum => self.segment,
+                _ => (PI * block.diameter * 0.5 * wrap_alpha) / 180.0,
+            };
+            // log::trace!("{}.eval | Block {} wrap_length: {}°", self.dbg, block.name, wrap_length);
+            block.wrap_alpha = wrap_alpha;
+            block.wrap_length = wrap_length;
+        });
         Some(blocks)
     }
 }

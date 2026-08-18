@@ -39,13 +39,6 @@ impl Blocks {
                 conf.d.as_mm(),
                 conf.scheme,
                 conf.bind,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0..0.0,
                 conf.deflector.map(|angle| angle.as_deg()),
             )).collect(),
             booms,
@@ -59,11 +52,10 @@ impl Blocks {
         let mut blocks = self.items.iter();
         let mut block = blocks.next().cloned()?;
         block.pos = self.blocks_pos(&block, &booms, &Block::default(), false);
-        let mut result = Vec::with_capacity(blocks.len());
-        let mut skipped = None;
-        let mut wrap_delta;
+        let mut result = Vec::with_capacity(self.items.len());
+        let mut skipped = Vec::with_capacity(3);
         while let Some(mut next) = blocks.next().cloned() {
-            next.pos = self.blocks_pos(&next, &booms, &block, skipped.is_some());
+            next.pos = self.blocks_pos(&next, &booms, &block, !skipped.is_empty());
             // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, next.name, next.pos.x, next.pos.y);
             let (k, j) = block.scheme.kj();
             let l_block = block.pos.distance(next.pos);
@@ -78,7 +70,7 @@ impl Blocks {
                     self.winch_rope_alpha = rope_alpha_fwd;
                     log::debug!("{}.eval | Block: {}: winch_rope_alpha: {:.3}", self.dbg, block.name, rope_alpha_fwd);
                 }
-                wrap_delta = (rope_alpha_fwd - self.winch_rope_alpha).to_radians() * block.diameter * 0.5;
+                let wrap_delta = (rope_alpha_fwd - self.winch_rope_alpha).to_radians() * block.diameter * 0.5;
                 // Изменение длины каната на лебедке (неподвижном блоке) за счет изменения угла первой стрелы, мм
                 // Сохраняем в блок, в Bendings будет учтено в расчете длин
                 block.wrap_delta = wrap_delta;
@@ -90,21 +82,19 @@ impl Blocks {
             if let Some(deflection) = next.deflector && rope_alpha_fwd > deflection {
                 // log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
                 next.skipped = true;
-                skipped = Some(next);
+                skipped.push(next);
             } else {
                 block.rope_alpha_fwd = rope_alpha_fwd;
                 next.rope_alpha_bck += rope_alpha_fwd;
                 // log::info!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
                 result.push(block);
-                if let Some(skipped) = skipped.take() {
-                    // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, skipped.name, skipped.pos.x, skipped.pos.y);
-                    result.push(skipped);
-                }
+                result.append(&mut skipped);
                 block = next;
             }
         }
         // log::debug!("{}.eval | Block {}: pos {:.4}, {:.4}", self.dbg, block.name, block.pos.x, block.pos.y);
         result.push(block);
+        result.append(&mut skipped);
         Some(result)
     }
     ///

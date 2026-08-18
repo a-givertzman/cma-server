@@ -1,4 +1,4 @@
-use std::{ops::Range, str::FromStr};
+use std::{ops::Range, str::FromStr, sync::Arc};
 use regex::Regex;
 use sal_core::error::Error;
 use crate::services::frdm_service::Offset;
@@ -142,7 +142,7 @@ impl FromStr for BlockBind {
 /// Crane Block
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
-    pub name: String,
+    pub name: Arc<str>,
     /// Block position relative to boom G (end of boom).
     pub lf: Offset<f64>,
     /// Block diameter, mm.
@@ -197,33 +197,54 @@ impl Block {
         diameter: f64,
         scheme:BlockScheme,
         bind: BlockBind,
-        rope_alpha_fwd: f64,
-        rope_alpha_bck: f64,
-        wrap_alpha: f64,
-        wrap_length: f64,
-        rope_len_fwd: f64,
-        rope_len_bck: f64,
-        bending: Range<f64>,
         deflector: Option<f64>,
     ) -> Self {
         Self {
-            name: name.into(),
+            name: Arc::from(name.into()),
             lf,
             diameter,
-            scheme: scheme,
-            bind: bind,
+            scheme,
+            bind,
             pos: Offset::new(0.0, 0.0),
-            rope_alpha_fwd,
-            rope_alpha_bck,
-            wrap_alpha,
-            wrap_length,
+            rope_alpha_fwd: 0.0,
+            rope_alpha_bck: 0.0,
+            wrap_alpha: 0.0,
+            wrap_length: 0.0,
             wrap_delta: 0.0,
-            rope_len_fwd,
-            rope_len_bck,
-            bending,
+            rope_len_fwd: 0.0,
+            rope_len_bck: 0.0,
+            bending: 0.0..0.0,
             deflector,
             skipped: false,
         }
+    }
+    ///
+    /// Returns [Block] with specified `wrap_alpha`
+    /// - `val` - Угол обхвата каната огибающего блок, градусы.
+    pub fn with_wrap_alpha(mut self, val: f64) -> Self {
+        self.wrap_alpha = val;
+        self
+    }
+    ///
+    /// Returns [Block] with specified `wrap_length`
+    /// - `val` - Длина каната огибающего блок, для барабана длина каната на барабане до точки схода, мм.
+    pub fn with_wrap_length(mut self, val: f64) -> Self {
+        self.wrap_length = val;
+        self
+    }
+    ///
+    /// Returns [Block] with specified `wrap_delta`
+    /// - `val` - Разница длины каната на блоке по отношению к базовому (парковочному) положению, мм.
+    pub fn with_wrap_delta(mut self, val: f64) -> Self {
+        self.wrap_delta = val;
+        self
+    }
+    ///
+    /// Returns [Block] with specified `bending`
+    /// - `val` - Текущие точки входа и схода каната с блока, считая от его начала каната.
+    pub fn with_bending(mut self, val: Range<f64>) -> Self {
+        self.bending = val;
+        self
     }
 }
 //
