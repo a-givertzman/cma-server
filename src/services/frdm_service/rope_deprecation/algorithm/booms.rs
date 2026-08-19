@@ -75,7 +75,7 @@ impl Booms {
             // log::trace!("{}.angles | Boom[{i}] '{}':  parking '{}'", self.dbg, boom.name, self.parking);
             let alpha_rel = match self.parking {
                 true => boom.parking,
-                false => match &boom.alpha_input {
+                false => match boom.alpha_input.as_ref() {
                     Some(input) => match self.inputs.get(input) {
                         Some(alpha) => alpha,
                         None => {

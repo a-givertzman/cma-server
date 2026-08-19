@@ -38,7 +38,7 @@ impl RopeSections {
             let (k, j) = block.scheme.kj();
             let block_rope_alpha_fwd = block.rope_alpha_fwd.to_radians();
             let block_rope_alpha_fwd_sin = block_rope_alpha_fwd.sin();
-            let block_rope_alpha_fwd_cos = block_rope_alpha_fwd.sin();
+            let block_rope_alpha_fwd_cos = block_rope_alpha_fwd.cos();
             let block_x = block.pos.x + j * 0.5 * block.diameter * block_rope_alpha_fwd_sin;
             let block_y = block.pos.y + j * 0.5 * block.diameter * block_rope_alpha_fwd_cos;
             let next_x = next.pos.x - j * k * 0.5 * next.diameter * block_rope_alpha_fwd_sin;
