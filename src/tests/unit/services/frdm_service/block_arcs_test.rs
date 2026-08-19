@@ -33,7 +33,7 @@ fn new() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
-    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    let path = "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv";
     log::debug!("{dbg} | reading csv: '{}'", path);
     let csv = match OpenOptions::new().read(true).open(path) {
         Ok(rdr) => {
@@ -201,12 +201,18 @@ fn new() {
         log::trace!("{dbg} | step {step}  result wrap alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd - b.rope_alpha_bck)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  result wrap alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.wrap_alpha)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  target wrap alpha: \n\t{:?}", target.iter().map(|(a, _)| format!("{:.3}", a)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  result wrap length: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.wrap_length)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  target wrap length: \n\t{:?}", target.iter().map(|(_, l)| format!("{:.3}", l)).collect::<Vec<_>>());
         for (i, (wrap_alpha, wrap_length)) in target.into_iter().enumerate() {
-            if !result[i].skipped {
-                assert!((result[i].wrap_alpha - wrap_alpha).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
-            }
-            if !result[i].skipped {
-                assert!((result[i].wrap_length - wrap_length).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+                if !result[i].skipped {
+                    assert!((result[i].wrap_alpha - wrap_alpha).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
+                }
+            if i == 0 {  // Для барабана лебедки csv.target = 0, а фактически заложен размер одного сигмента
+                assert!((result[i].wrap_length - conf.rope.segment.as_mm()).abs() < 0.001, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+            } else {
+                if !result[i].skipped {
+                    assert!((result[i].wrap_length - wrap_length).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
+                }
             }
         }
     }

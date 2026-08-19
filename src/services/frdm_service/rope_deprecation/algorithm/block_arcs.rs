@@ -35,7 +35,7 @@ impl BlockArcs {
         let mut blocks = self.rope_sections.eval()?;
         blocks.iter_mut().for_each(|block| {
             if block.skipped {
-                log::debug!("{}.eval | Block {} SKIPED", self.dbg, block.name);
+                // log::debug!("{}.eval | Block {} SKIPED", self.dbg, block.name);
                 return;   // Пропускаем элемент
             }
             let wrap_alpha = match block.bind {

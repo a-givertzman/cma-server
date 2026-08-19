@@ -33,7 +33,7 @@ fn new() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(10));
     test_duration.run().unwrap();
-    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    let path = "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv";
     log::debug!("{dbg} | reading csv: '{}'", path);
     let csv = match OpenOptions::new().read(true).open(path) {
         Ok(rdr) => {

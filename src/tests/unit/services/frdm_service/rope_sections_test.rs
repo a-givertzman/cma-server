@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::{Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::{Block, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -33,7 +33,7 @@ fn new() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
-    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    let path = "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv";
     log::debug!("{dbg} | reading csv: '{}'", path);
     let csv = match OpenOptions::new().read(true).open(path) {
         Ok(rdr) => {
@@ -194,10 +194,15 @@ fn new() {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), val);
         }
-        let result = rope_sections.eval().unwrap();
+        let result: Vec<Block> = rope_sections.eval().unwrap()
+                .into_iter()
+                .filter(|block| !block.skipped)
+                .collect();
         log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         log::trace!("{dbg} | step {step}  result: {:#?}", result);
-        log::debug!("{dbg} | step {step}  result rope alpha: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  result rope alpha bck: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_bck)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  target rope alpha: \n\t{:?}", target.iter().map(|(_, _, a, _)| format!("{:.3}", a)).collect::<Vec<_>>());
+        log::debug!("{dbg} | step {step}  result rope alpha fwd: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_alpha_fwd)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  target rope alpha: \n\t{:?}", target.iter().map(|(_, _, _, a)| format!("{:.3}", a)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  result rope len: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_len_fwd)).collect::<Vec<_>>());
         log::debug!("{dbg} | step {step}  target rope len: \n\t{:?}", target.iter().map(|(_, l, _, _)| format!("{:.3}", l)).collect::<Vec<_>>());

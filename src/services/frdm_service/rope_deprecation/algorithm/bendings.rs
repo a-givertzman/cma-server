@@ -83,9 +83,9 @@ impl Bendings {
                 BlockBind::Boom(_) => prev_bend.end,
                 BlockBind::Hook => prev_bend.end,
             };
-            if block.wrap_delta > f64::EPSILON || block.wrap_delta < -f64::EPSILON {
-                log::debug!("{}.eval | Block {}: {:?}, wrap_delta: {:.3}", self.dbg, block.name, block.bind, block.wrap_delta);
-            }
+            // if block.wrap_delta > f64::EPSILON || block.wrap_delta < -f64::EPSILON {
+            //     log::debug!("{}.eval | Block {}: {:?}, wrap_delta: {:.3}", self.dbg, block.name, block.bind, block.wrap_delta);
+            // }
             end = match block.bind {
                 BlockBind::Drum => start + block.wrap_length + block.wrap_delta,
                 BlockBind::Fixed => start + block.wrap_length,  // wrap_delta не добавлена, так как должна автоматически быть учтена по ходу расчета. TODO: Проверь это!

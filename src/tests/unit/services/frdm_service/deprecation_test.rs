@@ -34,7 +34,7 @@ fn eval() {
     log::debug!("\n{}", dbg);
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(30));
     test_duration.run().unwrap();
-    let path = "src/tests/unit/services/frdm_service/deprecation_test.csv";
+    let path = "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv";
     log::debug!("{dbg} | reading csv: '{}'", path);
     let rdr = OpenOptions::new().read(true).open(path).unwrap();
     let mut rdr = csv::Reader::from_reader(rdr);
@@ -239,7 +239,9 @@ fn eval() {
         deprecation.eval();
         for (_, event_name, event_value, _, _) in test_data {
             inputs.insert(event_name.to_string(), *event_value);
+            let t = Instant::now();
             deprecation.eval();
+            log::debug!("{dbg} | step {step} | Rope pos {event_value} | Elapsed: {:?}", t.elapsed());
         }
         let elapsed = time.elapsed();
         let r = result.borrow();
