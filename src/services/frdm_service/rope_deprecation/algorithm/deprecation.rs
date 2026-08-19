@@ -64,15 +64,15 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
     ///
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self) -> Option<()> {
-        let pos = self.inputs.rope_pos();
-        match self.bendings.eval(pos) {
+        let rope_pos = self.inputs.rope_pos();
+        match self.bendings.eval(rope_pos) {
             Some(blocks) => {
                 // log::debug!("{} | Bendings:", self.dbg);
                 // for block in &blocks {
                 //     log::debug!("{} | \t Block[{}]: {:.4}..{:.4}", self.dbg, block.name, block.bending.start, block.bending.end);
                 // }
-                let load = self.inputs.get(&self.conf.rope.load);
-                match (pos, load) {
+                let rope_load = self.inputs.get(&self.conf.rope.load);
+                match (rope_pos, rope_load) {
                     (None, None) => {
                         log::warn!("{}.eval | Inputs '{}', '{}' - Not found", self.dbg, self.conf.rope.pos, self.conf.rope.load);
                         return None;

@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::{BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::{BlockArcs, BlockBind, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
 
 ///
 ///
@@ -207,7 +207,7 @@ fn new() {
                 if !result[i].skipped {
                     assert!((result[i].wrap_alpha - wrap_alpha).abs() < 1.0, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_alpha, wrap_alpha);
                 }
-            if i == 0 {  // Для барабана лебедки csv.target = 0, а фактически заложен размер одного сигмента
+            if result[i].bind.is(BlockBind::Drum) {  // Для барабана лебедки csv.target = 0, а фактически заложен размер одного сигмента
                 assert!((result[i].wrap_length - conf.rope.segment.as_mm()).abs() < 0.001, "{dbg} | step {step}  block {i} \nresult: {:?}\ntarget: {:?}", result[i].wrap_length, wrap_length);
             } else {
                 if !result[i].skipped {

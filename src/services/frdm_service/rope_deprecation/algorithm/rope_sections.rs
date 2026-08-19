@@ -36,10 +36,13 @@ impl RopeSections {
         while let Some(next) = blocks_iter.next() {
             if next.skipped { continue; }
             let (k, j) = block.scheme.kj();
-            let block_x = block.pos.x + j * 0.5 * block.diameter * block.rope_alpha_fwd.to_radians().sin();
-            let block_y = block.pos.y + j * 0.5 * block.diameter * block.rope_alpha_fwd.to_radians().cos();
-            let next_x = next.pos.x - j * k * 0.5 * next.diameter * block.rope_alpha_fwd.to_radians().sin();
-            let next_y = next.pos.y - j * k * 0.5 * next.diameter * block.rope_alpha_fwd.to_radians().cos();
+            let block_rope_alpha_fwd = block.rope_alpha_fwd.to_radians();
+            let block_rope_alpha_fwd_sin = block_rope_alpha_fwd.sin();
+            let block_rope_alpha_fwd_cos = block_rope_alpha_fwd.sin();
+            let block_x = block.pos.x + j * 0.5 * block.diameter * block_rope_alpha_fwd_sin;
+            let block_y = block.pos.y + j * 0.5 * block.diameter * block_rope_alpha_fwd_cos;
+            let next_x = next.pos.x - j * k * 0.5 * next.diameter * block_rope_alpha_fwd_sin;
+            let next_y = next.pos.y - j * k * 0.5 * next.diameter * block_rope_alpha_fwd_cos;
             // log::debug!("{}.eval | Block: {}: {:.3}, {:.3} | Block: {}: {:.3}, {:.3}", self.dbg, block1.name, block1_x, block1_y, block2.name, block2_x, block2_y);
             let rope_len_fwd = Offset::new(next_x, next_y).distance(Offset::new(block_x, block_y));
             block.rope_len_fwd = rope_len_fwd;

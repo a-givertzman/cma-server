@@ -1,12 +1,12 @@
+use std::sync::Arc;
 use sal_sync::services::conf::ConfAngle;
-
 use crate::services::frdm_service::{InputKind, Offset};
 
 ///
 /// Crane Boom
 #[derive(Debug, Clone)]
 pub struct Boom {
-    pub name: String,
+    pub name: Arc<str>,
     /// The name of the input `Point` contains current `alpha_rel` value
     pub alpha_input: Option<String>,
     /// The name of the input `Point` contains current `len` value
@@ -38,7 +38,7 @@ impl Boom {
     /// - `l4` - Горизонтальное смещение начала стрелы относительно..., мм
     pub fn new(name: impl Into<String>, alpha_input: InputKind<f64>, len_input: InputKind<f64>, l1: f64, l2: f64, l3: f64, l4: f64, parking: ConfAngle) -> Self {
         Self {
-            name: name.into(),
+            name: Arc::from(name.into()),
             alpha_input: match &alpha_input {
                 InputKind::Const(_) => None,
                 InputKind::Point(val) => Some(val.clone()),

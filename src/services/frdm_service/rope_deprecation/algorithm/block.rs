@@ -18,12 +18,6 @@ pub enum BlockScheme {
     BottomBottom((f64, f64)) = 4,
 }
 impl BlockScheme {
-    // let (k, j) = match block.scheme {
-    //     super::BlockScheme::TopTop => (-1.0, 1.0),
-    //     super::BlockScheme::TopBottom => (1.0, 1.0),
-    //     super::BlockScheme::BottomTop => (1.0, -1.0),
-    //     super::BlockScheme::BottomBottom => (-1.0, -1.0),
-    // };
     ///
     /// Returns tuple (k, j) - coefficients depends on rope transition kind between blocks
     pub fn kj(&self) -> (f64, f64) {
@@ -66,10 +60,10 @@ impl FromStr for BlockScheme {
     /// Retirns [BlockScheme] from str like `TopTop`, `TopBottom`, `BottomTop`, `BottomBottom`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "TopTop" => Ok(Self::TopTop((-1.0, 1.0))),
-            "TopBottom" => Ok(Self::TopBottom((1.0, 1.0))),
-            "BottomTop" => Ok(Self::BottomTop((1.0, -1.0))),
-            "BottomBottom" => Ok(Self::BottomBottom((-1.0, -1.0))),
+            "TopTop" => Ok(Self::top_top()),
+            "TopBottom" => Ok(Self::top_bottom()),
+            "BottomTop" => Ok(Self::bottom_top()),
+            "BottomBottom" => Ok(Self::bottom_bottom()),
             _ => Err(Error::new("BlockScheme", "from_str").err(format!("Unknown variant '{s}'"))),
         }
     }
