@@ -83,7 +83,7 @@ impl Bendings {
                 BlockBind::Boom(_) => prev_bend.end,
                 BlockBind::Hook => prev_bend.end,
             };
-            if block.wrap_delta > f64::EPSILON {
+            if block.wrap_delta > f64::EPSILON || block.wrap_delta < -f64::EPSILON {
                 log::debug!("{}.eval | Block {}: {:?}, wrap_delta: {:.3}", self.dbg, block.name, block.bind, block.wrap_delta);
             }
             end = match block.bind {
