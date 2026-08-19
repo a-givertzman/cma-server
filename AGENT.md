@@ -1,0 +1,1 @@
+- Execute cargo test with `--profile fast-test` argument
