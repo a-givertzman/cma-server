@@ -93,11 +93,15 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
                             // TODO: Расчет износа сознательно упрощен.
                             // И учитывает "количество перегибов каната под нашрузкой".
                             // Но в будущем следует так же учесть и диаметр каната.
-                            if !block.skipped && block.diameter > 0.0 {
+                            if block.diameter > 0.0 {
                                 let deprecation = load / (block.diameter * 0.001);
-                                match self.slices(&block.bending) {
+                                let current = if block.skipped { Ok(vec![]) } else { self.slices(&block.bending) };
+                                match current {
                                     Err(err) => log::warn!("{}.eval | Block {}: Can't evaluate slices: {:?}", self.dbg, block.name, err),
-                                    Ok(current) => {
+                                    Ok(mut current) => {
+                                        if block.skipped {
+                                            current.clear();
+                                        }
                                         // Exit: the Slices that are in self.slices but not in current
                                         for slice in &self.blocks[block_ix] {
                                             // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
