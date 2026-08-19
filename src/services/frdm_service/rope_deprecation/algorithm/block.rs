@@ -221,6 +221,7 @@ impl Block {
     ///
     /// Returns [Block] with specified `wrap_alpha`
     /// - `val` - Угол обхвата каната огибающего блок, градусы.
+    #[allow(unused)]
     pub fn with_wrap_alpha(mut self, val: f64) -> Self {
         self.wrap_alpha = val;
         self
@@ -228,6 +229,7 @@ impl Block {
     ///
     /// Returns [Block] with specified `wrap_length`
     /// - `val` - Длина каната огибающего блок, для барабана длина каната на барабане до точки схода, мм.
+    #[allow(unused)]
     pub fn with_wrap_length(mut self, val: f64) -> Self {
         self.wrap_length = val;
         self
@@ -235,6 +237,7 @@ impl Block {
     ///
     /// Returns [Block] with specified `wrap_delta`
     /// - `val` - Разница длины каната на блоке по отношению к базовому (парковочному) положению, мм.
+    #[allow(unused)]
     pub fn with_wrap_delta(mut self, val: f64) -> Self {
         self.wrap_delta = val;
         self
@@ -242,6 +245,7 @@ impl Block {
     ///
     /// Returns [Block] with specified `bending`
     /// - `val` - Текущие точки входа и схода каната с блока, считая от его начала каната.
+    #[allow(unused)]
     pub fn with_bending(mut self, val: Range<f64>) -> Self {
         self.bending = val;
         self

@@ -176,7 +176,7 @@ fn new() {
         // }
         for (i, (target_gx, target_gy)) in target_pos.into_iter().enumerate() {
             if i == target_pos.len() - 1 {
-                let (Offset{x: dx, y: dy}, Offset{x: gx, y: gy}) = (result[i].dpt, result[i].gpt);
+                let (Offset{x: _dx, y: _dy}, Offset{x: gx, y: gy}) = (result[i].dpt, result[i].gpt);
                 assert!((gx - target_gx).abs() < 0.1, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gx, target_gx);
                 assert!((gy - target_gy).abs() < 0.1, "{dbg} | step {step}  \nresult: {:?}\ntarget: {:?}", gy, target_gy);
             }

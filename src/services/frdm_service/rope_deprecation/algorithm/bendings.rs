@@ -1,12 +1,9 @@
-use std::{sync::Arc, time::Instant};
 use sal_core::dbg::Dbg;
-use crate::services::frdm_service::{Block, BlockArcs, BlockBind, Inputs, RopeConf};
+use crate::services::frdm_service::{Block, BlockArcs, BlockBind, RopeConf};
 
 ///
 /// 10. Определение опорных точек по длине каната
 pub struct Bendings {
-    // /// Total working length of the rope, mm
-    // rope_len: f64,
     /// Длина каната на лебедке в парковочном положении, мм
     winch_len: f64,
     block_arcs: BlockArcs,
@@ -54,6 +51,8 @@ impl Bendings {
     /// Возвращает опорные точки каната в миллиметрах,
     /// то есть точки входа и выхода каната с блоков
     ///
+    /// - `rope_pos` - Rope position, mm.
+    ///
     /// Формируем опорных точек:
     ///     F1  = L_winch // длина каната на барабане до точки схода
     ///     F2  = F1 + l_rope_1
@@ -64,10 +63,10 @@ impl Bendings {
     ///     F10 = F9  + l_rope_5
     ///     F11 = F10 + arc_5
     ///     F12 = F11 + l_rope_6
-    pub fn eval(&mut self, inputs: &Arc<Inputs>) -> Option<Vec<Block>> {
-        let t = Instant::now();
+    pub fn eval(&mut self, rope_pos: Option<f64>) -> Option<Vec<Block>> {
+        // let t = std::time::Instant::now();
         let mut blocks = self.block_arcs.eval()?;
-        let Some(rope_pos) = inputs.rope_pos() else {
+        let Some(rope_pos) = rope_pos else {
             log::warn!("{}.eval | Rope position isn't ready", self.dbg);
             return None;
         };

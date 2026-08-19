@@ -1,6 +1,6 @@
-use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
 #[cfg(test)]
-use std::{sync::Once, time::{Duration, Instant}};
+use std::{fs::OpenOptions, sync::{Arc, atomic::AtomicBool}};
+use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
@@ -212,13 +212,13 @@ fn new() {
     let tolerance = 0.9;
     let mut errors = vec![];
     for (step, events, target) in test_data.iter() {
-        let t = Instant::now();
+        let t = std::time::Instant::now();
         for (key, val) in events {
             log::debug!("{dbg} | step {step}  Event '{}': {:?}", key, val);
             inputs.insert(key.to_owned(), *val);
         }
-        let result = bendings.eval(&inputs).unwrap();
-        // log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
+        let result = bendings.eval(inputs.rope_pos()).unwrap();
+        log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
         // log::trace!("{dbg} | step {step}  result: {:#?}", result);
         // log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
         // log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>());

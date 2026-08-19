@@ -22,7 +22,7 @@ use crate::{err, services::frdm_service::{Bendings, CraneConf, Inputs}};
 ///     - `Int`
 ///     - `Real`
 ///     - `Double`
-pub struct Deprecation<'a> {
+pub struct Deprecation<F> {
     inputs: Arc<Inputs>,
     conf: CraneConf,
     /// The length of the each rope segmetn
@@ -34,17 +34,19 @@ pub struct Deprecation<'a> {
     ///                Block     Slices
     blocks: FxIndexMap<usize, Vec<usize>>,
     bendings: Bendings,
-    results: Box<dyn Fn(&usize, f64) + 'a>,
+    /// Closure to pass the results of deprecation
+    /// `fn(slice: usize, deprecation: f64)`
+    results: F,
     dbg: Dbg,
 }
 //
 //
-impl<'a> Deprecation<'a> {
+impl<F: Fn(usize, f64)> Deprecation<F> {
     ///
     /// Returns [Deprecation] new instance
     /// - `inputs` - [Inputs] provides `Events` required for the calculations
-    /// - `results` - Callback provides Deprecation results as index of slice and it new Deprecation value
-    pub fn new(parent: impl Into<String>, conf: &CraneConf, inputs: Arc<Inputs>, bendings: Bendings, results: impl Fn(&usize, f64) + 'a) -> Self {
+    /// - `results` - Callback `|slice_ix, deprecation| {...}` provides deprecation results as index of slice and it new `deprecation` value
+    pub fn new(parent: impl Into<String>, conf: &CraneConf, inputs: Arc<Inputs>, bendings: Bendings, results: F) -> Self {
         let dbg = Dbg::new(parent, "Deprecation");
         inputs.subscribe(conf.rope.load.clone());
         inputs.subscribe(conf.rope.pos.clone());
@@ -55,20 +57,20 @@ impl<'a> Deprecation<'a> {
             slices: (conf.rope.length.as_mm() / conf.rope.segment.as_mm()).floor() as usize,
             blocks: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
             bendings,
-            results: Box::new(results),
+            results: results,
             dbg,
         }
     }
     ///
     /// Evaluates Boom's values using passed new parameters
     pub fn eval(&mut self) -> Option<()> {
-        match self.bendings.eval(&self.inputs) {
+        let pos = self.inputs.rope_pos();
+        match self.bendings.eval(pos) {
             Some(blocks) => {
                 // log::debug!("{} | Bendings:", self.dbg);
                 // for block in &blocks {
                 //     log::debug!("{} | \t Block[{}]: {:.4}..{:.4}", self.dbg, block.name, block.bending.start, block.bending.end);
                 // }
-                let pos = self.inputs.rope_pos();
                 let load = self.inputs.get(&self.conf.rope.load);
                 match (pos, load) {
                     (None, None) => {
@@ -86,6 +88,8 @@ impl<'a> Deprecation<'a> {
                     (Some(pos), Some(load)) => {
                         log::debug!("{}.eval | pos {pos} mm,  load {load} tonn", self.dbg);
                         for (block_ix, block) in blocks.iter().enumerate() {
+                            // TODO: Двойной пересчет износа для одних и тех же участков, если сервис будет перезапущен.
+                            // На первой итерации заполнить self.blocks без начисления износа.
                             // TODO: Расчет износа сознательно упрощен.
                             // И учитывает "количество перегибов каната под нашрузкой".
                             // Но в будущем следует так же учесть и диаметр каната.
@@ -98,14 +102,14 @@ impl<'a> Deprecation<'a> {
                                         for slice in &self.blocks[block_ix] {
                                             // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
                                             if let Err(_) = current.binary_search(slice) {
-                                                (self.results)(&slice, deprecation);
+                                                (self.results)(*slice, deprecation);
                                             }
                                         }
                                         // Enter: the Slices that are in current but not in self.slices
                                         for slice in &current {
                                             if let Err(_) = self.blocks[block_ix].binary_search(slice) {
                                             // log::debug!("{dbg} | Slice[{}] -> Enter ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
-                                                (self.results)(&slice, deprecation);
+                                                (self.results)(*slice, deprecation);
                                             }
                                         }
                                         self.blocks[block_ix] = current;

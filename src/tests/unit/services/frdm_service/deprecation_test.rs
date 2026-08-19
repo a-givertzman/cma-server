@@ -220,7 +220,7 @@ fn eval() {
             // let dbg = &dbg.clone();
             // log::debug!("{dbg} | Deprecation slice[{slice_ix}]: {:?}", deprecation);
             result.replace_with(|r| {
-                r[*slice_ix] += deprecation;
+                r[slice_ix] += deprecation;
                 r.to_owned()
             });
             result_count.replace_with(|r| {
