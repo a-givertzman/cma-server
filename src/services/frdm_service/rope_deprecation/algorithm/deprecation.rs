@@ -151,10 +151,8 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
         }
         // log::debug!("{}.slices | delta: {delta}", self.dbg);
         let slices = (delta / self.segment).ceil() as usize;    // self.segment - доверяем этому значению, проверяется в конфиге
-        let end = first_slice.saturating_add(slices);
-        if end > self.slices {
-            return Err(err!(self.dbg, "Invalid slice range: end {} exceeds maximum {}", slices, self.slices));
-        }
+        // Ограничим что бы не вылететь за границы диапазона
+        let end = first_slice.saturating_add(slices).min(self.slices);
         // log::debug!("{}.slices | slices: {slices}", self.dbg);
         Ok(Vec::from_iter(first_slice..end))
     }

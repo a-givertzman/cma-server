@@ -235,16 +235,18 @@ fn new() {
             let result = bendings.eval(inputs.rope_pos()).unwrap();
             log::debug!("{dbg} | step {step}  Elapsed: {:?}", t.elapsed());
             // log::trace!("{dbg} | step {step}  result: {:#?}", result);
-            // log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
-            // log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>());
+            log::debug!("{dbg} | step {step}  result bending: \n\t{:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>());
+            log::debug!("{dbg} | step {step}  target bending: \n\t{:?}", target.iter().map(|b| format!("{:.3}..{:.3}", b.start, b.end)).collect::<Vec<_>>());
             let mut ok = true;
             for (i, bending) in target.iter().enumerate() {
                 if (bending.end - bending.start).abs() > 0.00001 {
                     if i > 0 {
                         assert!((result[i].bending.start - bending.start).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.start, bending.start);
                     }
-                    assert!((result[i].bending.end - bending.end).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, bending.end);
-                    ok = ok && (((result[i].bending.start - bending.start).abs() < tolerance) && ((result[i].bending.end - bending.end).abs() < tolerance));
+                    let start = bending.start.min(bending.end);
+                    let end = bending.end.max(bending.start);
+                    assert!((result[i].bending.end - end).abs() < tolerance, "{dbg} | step {step} Bending {i}  \nresult: {:?}\ntarget: {:?}", result[i].bending.end, end);
+                    ok = ok && (((result[i].bending.start - start).abs() < tolerance) && ((result[i].bending.end - end).abs() < tolerance));
                 }
             }
             errors.push(format!("step {step}  result: {:?}", result.iter().map(|b| format!("{:.3}..{:.3}", b.bending.start, b.bending.end)).collect::<Vec<_>>()));

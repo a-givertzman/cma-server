@@ -78,7 +78,7 @@ impl Bendings {
             if block.skipped { return; }
             // log::debug!("{}.eval | Block {} {:?}, rope_len_fwd: {:.3}, wrap_length: {:.3}", self.dbg, block.name, block.bind, block.rope_len_fwd, block.wrap_length);
             start = match block.bind {
-                BlockBind::Drum => (self.winch_len - block.wrap_length - rope_pos).max(0.0),  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
+                BlockBind::Drum => (self.winch_len - block.wrap_length - rope_pos + block.wrap_delta).max(0.0),  // На барабане считаем кусочек каната длиной в один сегмент до точки схода,
                 BlockBind::Fixed => prev_bend.end,
                 BlockBind::Boom(_) => prev_bend.end,
                 BlockBind::Hook => prev_bend.end,
@@ -87,7 +87,7 @@ impl Bendings {
             //     log::debug!("{}.eval | Block {}: {:?}, wrap_delta: {:.3}", self.dbg, block.name, block.bind, block.wrap_delta);
             // }
             end = match block.bind {
-                BlockBind::Drum => start + block.wrap_length + block.wrap_delta,
+                BlockBind::Drum => start + block.wrap_length,
                 BlockBind::Fixed => start + block.wrap_length,  // wrap_delta не добавлена, так как должна автоматически быть учтена по ходу расчета. TODO: Проверь это!
                 BlockBind::Boom(_) => start + block.wrap_length,
                 BlockBind::Hook => start + block.wrap_length,

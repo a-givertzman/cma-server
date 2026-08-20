@@ -28,3 +28,6 @@ retain_points.json
 # Plot results
 plot*.png
 src/tests/**/*.jpeg
+
+# Temp files
+.~lock*
