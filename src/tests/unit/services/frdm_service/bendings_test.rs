@@ -34,10 +34,10 @@ fn new() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     let path = [
-        ("src/tests/unit/services/frdm_service/ysz-deprecation_test.yaml",
-        "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv"),
-        // ("src/tests/unit/services/frdm_service/spu-tnpa_deprecation_test.yaml",
-        // "src/tests/unit/services/frdm_service/spu-tnpa_deprecation_test.csv"),
+        // ("src/tests/unit/services/frdm_service/ysz-deprecation_test.yaml",
+        // "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv"),
+        ("src/tests/unit/services/frdm_service/spu-tnpa-deprecation_test.yaml",
+        "src/tests/unit/services/frdm_service/spu-tnpa-deprecation_test.csv"),
     ];
     let test_data = if !path.is_empty() {
         let mut res = Vec::with_capacity(path.len());
