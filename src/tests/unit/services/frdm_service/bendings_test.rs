@@ -41,9 +41,9 @@ fn new() {
     ];
     let test_data = if !path.is_empty() {
         let mut res = Vec::with_capacity(path.len());
-        for (conf, csv) in path {
-            log::debug!("{dbg} | reading csv: '{csv}'");
-            let rdr = OpenOptions::new().read(true).open(csv).unwrap();
+        for (conf, csv_path) in path {
+            log::debug!("{dbg} | reading csv: '{csv_path}'");
+            let rdr = OpenOptions::new().read(true).open(csv_path).unwrap();
             let mut rdr = csv::Reader::from_reader(rdr);
             log::debug!("{dbg} | Parse csv data...");
             let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
@@ -74,12 +74,13 @@ fn new() {
             let rdr = OpenOptions::new().read(true).open(conf).unwrap();
             let conf = ConfTree::new_root(serde_yaml::from_reader(rdr).unwrap());
             let conf = CraneConf::new(&dbg, conf);
-            res.push((conf, test_data));
+            res.push((csv_path, conf, test_data));
         }
         res
     } else {
-        log::debug!("{dbg} | CSV data sets are not set, continue test with embeded dataset");
+        log::debug!("{dbg} | CSV datasets are not set, continue test with embeded dataset");
         vec![(
+            "embedded conf and dataset",
             CraneConf::new(&dbg, ConfTree::new_root(serde_yaml::from_str(r"
                 rope:
                     width: 35 mm               # Diameter of the rome
@@ -181,11 +182,8 @@ fn new() {
             ]
         )]
     };
-    // let test_data = match csv {
-    //     Some(csv) => csv,
-    //     None => ,
-    // };
-    for (conf, test_data) in test_data {
+    for (path, conf, test_data) in test_data {
+        log::info!("{dbg} | Test Booms for '{path}'");
         let inputs = Arc::new(Inputs::fake(
             &dbg,
             &FrdmServiceConf {

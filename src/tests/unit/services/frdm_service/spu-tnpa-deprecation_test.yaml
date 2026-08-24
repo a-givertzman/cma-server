@@ -24,37 +24,43 @@ booms:
         parking: 40.00 deg         # Угол в парковочном положении, град
 blocks:
     - 1:
-        lf: -3322.50mm, -2811.96mm  # Растояние (x, y) от **конца** стрелы до оси блока, мм
-        d: 1435.0 mm                # Диаметр блока, мм
-        scheme: BottomBottom        # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-        bind: Drum                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+        lf: 3322.50mm, -2811.96mm
+        d: 1851.781 mm
+        scheme: BottomBottom
+        bind: Drum
+
     - 2:
-        lf: -3280.00mm, -914.66mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-        d: 1435.0 mm                # Диаметр блока, мм
-        scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-        bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+        lf: 3280.00mm, -914.66mm
+        d: 1435.0 mm
+        scheme: BottomTop
+        bind: Fixed
+
     - 3:
-        lf: -7002.00mm, 520.34mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-        d: 1435.0 mm                # Диаметр блока, мм
-        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-        bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+        lf: 7002.00mm, 520.34mm
+        d: 1435.0 mm
+        scheme: TopTop
+        bind: Fixed
+
     - 4:
-        lf: -7002.10mm, 2365.00mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-        d: 1435.0 mm                # Диаметр блока, мм
-        scheme: TopBottom           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-        bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+        lf: 7002.10mm, 2365.00mm
+        d: 1435.0 mm
+        scheme: TopBottom
+        bind: Fixed
+
     - 5:
-        lf: -6252.00mm, 3800.00mm   # Растояние (x, y) от **конца** стрелы до оси блока, мм
-        d: 1435.0 mm                # Диаметр блока, мм
-        scheme: BottomTop           # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-        bind: Fixed                 # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+        lf: 6252.00mm, 3800.00mm
+        d: 1435.0 mm
+        scheme: BottomTop
+        bind: Fixed
+
     - 6:
-        lf: -763.00mm, -717.50mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
-        d: 1435.0 mm                # Диаметр блока, мм
-        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-        bind: Boom 1                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+        lf: -763.00mm, -717.50mm
+        d: 1435.0 mm
+        scheme: TopTop
+        bind: Boom 1
+
     - 7:
-        lf: 0.0 mm, 0.0 mm          # Растояние (x, y) от **конца** стрелы до оси блока, мм
-        d: 0.0 mm                   # Диаметр блока, мм
-        scheme: TopTop              # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
-        bind: Hook                  # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
+        lf: 0.0mm, 0.0mm
+        d: 0.0 mm
+        scheme: TopTop
+        bind: Hook
