@@ -61,7 +61,8 @@ impl Blocks {
             // log::debug!("{}.eval | Block: {}: l_block: {:.3}", self.dbg, block1.name, l_block);
             let alpha_block = block.pos.alpha_horiz(&next.pos, l_block);
             // log::debug!("{}.eval | Block: {}: alpha_block: {:.3}", self.dbg, block1.name, alpha_block);
-            let rope_alpha_fwd = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
+            let rope_alpha_fwd_abs = alpha_block + j * ((0.5 * (block.diameter + k * next.diameter) / l_block).asin().to_degrees());
+            let rope_alpha_fwd = super::normalize_deg(rope_alpha_fwd_abs);
             if block.bind.is(BlockBind::Drum) && next.bind.is(BlockBind::Boom(0)) {
                 // Если место перехода каната Drum -> Boom (от барабана лебедки к первому подвижному)
                 // То закладываем это значение, Если место перехода Fixed -> Boom,
@@ -80,7 +81,7 @@ impl Blocks {
             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, block.name, block.pos.x, block.pos.y);
             //     log::warn!("{}.eval | Block {} pos: {}, {}", self.dbg, next.name, next.pos.x, next.pos.y);
             // }
-            if let Some(deflection) = next.deflector && rope_alpha_fwd > deflection {
+            if let Some(deflection) = next.deflector && rope_alpha_fwd_abs > deflection {
                 // log::debug!("{}.eval | Block {} bind: {:?} - SKIPPED", self.dbg, next.name, next.bind);
                 next.skipped = true;
                 skipped.push(next);

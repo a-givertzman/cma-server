@@ -40,8 +40,8 @@ impl BlockArcs {
             }
             let wrap_alpha = match block.bind {
                 BlockBind::Drum => 0.0,
-                BlockBind::Fixed => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
-                BlockBind::Boom(_) => f64::abs(block.rope_alpha_fwd - block.rope_alpha_bck),
+                BlockBind::Fixed => f64::abs(super::normalize_deg(block.rope_alpha_fwd - block.rope_alpha_bck)),
+                BlockBind::Boom(_) => f64::abs(super::normalize_deg(block.rope_alpha_fwd - block.rope_alpha_bck)),
                 BlockBind::Hook => 0.0,     // TODO: implement caclultions for Hook block if exists
             };
             // log::trace!("{}.eval | Block {} wrap_alpha: {}°", self.dbg, block.name, wrap_alpha);

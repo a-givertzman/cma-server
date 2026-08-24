@@ -35,8 +35,8 @@ fn new() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     let path = [
-        // ("src/tests/unit/services/frdm_service/ysz-deprecation_test.yaml",
-        // "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv"),
+        ("src/tests/unit/services/frdm_service/ysz-deprecation_test.yaml",
+        "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv"),
         ("src/tests/unit/services/frdm_service/spu-tnpa-deprecation_test.yaml",
         "src/tests/unit/services/frdm_service/spu-tnpa-deprecation_test.csv"),
     ];
@@ -59,7 +59,7 @@ fn new() {
                     ],
                     [
                         // block.x,     block.y     rope alpha
-                        (-1829.999999 , 11040.0,    row.rope_alpha1),
+                        (row.x1,        row.y1,     row.rope_alpha1),
                         (row.x2,        row.y2,     row.rope_alpha2),
                         (row.x3,        row.y3,     row.rope_alpha3),
                         (row.x4,        row.y4,     row.rope_alpha4),

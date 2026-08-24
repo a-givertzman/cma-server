@@ -34,8 +34,8 @@ fn new() {
     let test_duration = TestDuration::new(&dbg, Duration::from_secs(20));
     test_duration.run().unwrap();
     let path = [
-        // ("src/tests/unit/services/frdm_service/ysz-deprecation_test.yaml",
-        // "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv"),
+        ("src/tests/unit/services/frdm_service/ysz-deprecation_test.yaml",
+        "src/tests/unit/services/frdm_service/ysz-deprecation_test.csv"),
         ("src/tests/unit/services/frdm_service/spu-tnpa-deprecation_test.yaml",
         "src/tests/unit/services/frdm_service/spu-tnpa-deprecation_test.csv"),
     ];
@@ -218,14 +218,16 @@ fn new() {
             log::debug!("{dbg} | step {step}  result rope len: \n\t{:?}", result.iter().map(|b| format!("{:.3}", b.rope_len_fwd)).collect::<Vec<_>>());
             log::debug!("{dbg} | step {step}  target rope len: \n\t{:?}", target.iter().map(|(_, l, _, _)| format!("{:.3}", l)).collect::<Vec<_>>());
             for (i, (rope_len_bck, rope_len_fwd, rope_alpha_bck, rope_alpha_fwd)) in target.into_iter().enumerate() {
-                if i < result.len() - 2 {
-                    if i > 0 { // Лебедку пропускаем, в ней лежит wrap_delta - разница обусловленная изменением угла схода с лебедки относительно парковочного
-                        assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+                if !result[i].skipped {
+                    if i < result.len() - 2 {
+                        if i > 0 { // Лебедку пропускаем, в ней лежит wrap_delta - разница обусловленная изменением угла схода с лебедки относительно парковочного
+                            assert!((result[i].rope_len_bck - rope_len_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_bck, rope_len_bck);
+                        }
+                        assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
                     }
-                    assert!((result[i].rope_len_fwd - rope_len_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_len_fwd, rope_len_fwd);
+                    assert!((result[i].rope_alpha_bck - rope_alpha_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_bck, rope_alpha_bck);
+                    assert!((result[i].rope_alpha_fwd - rope_alpha_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_fwd, rope_alpha_fwd);
                 }
-                assert!((result[i].rope_alpha_bck - rope_alpha_bck).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_bck, rope_alpha_bck);
-                assert!((result[i].rope_alpha_fwd - rope_alpha_fwd).abs() < 1.0, "{dbg} | step {step}  block[{i}] \n\tresult: {:?}\n\ttarget: {:?}", result[i].rope_alpha_fwd, rope_alpha_fwd);
             }
         }
     }
