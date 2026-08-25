@@ -37,6 +37,8 @@ pub struct Deprecation<F> {
     /// Closure to pass the results of deprecation
     /// `fn(slice: usize, deprecation: f64)`
     results: F,
+    /// True if eval is called at first time
+    is_first_time: bool,
     dbg: Dbg,
 }
 //
@@ -58,6 +60,7 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
             blocks: conf.blocks.iter().enumerate().map(|(i, _)| (i, vec![])).collect(),
             bendings,
             results: results,
+            is_first_time: true,
             dbg,
         }
     }
@@ -88,8 +91,6 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
                     (Some(pos), Some(load)) => {
                         log::debug!("{}.eval | pos {pos} mm,  load {load} tonn", self.dbg);
                         for (block_ix, block) in blocks.iter().enumerate() {
-                            // TODO: Двойной пересчет износа для одних и тех же участков, если сервис будет перезапущен.
-                            // На первой итерации заполнить self.blocks без начисления износа.
                             // TODO: Расчет износа сознательно упрощен.
                             // И учитывает "количество перегибов каната под нашрузкой".
                             // Но в будущем следует так же учесть и диаметр каната.
@@ -98,22 +99,23 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
                                 let current = if block.skipped { Ok(vec![]) } else { self.slices(&block.bending) };
                                 match current {
                                     Err(err) => log::warn!("{}.eval | Block {}: Can't evaluate slices: {:?}", self.dbg, block.name, err),
-                                    Ok(mut current) => {
-                                        if block.skipped {
-                                            current.clear();
-                                        }
+                                    Ok(current) => {
                                         // Exit: the Slices that are in self.slices but not in current
                                         for slice in &self.blocks[block_ix] {
                                             // log::debug!("{dbg} | Slice[{}] -> Exit ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
                                             if let Err(_) = current.binary_search(slice) {
-                                                (self.results)(*slice, deprecation);
+                                                if !self.is_first_time {
+                                                    (self.results)(*slice, deprecation);
+                                                }
                                             }
                                         }
                                         // Enter: the Slices that are in current but not in self.slices
                                         for slice in &current {
                                             if let Err(_) = self.blocks[block_ix].binary_search(slice) {
                                             // log::debug!("{dbg} | Slice[{}] -> Enter ({ix}),  offset: {},  D: {} m,  result: {:?}", self.ix, self.offset, block.diameter * 0.001, result);
-                                                (self.results)(*slice, deprecation);
+                                                if !self.is_first_time {
+                                                    (self.results)(*slice, deprecation);
+                                                }
                                             }
                                         }
                                         self.blocks[block_ix] = current;
@@ -122,6 +124,7 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
                                 }
                             }
                         }
+                        self.is_first_time = false;
                         Some(())
                     }
                 }
@@ -200,7 +203,7 @@ fn test_slices() {
     ];
     let conf = ConfTree::new_root(serde_yaml::from_str(r"
         rope:
-            width: 35 mm
+            width: 20 mm
             length: 1 m
             aux-length: 1 m
             segment: 10 mm

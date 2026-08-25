@@ -72,6 +72,11 @@ impl RopeConf {
             load,
         }
     }
+    /// Возвращает расчетное количество сегментов с учетом общей длины каната и размера одного сегмента
+    pub fn slices(&self) -> usize {
+        (self.length.as_m() / self.segment.as_m()).floor() as usize
+    }
+
 }
 //
 //

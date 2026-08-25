@@ -1,27 +1,28 @@
 //!
 //! # FRDM (Fiber Rope Defects Monitoring)
-//! 
-//! - Communication with Camera 
+//!
+//! - Communication with Camera
 //! - Receives current rope position
 //! - Scanning the rope for defects
 //! - Calculates Rope Depreciation Rate
-//! 
+//!
 //! ## Basic configuration parameters:
-//! 
+//!
 //! ```yaml
 //! service FrdmService FrdmService1:
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-//! 
+//!
 use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use dashmap::DashMap;
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     services::{entity::{Name, Object}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{FrdmServiceConf, Inputs, RopeDefect, RopeDeprecation}};
+use crate::{err_pass, infra::ApiClient, services::frdm_service::{FrdmServiceConf, Inputs, RopeDefect, RopeDeprecation}};
 ///
 /// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
@@ -56,8 +57,8 @@ impl FrdmService {
         let dbg = self.dbg.clone();
         let table = self.conf.table_settings.clone();
         let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
-        let defect_slices = (rope_length / self.conf.rope_defect.segment.as_m()).round() as usize;
-        let deprecation_slices = (rope_length / self.conf.rope_deprecation.crane.rope.segment.as_m()).round() as usize;
+        let defect_slices = self.conf.rope_defect.slices(self.conf.rope_deprecation.crane.rope.length);
+        let deprecation_slices = self.conf.rope_deprecation.crane.rope.slices();
         let _ = self.scheduler.spawn(move || {
             log::debug!("{dbg}.update_db_settings | Updating db settings...");
             let sql = format!(r"
@@ -107,7 +108,7 @@ impl Object for FrdmService {
     }
 }
 //
-// 
+//
 impl std::fmt::Debug for FrdmService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -120,7 +121,7 @@ impl std::fmt::Debug for FrdmService {
 //
 impl Service for FrdmService {
     //
-    // 
+    #[named]
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let name = self.name.clone();
@@ -140,7 +141,7 @@ impl Service for FrdmService {
         }
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
         self.tasks.insert(api_client.name().join(), api_client.clone());
-        api_client.run()?;
+        api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
         self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
         // let subscription: Vec<SubscriptionCriteria> = [
@@ -172,7 +173,7 @@ impl Service for FrdmService {
             scheduler.clone(),
         ));
         self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
-        rope_deprecation.run()?;
+        rope_deprecation.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | RopeDeprecation ready", self.dbg);
         if !conf.rope_defect.cameras.is_empty() {
             log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.cameras.len());
@@ -188,18 +189,18 @@ impl Service for FrdmService {
                     scheduler.clone(),
                 ));
                 self.tasks.insert(defect_detection.name().join(), defect_detection.clone());
-                defect_detection.run()?; 
+                defect_detection.run().map_err(|err| err_pass!(self.dbg, err))?;
             }
         } else {
             log::warn!("{}.run | No Camera's configured", self.dbg);
         }
-        inputs.run()?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
+        inputs.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
         log::info!("{}.run | RopeDefect's ready", self.dbg);
         log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())
     }
     //
-    //
+    #[named]
     fn wait(&self) -> Result<(), Error> {
         let mut errors = vec![];
         for task in self.tasks.iter() {
@@ -211,7 +212,7 @@ impl Service for FrdmService {
             log::info!("{}.run | Exit", self.dbg);
             Ok(())
         } else {
-            Err(Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
+            Err(err_pass!(self.dbg, errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
         }
     }
     //
@@ -226,6 +227,5 @@ impl Service for FrdmService {
         for task in self.tasks.iter() {
             task.value().exit();
         }
-    }    
+    }
 }
-

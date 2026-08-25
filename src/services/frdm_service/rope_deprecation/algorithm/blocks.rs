@@ -66,7 +66,7 @@ impl Blocks {
             if block.bind.is(BlockBind::Drum) && next.bind.is(BlockBind::Boom(0)) {
                 // Если место перехода каната Drum -> Boom (от барабана лебедки к первому подвижному)
                 // То закладываем это значение, Если место перехода Fixed -> Boom,
-                // то учтется автоматически по ходу расчета. TODO: Проверь так ли это!
+                // то учтется автоматически по ходу расчета.
                 if self.parking {
                     self.parking = false;
                     self.winch_rope_alpha = rope_alpha_fwd;

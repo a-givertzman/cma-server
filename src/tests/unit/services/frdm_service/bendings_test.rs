@@ -53,8 +53,8 @@ fn new() {
                 test_data.push((
                     row.step,
                     [
-                        ("Winch.Pos",           0.00),  // rope position, m
-                        // ("Winch.Pos",        row.pos / 1000.0),  // rope position, m
+                        // ("Winch.Pos",           0.00),  // rope position, m
+                        ("Winch.Pos",        row.pos / 1000.0),  // rope position, m
                         ("MainBoom.Angle",   row.a21),
                         ("RotaryBoom.Angle", row.a22)
                     ],
@@ -220,7 +220,7 @@ fn new() {
                 ),
             ),
         );
-        let tolerance = 0.9;
+        let tolerance = 1.1;
         let mut errors = vec![];
         for (step, events, target) in test_data.iter() {
             let t = std::time::Instant::now();

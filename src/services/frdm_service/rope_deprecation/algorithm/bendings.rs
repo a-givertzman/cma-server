@@ -88,7 +88,7 @@ impl Bendings {
             // }
             end = match block.bind {
                 BlockBind::Drum => start + block.wrap_length,
-                BlockBind::Fixed => start + block.wrap_length,  // wrap_delta не добавлена, так как должна автоматически быть учтена по ходу расчета. TODO: Проверь это!
+                BlockBind::Fixed => start + block.wrap_length,
                 BlockBind::Boom(_) => start + block.wrap_length,
                 BlockBind::Hook => start + block.wrap_length,
             };
