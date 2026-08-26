@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::{Block, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::{Block, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::{CsvRecord, CsvTable}};
 
 ///
 ///
@@ -43,27 +43,23 @@ fn new() {
         let mut res = Vec::with_capacity(path.len());
         for (conf, csv_path) in path {
             log::debug!("{dbg} | reading csv: '{csv_path}'");
-            let rdr = OpenOptions::new().read(true).open(csv_path).unwrap();
-            let mut rdr = csv::Reader::from_reader(rdr);
-            log::debug!("{dbg} | Parse csv data...");
-            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let csv = CsvTable::load(&dbg, csv_path).unwrap();
             let mut test_data = vec![];
             for row in csv {
-                let row: CsvRecord = row.unwrap();
                 test_data.push((
-                    row.step,
+                    row.get_usize("step").unwrap(),
                     [
-                        ("MainBoom.Angle", row.a21),
-                        ("RotaryBoom.Angle", row.a22)
+                        ("MainBoom.Angle", row.get_f64("a21").unwrap()),
+                        ("RotaryBoom.Angle", row.get_f64("a22").unwrap())
                     ],
                     [
                         // rope_len_bck,     rope_len_fwd,              rope_alpha_bck,     rope_alpha_fwd
-                        (0.0000,                row.lrope_straight1,               0.00,    row.rope_alpha1),
-                        (row.lrope_straight1,   row.lrope_straight2,    row.rope_alpha1,    row.rope_alpha2),
-                        (row.lrope_straight2,   row.lrope_straight3,    row.rope_alpha2,    row.rope_alpha3),
-                        (row.lrope_straight3,   row.lrope_straight4,    row.rope_alpha3,    row.rope_alpha4),
-                        (row.lrope_straight4,   row.lrope_straight5,    row.rope_alpha4,    row.rope_alpha5),
-                        (row.lrope_straight5,   row.lrope_straight6,    row.rope_alpha5,    row.rope_alpha6),
+                        (0.0000,                row.get_f64("lrope_straight1").unwrap(),               0.00,    row.get_f64("rope_alpha1").unwrap()),
+                        (row.get_f64("lrope_straight1").unwrap(),   row.get_f64("lrope_straight2").unwrap(),    row.get_f64("rope_alpha1").unwrap(),    row.get_f64("rope_alpha2").unwrap()),
+                        (row.get_f64("lrope_straight2").unwrap(),   row.get_f64("lrope_straight3").unwrap(),    row.get_f64("rope_alpha2").unwrap(),    row.get_f64("rope_alpha3").unwrap()),
+                        (row.get_f64("lrope_straight3").unwrap(),   row.get_f64("lrope_straight4").unwrap(),    row.get_f64("rope_alpha3").unwrap(),    row.get_f64("rope_alpha4").unwrap()),
+                        (row.get_f64("lrope_straight4").unwrap(),   row.get_f64("lrope_straight5").unwrap(),    row.get_f64("rope_alpha4").unwrap(),    row.get_f64("rope_alpha5").unwrap()),
+                        (row.get_f64("lrope_straight5").unwrap(),   row.get_f64("lrope_straight6").unwrap(),    row.get_f64("rope_alpha5").unwrap(),    row.get_f64("rope_alpha6").unwrap()),
                     ],
                 ));
             }

@@ -31,6 +31,11 @@ pub struct CsvHeader {
     pub x6: String,        // X6, мм, - координаты блока 6
     pub y6: String,        // Y6, мм, - координаты блока 6
 }
+impl Default for CsvHeader {
+    fn default() -> Self {
+        Self { step: Default::default(), a21: Default::default(), a22: Default::default(), x_nok: Default::default(), y_nok: Default::default(), xg: Default::default(), yg: Default::default(), x_kp: Default::default(), y_kp: Default::default(), lpodv_min: Default::default(), lkan_прям: Default::default(), lkan_дуг: Default::default(), lкан_леб: Default::default(), x1: Default::default(), y1: Default::default(), x2: Default::default(), y2: Default::default(), x3: Default::default(), y3: Default::default(), x4: Default::default(), y4: Default::default(), x5: Default::default(), y5: Default::default(), x6: Default::default(), y6: Default::default() }
+    }
+}
 ///
 /// Representation of the csv data single row
 #[allow(unused)]

@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::{BlockArcs, BlockBind, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::{BlockArcs, BlockBind, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeSections}, tests::unit::services::frdm_service::{CsvRecord, CsvTable}};
 
 ///
 ///
@@ -43,27 +43,23 @@ fn new() {
         let mut res = Vec::with_capacity(path.len());
         for (conf, csv_path) in path {
             log::debug!("{dbg} | reading csv: '{csv_path}'");
-            let rdr = OpenOptions::new().read(true).open(csv_path).unwrap();
-            let mut rdr = csv::Reader::from_reader(rdr);
-            log::debug!("{dbg} | Parse csv data...");
-            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let csv = CsvTable::load(&dbg, csv_path).unwrap();
             let mut test_data = vec![];
             for row in csv {
-                let row: CsvRecord = row.unwrap();
                 test_data.push((
-                    row.step,
+                    row.get_usize("step").unwrap(),
                     [
-                        ("MainBoom.Angle", row.a21),
-                        ("RotaryBoom.Angle", row.a22)
+                        ("MainBoom.Angle", row.get_f64("a21").unwrap()),
+                        ("RotaryBoom.Angle", row.get_f64("a22").unwrap())
                     ],
                     [
                         // wrap_alpha, deg     wrap_length, mm
-                        (row.wrap_alpha1,      row.wrap_l1),
-                        (row.wrap_alpha2,      row.wrap_l2),
-                        (row.wrap_alpha3,      row.wrap_l3),
-                        (row.wrap_alpha4,      row.wrap_l4),
-                        (row.wrap_alpha5,      row.wrap_l5),
-                        (row.wrap_alpha6,      row.wrap_l6),
+                        (row.get_f64("wrap_alpha1").unwrap(),      row.get_f64("l_wrap1").unwrap()),
+                        (row.get_f64("wrap_alpha2").unwrap(),      row.get_f64("l_wrap2").unwrap()),
+                        (row.get_f64("wrap_alpha3").unwrap(),      row.get_f64("l_wrap3").unwrap()),
+                        (row.get_f64("wrap_alpha4").unwrap(),      row.get_f64("l_wrap4").unwrap()),
+                        (row.get_f64("wrap_alpha5").unwrap(),      row.get_f64("l_wrap5").unwrap()),
+                        (row.get_f64("wrap_alpha6").unwrap(),      row.get_f64("l_wrap6").unwrap()),
                     ],
                 ));
             }

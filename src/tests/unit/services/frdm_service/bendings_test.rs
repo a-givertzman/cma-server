@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeDeprecationConf, RopeSections}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeDeprecationConf, RopeSections}, tests::unit::services::frdm_service::{CsvRecord, CsvTable}};
 
 ///
 ///
@@ -43,29 +43,25 @@ fn new() {
         let mut res = Vec::with_capacity(path.len());
         for (conf, csv_path) in path {
             log::debug!("{dbg} | reading csv: '{csv_path}'");
-            let rdr = OpenOptions::new().read(true).open(csv_path).unwrap();
-            let mut rdr = csv::Reader::from_reader(rdr);
-            log::debug!("{dbg} | Parse csv data...");
-            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let csv = CsvTable::load(&dbg, csv_path).unwrap();
             let mut test_data = vec![];
             for row in csv {
-                let row: CsvRecord = row.unwrap();
                 test_data.push((
-                    row.step,
+                    row.cell::<usize>("step").unwrap(),
                     [
                         // ("Winch.Pos",           0.00),  // rope position, m
-                        ("Winch.Pos",        row.pos / 1000.0),  // rope position, m
-                        ("MainBoom.Angle",   row.a21),
-                        ("RotaryBoom.Angle", row.a22)
+                        ("Winch.Pos",        row.cell::<f64>("pos").unwrap() / 1000.0),  // rope position, m
+                        ("MainBoom.Angle",   row.cell::<f64>("a21").unwrap()),
+                        ("RotaryBoom.Angle", row.cell::<f64>("a22").unwrap())
                     ],
                     [
                         // enter        ..      exit, mm
-                            0.00         ..      row.t01,    // exit from winch
-                        row.t02         ..      row.t03,
-                        row.t04         ..      row.t05,
-                        row.t06         ..      row.t07,
-                        row.t08         ..      row.t09,
-                        row.t10         ..      row.t11,
+                           0.00         ..      row.cell::<f64>("t01").unwrap(),    // exit from winch
+                        row.cell::<f64>("t02").unwrap()         ..      row.cell::<f64>("t03").unwrap(),
+                        row.cell::<f64>("t04").unwrap()         ..      row.cell::<f64>("t05").unwrap(),
+                        row.cell::<f64>("t06").unwrap()         ..      row.cell::<f64>("t07").unwrap(),
+                        row.cell::<f64>("t08").unwrap()         ..      row.cell::<f64>("t09").unwrap(),
+                        row.cell::<f64>("t10").unwrap()         ..      row.cell::<f64>("t11").unwrap(),
                         // row.t12         ..      f64::NAN,
                     ],
                 ));

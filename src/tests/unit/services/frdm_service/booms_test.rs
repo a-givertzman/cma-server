@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::{Booms, CraneConf, FrdmServiceConf, Inputs, Offset}, tests::unit::services::frdm_service::CsvRecord};
+use crate::{services::{Booms, CraneConf, FrdmServiceConf, Inputs, Offset}, tests::unit::services::frdm_service::{CsvRecord, CsvTable}};
 
 ///
 ///
@@ -43,23 +43,19 @@ fn new() {
         let mut res = Vec::with_capacity(path.len());
         for (conf, csv_path) in path {
             log::debug!("{dbg} | reading csv: '{csv_path}'");
-            let rdr = OpenOptions::new().read(true).open(csv_path).unwrap();
-            let mut rdr = csv::Reader::from_reader(rdr);
-            log::debug!("{dbg} | Parse csv data...");
-            let csv: csv::DeserializeRecordsIter<'_, _, CsvRecord> = rdr.deserialize();
+            let csv = CsvTable::load(&dbg, csv_path).unwrap();
             let mut test_data = vec![];
             for row in csv {
-                let row: CsvRecord = row.unwrap();
                 test_data.push((
-                    row.step,
+                    row.cell::<usize>("step").unwrap(),
                     [
-                        ("MainBoom.Angle",   row.a21),
-                        ("RotaryBoom.Angle", row.a22)
+                        ("MainBoom.Angle",   row.cell::<f64>("a21").unwrap()),
+                        ("RotaryBoom.Angle", row.cell::<f64>("a22").unwrap())
                     ],
                     [
                         // boom[i].G
                         (0.00,   0.00),
-                        (row.xg, row.yg),
+                        (row.cell::<f64>("xg").unwrap(), row.cell::<f64>("yg").unwrap()),
                     ],
                 ));
             }

@@ -11,3 +11,6 @@ mod rope_conf_test;
 mod rope_sections_test;
 
 pub(super) use csv_record::*;
+
+mod csv_table;
+pub(super) use csv_table::*;
