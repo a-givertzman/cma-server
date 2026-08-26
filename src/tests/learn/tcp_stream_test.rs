@@ -4,7 +4,7 @@ use sal_core::error::{Error, ErrorLimit};
 use sal_sync::sync::Handles;
 use std::{sync::Once, net::{TcpStream, TcpListener}, io::{Read, Write, BufReader}, thread, time::Duration};
 use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::domain::RECV_TIMEOUT;
 ///
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 #[ignore = "Learn - all must be ignored"]
 #[test]
 fn strean_bytes() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test TcpStream read on close";
@@ -64,7 +64,7 @@ fn strean_bytes() {
 // #[ignore = "Learn - all must be ignored"]
 #[test]
 fn stream_read() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test TcpStream read on close";

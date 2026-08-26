@@ -4,7 +4,7 @@ mod tcp_server {
     use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use std::{sync::{Arc, Once}, thread, time::Duration};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues}, session::test_session::TestSession};
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{
         services::{
             server::{TcpServerConf, TcpServer},
@@ -30,7 +30,7 @@ mod tcp_server {
     /// Testing sending points from the TcpServer
     #[test]
     fn send() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let dbg = "tcp_server_test_send";
@@ -129,7 +129,7 @@ mod tcp_server {
     /// Testing receiving points on the TcpServer
     #[test]
     fn receive() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "tcp_server_test_teceive";

@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod fn_conf_keywd {
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
         use sal_sync::services::{
         entity::Status, task::functions::{FnConfKeywd, FnConfKeywdValue, FnConfPointType, FnConfOptions},
     };
@@ -24,7 +24,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for valid input
     #[test]
     fn valid() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         println!("test_create_valid");
@@ -61,7 +61,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for invalid input
     #[test]
     fn invalid() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         log::info!("test_create_invalid");
@@ -102,7 +102,7 @@ mod fn_conf_keywd {
     /// Testing FnConfKeywd::from_str for valid input with options
     #[test]
     fn valid_options() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         log::debug!("valid_options");

@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 use std::{sync::Once, thread, time::Duration};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use sal_core::dbg::Dbg;
 
 ///
@@ -23,7 +23,7 @@ fn init_each() {}
 #[ignore = "Learn - all must be ignored"]
 #[test]
 fn exiting() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = Dbg::own("kanal_channel_test");

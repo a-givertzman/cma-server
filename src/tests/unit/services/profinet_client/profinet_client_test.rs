@@ -3,7 +3,7 @@
 use chrono::Utc;
 use std::{sync::{Arc, Once}, thread, time::Duration};
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration}};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, PointTxId, Status}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
 use crate::{conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf, services::profinet_client::profinet_client::ProfinetClient};
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 #[test]
 #[ignore = "Integration test"]
 fn basic() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "profinet_client_test";

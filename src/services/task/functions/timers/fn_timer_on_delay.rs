@@ -8,9 +8,9 @@ use crate::{
 };
 ///
 /// ### Function | `FnTimerOnDelay`
-/// 
+///
 /// Таймера задержки включения — TON (Timer On-Delay)
-/// 
+///
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
 /// - `reset`: Сбрасывает секундомер по переднему фронту сигнала (переход 0 -> 1).
 /// - `input`: `true` - активирует секундомер, `false` - сбрасывает секундрмер,
@@ -27,7 +27,7 @@ pub struct FnTimerOnDelay {
     trigg: LevelTrigger,
     state: Option<bool>,
 }
-// 
+//
 impl FnTimerOnDelay {
     ///
     /// Returns `FnTimerOnDelay` new instance
@@ -37,7 +37,7 @@ impl FnTimerOnDelay {
     /// - `delay`: `Duration`
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, reset: Option<FnOutRef>, delay: ConfDuration, input: FnOutRef) -> Self {
-        Self { 
+        Self {
             id: format!("{}/FnTimerOnDelay{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
             reset: reset.map(FnChange::new),
@@ -162,7 +162,7 @@ mod tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc};
     use std::thread::sleep;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use sal_sync::services::entity::{Cot, Point, PointHlr, Status};
     use crate::services::task::{FnFlow, FnKind, FnOut, FnResult};
     use sal_sync::services::conf::{ConfDuration, ConfDurationUnit};
@@ -194,7 +194,7 @@ mod tests {
     }
     #[test]
     fn test_zero_delay_emits_true_on_first_tick() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOnDelay-zero_delay";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -212,7 +212,7 @@ mod tests {
     }
     #[test]
     fn test_normal_delay_and_falling_edge() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "FnTimerOnDelay-normal_delay";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -240,7 +240,7 @@ mod tests {
     }
     #[test]
     fn test_reset_interrupts_timer() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOnDelay-reset_interrupt";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -267,7 +267,7 @@ mod tests {
     }
     #[test]
     fn test_initialization_emits_new() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOnDelay-init";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -284,7 +284,7 @@ mod tests {
     }
     #[test]
     fn test_dominant_reset_blocks_zero_delay() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOnDelay-dominant_reset_zero_delay";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -307,7 +307,7 @@ mod tests {
     }
     #[test]
     fn test_cold_mode_clears_state() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOnDelay-cold_mode";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -325,7 +325,7 @@ mod tests {
     }
     #[test]
     fn test_accident_simultaneous_reset_and_input() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOnDelay-accident";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));

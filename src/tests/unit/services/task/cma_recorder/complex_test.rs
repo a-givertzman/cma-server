@@ -4,8 +4,8 @@
 use sal_sync::services::{Services, conf::{ConfTree, ServicesConf}, entity::{Cot, Name, Point, PointHlr, Status}, types::Bool};
 use testing::entities::test_value::Value;
 use std::sync::{Arc, Once};
-use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::services::task::{FlowContext, FnFlow, FnResult, TaskConf, TaskNodes};
+use debugging::session::{DebugSession, LogLevel};
+use crate::services::task::{FlowContext, TaskConf, TaskNodes};
 ///
 ///
 static INIT: Once = Once::new();
@@ -17,7 +17,7 @@ fn init_once() {
     })
 }
 ///
-/// 
+///
 fn init_each() {}
 ///
 /// Тестируем функции регистратора:
@@ -57,17 +57,17 @@ fn init_each() {}
 ///     - Winch3LoadEvent
 
 
-/// 
-/// 
+///
+///
 /// ****************** Нормализация входов ******************
-/// 
+///
 /// Расчет относительной нагрузки
 /// - Расчет craneLoadRelative
 /// - Расчет winch1LoadRelative
 /// - Реакция на изменение номинальной нагрузки "на лету"
 #[test]
 fn calc_relative_load() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "calc_relative_load";
@@ -179,7 +179,7 @@ fn calc_relative_load() {
 /// Динамический расчет порога 5% от номинала для определения начала рабочего цикла.
 #[test]
 fn calc_op_cycle_threshold() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "calc_op_cycle_threshold";
@@ -266,14 +266,14 @@ fn calc_op_cycle_threshold() {
     }
 }
 ///
-/// 
+///
 /// ****************** Определение рабочего цикла ******************
-/// 
-/// 
+///
+///
 /// Фиксация активности крана с учетом гистерезиса нагрузки 5% (FnThreshold) и таймеров задержки (TimerOnDelay, TimerOffDelay 5000ms).
 #[test]
 fn detect_crane_is_active() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "detect_crane_is_active";
@@ -336,7 +336,7 @@ fn detect_crane_is_active() {
 /// Фиксация активности крана с учетом гистерезиса нагрузки 5% (FnThreshold) и таймеров задержки (TimerOnDelay, TimerOffDelay 5000ms).
 #[test]
 fn detect_winch1_is_active() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "detect_winch1_is_active";
@@ -399,7 +399,7 @@ fn detect_winch1_is_active() {
 /// Фиксация активности крана с учетом гистерезиса нагрузки 5% (FnThreshold) и таймеров задержки (TimerOnDelay, TimerOffDelay 5000ms).
 #[test]
 fn detect_winch2_is_active() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "detect_winch2_is_active";
@@ -462,7 +462,7 @@ fn detect_winch2_is_active() {
 /// Фиксация активности крана с учетом гистерезиса нагрузки 5% (FnThreshold) и таймеров задержки (TimerOnDelay, TimerOffDelay 5000ms).
 #[test]
 fn detect_winch3_is_active() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "detect_winch3_is_active";
@@ -525,7 +525,7 @@ fn detect_winch3_is_active() {
 /// Проверка совпадения активности гидростанции с активностью рабочего цикла.
 #[test]
 fn detect_op_cycle_active() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "detect_op_cycle_active";
@@ -591,7 +591,7 @@ fn detect_op_cycle_active() {
 /// Проверка совпадения активности гидростанции с активностью рабочего цикла.
 #[test]
 fn detect_pump_is_active() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "detect_pump_is_active";
@@ -657,7 +657,7 @@ fn detect_pump_is_active() {
 /// Выделение переднего (Started) и заднего (Done) фронтов рабочего цикла.
 #[test]
 fn detect_op_cycle_edges() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "detect_op_cycle_edges";
@@ -735,14 +735,14 @@ fn detect_op_cycle_edges() {
     }
 }
 ///
-/// 
+///
 /// ****************** Формирование ID цикла ******************
-/// 
-/// 
+///
+///
 /// Инкремент и сохранение (FnRetain + FnAcc) сквозного идентификатора по началу каждого нового рабочего цикла.
 #[test]
 fn gen_op_cycle_id() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "gen_op_cycle_id";
@@ -806,15 +806,15 @@ fn gen_op_cycle_id() {
     }
 }
 ///
-/// 
+///
 /// ****************** Расчет основных метрик ******************
-/// 
-/// 
+///
+///
 /// Сбор и фиксация (FnHold + FnAverage) средней нагрузки на кран за цикл.
 /// Проверка работы интегратора FnAverage и корректности сброса по фронту начала цикла.
 #[test]
 fn calc_crane_cycle_avg_load() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "calc_crane_cycle_avg_load";
@@ -826,40 +826,40 @@ fn calc_crane_cycle_avg_load() {
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();
     // Кортеж: (Шаг, Задержка_мс, Имя_сигнала, Значение, Ожидаемое_Среднее)
     let test_data: &[(i32, u64, &str, Value, Option<f32>)] = &[
-        // Устанавливаем номинал. Порог активности (5%) = 5.0. 
+        // Устанавливаем номинал. Порог активности (5%) = 5.0.
         (01, 0,    "/App/ied13/db905_visual_data_fast/Winch1.LoadR0", Value::Real(100.0), None),
         (01, 0,    "/App/ied13/db905_visual_data_fast/Winch2.LoadR0", Value::Real(100.0), None),
         (01, 0,    "/App/ied13/db905_visual_data_fast/Winch3.LoadR0", Value::Real(100.0), None),
-        
+
         // Явный пуш 4.0 (до цикла). Порог не пройден. Count=4, Sum=4.0 -> Avg=1.0
         (02, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(4.0),   Some(1.0)),
-        
+
         // Пуш 16.0 (> 5.0). TimerOnDelay(5000ms) стартует. Count=5, Sum=20.0 -> Avg=4.0
         (03, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(16.0),  Some(4.0)),
-        
+
         // Прошло 2.5 сек. Таймер еще идет. Count=6, Sum=36.0 -> Avg=6.0
         (04, 2500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(16.0),  Some(6.0)),
-        
+
         // Прошло еще 3.0 сек (всего 5.5). TimerOnDelay пробивается -> СТАРТ ЦИКЛА.
-        // FnAverage получает reset (opCycleIsStarted = true), сбрасывает сумму и счетчик в 0, 
+        // FnAverage получает reset (opCycleIsStarted = true), сбрасывает сумму и счетчик в 0,
         // а затем сразу добавляет текущее значение (16.0). Count=1, Sum=16.0 -> Avg=16.0
         (05, 3000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(16.0),  Some(16.0)),
-        
+
         // В цикле. Нагрузка 20.0. Count=2, Sum=36.0 -> Avg=18.0
         (06, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(20.0),  Some(18.0)),
-        
+
         // В цикле. Нагрузка 24.0. Count=3, Sum=60.0 -> Avg=20.0
         (07, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(24.0),  Some(20.0)),
-        
+
         // Сброс нагрузки до 0.0. TimerOffDelay(5000ms) стартует. Цикл еще активен. Count=4, Sum=60.0 -> Avg=15.0
         (08, 0,    "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Some(15.0)),
-        
+
         // Прошло 2.5 сек. TimerOffDelay еще идет. Count=5, Sum=60.0 -> Avg=12.0
         (09, 2500, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Some(12.0)),
-        
+
         // Прошло еще 3.0 сек. TimerOffDelay пробивается -> КОНЕЦ ЦИКЛА. Count=6, Sum=60.0 -> Avg=10.0
         (10, 3000, "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(0.0),   Some(10.0)),
-        
+
         // Вне цикла. Нагрузка 10.0 (Таймер ON стартует снова). Сброса нет, т.к. цикл не начался. Count=7, Sum=70.0 -> Avg=10.0
         (11, 100,  "/App/ied14/db906_visual_data/Winch1.Load",        Value::Real(10.0),  Some(10.0)),
     ];
@@ -898,7 +898,7 @@ fn calc_crane_cycle_avg_load() {
 /// Сбор и фиксация средней нагрузки на каждую лебедку за цикл.
 #[test]
 fn calc_winch_cycle_avg_load() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "calc_winch_cycle_avg_load";
@@ -997,7 +997,7 @@ fn calc_winch_cycle_avg_load() {
 /// Сбор и фиксация (FnHold + FnMax) пиковой нагрузки на кран за цикл.
 #[test]
 fn calc_crane_cycle_max_load() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "calc_crane_cycle_max_load";
@@ -1047,7 +1047,7 @@ fn calc_crane_cycle_max_load() {
             Value::String(v) => Point::String(PointHlr::new(0, name, v, Status::Ok, Cot::Inf, ts)),
             _ => panic!("{dbg} | Step {step} | '{name}': Invalid type"),
         };
-        
+
         log::debug!("{dbg} | Step {step} | point '{}': {:?}", point.name(), point.value());
         task_nodes.eval(point);
 
@@ -1069,7 +1069,7 @@ fn calc_crane_cycle_max_load() {
 /// Подсчет длительности (FnTimer) активного состояния цикла в секундах.
 #[test]
 fn calc_crane_op_cycle_secs() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "calc_crane_op_cycle_secs";
@@ -1141,10 +1141,10 @@ fn calc_crane_op_cycle_secs() {
                 log::debug!("{dbg} | Step {step} | craneOperatingCycleSecs: {:?}", res.value());
                 // Приводим к double, так как время в FnTimer считается в f64
                 let actual = res.as_double().value;
-                // Допуск 0.1 секунды (100 мс). Вызов thread::sleep зависит от планировщика ОС 
+                // Допуск 0.1 секунды (100 мс). Вызов thread::sleep зависит от планировщика ОС
                 // и не дает идеальной точности, поэтому f32::EPSILON тут приведет к flaky-тестам.
                 let epsilon = 0.1;
-                assert!((actual - target).abs() < epsilon, 
+                assert!((actual - target).abs() < epsilon,
                     "{dbg} | Step {step} | craneOperatingCycleSecs \n result: {actual} \n target: {target} \n diff: {}", (actual - target).abs());
             }
             (Ok(None), None) | (Err(_), None) | (Ok(Some(_)), None) => {
@@ -1162,7 +1162,7 @@ fn calc_alarm_class() {}
 /// Расчет характеристического числа крана (усталость по кубу максимальной относительной нагрузки). Обновление стейта по завершению цикла.
 #[test]
 fn calc_crane_eigen_value() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "calc_crane_eigen_value";
@@ -1184,7 +1184,7 @@ fn calc_crane_eigen_value() {
         (5, 5500, "/App/ied14/db906_visual_data/Winch1.Load", Value::Real(50.0), None),
         // Сброс груза до 0.0. Запуск TimerOffDelay. Цикл еще идет
         (6, 0, "/App/ied14/db906_visual_data/Winch1.Load", Value::Real(0.0), None),
-        // Пробиваем таймер остановки (5500мс). КОНЕЦ ЦИКЛА (opCycleIsDone = true). 
+        // Пробиваем таймер остановки (5500мс). КОНЕЦ ЦИКЛА (opCycleIsDone = true).
         // Расчет: 0.0 + (50.0 / 100.0)^3 = 0.125
         (7, 5500, "/App/ied14/db906_visual_data/Winch1.Load", Value::Real(0.0), Some(0.125)),
         // Пуш 100.0 (Относительная 1.0). Запуск таймера старта второго цикла
@@ -1232,13 +1232,13 @@ fn calc_crane_eigen_value() {
 #[test]
 fn calc_winch_eigen_value() {}
 ///
-/// 
+///
 /// ****************** Расчет диапазонов загрузки ******************
-/// 
+///
 /// Формирование 13 логических флагов попадания средней нагрузки (0.05..1.25+) по итогам цикла (FnAnd + FnGe + FnLt).
 #[test]
 fn eval_load_ranges_matrix() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "eval_load_ranges_matrix";
@@ -1325,7 +1325,7 @@ fn eval_load_ranges_matrix() {
 /// Каскадный выбор (FnSelect) строкового ключа диапазона ('0_05-0_15' и т.д.) на основе матрицы логических флагов.
 #[test]
 fn eval_cycle_load_range_str() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "eval_cycle_load_range_str";
@@ -1414,20 +1414,20 @@ fn eval_cycle_load_range_str() {
             }
             // Пропускаем шаги, где мы не ждем формирования строкового ключа диапазона
             (Ok(None), None) | (Err(_), None) | (Ok(Some(_)), None) => {}
-            
+
             _ => panic!("{dbg} | Step {step} | \n result: {:?} \n target: {:?}", result, target_range),
         }
     }
 }
 ///
-/// 
+///
 /// ****************** Накопители (Basic Metrics) ******************
-/// 
+///
 ///
 /// Накопление общего времени работы в секундах (FnSql UPDATE) для крана, лебедок и насосной станции.
 #[test]
 fn metric_total_op_secs() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "metric_total_op_secs";
@@ -1515,9 +1515,9 @@ fn metric_swl_trip_count() {}
 #[test]
 fn metric_eigen_value_sync() {}
 ///
-/// 
+///
 /// ****************** Журнал рабочих циклов ******************
-/// 
+///
 ///
 /// Запись в БД rec_operating_cycle с таймстемпами начала/конца и Alarm Class.
 #[test]
@@ -1527,9 +1527,9 @@ fn export_op_cycle_record() {}
 #[test]
 fn export_op_metric_record() {}
 ///
-/// 
+///
 /// ****************** Телеметрия и события (Live) ******************
-/// 
+///
 ///
 /// Экспорт в БД событий CraneMode.MOPS по факту их изменения (IsChangedValue).
 #[test]

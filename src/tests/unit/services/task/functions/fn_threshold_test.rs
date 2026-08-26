@@ -2,7 +2,7 @@
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use testing::entities::test_value::Value;
 use std::{cell::RefCell, rc::Rc, sync::Once};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{
@@ -51,7 +51,7 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
 /// Threshold Int's
 #[test]
 fn fn_threshold_int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "fn_threshold_int";
     log::info!("{}", self_id);
@@ -97,7 +97,7 @@ fn fn_threshold_int() {
 /// Threshold Reals's
 #[test]
 fn fn_threshold_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "fn_threshold_real";
     log::info!("{}", self_id);
@@ -143,7 +143,7 @@ fn fn_threshold_real() {
 /// Threshold Double's
 #[test]
 fn fn_threshold_double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "fn_threshold_double";
     log::info!("{}", self_id);

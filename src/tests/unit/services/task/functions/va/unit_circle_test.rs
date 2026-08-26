@@ -4,7 +4,7 @@ mod unit_circle {
     use std::{f64::consts::PI, sync::Once, time::Duration};
     use rustfft::num_complex::Complex;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
 
     use crate::{core_::aprox_eq::aprox_eq::AproxEq, services::task::nested_function::va::unit_circle::UnitCircle};
     ///
@@ -25,7 +25,7 @@ mod unit_circle {
     /// Testing (angle, complex) for:  0,  45,  90, 135, 180, 225, 270, 315, 360 grad
     #[test]
     fn anderstanding() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");
@@ -76,7 +76,7 @@ mod unit_circle {
     /// Testing UnutCycle::at_angle for   0,  45,  90, 135, 180, 225, 270, 315, 360 grad
     #[test]
     fn at_angle_8() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");
@@ -117,7 +117,7 @@ mod unit_circle {
     /// Testing UnutCycle::at_angle for   0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360 grad
     #[test]
     fn at_angle_12() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");
@@ -162,7 +162,7 @@ mod unit_circle {
     /// Testing UnutCycle::at_angle deppending on specified sampling frequency
     #[test]
     fn at_angle() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");
@@ -210,7 +210,7 @@ mod unit_circle {
     /// Testing UnutCycle::angle for   0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360 grad
     #[test]
     fn angle_12() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");

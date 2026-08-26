@@ -4,7 +4,7 @@ use std::{fs::OpenOptions, rc::Rc, sync::{Arc, Once, atomic::AtomicBool}, time::
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{services::{Bendings, BlockArcs, Blocks, Booms, CraneConf, Deprecation, FrdmServiceConf, Inputs, RopeDeprecationConf, RopeSections}, tests::{tools::{SeriesKind, plot}, unit::services::frdm_service::CsvRecord}};
 
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 /// Testing [Deprecation]
 #[test]
 fn eval() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     _ = std::process::Command::new("clear").status();
@@ -76,41 +76,41 @@ fn eval() {
     //     (02,  "RotaryBoom.Angle",        155.300,     vec![ 0.00,     0.00,     0.00],     0),
     //     (03,  "Winch.Pos",                 0.000,     vec![ 0.00,     0.00,     0.00],     0),
         (04,  "Winch.Load",                1.000,     vec![ 3.33,     0.00,     3.33],     2),
-        (05,  "Winch.Pos",                 0.02,     vec![ 0.00,     0.00,     0.00],     0),
-        (06,  "Winch.Pos",                 0.03,     vec![ 0.00,     0.00,     0.00],     0),
-        (06,  "Winch.Pos",                 0.06,     vec![ 0.00,     0.00,     0.00],     0),
-        (06,  "Winch.Pos",                 0.08,     vec![ 0.00,     0.00,     0.00],     0),
-        (07,  "Winch.Pos",                 0.10,     vec![ 0.00,     0.00,     0.00],     0),
-        (08,  "Winch.Pos",                 0.12,     vec![ 0.00,     0.00,     0.00],     0),
-        (08,  "Winch.Pos",                 0.14,     vec![ 0.00,     0.00,     0.00],     0),
-        (08,  "Winch.Pos",                 0.16,     vec![ 0.00,     0.00,     0.00],     0),
-        (08,  "Winch.Pos",                 0.18,     vec![ 0.00,     0.00,     0.00],     0),
-        (09,  "Winch.Pos",                 0.20,     vec![ 0.00,     0.00,     0.00],     0),
-        (10,  "Winch.Pos",                 0.22,     vec![ 0.00,     0.00,     0.00],     0),
-        (10,  "Winch.Pos",                 0.24,     vec![ 0.00,     0.00,     0.00],     0),
-        (10,  "Winch.Pos",                 0.26,     vec![ 0.00,     0.00,     0.00],     0),
-        (10,  "Winch.Pos",                 0.28,     vec![ 0.00,     0.00,     0.00],     0),
-        (11,  "Winch.Pos",                 0.30,     vec![ 0.00,     0.00,     0.00],     0),
-        (12,  "Winch.Pos",                 0.32,     vec![ 0.00,     0.00,     0.00],     0),
-        (12,  "Winch.Pos",                 0.34,     vec![ 0.00,     0.00,     0.00],     0),
-        (12,  "Winch.Pos",                 0.36,     vec![ 0.00,     0.00,     0.00],     0),
-        (12,  "Winch.Pos",                 0.38,     vec![ 0.00,     0.00,     0.00],     0),
-        (13,  "Winch.Pos",                 0.40,     vec![ 0.00,     0.00,     0.00],     0),
-        (14,  "Winch.Pos",                 0.42,     vec![ 0.00,     0.00,     0.00],     0),
-        (14,  "Winch.Pos",                 0.44,     vec![ 0.00,     0.00,     0.00],     0),
-        (14,  "Winch.Pos",                 0.46,     vec![ 0.00,     0.00,     0.00],     0),
-        (14,  "Winch.Pos",                 0.48,     vec![ 0.00,     0.00,     0.00],     0),
-        (15,  "Winch.Pos",                 0.50,     vec![ 0.00,     0.00,     0.00],     0),
-        (16,  "Winch.Pos",                 0.52,     vec![ 0.00,     0.00,     0.00],     0),
-        (16,  "Winch.Pos",                 0.54,     vec![ 0.00,     0.00,     0.00],     0),
-        (16,  "Winch.Pos",                 0.56,     vec![ 0.00,     0.00,     0.00],     0),
-        (16,  "Winch.Pos",                 0.58,     vec![ 0.00,     0.00,     0.00],     0),
-        (17,  "Winch.Pos",                 0.60,     vec![ 0.00,     0.00,     0.00],     0),
-        (18,  "Winch.Pos",                 0.62,     vec![ 0.00,     0.00,     0.00],     0),
-        (18,  "Winch.Pos",                 0.64,     vec![ 0.00,     0.00,     0.00],     0),
-        (18,  "Winch.Pos",                 0.66,     vec![ 0.00,     0.00,     0.00],     0),
-        (18,  "Winch.Pos",                 0.68,     vec![ 0.00,     0.00,     0.00],     0),
-        (19,  "Winch.Pos",                 0.70,     vec![ 0.00,     0.00,     0.00],     0),
+        (05,  "Winch.Pos",                 0.020,     vec![ 0.00,     0.00,     0.00],     0),
+        (06,  "Winch.Pos",                 0.030,     vec![ 0.00,     0.00,     0.00],     0),
+        (06,  "Winch.Pos",                 0.060,     vec![ 0.00,     0.00,     0.00],     0),
+        (06,  "Winch.Pos",                 0.080,     vec![ 0.00,     0.00,     0.00],     0),
+        (07,  "Winch.Pos",                 0.100,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.120,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.140,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.160,     vec![ 0.00,     0.00,     0.00],     0),
+        (08,  "Winch.Pos",                 0.180,     vec![ 0.00,     0.00,     0.00],     0),
+        (09,  "Winch.Pos",                 0.200,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.220,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.240,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.260,     vec![ 0.00,     0.00,     0.00],     0),
+        (10,  "Winch.Pos",                 0.280,     vec![ 0.00,     0.00,     0.00],     0),
+        (11,  "Winch.Pos",                 0.300,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.320,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.340,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.360,     vec![ 0.00,     0.00,     0.00],     0),
+        (12,  "Winch.Pos",                 0.380,     vec![ 0.00,     0.00,     0.00],     0),
+        (13,  "Winch.Pos",                 0.400,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.420,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.440,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.460,     vec![ 0.00,     0.00,     0.00],     0),
+        (14,  "Winch.Pos",                 0.480,     vec![ 0.00,     0.00,     0.00],     0),
+        (15,  "Winch.Pos",                 0.500,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.520,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.540,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.560,     vec![ 0.00,     0.00,     0.00],     0),
+        (16,  "Winch.Pos",                 0.580,     vec![ 0.00,     0.00,     0.00],     0),
+        (17,  "Winch.Pos",                 0.600,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.620,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.640,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.660,     vec![ 0.00,     0.00,     0.00],     0),
+        (18,  "Winch.Pos",                 0.680,     vec![ 0.00,     0.00,     0.00],     0),
+        (19,  "Winch.Pos",                 0.700,     vec![ 0.00,     0.00,     0.00],     0),
     ];
     let mut target: Vec<f64> = vec![];
     let mut target_count = 0;
@@ -194,9 +194,7 @@ fn eval() {
         Arc::new(AtomicBool::new(false)),
     ));
     let parking = true;
-    let mut deprecation = Deprecation::new(
-        &dbg,
-        &conf,
+    let mut deprecation = Deprecation::new(&dbg, &conf,
         inputs.clone(),
         Bendings::new(
             &dbg,

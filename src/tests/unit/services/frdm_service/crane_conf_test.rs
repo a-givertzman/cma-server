@@ -3,7 +3,7 @@ use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::{ConfAngle, ConfAngleUnit, ConfDistance, ConfDistanceUnit, ConfTree};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::services::{BlockBind, BlockConf, BlockScheme, BoomConf, InputKind, CraneConf, Offset, RopeConf};
 
 ///
@@ -24,7 +24,7 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn new() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");

@@ -2,7 +2,7 @@
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use testing::entities::test_value::Value;
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{FnOut, FnInput, FnIsChangedValue},
@@ -30,7 +30,7 @@ fn init_each(default: &str, name: impl Into<String>, type_: FnConfPointType) -> 
 /// Testing accumulation of the Bool's
 #[test]
 fn is_changed_bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "is_changed_bool";
     log::info!("{}", dbg);

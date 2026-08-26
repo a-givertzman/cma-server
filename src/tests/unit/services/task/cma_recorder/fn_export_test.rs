@@ -8,7 +8,7 @@ mod fn_export {
     }, thread_pool::{Scheduler, ThreadPool}};
     use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{
         services::task::{Task, TaskConf, TaskTestReceiver},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer,
@@ -42,7 +42,7 @@ mod fn_export {
     /// Testing Task function 'Export' with 'enable' input used
     #[test]
     fn export_point_with_enable() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         let dbg = "App";
         let self_name = Name::new("", dbg);
@@ -184,7 +184,7 @@ mod fn_export {
     /// Testing Task function 'Export' with default 'enable' = true
     #[test]
     fn export_point_without_enable() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         let dbg = "App";
         let self_name = Name::new("", dbg);
@@ -312,7 +312,7 @@ mod fn_export {
     /// Testing Task function 'Export' with default 'enable' = true
     #[test]
     fn export_unconfigured_point() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         let dbg = "App";
         let self_name = Name::new("", dbg);

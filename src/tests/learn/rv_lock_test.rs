@@ -3,9 +3,9 @@
 #[cfg(test)]
 mod tests {
     use sal_sync::{collections::FxHashMap, sync::channel};
-    use std::{collections::HashMap, hash::BuildHasherDefault, sync::{Arc, Once}, thread, time::{Duration, Instant}};
+    use std::{sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::domain::{Mutex, RwLock};
 
     ///
@@ -29,7 +29,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn map_in_rv_lock() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         let self_id = "test access to map behaind RvLock";
         println!("\n{}", self_id);
@@ -108,7 +108,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn just_map() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         let self_id = "test direct access to map";
         println!("\n{}", self_id);
@@ -185,7 +185,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn map_in_mutex() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         let self_id = "test access to map behaind Mutex";
         println!("\n{}", self_id);
@@ -264,7 +264,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn matching() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         let self_id = "test access values using match";
         println!("\n{}", self_id);

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::{sync::Once, time::Duration, thread::{self}};
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use sal_sync::sync::channel::{self, RecvTimeoutError};
     use crate::domain::RECV_TIMEOUT;
 
@@ -29,7 +29,7 @@ mod tests {
     #[ignore = "Learn - all must be ignored"]
     #[test]
     fn test_mpsc_receiver() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         println!("test mpsc::Receiver");

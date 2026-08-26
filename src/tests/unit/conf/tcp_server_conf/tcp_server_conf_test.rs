@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 use std::sync::Once;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::services::server::TcpServerConf;
 ///
 ///
@@ -21,7 +21,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn test_tcp_server_config() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test TcpServerConfig";

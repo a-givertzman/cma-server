@@ -238,46 +238,48 @@ impl Service for RopeDeprecation where {
         self.exit.store(true, Ordering::Release);
     }
 }
+
 ///
 /// Basic Tests
-#[test]
-fn test_build_sql() {
-    use debugging::session::debug_session::{DebugSession, LogLevel};
-    DebugSession::new().filter(LogLevel::Debug).init();
-    let dbg = "test_str_write";
-    let mut aggregated = Vec::with_capacity(10);
-    let mut sql = String::with_capacity(4096);
-    let test_data = [
-        (01, vec![], ""),
-        (02, vec![(1212, 1212.1313)],
-        "INSERT INTO my_table (id, deprecation) VALUES (1212, 1212.1313) ON CONFLICT (id) DO UPDATE SET deprecation = my_table.deprecation + EXCLUDED.deprecation;"),
-        (03, vec![(111, 111.111), (222, 222.222)],
-        "INSERT INTO my_table (id, deprecation) VALUES (111, 111.111), (222, 222.222) ON CONFLICT (id) DO UPDATE SET deprecation = my_table.deprecation + EXCLUDED.deprecation;"),
-        (04, vec![(1212, 1212.1313), (2121, 2121.2121), (3131, 3131.3131)],
-        "INSERT INTO my_table (id, deprecation) VALUES (1212, 1212.1313), (2121, 2121.2121), (3131, 3131.3131) ON CONFLICT (id) DO UPDATE SET deprecation = my_table.deprecation + EXCLUDED.deprecation;"),
-    ];
-    for (step, values, target) in test_data {
-        aggregated.clear();
-        for (id, dep) in values {
-            aggregated.push((id, dep));
-        }
-        if RopeDeprecation::build_sql(&mut aggregated, "my_table", &mut sql).is_ok() {
-            log::debug!("{dbg} | Sql: {:?}", sql);
-            assert!(sql == target, "{dbg} | Step {step} \n result: {:?} \n target: {:?}", sql, target);
-        } else {
-            assert!(sql.is_empty(), "{dbg} | Step {step} SQL must be empty");
-        }
-    }
-}
-///
-/// Tests for `aggregate_sparse`
+#[cfg(test)]
 mod test_aggregate_sparse {
     use super::*;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
 
     #[test]
+    fn test_build_sql() {
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
+        let dbg = "test_str_write";
+        let mut aggregated = Vec::with_capacity(10);
+        let mut sql = String::with_capacity(4096);
+        let test_data = [
+            (01, vec![], ""),
+            (02, vec![(1212, 1212.1313)],
+            "INSERT INTO my_table (id, deprecation) VALUES (1212, 1212.1313) ON CONFLICT (id) DO UPDATE SET deprecation = my_table.deprecation + EXCLUDED.deprecation;"),
+            (03, vec![(111, 111.111), (222, 222.222)],
+            "INSERT INTO my_table (id, deprecation) VALUES (111, 111.111), (222, 222.222) ON CONFLICT (id) DO UPDATE SET deprecation = my_table.deprecation + EXCLUDED.deprecation;"),
+            (04, vec![(1212, 1212.1313), (2121, 2121.2121), (3131, 3131.3131)],
+            "INSERT INTO my_table (id, deprecation) VALUES (1212, 1212.1313), (2121, 2121.2121), (3131, 3131.3131) ON CONFLICT (id) DO UPDATE SET deprecation = my_table.deprecation + EXCLUDED.deprecation;"),
+        ];
+        for (step, values, target) in test_data {
+            aggregated.clear();
+            for (id, dep) in values {
+                aggregated.push((id, dep));
+            }
+            if RopeDeprecation::build_sql(&mut aggregated, "my_table", &mut sql).is_ok() {
+                log::debug!("{dbg} | Sql: {:?}", sql);
+                assert!(sql == target, "{dbg} | Step {step} \n result: {:?} \n target: {:?}", sql, target);
+            } else {
+                assert!(sql.is_empty(), "{dbg} | Step {step} SQL must be empty");
+            }
+        }
+    }
+
+    ///
+    /// Tests for `aggregate_sparse`
+    #[test]
     fn test_aggregate_sparse_empty() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_empty";
         let mut src: Vec<(usize, f64)> = vec![];
         let mut result: Vec<(usize, f64)> = vec![(999, 1.0)]; // непустой result — должен очиститься
@@ -287,7 +289,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_single() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_single";
         let mut src = vec![(42, 3.5)];
         let mut result = Vec::new();
@@ -297,7 +299,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_all_unique() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_all_unique";
         let mut src = vec![(1, 10.0), (2, 20.0), (3, 30.0)];
         let mut result = Vec::new();
@@ -307,7 +309,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_all_same_index() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_all_same_index";
         let mut src = vec![(5, 1.0), (5, 2.0), (5, 3.0)];
         let mut result = Vec::new();
@@ -317,7 +319,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_unsorted_duplicates() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_unsorted_duplicates";
         // Дубликаты разбросаны, индексы не отсортированы
         let mut src = vec![(3, 30.0), (1, 10.0), (3, 5.0), (1, 2.0), (2, 20.0)];
@@ -328,7 +330,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_reverse_order() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_reverse_order";
         let mut src = vec![(10, 1.0), (8, 2.0), (8, 3.0), (5, 4.0), (5, 5.0), (5, 6.0)];
         let mut result = Vec::new();
@@ -338,7 +340,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_negative_values() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_negative_values";
         let mut src = vec![(1, -10.0), (1, 5.0), (2, -3.0), (2, -7.0)];
         let mut result = Vec::new();
@@ -348,7 +350,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_zero_values() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_zero_values";
         let mut src = vec![(0, 0.0), (0, 0.0), (1, 0.0)];
         let mut result = Vec::new();
@@ -358,7 +360,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_result_cleared() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_result_cleared";
         // result содержит мусор — метод должен его очистить перед записью
         let mut src = vec![(1, 1.0)];
@@ -369,7 +371,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_large_input() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_large_input";
         // 1000 элементов, каждый 3-й индекс дублируется 3 раза
         let mut src = Vec::with_capacity(3000);
@@ -391,7 +393,7 @@ mod test_aggregate_sparse {
 
     #[test]
     fn test_aggregate_sparse_groups_of_duplicates() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "test_aggregate_sparse_groups_of_duplicates";
         // Несколько групп дубликатов, перемешанных
         let mut src = vec![

@@ -8,9 +8,9 @@ use crate::{
 };
 ///
 /// ### Function | `FnTimerOffDelay`
-/// 
+///
 /// Таймер задержки выключения TOF (Timer-Off-Delay)
-/// 
+///
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
 /// - `reset`: Доминантный сбрас. При `true` обнуляет выход в `false` и сбрасывает секундомер.
 /// - `input`: `true` - сразу проходит на выход, `false` - пройдет на выход по окончании заданного `duration`.
@@ -28,7 +28,7 @@ pub struct FnTimerOffDelay {
     state: Option<bool>,
     ts: chrono::DateTime<chrono::Utc>,
 }
-// 
+//
 impl FnTimerOffDelay {
     ///
     /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
@@ -37,7 +37,7 @@ impl FnTimerOffDelay {
     /// - `delay`: `Duration`
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, reset: Option<FnOutRef>, delay: ConfDuration, input: FnOutRef) -> Self {
-        Self { 
+        Self {
             id: format!("{}/FnTimerOffDelay{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed)),
             kind: FnKind::Fn,
             reset: reset.map(FnChange::new),
@@ -167,7 +167,7 @@ mod tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc};
     use std::thread::sleep;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use sal_sync::services::entity::{Cot, Point, PointHlr, Status};
     use crate::services::task::{FnFlow, FnKind, FnOut, FnResult};
     use sal_sync::services::conf::{ConfDuration, ConfDurationUnit};
@@ -199,7 +199,7 @@ mod tests {
     }
     #[test]
     fn test_zero_delay_follows_input() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOffDelay-zero_delay";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -222,7 +222,7 @@ mod tests {
     }
     #[test]
     fn test_normal_delay_holds_true_on_falling_edge() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let dbg = "FnTimerOffDelay-normal_delay";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -246,7 +246,7 @@ mod tests {
     }
     #[test]
     fn test_reset_interrupts_off_delay() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOffDelay-reset_interrupt";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -272,7 +272,7 @@ mod tests {
     }
     #[test]
     fn test_initialization_emits_old_on_false() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOffDelay-init";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -289,7 +289,7 @@ mod tests {
     }
     #[test]
     fn test_dominant_reset_blocks_zero_delay() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOffDelay-dominant_reset_zero_delay";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -310,7 +310,7 @@ mod tests {
     }
     #[test]
     fn test_cold_mode_clears_active_timer() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOffDelay-cold_mode";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));
@@ -331,7 +331,7 @@ mod tests {
     }
     #[test]
     fn test_accident_simultaneous_reset_and_input() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         let dbg = "FnTimerOffDelay-accident";
         log::info!("{dbg}");
         let input = Rc::new(RefCell::new(MockOrigin::new()));

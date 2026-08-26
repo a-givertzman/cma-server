@@ -6,7 +6,7 @@ mod tcp_client {
     }, sync::channel, thread_pool::ThreadPool};
     use std::{io::Write, net::TcpListener, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{
         conf::tcp_client_conf::TcpClientConf,
         domain::{net::protocols::jds::{jds_encode_message::JdsEncodeMessage, jds_serialize::JdsSerialize}, RwLock},
@@ -31,7 +31,7 @@ mod tcp_client {
     ///
     #[test]
     fn read() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let dbg = "TcpClient-READ";
@@ -86,7 +86,7 @@ mod tcp_client {
         let test_data: Vec<Value> = test_data.collect();
         let total_count = test_data.len();
         let services = Arc::new(Services::new(dbg, ServicesConf::new(
-            dbg, 
+            dbg,
             ConfTree::new_root(serde_yaml::from_str(r#"
                 retain:
             "#).unwrap()),
@@ -130,7 +130,7 @@ mod tcp_client {
             log::debug!("\nresult({}): {:?}\ntarget({}): {:?}", received.len(), result, sent.len(), target);
             assert!(result.name() == target.name(), "\nresult: {:?}\ntarget: {:?}", result, target);
             assert!(result.status() == target.status(), "\nresult: {:?}\ntarget: {:?}", result, target);
-            assert!(result.timestamp() == target.timestamp(), "\nresult: {:?}\ntarget: {:?}", result, target);
+            assert!(result.ts() == target.ts(), "\nresult: {:?}\ntarget: {:?}", result, target);
             assert!(result.cmp_value(&target), "\nresult: {:?}\ntarget: {:?}", result, target);
         }
         test_duration.exit();

@@ -3,7 +3,7 @@
 mod history {
     use std::{sync::Once, env, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::services::app::app::App;
     ///
     ///
@@ -24,7 +24,7 @@ mod history {
     #[test]
     #[ignore = "To be implemented later"]
     fn basic() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "history_test";

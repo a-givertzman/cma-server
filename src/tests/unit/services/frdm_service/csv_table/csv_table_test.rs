@@ -1,7 +1,7 @@
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 
 ///
 ///
@@ -21,7 +21,7 @@ fn init_each() -> () {}
 /// Testing [CsvTable::load]
 #[test]
 fn test_load() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");

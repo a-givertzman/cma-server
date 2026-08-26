@@ -3,7 +3,7 @@ mod tests {
     use chrono::{DateTime, Utc};
     use sal_sync::{services::{entity::{Cot, Point, PointHlr, Status}, types::Bool}, sync::channel};
     use std::sync::Once;
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{domain::net::protocols::jds::jds_serialize::JdsSerialize, tcp::steam_read::StreamRead};
     ///
     ///
@@ -33,7 +33,7 @@ mod tests {
     ///
     #[test]
     fn test_jds_serialize() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         println!("test JdsSerialize");

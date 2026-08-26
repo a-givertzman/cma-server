@@ -1,9 +1,9 @@
 #[cfg(test)]
 
 use regex::RegexBuilder;
-use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point, ToPoint}, Services}, thread_pool::ThreadPool};
+use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Name, ToPoint}, Services}, thread_pool::ThreadPool};
 use std::sync::{Once, Arc};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::services::task::{FlowContext, TaskConf, TaskNodes};
 ///
 ///
@@ -24,7 +24,7 @@ fn init_once() {
 ///
 #[test]
 fn int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "test_int";
     let self_name = Name::new("", dbg);
@@ -35,7 +35,7 @@ fn int() {
             in queue api-link:
                 max-length: 10000
             fn SqlMetric:
-                sql: "UPDATE table_name SET kind = '{input1}' WHERE id = '{input2}';"    
+                sql: "UPDATE table_name SET kind = '{input1}' WHERE id = '{input2}';"
                 input1 let VarName2:
                     input fn Add:
                         input1 fn Add:
@@ -49,7 +49,7 @@ fn int() {
     let mut nodes = TaskNodes::without_retain(dbg, 0);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
@@ -92,7 +92,7 @@ fn int() {
                         }
                         Ok(None) => log::warn!("{dbg} | step {step}: evalNode '{}' out - '{}': None", eval_node_name, eval_node_out.borrow().id()),
                         Err(err) => log::warn!("{dbg} | step {step}: evalNode '{}' out - '{}' is Error: {:#?}", eval_node_name, eval_node_out.borrow().id(), err),
-                    } 
+                    }
                 }
             }
             None => {
@@ -105,7 +105,7 @@ fn int() {
 ///
 #[test]
 fn real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "test_real";
     let self_name = Name::new("", dbg);
@@ -116,7 +116,7 @@ fn real() {
             in queue api-link:
                 max-length: 10000
             fn SqlMetric:
-                sql: "UPDATE table_name SET kind = '{input1:.2}' WHERE id = '{input2:.2}';"    
+                sql: "UPDATE table_name SET kind = '{input1:.2}' WHERE id = '{input2:.2}';"
                 input1 let VarName2:
                     input fn Add:
                         input1 fn Add:
@@ -130,7 +130,7 @@ fn real() {
     let mut nodes = TaskNodes::without_retain(dbg, 0);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
@@ -196,7 +196,7 @@ fn real() {
 ///
 #[test]
 fn double() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     let dbg = "test_real";
     let self_name = Name::new("", dbg);
@@ -207,7 +207,7 @@ fn double() {
             in queue api-link:
                 max-length: 10000
             fn SqlMetric:
-                sql: "UPDATE table_name SET kind = '{input1:.2}' WHERE id = '{input2:.2}';"    
+                sql: "UPDATE table_name SET kind = '{input1:.2}' WHERE id = '{input2:.2}';"
                 input1 let VarName2:
                     input fn Add:
                         input1 fn Add:
@@ -220,7 +220,7 @@ fn double() {
     log::trace!("conf: {:?}", conf);
     let mut nodes = TaskNodes::without_retain(dbg, 0);
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),

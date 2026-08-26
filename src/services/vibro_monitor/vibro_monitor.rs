@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{collections::FxDashMap, kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, conf::ConfTree, entity::{Name, Object, PointTxId}}, thread_pool::Scheduler};
+use sal_sync::{collections::FxDashMap, kernel::state::ExitNotify, services::{EventValueAccess, Service, Services, entity::{Name, Object}}, thread_pool::Scheduler};
 use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, err, err_pass, infra::ApiClient};
 use super::{VibroMonitorConf, InputKind};
 
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS {vibration_faults} (
     severity       vibration_severity NOT NULL,
     -- Текущие обороты расчете, для валидации диагноза
     rpm            DOUBLE PRECISION NOT NULL,
-    -- Гарантирует, что для каждого оборудования 
+    -- Гарантирует, что для каждого оборудования
     -- хранится ровно ОДНА запись по конкретному дефекту
     PRIMARY KEY (equipment_id, fault_kind)
 );
@@ -232,6 +232,5 @@ impl Service for VibroMonitor {
         for task in self.tasks.iter() {
             task.value().exit();
         }
-    }    
+    }
 }
-

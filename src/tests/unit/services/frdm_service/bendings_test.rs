@@ -4,8 +4,8 @@ use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::services::conf::ConfTree;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{services::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeDeprecationConf, RopeSections}, tests::unit::services::frdm_service::{CsvRecord, CsvTable}};
+use debugging::session::{DebugSession, LogLevel};
+use crate::{services::{Bendings, BlockArcs, Blocks, Booms, CraneConf, FrdmServiceConf, Inputs, RopeDeprecationConf, RopeSections}, tests::unit::services::frdm_service::CsvTable};
 
 ///
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 /// Testing [Bendings]
 #[test]
 fn new() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");

@@ -4,7 +4,7 @@ mod sampling_freq {
     use std::{f64::consts::PI, sync::Once, time::Duration};
     use rustfft::num_complex::Complex;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{core_::aprox_eq::aprox_eq::AproxEq, services::task::nested_function::va::sampling_freq::SamplingFreq};
     ///
     ///
@@ -24,7 +24,7 @@ mod sampling_freq {
     /// Testing SamplingFreq.next()
     #[test]
     fn next() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");

@@ -4,7 +4,7 @@ use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::{services::{conf::ConfTree, entity::{Point, ToPoint}}, sync::Owner};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::domain::testing::ServiceTestPlanner;
 ///
 ///
@@ -24,7 +24,7 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn run() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");

@@ -2,7 +2,7 @@
 
 mod tcp_client_connect {
     use crate::{domain::Mutex, tcp::tcp_client_connect::TcpClientConnect};
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
         use std::{
         net::TcpListener,
         sync::{
@@ -30,7 +30,7 @@ mod tcp_client_connect {
     /// Testing success connection case
     #[test]
     fn success_connection() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         println!("test success connection");
@@ -110,7 +110,7 @@ mod tcp_client_connect {
     /// Testing connection fail case
     #[test]
     fn failure_connection() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         println!("test failure connection");

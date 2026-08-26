@@ -3,7 +3,7 @@
 use indexmap::IndexMap;
 use std::{collections::HashMap, sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 ///
 ///
 static INIT: Once = Once::new();
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 #[test]
 #[ignore = "Learn - all must be ignored"]
 fn test() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let self_id = "test";
