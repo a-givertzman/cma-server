@@ -111,7 +111,6 @@ impl Object for FrdmService {
     }
 }
 //
-//
 impl std::fmt::Debug for FrdmService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -120,7 +119,6 @@ impl std::fmt::Debug for FrdmService {
             .finish()
     }
 }
-//
 //
 impl Service for FrdmService {
     //
@@ -147,25 +145,6 @@ impl Service for FrdmService {
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
         self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
-        // let subscription: Vec<SubscriptionCriteria> = [
-        //         conf.rope_deprecation.crane.rope.pos.clone(),
-        //         conf.rope_deprecation.crane.rope.load.clone(),
-        //     ]
-        //     .iter().chain(
-        //         conf.rope_deprecation.crane.booms.iter().filter_map(|(_, b)| {
-        //             match &b.angle {
-        //                 crate::services::frdm_service::InputKind::Const(_) => None,
-        //                 crate::services::frdm_service::InputKind::Point(v) => Some(v),
-        //             }
-        //         }),
-        //     )
-        //     .map(|point| {
-        //         let subscription = SubscriptionCriteria::new(point, Cot::Inf);
-        //         log::trace!("{dbg}.run | Subscription: {:?}", subscription);
-        //         subscription
-        //     })
-        //     .collect();
-        // let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &subscription);
         let inputs = Arc::new(Inputs::new(&name, &conf, services.clone(), scheduler.clone(), self.exit.clone()));
         self.tasks.insert(inputs.name().join(), inputs.clone());
         let rope_deprecation = Arc::new(RopeDeprecation::new(
@@ -198,7 +177,7 @@ impl Service for FrdmService {
             log::warn!("{}.run | No Camera's configured", self.dbg);
         }
         inputs.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
-        log::info!("{}.run | RopeDefect's ready", self.dbg);
+        log::info!("{}.run | Inputs ready", self.dbg);
         log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())
     }

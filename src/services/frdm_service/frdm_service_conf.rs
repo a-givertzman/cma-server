@@ -103,12 +103,14 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///             resend-packet: true             # StreamPacketResendEnable
 ///
 ///     rope-deprecation:
+///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///         table: 'public.frdm_deprecation'
 ///         crane:
 ///             rope:
-///                 width: 35 mm        # Diameter of the rome
-///                 length: 3000 m      # Total working length of the rope
-///                 segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///                 width: 35 mm            # Diameter of the rome
+///                 length: 3000 m          # Total working length of the rope
+///                 segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///                 aux-length: 1.200 m     # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
 ///                 pos: point real 'Winch.EncoderBR2'      # meters, current rope position
 ///                 load: point real 'Winch.Load'           # tonn, current rope load
 ///             booms:

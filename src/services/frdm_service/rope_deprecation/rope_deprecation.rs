@@ -149,7 +149,7 @@ impl std::fmt::Debug for RopeDeprecation {
 // }
 //
 //
-impl Service for RopeDeprecation where {
+impl Service for RopeDeprecation {
     //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
@@ -161,7 +161,6 @@ impl Service for RopeDeprecation where {
         let inputs = self.inputs.clone();
         let exit = self.exit.clone();
         let api_client = self.api_client.clone();
-        let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
         let (pairs_tx, pairs_rx) = unbounded();
         let mut deprecation = Self::build_math(dbg.clone(), conf.clone(), inputs.clone(), pairs_tx);
@@ -206,17 +205,14 @@ impl Service for RopeDeprecation where {
             }
             log::info!("{dbg}.run | Exit");
         });
-        handles.push(handle);
-        for handle in handles {
-            match handle {
-                Ok(handle) => {
-                    self.handles.push(handle);
-                }
-                Err(err) => {
-                    let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
-                    log::warn!("{}", err);
-                    return Err(err);
-                }
+        match handle {
+            Ok(handle) => {
+                self.handles.push(handle);
+            }
+            Err(err) => {
+                let err = Error::new(&self.dbg, "run").pass_with("Start failed", err.to_string());
+                log::warn!("{}", err);
+                return Err(err);
             }
         }
         let r = match conf.wait_started {
