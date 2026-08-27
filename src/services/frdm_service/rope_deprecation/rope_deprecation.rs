@@ -6,7 +6,7 @@ use sal_sync::{
     sync::{channel::RecvTimeoutError, Handles},
     thread_pool::Scheduler,
 };
-use crate::{domain::unbounded, err, infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, Inputs, RopeDeprecationConf, RopeSections}};
+use crate::{domain::{Sender, unbounded}, err, infra::ApiClient, services::frdm_service::{Bendings, BlockArcs, Blocks, Booms, Deprecation, Inputs, RopeDeprecationConf, RopeSections}};
 
 ///
 /// ## Rope deprecation rate
@@ -94,6 +94,35 @@ impl RopeDeprecation {
         // Запись последней группы
         result.push((current_ix, current_sum));
     }
+    /// Собирает алгоритм расчета
+    fn build_math(dbg: Dbg, conf: RopeDeprecationConf, inputs: Arc<Inputs>,  tx: Sender<(usize, f64)>) ->  Deprecation<impl Fn(usize, f64)> {
+        Deprecation::new(
+            &dbg,
+            &conf.crane,
+            inputs.clone(),
+            Bendings::new(
+                &dbg,
+                &conf.crane.rope,
+                BlockArcs::new(
+                    &dbg,
+                    &conf.crane.rope.segment,
+                    RopeSections::new(
+                        &dbg,
+                        Blocks::new(
+                            &dbg,
+                            conf.crane.rope.aux_length,
+                            &conf.crane.blocks,
+                            true,
+                            Booms::new(&dbg, &conf.crane.booms, inputs, true),
+                        ),
+                    ),
+                ),
+            ),
+            move |slice_ix, deprecation| {
+                let _ = tx.send((slice_ix, deprecation));
+            },
+        )
+    }
 }
 //
 impl Object for RopeDeprecation {
@@ -134,37 +163,12 @@ impl Service for RopeDeprecation where {
         let api_client = self.api_client.clone();
         let mut handles = vec![];
         log::debug!("{}.run | Preparing thread...", dbg);
+        let (pairs_tx, pairs_rx) = unbounded();
+        let mut deprecation = Self::build_math(dbg.clone(), conf.clone(), inputs.clone(), pairs_tx);
         let handle = self.scheduler.spawn(move || {
             let dbg = &dbg;
             let inputs_stream = inputs.listen();
             let conf_table = conf.table.clone();
-            let (pairs_tx, pairs_rx) = unbounded();
-            let mut deprecation = Deprecation::new(
-                dbg,
-                &conf.crane,
-                inputs.clone(),
-                Bendings::new(
-                    dbg,
-                    &conf.crane.rope,
-                    BlockArcs::new(
-                        dbg,
-                        &conf.crane.rope.segment,
-                        RopeSections::new(
-                            dbg,
-                            Blocks::new(
-                                dbg,
-                                conf.crane.rope.aux_length,
-                                &conf.crane.blocks,
-                                true,
-                                Booms::new(dbg, &conf.crane.booms, inputs, true),
-                            ),
-                        ),
-                    ),
-                ),
-                |slice_ix, deprecation| {
-                    let _ = pairs_tx.send((slice_ix, deprecation));
-                },
-            );
             service_release.add(Ok(()));
             let mut sql = String::with_capacity(120 + (conf.crane.blocks.len() * 32));
             let mut received = Vec::with_capacity(pairs_rx.len());

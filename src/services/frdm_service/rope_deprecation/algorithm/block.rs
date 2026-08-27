@@ -78,8 +78,6 @@ pub enum BlockBind {
     Fixed,
     /// Блок на стреле
     Boom(usize),
-    // /// Блок на стреле, работает впаре, подразумевается что пара соседних блоков имеет такой тип
-    // BoomPair(usize),
     /// Блок на подвесе (крюке)
     Hook,
 }
@@ -89,19 +87,18 @@ impl BlockBind {
     ///
     /// Returns Boom from corresponding string
     fn boom(s: &str) -> Result<Self, Error> {
-        let re = Regex::new(r"(boom|boompair)[ \t](\d+)").unwrap();
+        let re = Regex::new(r"(boom)[ \t](\d+)").unwrap();
         let caps = re.captures(s)
             .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
         let kind = caps.get(1)
-            .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'")))?;
+            .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
         let bind = caps.get(2)
             .ok_or(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'")))?;
         let bind = bind.as_str().parse()
             .map_err(|_| Error::new("BlockBind", "from_str").err(format!("Wring Block number in '{s}', Expecting integer >= 0")))?;
         match kind.as_str() {
             "boom" => Ok(Self::Boom(bind)),
-            // "boompair" => Ok(Self::BoomPair(bind)),
-            _ => Err(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0 / BoomPair 0'"))),
+            _ => Err(Error::new("BlockBind", "from_str").err(format!("Wrong format '{s}', Expected string like 'Boom 0'"))),
         }
     }
     ///
@@ -112,7 +109,6 @@ impl BlockBind {
             (BlockBind::Drum, BlockBind::Drum) => true,
             (BlockBind::Fixed, BlockBind::Fixed) => true,
             (BlockBind::Boom(_), BlockBind::Boom(_)) => true,
-            // (BlockBind::BoomPair(_), BlockBind::BoomPair(_)) => true,
             (BlockBind::Hook, BlockBind::Hook) => true,
             _ => false,
         }

@@ -20,7 +20,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///             defect: 'public.frdm_defect'
 ///             defect-image: 'public.frdm_defect_image'
 ///         segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
-///         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
+///         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position
 ///         camera-offset: 5.5 m                        # camera position from the begin of the rope (hook side)
 ///         defect-detection:
 ///             normalize:
@@ -31,7 +31,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     height: 1000        # New image height
 ///                 gamma:
 ///                     factor: 120.0       # Percent of influence of [AutoGamma] algorythm bigger the value more the effect of [AutoGamma] algorythm, %
-///             
+///
 ///             fast-scan:
 ///                 fast-contours:
 ///                     otsu-tune: 0.40
@@ -50,12 +50,12 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     add-weighted:
 ///                         weight1: 1.0            # Weight of the first array elements.
 ///                         weight2: 1.0            # Weight of the second array elements.
-///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                 rope-dimensions:        # Verifaing the rope dimensions
 ///                     rope-width: 380               # Standart rope width, px
 ///                     width-tolerance: 50.0         # Tolerance for rope width, %
 ///                     square-tolerance: 100.0       # Tolerance for rope square, %
 ///                 distortion-threshold: 1.2    # 1.1..1.3, absolute threshold to detect the geometry deffects
-///             
+///
 ///             fine-scan:
 ///                 fine-contours:
 ///                     otsu-tune: 0.40         # Auto threshold factor, 1 - no correction, 0..1 - more, 1.. - less sensitive
@@ -77,7 +77,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     #     weight2: 1.0            # Weight of the second array elements.
 ///                     bitwise-and:
 ///                         no-params: ~
-///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                 rope-dimensions:        # Verifaing the rope dimensions
 ///                     rope-width: 380               # Standart rope width, px
 ///                     width-tolerance: 30.0         # Tolerance for rope width, %
 ///                     square-tolerance: 100.0       # Tolerance for rope square, %
@@ -85,7 +85,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                 defect-threshold: 2.5        # 1.1..1.3, absolute threshold to detect the geometry deffects
 ///         camera Camera1:
 ///             fps: Max                    # Max / Min / 30.0
-///             resolution: 
+///             resolution:
 ///                 width: 1200
 ///                 height: 800
 ///             index: 0
@@ -101,7 +101,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///             auto-packet-size: true          # StreamAutoNegotiatePacketSize
 ///             channel-packet-size: Max        # Maximizing packet size increases frame rate
 ///             resend-packet: true             # StreamPacketResendEnable
-/// 
+///
 ///     rope-deprecation:
 ///         table: 'public.frdm_deprecation'
 ///         crane:
@@ -181,7 +181,7 @@ pub struct FrdmServiceConf {
     pub rope_deprecation: RopeDeprecationConf,
 }
 //
-// 
+//
 impl FrdmServiceConf {
     ///
     /// Returns [FrdmServiceConf] built from `ConfTree`:
@@ -226,7 +226,7 @@ impl FrdmServiceConf {
             None => {
                 panic!("FrdmServiceConf.from_yaml | Format error or empty conf: {:#?}", value)
             }
-        }        
+        }
     }
     ///
     /// reads config from path

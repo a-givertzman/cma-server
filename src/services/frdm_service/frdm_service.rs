@@ -14,7 +14,7 @@
 //!     parameter: value    # meaning
 //! ```
 //!
-use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
+use std::{path::Path, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
 use dashmap::DashMap;
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
@@ -59,6 +59,7 @@ impl FrdmService {
         let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
         let defect_slices = self.conf.rope_defect.slices(self.conf.rope_deprecation.crane.rope.length);
         let deprecation_slices = self.conf.rope_deprecation.crane.rope.slices();
+        let mut timeout = Duration::from_millis(500);
         let _ = self.scheduler.spawn(move || {
             log::debug!("{dbg}.update_db_settings | Updating db settings...");
             let sql = format!(r"
@@ -88,6 +89,8 @@ impl FrdmService {
                     },
                     Err(err) => {
                         log::error!("{dbg}.update_db_settings | Fetch error: {:?}", err);
+                        std::thread::sleep(timeout);
+                        timeout = (timeout * 2).min(Duration::from_secs(10));
                     }
                 }
             }
