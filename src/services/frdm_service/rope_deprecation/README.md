@@ -23,8 +23,15 @@
 
 ## Основные файлы
 
+
+
 | Файл | Назначение |
 |------|------------|
+| **Документация** | |
+| [part06_geometry.pdf](https://github.com/a-givertzman/cma-server/blob/wear-services/design/frdm-service/part06_geometry.pdf) | Математическое описание задачи. |
+| [Нормализация углов, система координат.pdf](https://github.com/a-givertzman/cma-server/blob/wear-services/design/frdm-service/spu-tnpa-optimist/%D0%BF%D0%BE%D1%8F%D1%81%D0%BD%D0%B5%D0%BD%D0%B8%D1%8F(%D0%BD%D0%BE%D1%80%D0%BC%D0%B0%D0%BB%D0%B8%D0%B7%D0%B0%D1%86%D0%B8%D1%8F%2C%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC%D0%B0%20%D0%BA%D0%BE%D0%BE%D1%80%D0%B4%D0%B8%D0%BD%D0%B0%D1%82).pdf) | Пояснения о нормализации углов и о системе координат. |
+| [test-data-template.xlsx](https://github.com/a-givertzman/cma-server/blob/wear-services/design/frdm-service/test-data-template.xlsx) | Темплейт таблицы для автоматического тестирования математики. |
+| **Исходный код** | |
 | [`rope_deprecation.rs`](rope_deprecation.rs) | Сам сервис: запуск, цикл обработки, агрегация, SQL. |
 | [`rope_deprecation_conf.rs`](rope_deprecation_conf.rs) | Конфиг `RopeDeprecationConf` (`wait-started`, `table`, `crane`). |
 | [`crane_conf.rs`](crane_conf.rs) | `CraneConf` — сборка `rope` + `booms` + `blocks`. |
