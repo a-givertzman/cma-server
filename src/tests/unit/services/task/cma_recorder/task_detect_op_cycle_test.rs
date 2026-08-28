@@ -4,7 +4,7 @@ mod cma_recorder {
     use sal_sync::{math::AproxEq, services::{conf::{ConfTree, ServicesConf}, entity::{Name, Point}, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::ThreadPool};
     use std::{env, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{
         services::task::{Task, TaskConf, TaskTestReceiver},
         tests::unit::services::task::cma_recorder::task_test_producer::TaskTestProducer
@@ -29,7 +29,7 @@ mod cma_recorder {
     /// - filtering (thresholding filter) smoothed value
     #[test]
     fn detect_operating_cycle() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let dbg = "App";

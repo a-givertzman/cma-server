@@ -2,7 +2,7 @@
 use testing::entities::test_value::Value;
 use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
 use std::{cell::RefCell, rc::Rc, sync::Once};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{EvalCycle, EvalCycleRef, FlowContext, FnAverage, FnFlow, FnInput, FnOut}
@@ -49,7 +49,7 @@ fn init_each(parent: &str, initial: Value, cycle: &EvalCycleRef) -> FnInOutRef {
 ///
 #[test]
 fn test_bool() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     let dbg = "FnAverage-test_bool";
     log::info!("{}", dbg);
@@ -82,7 +82,7 @@ fn test_bool() {
 ///
 #[test]
 fn test_int() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     let dbg = "FnAverage-test_int";
     log::info!("{}", dbg);
@@ -129,7 +129,7 @@ fn test_int() {
 ///
 #[test]
 fn test_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAverage-test_real";
     log::info!("{}", dbg);
@@ -172,7 +172,7 @@ fn test_real() {
 /// Double points on input, enable - is variable during the test
 #[test]
 fn test_double_reset() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAverage-test_double_reset";
     log::info!("{}", dbg);
@@ -241,7 +241,7 @@ fn test_double_reset() {
 /// Проверка поведения при отсутствии входных данных (обрыв связи)
 #[test]
 fn test_disconnect() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     let dbg = "FnAverage-test_disconnect";
     let cycle = Rc::new(EvalCycle::new());

@@ -2,7 +2,7 @@
 
 use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
 use std::{sync::Once, time::{Instant, Duration}, thread,rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
      domain::FnInOutRef, services::task::{EvalCycle, EvalCycleRef, FnFlow, FnInput, FnOut, FnTimer},
 };
@@ -29,7 +29,7 @@ fn init_each(default: &str, typ: FnConfPointType, cycle: &EvalCycleRef) -> FnInO
 /// Testing Task FnTimer measuring simple elapsed
 #[test]
 fn total_elapsed() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnTimer-test_total_elapsed";
     log::info!("{dbg}");
@@ -92,7 +92,7 @@ fn total_elapsed() {
 /// Testing Task FnTimer elapsed having reset
 #[test]
 fn elapsed_reset() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnTimer-test_elapsed_reset";
     log::info!("{dbg}");
@@ -178,7 +178,7 @@ fn elapsed_reset() {
 /// Testing Task FnTimer with initial value
 #[test]
 fn initial() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnTimer-test_initial";
     log::info!("{dbg}");

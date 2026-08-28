@@ -7,7 +7,7 @@ use testing::{
     stuff::{max_test_duration::TestDuration, inc_test_values::IncTestValues},
     session::test_session::TestSession,
 };
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     services::{
         server::{TcpServerConf, TcpServer},
@@ -33,7 +33,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn keep_send() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "tcp_server_keep_send";
@@ -130,7 +130,7 @@ fn keep_send() {
 ///
 #[test]
 fn keep_receive() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "tcp_server_keep_receive";

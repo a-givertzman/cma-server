@@ -5,7 +5,7 @@ use sal_sync::services::{conf::{ConfCustomKeywd, ConfDistance, ConfTree, ConfTre
 use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_conf::TablesConf};
 ///
 /// ## The configuration parameters for the `RopeDefect`
-/// 
+///
 /// ### Conf example
 /// ```yaml
 /// rope-defect:
@@ -14,11 +14,11 @@ use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_co
 ///         defect: 'public.frdm_defect'
 ///         defect-image: 'public.frdm_defect_image'
 ///     segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
-///     segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
+///     segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position
 ///     camera-offset: 5.5 m        # camera position from the begin of the rope (hook side)
 ///     defect-detection:
 ///         gamma:
-///             no-param: not parameters implemented 
+///             no-param: not parameters implemented
 ///         brightness-contrast:
 ///             histogram-clipping: 1     # optional histogram clipping, default = 0 %
 ///         gausian:
@@ -47,13 +47,13 @@ pub struct RopeDefectConf {
     pub wait_started: Option<Duration>,
     /// API configuration parametes
     pub api: ApiClientConf,
-    /// Names of the database tables used for storing defects and it's images 
+    /// Names of the database tables used for storing defects and it's images
     pub tables: TablesConf,
     /// Rope segmetn length.
     /// Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
     pub segment: ConfDistance,
     /// Acceptable camera position error in relation to exact segment position
-    /// 
+    ///
     /// Default: 5% of `segment`
     pub segment_threshold: ConfDistance,
     /// Camera position from the begin of the rope (hook side)
@@ -63,7 +63,7 @@ pub struct RopeDefectConf {
     pub cameras: Vec<(CameraId, CameraConf)>,
 }
 //
-// 
+//
 impl RopeDefectConf {
     ///
     /// Returns [RopeDefectConf] built from `ConfTree`:
@@ -113,6 +113,11 @@ impl RopeDefectConf {
             defect_detection,
             cameras,
         }
+    }
+    /// Возвращает расчетное количество сегментов с учетом общей длины каната и размера одного сегмента
+    /// - `rope_length` - Общая длина каната
+    pub fn slices(&self, rope_length: ConfDistance) -> usize {
+        (rope_length.as_m() / self.segment.as_m()).round() as usize
     }
 }
 ///

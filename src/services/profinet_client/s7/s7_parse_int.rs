@@ -135,7 +135,7 @@ mod s7_parse_int_test {
     use std::{sync::Once, time::{Duration, Instant}};
     use super::*;
     use chrono::Utc;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use sal_core::dbg::Dbg;
     use sal_sync::services::entity::{Name, PointConf, PointConfAddress, PointType, Status};
     use testing::stuff::max_test_duration::TestDuration;
@@ -159,7 +159,7 @@ mod s7_parse_int_test {
     ///
     #[test]
     fn to_point() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");
@@ -270,7 +270,7 @@ mod s7_parse_int_test {
     ///
     #[test]
     fn add_raw() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         log::debug!("");

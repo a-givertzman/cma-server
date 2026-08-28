@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod retain_buffer {
     use std::sync::Once;
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::domain::retain_buffer::retain_buffer::RetainBuffer;
     ///
     ///
@@ -21,7 +21,7 @@ mod retain_buffer {
     ///
     #[test]
     fn basic() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         println!("test RetainBuffer");
@@ -66,7 +66,7 @@ mod retain_buffer {
     ///
     #[test]
     fn capacity() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         println!("test RetainBuffer capacity");

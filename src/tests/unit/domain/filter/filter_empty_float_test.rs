@@ -4,7 +4,7 @@ mod tests {
     use core::f64;
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::domain::filter::filter::{Filter, FilterEmpty};
     ///
     ///
@@ -24,7 +24,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_empty_f64() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         init_once();
         init_each();
         let dbg = "test_filter_empty_f64 0.0 - 1.0 - 0.0";
@@ -92,7 +92,7 @@ mod tests {
     /// Testing FilterEmpty with absolute empty and negative input
     #[test]
     fn test_filter_empty_f32() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test_filter_empty_f32 (-1.0) - 1.0 - (-1.0)";

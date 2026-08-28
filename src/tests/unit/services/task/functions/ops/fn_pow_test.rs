@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{EvalCycle, EvalCycleRef, FnInput, FnOut, FnPow}
@@ -29,7 +29,7 @@ fn init_each(default: &str, typ: FnConfPointType, cycle: &EvalCycleRef) -> FnInO
 /// Testing FnPow Int's
 #[test]
 fn int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("fn_pow_int");
     let mut value1_stored;
@@ -99,7 +99,7 @@ fn int() {
 /// Testing FnPow Real's
 #[test]
 fn real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     fn checked_powf(base: f32, exp: f32) -> Result<f32, ()> {
         let result = base.powf(exp);
         if result.is_finite() { Ok(result) } else { Err(()) }
@@ -171,7 +171,7 @@ fn real() {
 /// Testing FnPow Double's
 #[test]
 fn double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     fn checked_powf(base: f64, exp: f64) -> Result<f64, ()> {
         let result = base.powf(exp);
         if result.is_finite() { Ok(result) } else { Err(()) }

@@ -6,7 +6,7 @@ mod jds_deserialize {
     use sal_sync::services::{entity::{Cot, {Point, PointHlr}, Status}, types::Bool};
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Write, BufReader}};
     use testing::session::test_session::TestSession;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{domain::net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, tcp::tcp_stream_write::OpResult};
     ///
     ///
@@ -34,7 +34,7 @@ mod jds_deserialize {
     ///
     #[test]
     fn basic() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let dbg = "test JdsDeserialize";
@@ -149,7 +149,7 @@ mod jds_deserialize {
                                             assert!(point.name() == test_data[recv_index].1.name(), "\nreceived: {:?}\nexpected: {:?}", point.name(), test_data[recv_index].1.name());
                                             assert!(point.status() == test_data[recv_index].1.status(), "\nreceived: {:?}\nexpected: {:?}", point.status(), test_data[recv_index].1.status());
                                             assert!(point.cot() == test_data[recv_index].1.cot(), "\nreceived: {:?}\nexpected: {:?}", point.cot(), test_data[recv_index].1.cot());
-                                            assert!(point.timestamp() == test_data[recv_index].1.timestamp(), "\nreceived: {:?}\nexpected: {:?}", point.timestamp(), test_data[recv_index].1.timestamp());
+                                            assert!(point.ts() == test_data[recv_index].1.ts(), "\nreceived: {:?}\nexpected: {:?}", point.ts(), test_data[recv_index].1.ts());
                                             match point {
                                                 Point::Bool(point) => assert!(point.value == test_data[recv_index].1.as_bool().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_bool().value),
                                                 Point::Int(point) => assert!(point.value == test_data[recv_index].1.as_int().value, "\nreceived: {:?}\nexpected: {:?}", point.value, test_data[recv_index].1.as_int().value),
@@ -261,4 +261,3 @@ mod jds_deserialize {
         });
     }
 }
-

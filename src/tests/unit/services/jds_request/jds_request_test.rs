@@ -8,7 +8,7 @@ use sal_sync::{services::{
     }, LinkName, MultiQueue, MultiQueueConf, Service, Services
 }, thread_pool::ThreadPool};
 use testing::{session::test_session::TestSession, stuff::max_test_duration::TestDuration};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use std::{collections::HashMap, io::{Read, Write}, net::TcpStream, str::FromStr, sync::{Arc, Once, atomic::{AtomicBool, Ordering}}, thread, time::Duration};
 use crate::{
     domain::{net::protocols::jds::{jds_define::JDS_END_OF_TRANSMISSION, jds_deserialize::JdsDeserialize, request_kind::RequestKind}, testing::{RecvService, RecvServiceConf}},
@@ -77,7 +77,7 @@ fn point_configs(parent_name: &Name) -> Vec<PointConf> {
 ///
 #[test]
 fn reject() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "jds_request_test";
@@ -242,7 +242,7 @@ fn reject() {
 ///
 #[test]
 fn request_auth_secret() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "jds_request_test";
@@ -362,7 +362,7 @@ fn request_auth_secret() {
 ///
 #[test]
 fn request_points() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "jds_request_test::points";
@@ -556,7 +556,7 @@ fn request_points() {
 ///
 #[test]
 fn request_subscribe() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "jds_request_test::subscribe";
@@ -753,7 +753,7 @@ fn request_subscribe() {
 #[test]
 #[ignore = "To be implementes..."]
 fn auth_ssh() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "jds_request_test";

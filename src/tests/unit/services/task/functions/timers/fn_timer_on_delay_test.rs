@@ -4,7 +4,7 @@ use sal_sync::services::conf::{ConfDuration, ConfDurationUnit};
 
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, time::Duration, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
      domain::FnInOutRef, services::task::{EvalCycle, EvalCycleRef, FnInput, FnOut, FnTimerOnDelay},
 };
@@ -31,7 +31,7 @@ fn init_each(default: &str, typ: FnConfPointType, cycle: &EvalCycleRef) -> FnInO
 /// `Task` `FnTimerOnDelay` | measuring simple elapsed seconds
 #[test]
 fn elapsed() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = Dbg::own("FnTimerOnDelay-test");
     log::info!("{dbg}");

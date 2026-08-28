@@ -3,7 +3,7 @@
 use sal_sync::services::entity::PointConfAddress;
 use sal_sync::services::entity::{Name, {PointConf, PointConfHistory, PointType}};
 use std::{sync::Once, time::Duration};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use testing::stuff::max_test_duration::TestDuration;
 use crate::conf::profinet_client_conf::profinet_client_conf::ProfinetClientConf;
 ///
@@ -24,7 +24,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn basic() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "ProfinetClientConf-test";

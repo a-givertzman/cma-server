@@ -4,7 +4,7 @@ use std::{f64::consts::PI, sync::{Arc, Once}, time::{Duration, Instant}};
 use rustfft::{num_complex::ComplexFloat, Fft, FftPlanner};
 use sal_core::error::ErrorLimit;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::services::task::FftBuf;
 ///
 ///
@@ -24,7 +24,7 @@ fn init_each() -> () {}
 /// Testing FftBuf basic functionality
 #[test]
 fn basic() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");

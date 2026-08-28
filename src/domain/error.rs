@@ -1,6 +1,6 @@
 ///
 /// ### Создает новую ошибку на основе текущего контекста выполнения.
-/// 
+///
 /// Добавь атрибут метода `#[named]` из крейта `function_name`
 ///
 /// **Примеры использования:**
@@ -11,7 +11,7 @@ macro_rules! err {
     // Ветка 1: Если передали ключевое слово Self
     (Self, $($arg:tt)+) => {
         $crate::Error::new(
-            $crate::short_type_name::<Self>(), 
+            $crate::short_type_name::<Self>(),
             function_name!()
         ).err(format!($($arg)+))
     };
@@ -24,7 +24,7 @@ macro_rules! err {
 /// ### Пробрасывает ошибку выше по стеку, оборачивая её в текущий контекст трассировки.
 ///
 /// Добавь атрибут метода `#[named]` из крейта `function_name`
-/// 
+///
 /// **Примеры использования:**
 /// * `err_pass!(self.dbg, err)` — передает ошибку дальше с именем класса `self.dbg` и именем текущей функции.
 /// * `err_pass!(self.dbg, err, "Описание")` — передает ошибку с дополнительным описанием и `self.dbg`.
@@ -35,14 +35,14 @@ macro_rules! err_pass {
     // Ветка 1: Чистый проброс для Self
     (Self, $err:expr) => {
         $crate::Error::new(
-            $crate::utils::short_type_name::<Self>(), 
+            $crate::short_type_name::<Self>(),
             function_name!()
         ).pass($err.to_string())
     };
     // Ветка 2: Проброс с описанием для Self
     (Self, $err:expr, $($arg:tt)+) => {
         $crate::Error::new(
-            $crate::short_type_name::<Self>(), 
+            $crate::short_type_name::<Self>(),
             function_name!()
         ).pass_with(format!($($arg)+), $err.to_string())
     };

@@ -3,7 +3,7 @@
 mod tests {
     use std::{sync::Once, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::domain::filter::{filter_threshold::FilterThreshold, filter::Filter};
     ///
     ///
@@ -48,7 +48,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_threshold_abs_pos_i16() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_pos 0 - 10 - 0";
@@ -74,7 +74,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_threshold_abs_pos_i32() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_pos_i32 0 - 10 - 0";
@@ -100,7 +100,7 @@ mod tests {
     ///
     #[test]
     fn test_filter_threshold_abs_pos_i64() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_pos_i64 0 - 10 - 0";
@@ -126,7 +126,7 @@ mod tests {
     /// Testing FilterThreshold with absolute threshold
     #[test]
     fn test_filter_threshold_abs_neg_i16() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_neg_i16 (-10) - 10 - (-10)";
@@ -195,7 +195,7 @@ mod tests {
     /// Testing FilterThreshold with absolute threshold
     #[test]
     fn test_filter_threshold_abs_neg_i32() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_neg_i32 (-10) - 10 - (-10)";
@@ -264,7 +264,7 @@ mod tests {
     /// Testing FilterThreshold with absolute threshold
     #[test]
     fn test_filter_threshold_abs_neg_i64() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test_filter_threshold_abs_neg_i64 (-10) - 10 - (-10)";

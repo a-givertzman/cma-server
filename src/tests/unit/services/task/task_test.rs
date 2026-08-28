@@ -1,4 +1,4 @@
-use sal_sync::services::{PointRegistry, PointRegistryConf, RegistryConf, entity::{PointConf, PointConfHistory, PointType}};
+use sal_sync::services::{PointRegistry, RegistryConf, entity::{PointConf, PointConfHistory, PointType}};
 #[cfg(test)]
 
 use sal_sync::{services::{
@@ -6,7 +6,7 @@ use sal_sync::{services::{
 }, thread_pool::ThreadPool};
 use std::{env, sync::{Arc, Once}, time::{Duration, Instant}};
 use testing::{entities::test_value::Value, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::services::task::{Task, TaskConf, TaskTestProducer, TaskTestReceiver};
 ///
 ///
@@ -26,7 +26,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn structure() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "task_test";
@@ -43,7 +43,7 @@ fn structure() {
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::empty(),
     ), Some(tp.scheduler()))
         .unwrap()
@@ -120,7 +120,7 @@ fn structure() {
 #[test]
 #[ignore = "TODO - transfered values assertion not implemented yet"]
 fn transfer() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     log::info!("test");
@@ -136,7 +136,7 @@ fn transfer() {
     log::trace!("config: {:?}", &config);
     let tp = ThreadPool::new(dbg, Some(8));
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::empty(),
     ), Some(tp.scheduler()))
         .unwrap()
@@ -199,4 +199,3 @@ fn transfer() {
         assert!(&recv_point == sent_point, "\nresult: {:?}\ntarget: {:?}", recv_point, sent_point);
     }
 }
-

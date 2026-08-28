@@ -13,7 +13,7 @@ use crate::{core_::{conf::task_config::TaskConfig, debug::debug_session::LogLeve
 
 
 fn main() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     log::info!("test_task");
     
     // let (initial, switches) = init_each();

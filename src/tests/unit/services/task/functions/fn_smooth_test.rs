@@ -2,7 +2,7 @@
 use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
 use testing::entities::test_value::Value;
 use std::{cell::RefCell, rc::Rc, sync::Once};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{
@@ -51,7 +51,7 @@ fn init_each(parent: &str, initial: Value) -> FnInOutRef {
 /// Threshold Reals's
 #[test]
 fn fn_smooth_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "fn_smooth_real";
     log::info!("{}", dbg);
@@ -143,7 +143,7 @@ fn fn_smooth_real() {
 /// Threshold Double's
 #[test]
 fn fn_smooth_double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "fn_smooth_double";
     log::info!("{}", dbg);
@@ -235,7 +235,7 @@ fn fn_smooth_double() {
 /// User Threshold Reals's
 #[test]
 fn fn_smooth_user() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     let self_id = "fn_smooth_user";
     log::info!("{}", self_id);

@@ -3,7 +3,7 @@
 use std::{sync::Once, time::{Duration, Instant}};
 use sal_core::dbg::Dbg;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::infra::message::{Field, FieldConf, FieldTerminator, FixedField, Message, SizedField};
 ///
 ///
@@ -33,7 +33,7 @@ fn init_each() -> () {}
 /// 
 #[test]
 fn parse() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");
@@ -141,7 +141,7 @@ fn parse() {
 /// Testing [Message].build all supported kinds of [Field]'s
 #[test]
 fn build_all_fields() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");
@@ -282,7 +282,7 @@ fn build_all_fields() {
 /// ```
 #[test]
 fn build() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     log::debug!("");

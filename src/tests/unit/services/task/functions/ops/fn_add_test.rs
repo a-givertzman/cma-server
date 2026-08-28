@@ -3,7 +3,7 @@ use sal_sync::services::entity::Point;
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{EvalCycle, EvalCycleRef, FlowContext, FnAdd, FnInput, FnOut}
@@ -30,7 +30,7 @@ fn init_each(default: Option<impl ToString>, type_: FnConfPointType, cycle: &Eva
 /// Testing Add Overflow
 #[test]
 fn overflow() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     let dbg = "FnAdd-overflow";
     let cycle = Rc::new(EvalCycle::new());
     let input1 = init_each(Some(i64::MAX), FnConfPointType::Int, &cycle);
@@ -48,7 +48,7 @@ fn overflow() {
 /// Testing Type Promotion
 #[test]
 fn promotion() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAdd-promotion";
     let cycle = Rc::new(EvalCycle::new());
@@ -68,7 +68,7 @@ fn promotion() {
 /// Testing NaN Guard
 #[test]
 fn nan_guard() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAdd-nan";
     let cycle = Rc::new(EvalCycle::new());
@@ -86,7 +86,7 @@ fn nan_guard() {
 /// Testing Cold Mode
 #[test]
 fn cold_mode() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAdd-cold";
     let cycle = Rc::new(EvalCycle::new());
@@ -101,7 +101,7 @@ fn cold_mode() {
 /// Testing Task Add Bool's
 #[test]
 fn bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAdd-bool";
     log::info!("{dbg}");
@@ -132,7 +132,7 @@ fn bool() {
 /// Testing Task Add Int's
 #[test]
 fn int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAdd-int";
     log::info!("{dbg}");
@@ -195,7 +195,7 @@ fn int() {
 /// Testing Add Real's
 #[test]
 fn real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAdd-real";
     log::info!("dbg");
@@ -258,7 +258,7 @@ fn real() {
 /// Testing Add Double's
 #[test]
 fn double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "FnAdd-double";
     log::info!("{dbg}");

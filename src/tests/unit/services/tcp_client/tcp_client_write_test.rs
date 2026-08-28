@@ -3,7 +3,7 @@ mod tcp_client {
     use sal_sync::{services::{conf::{ConfTree, ServicesConf}, entity::{Object, Point, ToPoint}, Service, Services}, thread_pool::ThreadPool};
     use std::{io::BufReader, net::TcpListener, sync::{Arc, Once}, thread::{self, JoinHandle}, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, session::test_session::TestSession, stuff::{max_test_duration::TestDuration, random_test_values::RandomTestValues}};
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{
         conf::tcp_client_conf::TcpClientConf,
         domain::{net::{connection_status::ConnectionStatus, protocols::jds::{jds_decode_message::JdsDecodeMessage, jds_deserialize::JdsDeserialize}}, RwLock},
@@ -28,7 +28,7 @@ mod tcp_client {
     ///
     #[test]
     fn write() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let dbg = "TcpClient-WRITE";

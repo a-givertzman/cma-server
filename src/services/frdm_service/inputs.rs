@@ -88,9 +88,9 @@ impl Inputs {
     }
     ///
     /// Adds new value into the current state
-    /// 
+    ///
     /// Used for internal or testing purposes only
-    /// 
+    ///
     /// In nornal operation events should be received by the subscription
     #[cfg(test)]
     pub(crate) fn insert(&self, key: impl Into<String>, val: f64) {
@@ -98,13 +98,11 @@ impl Inputs {
         if key == self.conf.rope_deprecation.crane.rope.pos {
             let pos = val * 1000.0;
             log::debug!("{}.insert | Rope position '{}' mm: {:?}", self.dbg, key, pos);
-            self.inputs.insert(key.clone(), Some(pos));
             let pos = pos.round() as usize;
             self.rope_pos.store(Some(pos));
             self.cam_segment_ix.store(self.rope.segment_index(pos));
-        } else {
-            self.inputs.insert(key.clone(), Some(val));
         }
+        self.inputs.insert(key.clone(), Some(val));
     }
     ///
     /// Returns channel with all internal events
@@ -132,9 +130,9 @@ impl Inputs {
     }
     ///
     /// Rope position, mm
-    /// 
+    ///
     /// Rope position is set to zero when crane in the parking position
-    /// 
+    ///
     /// Rope position increments as it's unwound from the winch
     pub fn rope_pos(&self) -> Option<f64> {
         match self.inputs.get(&self.conf.rope_deprecation.crane.rope.pos) {
@@ -150,7 +148,7 @@ impl Inputs {
     }
     ///
     /// Returns Rope segment index under the camera, from 0
-    /// 
+    ///
     /// Returns `Some(ix)` if camera position aligned to the beginning of segment with acceptable accuracy,
     /// otherwise returns `None`
     pub fn cam_segment_ix(&self) -> Arc<AtomicUsizeOption> {
@@ -165,7 +163,7 @@ impl Object for Inputs {
     }
 }
 //
-// 
+//
 impl std::fmt::Debug for Inputs {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -175,10 +173,10 @@ impl std::fmt::Debug for Inputs {
     }
 }
 //
-// 
+//
 impl Service for Inputs where {
     //
-    // 
+    //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
@@ -278,5 +276,5 @@ impl Service for Inputs where {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-    }    
+    }
 }

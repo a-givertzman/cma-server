@@ -140,7 +140,7 @@ static COUNT: AtomicUsize = AtomicUsize::new(1);
 mod tests {
     use super::*;
     use crate::domain::unbounded;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use sal_sync::services::entity::{Point, PointHlr, Status, Cot};
     use std::{cell::RefCell, rc::Rc};
     // Простой Mock-источник данных
@@ -162,7 +162,7 @@ mod tests {
     }
     #[test]
     fn test_export_sends_only_on_new() {
-        DebugSession::new().filter(LogLevel::Debug).init();
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
         let (tx, rx) = unbounded();
         let source_point = mock_int_point(42);
         let input = Rc::new(RefCell::new(MockNode { 

@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{EvalCycle, EvalCycleRef, FnDiv, FnInput, FnOut},
@@ -30,7 +30,7 @@ fn init_each(default: &str, typ: FnConfPointType, cycle: &EvalCycleRef) -> FnInO
 #[ignore = "Task FnDiv ignored for Bool's - not implemented, under discussion"]
 #[test]
 fn bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("fn_div_bool");
     let mut value1_stored;
@@ -76,7 +76,7 @@ fn bool() {
 /// Testing Mul Int's
 #[test]
 fn int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("fn_div_int");
     let mut value1_stored;
@@ -127,7 +127,7 @@ fn int() {
 /// Testing Mul Real's
 #[test]
 fn real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("fn_div_real");
     let mut value1_stored;
@@ -186,7 +186,7 @@ fn real() {
 /// Testing Mul Double's
 #[test]
 fn double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("fn_div_double");
     let mut value1_stored;

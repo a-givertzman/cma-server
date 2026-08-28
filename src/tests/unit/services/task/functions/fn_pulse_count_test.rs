@@ -34,7 +34,7 @@ fn init_each(initial: PointType) -> FnInOutRef {
 ///
 #[test]
 fn test_single() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("test_single");
     let input = init_each(false.toPoint("bool"));
@@ -73,7 +73,7 @@ fn test_single() {
 
 #[test]
 fn test_multiple() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("test_multiple");
     let input = init_each(false.toPoint("bool"));
@@ -111,7 +111,7 @@ fn test_multiple() {
 
 #[test]
 fn test_multiple_reset() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("test_multiple_reset");
     let input = init_each(false.toPoint("bool"));

@@ -1,0 +1,66 @@
+rope:
+    width: 35 mm               # Diameter of the rome
+    length: 3528.387 m           # Total working length of the rope
+    aux-length: 1321.68 mm     # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
+    segment: 100 mm            # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+    pos: point real 'Winch.Pos'         # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
+    load: point real 'Winch.Load'       # tonn, current rope load
+booms:
+    - Main-Boom:
+        l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
+        l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
+        l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
+        l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
+        len: 7440.5 mm              # length of the boom
+        angle: point real 'MainBoom.Angle'   # degrees, current angle of the boom (relative axis)
+        parking: 50.00 deg         # Угол в парковочном положении, град
+    - Rotary-Boom:
+        l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
+        l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
+        l3: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до продольной оси предыдущей стрелы (до ГСК для первой срелы), константа
+        l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
+        len: 1648.0 mm              # length of the boom
+        angle: point real 'RotaryBoom.Angle'   # degrees, current angle of the boom (relative axis)
+        parking: 40.00 deg         # Угол в парковочном положении, град
+blocks:
+    - 1:
+        lf: 3322.50mm, -2811.96mm
+        d: 1851.781 mm
+        scheme: BottomBottom
+        bind: Drum
+
+    - 2:
+        lf: 3280.00mm, -914.66mm
+        d: 1435.0 mm
+        scheme: BottomTop
+        bind: Fixed
+
+    - 3:
+        lf: 7002.00mm, 520.34mm
+        d: 1435.0 mm
+        scheme: TopTop
+        bind: Fixed
+
+    - 4:
+        lf: 7002.10mm, 2365.00mm
+        d: 1435.0 mm
+        scheme: TopBottom
+        bind: Fixed
+
+    - 5:
+        lf: 6252.00mm, 3800.00mm
+        d: 1435.0 mm
+        scheme: BottomTop
+        bind: Fixed
+
+    - 6:
+        lf: -763.00mm, -717.50mm
+        d: 1435.0 mm
+        scheme: TopTop
+        bind: Boom 1
+
+    - 7:
+        lf: 0.0mm, 0.0mm
+        d: 0.0 mm
+        scheme: TopTop
+        bind: Hook

@@ -1,13 +1,13 @@
 //!
 //! Construct the Service by it's name in the runtime
-//! 
+//!
 use std::sync::Arc;
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{conf::ConfTree, entity::Name, MultiQueue, MultiQueueConf, Service, Services}, thread_pool::Scheduler};
 use crate::{
     conf::{profinet_client_conf::profinet_client_conf::ProfinetClientConf, slmp_client_conf::slmp_client_conf::SlmpClientConf, tcp_client_conf::TcpClientConf}, err_pass, services::{
-        ApiClient, ApiClientConf, CacheService, CacheServiceConf, VibroMonitor, VibroMonitorConf, VirtualDevice, VirtualDeviceConf, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient
+        ApiClient, ApiClientConf, CacheService, CacheServiceConf, FrdmService, FrdmServiceConf, VibroMonitor, VibroMonitorConf, VirtualDevice, VirtualDeviceConf, history::{producer_service::ProducerService, producer_service_conf::ProducerServiceConf}, profinet_client::profinet_client::ProfinetClient, server::{TcpServer, TcpServerConf}, slmp_client::slmp_client::SlmpClient, task::{Task, TaskConf}, tcp_client::tcp_client::TcpClient
     }
 };
 
@@ -31,6 +31,7 @@ impl ServicesFactory {
     const PRODUCER_SERVICE: &'static str = "ProducerService";
     const CACHE_SERVICE: &'static str = "CacheService";
     const SLMP_CLIENT: &'static str = "SlmpClient";
+    const FRDM_SERVICE: &'static str = "FrdmService";
     const VIRTUAL_DEVICE: &'static str = "VirtualDevice";
     const VIBRO_MONITOR: &'static str = "VibroMonitor";
     ///
@@ -49,12 +50,12 @@ impl ServicesFactory {
     /// - `conf` - The conf of the service
     /// - `services` - [Services] to the service if required
     /// - `scheduler` - [Scheduler] of the external `ThreadPool`
-    /// 
+    ///
     /// ```yaml
     /// # keywd |     kind      |     name
     /// service     ApiClient       ApiClient-1
     /// ```
-    /// 
+    ///
     /// ### Panics
     /// - if specified service `name` is not supported
     #[named]
@@ -105,6 +106,11 @@ impl ServicesFactory {
                 let conf = SlmpClientConf::new(&self.parent, conf);
                 log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
                 Ok(Arc::new(SlmpClient::new(conf, services, scheduler.clone())))
+            }
+            Self::FRDM_SERVICE => {
+                let conf = FrdmServiceConf::new(&self.parent, conf);
+                log::trace!("{}.run | Conf: {:#?}", self.dbg, conf);
+                Ok(Arc::new(FrdmService::new(conf, services, scheduler.clone())))
             }
             Self::VIRTUAL_DEVICE => {
                 let conf = VirtualDeviceConf::new(&self.parent, conf);

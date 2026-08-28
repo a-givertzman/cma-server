@@ -6,11 +6,12 @@ use std::{collections::HashMap, fmt::Debug, str::FromStr, sync::{atomic::{Atomic
 use testing::entities::test_value::Value;
 use crate::domain::RwLock;
 ///
-/// 
+///
+#[allow(unused)]
 pub struct TaskTestProducer {
     dbg: Dbg,
     name: Name,
-    send_to: LinkName, 
+    send_to: LinkName,
     cycle: Duration,
     services: Arc<Services>,
     test_data: Vec<(String, Value)>,
@@ -19,7 +20,7 @@ pub struct TaskTestProducer {
     exit: Arc<AtomicBool>,
 }
 //
-// 
+#[allow(unused)]
 impl TaskTestProducer {
     pub fn new(parent: &str, send_to: &str, cycle: Duration, services: Arc<Services>, test_data: &[(String, Value)]) -> Self {
         let name = Name::new(parent, format!("TaskTestProducer{}", COUNT.fetch_add(1, Ordering::Relaxed)));
@@ -38,25 +39,25 @@ impl TaskTestProducer {
         }
     }
     ///
-    /// 
+    ///
     pub fn sent(&self) -> Vec<Point> {
         self.sent.read().clone()
     }
     ///
-    /// 
+    ///
     pub fn sent_len(&self) -> usize {
         self.sent.read().len()
     }
 }
 //
-// 
+//
 impl Object for TaskTestProducer {
     fn name(&self) -> Name {
         self.name.clone()
     }
 }
 //
-// 
+//
 impl Debug for TaskTestProducer {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -69,7 +70,7 @@ impl Debug for TaskTestProducer {
 //
 impl Service for TaskTestProducer {
     //
-    // 
+    //
     fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let tx_id = PointTxId::from_str(&self.name.join());
