@@ -11,9 +11,9 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///     subscribe: MultiQueue       # Service name, to subscribe for event's required for the calculations like rope positin and crane angles
 ///     api-client:
 ///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
-///         address: "0.0.0.0:8081",
-///         auth-token: "123!@#",
-///         database: "cma",
+///         address: "0.0.0.0:8081"
+///         auth-token: "123!@#"
+///         database: "cma"
 ///     table-settings: 'public.frdm_settings'
 ///     rope-defect:
 ///         tables:

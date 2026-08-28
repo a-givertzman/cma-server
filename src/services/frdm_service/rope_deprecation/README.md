@@ -117,6 +117,8 @@ MultiQueue ──subscribe──▶ Inputs (кэш FxDashMap)
 
 ## Конфигурация
 
+Пример конфигурации можно поискать в файле `frdm-config.yaml`
+
 ### Полный пример
 
 Основан на `ysz-deprecation_test.yaml`. Это рабочий минимальный конфиг
