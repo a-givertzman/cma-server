@@ -4,6 +4,9 @@
 по мере прохождения через блоки грузоподъёмной машины. Износ накапливается в
 таблице БД и доступен клиентам через API-сервер.
 
+---  
+
+
 ## Назначение
 
 На каждый приходящий event (позиция каната, нагрузка, углы стрел) сервис:
@@ -14,6 +17,9 @@
 4. УПРОЩЕНИЕ Диаметр самого каната в расчете пока не учавствует
 5. Агрегирует пары `(slice_ix, deprecation)`, формирует `INSERT ... ON CONFLICT`
    и отправляет SQL в БД через `ApiClient` (fire-and-forget).
+
+---  
+
 
 ## Основные файлы
 
@@ -31,6 +37,9 @@
 | [`algorithm/blocks.rs`](algorithm/blocks.rs) | `Blocks` — позиции блоков в СК стрел. |
 | [`../frdm_service.rs`](../frdm_service.rs) | `FrdmService` — родитель: создаёт и запускает `RopeDeprecation`. |
 | [`../inputs.rs`](../inputs.rs) | `Inputs` — подписка на шину MultiQueue, кэш последних значений. |
+
+---  
+
 
 ## Жизненный цикл
 
@@ -61,6 +70,9 @@
 > Поток завершается по флагу `exit` на следующем `recv_timeout`. Если шина
 > MultiQueue закрылась — сработает ветка `Err(_) → break`.
 
+---  
+
+
 ## Подписки и поток данных
 
 ```
@@ -83,6 +95,25 @@ MultiQueue ──subscribe──▶ Inputs (кэш FxDashMap)
 `RopeDeprecation::run`), делая снимок всех накопленных `subscribe` ключей.
 Поэтому порядок запуска в `FrdmService::run` строго:
 `rope_deprecation.run()` → `rope_defect.run()` → `inputs.run()`.
+
+---  
+
+
+## База данных
+
+Накопленный износ каната храниться в таблице БД. Для каждого сегмента в отдельной записи.
+
+Название таблицы `public.frdm_deprecation`
+
+Структура таблицы
+
+ Номер Сегмента  |  Значение накопленного износа
+ ---             |  ---
+ id              |  deprecation
+ bigserial       |  numeric(24, 8)
+
+---  
+
 
 ## Конфигурация
 
@@ -204,6 +235,9 @@ rope-deprecation:
 | `bind` | enum | **да** | Привязка: <br>&emsp;`Drum` (барабан), <br>&emsp;`Fixed` (неподвижный вне стрел), <br>&emsp;`Boom N` (блок на N-ной стреле), <br>&emsp;`Hook` (подвес). |
 | `deflector-angle` | Angle | нет | Угол перекидывания. Блок включается в работу только когда стрела проходит это положение. 90 deg - означает вертикально вниз. |
 
+---  
+
+
 ## Тесты
 
 ### Инлайн-тесты (`rope_deprecation.rs`)
@@ -245,6 +279,9 @@ cargo test --profile fast-test rope_deprecation::test_aggregate_sparse
 | [`ysz-deprecation_test.yaml`](../../../tests/unit/services/frdm_service/ysz-deprecation_test.yaml) | Кран YSZ: 2 стрелы, 7 блоков, `deflector-angle` на блоке 6. |
 | [`spu-tnpa-deprecation_test.yaml`](../../../tests/unit/services/frdm_service/spu-tnpa-deprecation_test.yaml) | Кран SPU-TNPA: 2 стрелы, 7 блоков. |
 | [`deprecation-test.yaml`](../../../tests/unit/services/frdm_service/deprecation-test.yaml) | Интеграционный конфиг с полным `service FrdmService`. |
+
+---  
+
 
 ## Замечания
 
