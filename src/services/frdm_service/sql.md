@@ -110,11 +110,11 @@ language plpgsql;
 ### Поиск устаревших изображений
 
 ```sql
--- FRDM | Function cleaning the old images keeping 10 imeges per rope slice for each defect kind
+-- FRDM | Function cleaning the old imeges keeping 10 imeges per rope slice for each defect kind
 CREATE OR REPLACE FUNCTION public.clean_frdm_defect_image(
     slice_      bigint,             -- номер сегмента
     defect_     frdm_defect_kind,   -- вид дефекта
-    camera_     int2,               -- номер камеры
+    camera_     integer,            -- номер камеры
     keep_       int default 10      -- сколько изображений оставить
 )
 RETURNS TABLE(path text)
