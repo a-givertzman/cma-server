@@ -2506,13 +2506,13 @@ dependencies = [
 [[package]]
 name = "frdm-tools"
 version = "0.2.1"
-source = "git+https://github.com/a-givertzman/frdm-server.git?tag=0.2.1#a069804b82106345c2dd0cb8a9c9b65eb6292490"
+source = "git+https://github.com/a-givertzman/frdm-server.git?tag=0.2.1#94d3f469fb4af6c9b22c6e9776f0573f67a62777"
 dependencies = [
  "api-tools",
  "bincode",
  "circular-buffer",
  "crossterm",
- "debugging 0.0.1",
+ "debugging 0.1.1",
  "eframe 0.35.0",
  "egui 0.35.0",
  "egui_plot 0.36.0",
@@ -3053,9 +3053,9 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hermit-abi"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
+checksum = "e17592d60ebacc7d5e169f4663c5f84f9161cc90328abcfe8456f41e4dfcb284"
 
 [[package]]
 name = "hex"
@@ -3279,9 +3279,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.14.0"
+version = "2.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
+checksum = "07aa2048142242915a31d35844fb311e0e53fcca590c3a0a40dcf1b841fa09eb"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
@@ -5667,9 +5667,9 @@ dependencies = [
 
 [[package]]
 name = "scc"
-version = "3.8.6"
+version = "3.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8af0b99483d1c3e59471d4f0cb58b244169436a8979c889a91a3f697075ea01"
+checksum = "b61e66d981128945ef7253d1dcaff636423acfebdee22cd2d8dfd4eb89e4d134"
 dependencies = [
  "saa",
  "sdd",

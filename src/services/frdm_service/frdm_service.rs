@@ -22,7 +22,7 @@ use sal_sync::{
     services::{entity::{Name, Object}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::{err_pass, infra::ApiClient, services::frdm_service::{FrdmServiceConf, Inputs, RopeDefect, RopeDeprecation}};
+use crate::{domain::RECV_TIMEOUT, err_pass, infra::ApiClient, services::frdm_service::{FrdmServiceConf, Inputs, RopeDefect, RopeDeprecation}};
 ///
 /// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
@@ -79,20 +79,18 @@ impl FrdmService {
             ");
             log::trace!("{dbg}.update_db_settings | Fetching sql: {:?}", sql);
             while !exit.load(Ordering::Acquire) {
-                match api_client.fetch(&sql).wait() {
-                    Ok(reply) => {
-                        if reply.is_ok() {
-                            log::debug!("{dbg}.update_db_settings | Updating db settings - Ok {:?}", reply.unwrap());
-                            break;
-                        }
-                        log::warn!("{dbg}.update_db_settings | Sql reply: {:?}", reply);
+                match api_client.fetch(&sql).timeout(Duration::from_millis(500)) {
+                    Ok(None) => {},
+                    Ok(Some(Ok(reply))) => {
+                        log::debug!("{dbg}.update_db_settings | Updating db settings - Ok {:?}", reply);
+                        break;
                     },
-                    Err(err) => {
+                    Ok(Some(Err(err))) | Err(err) => {
                         log::error!("{dbg}.update_db_settings | Fetch error: {:?}", err);
-                        std::thread::sleep(timeout);
-                        timeout = (timeout * 2).min(Duration::from_secs(10));
                     }
                 }
+                std::thread::sleep(timeout);
+                timeout = (timeout * 2).min(Duration::from_secs(10));
             }
         })?;
         Ok(())
@@ -127,15 +125,11 @@ impl Service for FrdmService {
         log::info!("{}.run | Starting...", self.dbg);
         let name = self.name.clone();
         let conf = self.conf.clone();
+        let winch = 1;      // Номер лебедки пока захардкожен. TODO: Вынести в конфиг, если лебедок несколько
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let storage_path = Path::new("assets/files").join(
-            self.name.join()
-                .chars()
-                .enumerate()
-                .filter(|(ix, ch)| !((*ix == 0) & (*ch == '/')))
-                .map(|(_, ch)| ch)
-                .collect::<String>()
+            self.name.join().trim_start_matches("/")
         );
         if let Err(err) = self.create_rope_defects_dir(&storage_path) {
             log::warn!("{}.run | Can't create folder for rope defects images: {:?}", self.dbg, err);
@@ -144,7 +138,7 @@ impl Service for FrdmService {
         self.tasks.insert(api_client.name().join(), api_client.clone());
         api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
-        self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
+        self.update_db_settings(winch, api_client.clone(), self.exit.clone())?;
         let inputs = Arc::new(Inputs::new(&name, &conf, services.clone(), scheduler.clone(), self.exit.clone()));
         self.tasks.insert(inputs.name().join(), inputs.clone());
         let rope_deprecation = Arc::new(RopeDeprecation::new(

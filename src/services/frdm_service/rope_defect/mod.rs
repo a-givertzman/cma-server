@@ -1,17 +1,17 @@
 //!
 //! # Определение дефектов грузоподъемного каната по его изображениям
-//! 
+//!
 //! Алгоритм основан на анализе изображения каната, а точнее контуров каната
 //! Для выявления дефектов изображение каната нормализуется (авто гамма, авто контраст),
 //! затем изображение бинаризуется с использованием регулируемого значения порога бинаризации
-//! 
-//! ## Виды определяемых дфектов
+//!
+//! ## Виды определяемых дефектов
 //! - Расширение (симметричная деформация с увеличением среднего диаметра)
 //! - Сужение (симметричная деформация с уменьшением среднего диаметра)
 //! - Холмик (выпуклость на одной стороне изображения каната)
 //! - Канавка (углубление на одной стороне изображения каната)
-//! 
-//! ## Процессс
+//!
+//! ## Процесс
 //! - Из конфигурации получаем геометрию стрел, параметры настройки камер и сегментирования каната
 //! ```yaml
 //!     rope-defect:
@@ -19,7 +19,7 @@
 //!             defect: 'public.frdm_defect'
 //!             defect-image: 'public.frdm_defect_image'
 //!         segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
-//!         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
+//!         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position
 //!         camera-offset: 5.5 m        # camera position from the begin of the rope (hook side)
 //!         defect-detection:
 //!             ...
@@ -34,7 +34,7 @@
 //!             winch-length: 2985 m    # Length of the rope on the winch drum in the parking position, when rope pos is zero
 //!             segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
 //!             pos: point real 'Winch.EncoderBR2'     # meters, current rope position (длина каната размотанного с барабана считая от парковочного)
-//!             load: point real 'Winch.Load'          # tonn, current rope load 
+//!             load: point real 'Winch.Load'          # tonn, current rope load
 //!         booms:
 //!             - Main-Boom:
 //!                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
@@ -62,10 +62,10 @@
 //!                 schemes: TopTop             # Схема схода каната с блоком к следующему: 1 - TopTop, 2 - TopBottom, 3 - BottomTop, 4 - BottomBottom,
 //!                 bind: Boom 0                # Привязка блока к стреле (нумерация с 0), Fixed - Барабан, Boom 0 - Блок на первой стреле, Hook - Блок на подвесе
 //! ```
-//! 
-//! - Канат с учетом заданных настроек условно нарезается на сенменты, размер сегмента должен быть 85..95% от ширины кадра (размер кадра вдоль каната)
-//! - В процессе перемещения каната приложение получает изменения длины вытравленной его части, 
-//!     - Пересчитываем и получаем положение сегмента оносительно положения камеры
+//!
+//! - Канат с учетом заданных настроек условно нарезается на сегменты, размер сегмента должен быть 85..95% от ширины кадра (размер кадра вдоль каната)
+//! - В процессе перемещения каната приложение получает изменения длины вытравленной его части,
+//!     - Пересчитываем и получаем положение сегмента относительно положения камеры
 //! - В моменты когда камера проходит границу между соседними сегментами, берем кадр с камеры и считаем дефекты
 //! - Граница между сегментами задается с допустимой погрешность `segment-threshold`
 mod rope_defect_conf;

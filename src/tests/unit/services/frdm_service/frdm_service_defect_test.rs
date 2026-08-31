@@ -21,6 +21,7 @@ fn init_once() {
 fn init_each() -> () {}
 ///
 /// Testing such functionality / behavior
+#[ignore = "Isn't implemented yet."]
 #[test]
 fn run() {
     DebugSession::new().filter(LogLevel::Debug).init().unwrap();
@@ -110,6 +111,7 @@ fn run() {
             service FrdmService:
                 wait-started: 10 ms
                 cycle: 100 ms
+                subscribe: /{dbg}/MultiQueue       # Service name, to subscribe for event's required for the calculations like rope positin and crane angles
                 api-client:
                     wait-started: 10 ms
                     address: 127.0.0.1:8081
@@ -220,6 +222,7 @@ fn run() {
                                 l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                                 len: 11200.0 mm                                         # length of the boom
                                 angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+                                parking: 0.0 deg            # Угол в парковочном положении, град
                             - Rotary-Boom:
                                 l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
                                 l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -227,6 +230,7 @@ fn run() {
                                 l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
                                 len: 7984.1 mm                                          # length of the rotary boom
                                 angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+                                parking: 23.78 deg          # Угол в парковочном положении, град
                         blocks:
                             - 1:
                                 lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм

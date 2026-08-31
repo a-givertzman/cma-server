@@ -12,7 +12,7 @@ type Reply = Result<Vec<IndexMap<String, serde_json::Value>>, Error>;
 ///
 /// - Automatically connects to the server on request
 /// - Keeps connection alive to be faster
-/// 
+///
 /// ### Configuration
 /// ```yaml
 /// ```
@@ -95,7 +95,6 @@ impl Service for ApiClient {
                 std::thread::sleep(timeout);
                 timeout = (timeout * 2).min(Duration::from_secs(10));
                 if exit.load(Ordering::Acquire) {
-                    timeout = Duration::ZERO;
                     break;
                 }
             }
@@ -111,7 +110,11 @@ impl Service for ApiClient {
                                 match serde_json::from_slice(&reply) {
                                     Ok(reply) => {
                                         let reply: ApiReply = reply;
-                                        sink.add(Ok(reply.data));
+                                        if reply.has_error() {
+                                            sink.add(Err(error.pass(reply.error.toString())));
+                                        } else {
+                                            sink.add(Ok(reply.data));
+                                        }
                                     }
                                     Err(err) => sink.add(Err(error.pass_with("Deserialize reply error", err.to_string()))),
                                 }
@@ -127,7 +130,7 @@ impl Service for ApiClient {
                 }
             }
             while let Ok(Some((_sql, sink))) = recv.try_recv() {
-                // TODO: Store SQLs instead of deleting them 
+                // TODO: Store SQLs instead of deleting them
                 drop(sink);
             }
             is_started.store(false, Ordering::Release);
@@ -168,7 +171,7 @@ impl Service for ApiClient {
     //
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
-    }    
+    }
 }
 //
 //
@@ -178,7 +181,7 @@ impl Object for ApiClient {
     }
 }
 //
-// 
+//
 impl std::fmt::Debug for ApiClient {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter

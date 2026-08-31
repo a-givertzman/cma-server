@@ -33,7 +33,7 @@ impl RopeDefect {
         api_client: Arc<ApiClient>,
         scheduler: Scheduler,
     ) -> Self {
-        let name = Name::new(parent, "RopeDefect");
+        let name = Name::new(parent, format!("RopeDefect-{camera_id}"));
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
@@ -50,7 +50,7 @@ impl RopeDefect {
     }
     /// ### Store image
     /// - Save camera images to DB and local store
-    /// - Clening obsoleted images
+    /// - Cleaning obsoleted images
     #[named]
     fn save_image(dbg: &Dbg, api_client: &ApiClient, slice: usize, defect_id: &str, camera_id: usize, frame: &Image, img_path: &str) -> Result<(), Error> {
         let error = Error::new(dbg, "save_image");
@@ -114,9 +114,8 @@ impl RopeDefect {
         let time = Instant::now();
         let slice_ix = frame.meta;
         if Some(slice_ix) != prev_index {
-            let frame = Image { mat: frame.mat, meta: slice_ix };
-            defect.eval(frame.clone());
-            log::debug!("{dbg}.detection | Rope slice {}, Elapsed: {:?}", frame.meta, time.elapsed());
+            defect.eval(frame);
+            log::debug!("{dbg}.detection | Rope slice {slice_ix}, Elapsed: {:?}", time.elapsed());
             Some(slice_ix)
         } else {
             log::trace!("{dbg}.detection | Elapsed: {:?}", time.elapsed());
@@ -144,9 +143,11 @@ impl Service for RopeDefect {
     //
     #[named]
     fn run(&self) -> Result<(), Error> {
-        let camera_conf = self.conf.cameras[self.camera_id].1.clone();
-        log::info!("{}.run | Starting {}[{}]...", self.dbg, camera_conf.name, self.camera_id);
         let dbg = self.dbg.clone();
+        let (_, camera_conf) = self.conf.cameras.get(self.camera_id)
+            .ok_or_else(|| err!(dbg, "Can't get config for camera id {}", self.camera_id))?
+            .clone();
+        log::info!("{}.run | Starting {}[{}]...", self.dbg, camera_conf.name, self.camera_id);
         let name = self.name.clone();
         let conf = self.conf.clone();
         let camera_id = self.camera_id;
@@ -249,10 +250,17 @@ impl Service for RopeDefect {
             );
             let mut prev_index = None;
             match &camera_conf.from_path {
+                // Testing operation
                 Some(path) => {
                     log::info!("{dbg}.run | Starting camera from path '{path}'...");
                     let camera = Camera::new(inputs.cam_segment_ix().clone(), camera_conf.clone());
-                    let frames = camera.from_images(path).unwrap(); // Используется для тестирования, unwrap допустимо
+                    let frames = match camera.from_images(path) { // Используется для тестирования, unwrap допустимо
+                        Ok(frames) => frames,
+                        Err(err) => {
+                            log::error!("{dbg}.run | Can't start camera from path '{path}', error: {:?}", err);
+                            return;
+                        }
+                    };
                     service_release.add(Ok(()));
                     for frame in frames {
                         log::debug!("{dbg}.run | Receiving frames from camera - Ok");
@@ -265,6 +273,7 @@ impl Service for RopeDefect {
                         std::thread::sleep(Duration::from_millis(50));
                     }
                 }
+                // Normal operation
                 None => {
                     service_release.add(Ok(()));
                     let timeout_millis = 64;
@@ -283,12 +292,15 @@ impl Service for RopeDefect {
                                 'camera: while !exit.load(Ordering::Acquire) {
                                     match camera_stream.recv_timeout(RECV_TIMEOUT) {
                                         Ok(frame) => {
-                                            prev_index = Self::detection(
-                                                &dbg,
-                                                frame,
-                                                &defect,
-                                                prev_index,
-                                            );
+                                            // Запускать детекцию иммет смысл если позиция каната инициализирована
+                                            if inputs.cam_segment_ix().load().is_some() {
+                                                prev_index = Self::detection(
+                                                    &dbg,
+                                                    frame,
+                                                    &defect,
+                                                    prev_index,
+                                                );
+                                            }
                                         }
                                         Err(crate::domain::RecvTimeoutError::Timeout) => {}
                                         Err(err) => {
@@ -310,7 +322,7 @@ impl Service for RopeDefect {
         self.handles.push(handle);
         let r = if conf.wait_started.is_some() {
             log::info!("{}.run | Waiting while starting...", self.dbg);
-            return service_waiting.wait();
+            service_waiting.wait()
         } else { Ok(()) };
         log::info!("{}.run | Starting - ok", self.dbg);
         r
