@@ -65,11 +65,11 @@ impl Inputs {
         let tp = ThreadPool::new(&dbg, Some(4));
         let inputs = Arc::new(FxDashMap::default());
         for (key, val) in data {
-            _ = inputs.insert(key.into(), val);
+            _ = inputs.insert(key.into(), Some(val));
         }
         Self {
             name: name.clone(),
-            inputs: Arc::new(FxDashMap::default()),
+            inputs,
             listeners: Arc::new(FxDashMap::default()),
             conf: conf.clone(),
             rope,
