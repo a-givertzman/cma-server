@@ -60,11 +60,11 @@ pub struct RopeDefectConf {
     ///
     /// | segment | register_segment |
     /// | ---     | ---              |
-    /// |    0.. 500 mm  |  1.0 m    |
+    /// |   24.. 500 mm  |  1.0 m    |
     /// |  500.. 700 mm  |  2.0 m    |
     /// |  700..1500 mm  |  3.0 m    |
     /// | 1500..5000 mm  | 10.0 m    |
-    pub register_segment: ConfDistance,
+    register_segment: ConfDistance,
     /// ### Camera position from the begin of the rope (hook side)
     pub camera_offset: ConfDistance,
     /// ### Configuration parameters for binarization and defect detection algorithms
@@ -139,7 +139,7 @@ impl RopeDefectConf {
     /// в размер для регистрации в БД (поле `register_segment`).
     pub fn scale_slice_to_db(&self, slice: usize) -> usize {
         let ratio = self.register_segment.as_mm() / self.segment.as_mm();
-        (slice as f64 / ratio).round() as usize
+        ((slice as f64 + 0.5) / ratio).floor() as usize
     }
 }
 ///
@@ -184,6 +184,109 @@ impl Default for RopeDefectConf {
             camera_offset: Default::default(),
             defect_detection: Default::default(),
             cameras: Default::default(),
+        }
+    }
+}
+///
+/// Basic Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+    use debugging::session::{DebugSession, LogLevel};
+    use testing::stuff::max_test_duration::TestDuration;
+
+    ///
+    /// Returns [RopeDefectConf] with the specified segment and register_segment lengths
+    fn conf(segment_mm: f64, register_segment_m: f64) -> RopeDefectConf {
+        RopeDefectConf {
+            segment: ConfDistance::new(segment_mm, ConfDistanceUnit::Millimeter),
+            register_segment: ConfDistance::new(register_segment_m, ConfDistanceUnit::Meter),
+            ..Default::default()
+        }
+    }
+    ///
+    /// Testing [RopeDefectConf].scale_slice_to_db()
+    /// - `segment: 100 mm`, `register_segment: 1.0 m`, `ratio = 10`
+    #[test]
+    fn test_scale_slice_to_db() {
+        DebugSession::new().filter(LogLevel::Trace).init().unwrap();
+        let dbg = Dbg::own("RopeDefectConf-test");
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+        test_duration.run().unwrap();
+        let conf = conf(100.0, 1.0);
+        let test_data = [
+            //       detection slice ix   covered rope, mm    db slice
+            (01,    0,                    0..100,             0),
+            (02,    4,                    400..500,           0),
+            (03,    5,                    500..600,           0),     // большая часть сегмента в первом метре
+            (04,    9,                    900..1000,          0),
+            (05,    10,                   1000..1100,         1),
+            (06,    14,                   1400..1500,         1),
+            (07,    15,                   1500..1600,         1),     // большая часть сегмента во втором метре
+            (08,    19,                   1900..2000,         1),
+            (09,    20,                   2000..2100,         2),
+            // Последний detection slice каната 3000 m (3000 m / 100 mm - 1 = 29999)
+            // не должен выйти за пределы количества db slices (2999)
+            (10,    29999,                2999900..3000000,   2999),
+        ];
+        for (step, slice, _covered, target) in test_data {
+            let time = Instant::now();
+            let result = conf.scale_slice_to_db(slice);
+            assert!(result == target, "{dbg} | step {step} \nresult: {result}\ntarget: {target}");
+            log::debug!("{dbg} | step {step}  elapsed: {:?}", time.elapsed());
+        }
+    }
+    ///
+    /// Testing [RopeDefectConf].scale_slice_to_db() with the non-integer ratio
+    /// - `segment: 300 mm`, `register_segment: 1.0 m`, `ratio = 10/3 ≈ 3.333`
+    #[test]
+    fn test_scale_slice_to_db_non_integer_ratio() {
+        DebugSession::new().filter(LogLevel::Trace).init().unwrap();
+        let dbg = Dbg::own("RopeDefectConf-test");
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+        test_duration.run().unwrap();
+        let conf = conf(300.0, 1.0);
+        let test_data = [
+            //       detection slice ix   covered rope, mm    db slice
+            (01,    0,                    0..300,             0),
+            (02,    2,                    600..900,           0),     // целиком в первом метре
+            (03,    3,                    900..1200,          1),     // 100 мм в первом, 200 мм во втором
+            (04,    6,                    1800..2100,         1),     // 200 мм во втором, 100 мм в третьем
+            (05,    7,                    2100..2400,         2),     // целиком в третьем метре
+        ];
+        for (step, slice, _covered, target) in test_data {
+            let time = Instant::now();
+            let result = conf.scale_slice_to_db(slice);
+            assert!(result == target, "{dbg} | step {step} \nresult: {result}\ntarget: {target}");
+            log::debug!("{dbg} | step {step}  elapsed: {:?}", time.elapsed());
+        }
+    }
+    ///
+    /// Testing [RopeDefectConf].db_slices()
+    #[test]
+    fn test_db_slices() {
+        DebugSession::new().filter(LogLevel::Trace).init().unwrap();
+        let dbg = Dbg::own("RopeDefectConf-test");
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+        test_duration.run().unwrap();
+        let test_data = [
+            //       rope length, m   register_segment, m   db slices
+            (01,    3000.0,            1.0,                  3000),
+            (02,    3000.0,            10.0,                 300),
+            (03,    3050.0,            1.0,                  3050),
+            (04,    2999.4,            1.0,                  2999),
+            (05,    100.5,             1.0,                  101),   // round: половина округляется вверх
+        ];
+        for (step, rope_length, register_segment, target) in test_data {
+            let time = Instant::now();
+            let conf = conf(100.0, register_segment);
+            let result = conf.db_slices(ConfDistance::new(rope_length, ConfDistanceUnit::Meter));
+            assert!(result == target, "{dbg} | step {step} \nresult: {result}\ntarget: {target}");
+            log::debug!("{dbg} | step {step}  elapsed: {:?}", time.elapsed());
         }
     }
 }
