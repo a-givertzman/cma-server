@@ -57,7 +57,7 @@ impl FrdmService {
         let dbg = self.dbg.clone();
         let table = self.conf.table_settings.clone();
         let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
-        let defect_slices = self.conf.rope_defect.slices(self.conf.rope_deprecation.crane.rope.length);
+        let defect_slices = self.conf.rope_defect.db_slices(self.conf.rope_deprecation.crane.rope.length);
         let deprecation_slices = self.conf.rope_deprecation.crane.rope.slices();
         let mut timeout = Duration::from_millis(500);
         let _ = self.scheduler.spawn(move || {

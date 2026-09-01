@@ -55,7 +55,7 @@ impl Rope {
         // Current rope pos Delta in relation to exact segment position
         let delta = (slices - ix).abs() * self.segment;
         if delta <= self.segment_threshold {
-            log::debug!("{}.detection | Rope position at camera: {:.2?} mm ({:.3?} m), index {ix}, delta {:.2} mm", self.dbg, pos, pos * 0.001, delta);
+            log::debug!("{}.detection | Rope position at camera: {:.2} mm ({:.3} m), index {ix}, delta {:.2} mm", self.dbg, pos, pos * 0.001, delta);
             Some(ix as usize)
         } else {
             // log::trace!("{}.segment_index | pos: {:.2}mm ({:.4}m), slices: {:.4},  delta: {:.2}mm - Skip", self.dbg, pos, pos * 0.001, slices, delta);

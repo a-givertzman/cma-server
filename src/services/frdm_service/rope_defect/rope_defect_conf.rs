@@ -1,7 +1,7 @@
 use std::{str::FromStr, time::Duration};
 use frdm_tools::camera::CameraConf;
 use sal_core::dbg::Dbg;
-use sal_sync::services::{conf::{ConfCustomKeywd, ConfDistance, ConfTree, ConfTreeGet}, entity::Name};
+use sal_sync::services::{conf::{ConfCustomKeywd, ConfDistance, ConfDistanceUnit, ConfTree, ConfTreeGet}, entity::Name};
 use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_conf::TablesConf};
 ///
 /// ## The configuration parameters for the `RopeDefect`
@@ -43,30 +43,38 @@ use crate::{infra::ApiClientConf, services::frdm_service::rope_defect::tables_co
 #[derive(Debug, Clone, PartialEq)]
 pub struct RopeDefectConf {
     pub name: Name,
-    /// Next service will wait until current completely started plus specified time, optional
+    /// ### Next service will wait until current completely started plus specified time, optional
     pub wait_started: Option<Duration>,
-    /// API configuration parametes
+    /// ### API configuration parametes
     pub api: ApiClientConf,
-    /// Names of the database tables used for storing defects and it's images
+    /// ### Names of the database tables used for storing defects and it's images
     pub tables: TablesConf,
-    /// Rope segmetn length.
+    /// ### Rope segmetn length.
     /// Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
     pub segment: ConfDistance,
-    /// Acceptable camera position error in relation to exact segment position
+    /// ### Acceptable camera position error in relation to exact segment position
     ///
     /// Default: 5% of `segment`
     pub segment_threshold: ConfDistance,
-    /// Camera position from the begin of the rope (hook side)
+    /// ### Rope segment length for defect registration (DB). Typically 1m.
+    ///
+    /// | segment | register_segment |
+    /// | ---     | ---              |
+    /// |    0.. 500 mm  |  1.0 m    |
+    /// |  500.. 700 mm  |  2.0 m    |
+    /// |  700..1500 mm  |  3.0 m    |
+    /// | 1500..5000 mm  | 10.0 m    |
+    pub register_segment: ConfDistance,
+    /// ### Camera position from the begin of the rope (hook side)
     pub camera_offset: ConfDistance,
-    /// Configuration parameters for binarization and defect detection algorithms
+    /// ### Configuration parameters for binarization and defect detection algorithms
     pub defect_detection: frdm_tools::conf::Conf,
     pub cameras: Vec<(CameraId, CameraConf)>,
 }
 //
-//
 impl RopeDefectConf {
     ///
-    /// Returns [RopeDefectConf] built from `ConfTree`:
+    /// Returns [RopeDefectConf] built from `ConfTree`
     pub fn new(
         parent: impl Into<String>,
         conf: ConfTree,
@@ -109,15 +117,29 @@ impl RopeDefectConf {
             tables,
             segment,
             segment_threshold,
+            register_segment: match segment.as_mm() {
+                  24.0 ..  500.0 => ConfDistance::new(1.0, ConfDistanceUnit::Meter),
+                 500.0 ..  700.0 => ConfDistance::new(2.0, ConfDistanceUnit::Meter),
+                 700.0 .. 1500.0 => ConfDistance::new(3.0, ConfDistanceUnit::Meter),
+                1500.0 .. 5000.0 => ConfDistance::new(10.0, ConfDistanceUnit::Meter),
+                _ => panic!("{dbg}.new | 'segment' length {:?} is unexpected or invalid. Expected 24..500 mm.", segment),
+            },
             camera_offset,
             defect_detection,
             cameras,
         }
     }
-    /// Возвращает расчетное количество сегментов с учетом общей длины каната и размера одного сегмента
+    /// Возвращает расчетное количество сегментов каната для регистрации в БД
+    /// с учетом общей длины каната и размера одного сегмента для регистрации
     /// - `rope_length` - Общая длина каната
-    pub fn slices(&self, rope_length: ConfDistance) -> usize {
-        (rope_length.as_m() / self.segment.as_m()).round() as usize
+    pub fn db_slices(&self, rope_length: ConfDistance) -> usize {
+        (rope_length.as_m() / self.register_segment.as_m()).round() as usize
+    }
+    /// Переводит индекс (номер) сегмента каната из расчетного размера (поле `segment`)
+    /// в размер для регистрации в БД (поле `register_segment`).
+    pub fn scale_slice_to_db(&self, slice: usize) -> usize {
+        let ratio = self.register_segment.as_mm() / self.segment.as_mm();
+        (slice as f64 / ratio).round() as usize
     }
 }
 ///
@@ -158,6 +180,7 @@ impl Default for RopeDefectConf {
             tables: Default::default(),
             segment: Default::default(),
             segment_threshold: Default::default(),
+            register_segment: Default::default(),
             camera_offset: Default::default(),
             defect_detection: Default::default(),
             cameras: Default::default(),

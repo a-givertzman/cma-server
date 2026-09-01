@@ -162,14 +162,18 @@ impl Service for RopeDefect {
         let handles_clone = self.handles.clone();
         log::debug!("{}.run | Preparing thread...", dbg);
         let scheduler = self.scheduler.clone();
-        let handle = self.scheduler.spawn(move || {
+        let handle = self.scheduler.spawn({
+            let conf = conf.clone();
+            move || {
             let dbg1 = dbg.clone();
             let defect = FineScan::new(
                 conf.defect_detection.fine_scan,
                 scheduler.clone(),
-                Some(move |ctx: &Context| {
+                Some({
+                    let conf = conf.clone();
+                    move |ctx: &Context| {
                     let defects = ContextRead::<RopeDefectCtx<FineScanCtx>>::read(ctx).result.clone();
-                    let slice_ix = *ContextRead::<MetaCtx>::read(ctx);
+                    let slice_ix = conf.scale_slice_to_db(*ContextRead::<MetaCtx>::read(ctx));
                     if !defects.is_empty() {
                         log::warn!("{dbg1}.run | Slice {slice_ix} - Defects detected");
                         defects.iter().enumerate().for_each(|(i, defect)| {
@@ -224,7 +228,7 @@ impl Service for RopeDefect {
                     } else {
                         log::info!("{dbg1}.run | Slice {slice_ix} - No defects detected");
                     }
-                }),
+                }}),
                 FastScan::new(
                     conf.defect_detection.fast_scan,
                     scheduler,
@@ -318,7 +322,7 @@ impl Service for RopeDefect {
                 }
             }
             log::info!("{dbg}.run | Exit");
-        }).map_err(|err| err_pass!(self.dbg, err, "Start failed"))?;
+        }}).map_err(|err| err_pass!(self.dbg, err, "Start failed"))?;
         self.handles.push(handle);
         let r = if conf.wait_started.is_some() {
             log::info!("{}.run | Waiting while starting...", self.dbg);
