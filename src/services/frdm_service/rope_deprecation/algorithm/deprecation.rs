@@ -161,113 +161,119 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
     }
 }
 ///
-/// Testing such functionality / behavior
+/// Basic Tests
 #[cfg(test)]
-#[test]
-fn test_slices() {
+mod tests {
+    use super::*;
     use std::{sync::atomic::AtomicBool, time::{Duration, Instant}};
+    use debugging::session::{DebugSession, LogLevel};
     use sal_sync::{services::{conf::{ConfTree, ServicesConf}, Services}, thread_pool::ThreadPool};
     use testing::stuff::max_test_duration::TestDuration;
     use crate::services::frdm_service::{BlockArcs, Blocks, Booms, FrdmServiceConf, RopeSections};
-    env_logger::Builder::new().filter_level(log::LevelFilter::Debug).init();
-    log::debug!("");
-    let dbg = Dbg::own("Deprecation.slices");
-    log::debug!("\n{}", dbg);
-    let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
-    test_duration.run().unwrap();
-    let test_data: &[(i32, Range<f64>, Vec<usize>)] = &[
-        (01,  0.0.. 5.0, vec![0]),
-        (02,  0.0..10.0, vec![0]),
-
-        (10, 08.0..10.0, vec![0]),
-        (11, 09.0..11.0, vec![0, 1]),
-        (12, 10.0..12.0, vec![1]),
-        (13, 11.0..13.0, vec![1]),
-
-        (30, 11.0..35.0, vec![1, 2, 3]),
-        (31, 12.0..35.0, vec![1, 2, 3]),
-        (32, 15.0..35.0, vec![1, 2, 3]),
-        (33, 17.0..35.0, vec![1, 2, 3]),
-        (34, 19.0..35.0, vec![1, 2, 3]),
-
-        (41, 15.0..31.0, vec![1, 2, 3]),
-        (42, 15.0..32.0, vec![1, 2, 3]),
-        (43, 15.0..35.0, vec![1, 2, 3]),
-        (44, 15.0..37.0, vec![1, 2, 3]),
-        (45, 15.0..39.0, vec![1, 2, 3]),
-
-        (51, 15.0..39.0, vec![1, 2, 3]),
-        (52, 15.0..40.0, vec![1, 2, 3]),
-        (53, 15.0..41.0, vec![1, 2, 3, 4]),
-
-    ];
-    let conf = ConfTree::new_root(serde_yaml::from_str(r"
-        rope:
-            width: 20 mm
-            length: 1 m
-            aux-length: 1 m
-            segment: 10 mm
-            pos: point real 'Winch.Pos'
-            load: point real 'Winch.Load'
-        booms:
-            - Main-Boom:
-                l1: 0.0 mm
-                l2: 0.0 mm
-                l3: 0.0 mm
-                l4: 10330.0 mm
-                len: 11200.0 mm
-                angle: point real 'MainBoom.Angle'
-                parking: 0.0 deg
-        blocks:
-            - 1:
-                lf: 1830.0 mm,  710.0 mm
-                d: 845.670 mm
-                scheme: TopTop
-                bind: Drum
-    ").unwrap());
-
-    let crane_conf = CraneConf::new(&dbg, conf);
-    let mut conf = FrdmServiceConf::default();
-    conf.rope_deprecation.crane = crane_conf;
-    let tp = ThreadPool::new(&dbg, Some(4));
-    let services = Arc::new(Services::new(
-        &dbg,
-        ServicesConf::new(&dbg, ConfTree::new_root(serde_yaml::from_str(r"").unwrap())),
-        Some(tp.scheduler()),
-    ).unwrap());
-    let exit = Arc::new(AtomicBool::new(false));
-    let inputs = Arc::new(Inputs::new(&dbg, &conf, services, tp.scheduler(), exit));
-    let parking = false;
-    let deprecation = Deprecation::new(
-        &dbg,
-        &conf.rope_deprecation.crane,
-        inputs.clone(),
-        Bendings::new(
+    ///
+    /// Testing such functionality / behavior
+    #[test]
+    fn test_slices() {
+        DebugSession::new().filter(LogLevel::Debug).init().unwrap();
+        log::debug!("");
+        let dbg = Dbg::own("Deprecation.slices");
+        log::debug!("\n{}", dbg);
+        let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
+        test_duration.run().unwrap();
+        let test_data: &[(i32, Range<f64>, Vec<usize>)] = &[
+            (01,  0.0.. 5.0, vec![0]),
+            (02,  0.0..10.0, vec![0]),
+    
+            (10, 08.0..10.0, vec![0]),
+            (11, 09.0..11.0, vec![0, 1]),
+            (12, 10.0..12.0, vec![1]),
+            (13, 11.0..13.0, vec![1]),
+    
+            (30, 11.0..35.0, vec![1, 2, 3]),
+            (31, 12.0..35.0, vec![1, 2, 3]),
+            (32, 15.0..35.0, vec![1, 2, 3]),
+            (33, 17.0..35.0, vec![1, 2, 3]),
+            (34, 19.0..35.0, vec![1, 2, 3]),
+    
+            (41, 15.0..31.0, vec![1, 2, 3]),
+            (42, 15.0..32.0, vec![1, 2, 3]),
+            (43, 15.0..35.0, vec![1, 2, 3]),
+            (44, 15.0..37.0, vec![1, 2, 3]),
+            (45, 15.0..39.0, vec![1, 2, 3]),
+    
+            (51, 15.0..39.0, vec![1, 2, 3]),
+            (52, 15.0..40.0, vec![1, 2, 3]),
+            (53, 15.0..41.0, vec![1, 2, 3, 4]),
+    
+        ];
+        let conf = ConfTree::new_root(serde_yaml::from_str(r"
+            rope:
+                width: 20 mm
+                length: 1 m
+                aux-length: 1 m
+                segment: 10 mm
+                pos: point real 'Winch.Pos'
+                load: point real 'Winch.Load'
+            booms:
+                - Main-Boom:
+                    l1: 0.0 mm
+                    l2: 0.0 mm
+                    l3: 0.0 mm
+                    l4: 10330.0 mm
+                    len: 11200.0 mm
+                    angle: point real 'MainBoom.Angle'
+                    parking: 0.0 deg
+            blocks:
+                - 1:
+                    lf: 1830.0 mm,  710.0 mm
+                    d: 845.670 mm
+                    scheme: TopTop
+                    bind: Drum
+        ").unwrap());
+    
+        let crane_conf = CraneConf::new(&dbg, conf);
+        let mut conf = FrdmServiceConf::default();
+        conf.rope_deprecation.crane = crane_conf;
+        let tp = ThreadPool::new(&dbg, Some(4));
+        let services = Arc::new(Services::new(
             &dbg,
-            &conf.rope_deprecation.crane.rope,
-            BlockArcs::new(
+            ServicesConf::new(&dbg, ConfTree::new_root(serde_yaml::from_str(r"").unwrap())),
+            Some(tp.scheduler()),
+        ).unwrap());
+        let exit = Arc::new(AtomicBool::new(false));
+        let inputs = Arc::new(Inputs::new(&dbg, &conf, services, tp.scheduler(), exit));
+        let parking = false;
+        let deprecation = Deprecation::new(
+            &dbg,
+            &conf.rope_deprecation.crane,
+            inputs.clone(),
+            Bendings::new(
                 &dbg,
-                &conf.rope_deprecation.crane.rope.segment,
-                RopeSections::new(
+                &conf.rope_deprecation.crane.rope,
+                BlockArcs::new(
                     &dbg,
-                    Blocks::new(
+                    &conf.rope_deprecation.crane.rope.segment,
+                    RopeSections::new(
                         &dbg,
-                        conf.rope_deprecation.crane.rope.aux_length,
-                        &conf.rope_deprecation.crane.blocks,
-                        parking,
-                        Booms::new(&dbg, &conf.rope_deprecation.crane.booms, inputs, parking),
+                        Blocks::new(
+                            &dbg,
+                            conf.rope_deprecation.crane.rope.aux_length,
+                            &conf.rope_deprecation.crane.blocks,
+                            parking,
+                            Booms::new(&dbg, &conf.rope_deprecation.crane.booms, inputs, parking),
+                        ),
                     ),
                 ),
             ),
-        ),
-        |_, _| {},
-    );
-    let mut t;
-    for (step, bendings, target) in test_data {
-        t = Instant::now();
-        let result = deprecation.slices(&bendings).unwrap();
-        log::debug!("{dbg} | {step}  result: {:?}, target: {:?},  elapsed: {:?}", result, target, t.elapsed());
-        assert!(result == target.to_owned(), "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+            |_, _| {},
+        );
+        let mut t;
+        for (step, bendings, target) in test_data {
+            t = Instant::now();
+            let result = deprecation.slices(&bendings).unwrap();
+            log::debug!("{dbg} | {step}  result: {:?}, target: {:?},  elapsed: {:?}", result, target, t.elapsed());
+            assert!(result == target.to_owned(), "{dbg} | step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+        }
+        test_duration.exit();
     }
-    test_duration.exit();
 }
