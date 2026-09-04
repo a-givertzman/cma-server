@@ -187,6 +187,7 @@ impl Service for VirtualDevice {
             match table {
                 Some(mut table) => {
                     let header = Header::from(&name, table.sheet());
+                    log::info!("{dbg}.run | Header: {:?}", header);
                     let input_block = InputBlock::new("time", "name", "value", &header);
                     let rows = table.sheet().row_header_max();
                     let columns = table.sheet().col_header_max();
