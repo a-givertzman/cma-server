@@ -48,6 +48,18 @@ impl Table {
         self.book.sheet(self.sheet)
     }
     ///
+    /// Returns number of rows of active sheet
+    pub fn rows(&self) -> u32 {
+        let (rows, _) = self.book.sheet(self.sheet).used_grid_size();
+        rows
+    }
+    ///
+    /// Returns number of columns of active sheet
+    pub fn columns(&self) -> u32 {
+        let (_, cols) = self.book.sheet(self.sheet).used_grid_size();
+        cols
+    }
+    ///
     /// Returns active `Sheet` mutable
     pub fn sheet_mut(&mut self) -> &mut Sheet {
         self.book.sheet_mut(self.sheet)

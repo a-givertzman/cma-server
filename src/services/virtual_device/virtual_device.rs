@@ -189,8 +189,8 @@ impl Service for VirtualDevice {
                     let header = Header::from(&name, table.sheet());
                     log::info!("{dbg}.run | Header: {:?}", header);
                     let input_block = InputBlock::new("time", "name", "value", &header);
-                    let rows = table.sheet().row_header_max();
-                    let columns = table.sheet().col_header_max();
+                    let rows = table.rows();
+                    let columns = table.columns();
                     let start = header.end() + 1;
                     log::info!("{dbg}.run | Setup...");
                     for cmd in conf.before {
