@@ -113,9 +113,9 @@ service Task RecorderTask:
             input2: winch3LoadNom
     let craneIsActive:
         input fn TimerOffDelay:
-            delay: 5000ms
+            delay: 500ms
             input fn TimerOnDelay:
-                delay: 5000ms
+                delay: 500ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: opCycleThreshold
@@ -123,9 +123,9 @@ service Task RecorderTask:
                     input2: opCycleThreshold
     let winch1IsActive:
         input fn TimerOffDelay:
-            delay: 5000ms
+            delay: 500ms
             input fn TimerOnDelay:
-                delay: 5000ms
+                delay: 500ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch1OpCycleThreshold
@@ -133,9 +133,9 @@ service Task RecorderTask:
                     input2: winch1OpCycleThreshold
     let winch2IsActive:
         input fn TimerOffDelay:
-            delay: 5000ms
+            delay: 500ms
             input fn TimerOnDelay:
-                delay: 5000ms
+                delay: 500ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch2OpCycleThreshold
@@ -143,9 +143,9 @@ service Task RecorderTask:
                     input2: winch2OpCycleThreshold
     let winch3IsActive:
         input fn TimerOffDelay:
-            delay: 5000ms
+            delay: 500ms
             input fn TimerOnDelay:
-                delay: 5000ms
+                delay: 500ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch3OpCycleThreshold
@@ -195,9 +195,10 @@ service Task RecorderTask:
     #
     # Crane Average load in operating cycle in relative units
     let craneCycleAverageLoadRelative:
-        input fn Div:
-            input1: craneCycleAverageLoad
-            input2: craneLoadNom
+        input fn Debug:
+            craneCycleAverageLoadRelative fn Div:
+                input1: craneCycleAverageLoad
+                input2: craneLoadNom
     #
     # Crane Max load in operating cycle, ??? unit ???
     let craneCycleMaxLoad:
@@ -1165,7 +1166,7 @@ service Task RecorderTask:
         # 3.3 | int | total-operating-cycles-count | суммарное число рабочих циклов
         input33 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'total-operating-cycles-count';
-            input: opCycleIsDone
+            # input: opCycleIsDone
         #
         # 3.4  |  cycles-distribution-by-load-ranges  |  распределение циклов по диапазонам нагрузки
         #

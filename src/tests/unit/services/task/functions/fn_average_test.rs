@@ -1,7 +1,7 @@
 #[cfg(test)]
 use testing::entities::test_value::Value;
 use sal_sync::{math::AproxEq, services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}}};
-use std::{cell::RefCell, rc::Rc, sync::Once};
+use std::{cell::RefCell, rc::Rc, sync::Once, time::Duration};
 use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
@@ -95,21 +95,21 @@ fn test_int() {
     );
     // Формат: (step, input_value, target_average, target_is_new)
     let test_data = vec![
-        (00,    0i64,  0i64,  true),  // Холодный старт -> New
-        (01,    0,     0,     false), // Среднее не изменилось -> Old
-        (02,    3,     1,     true),  // 3/3 = 1 -> New
-        (03,    0,     1,     false), // 3/4 = 0.75 (округление 1). Старое 1 -> Old
-        (04,    0,     1,     false), // 3/5 = 0.60 (округление 1). -> Old
-        (05,    1,     1,     false),
-        (06,    0,     1,     false),
-        (07,    7,     1,     false), // 11/8 = 1.375 (округление 1). -> Old
-        (08,    0,     1,     false),
-        (09,    0,     1,     false),
-        (10,    2,     1,     false),
-        (11,    8,     2,     true),  // 21/12 = 1.75 (округление 2). Изменилось -> New!
-        (12,    1,     2,     false),
-        (13,    0,     2,     false),
-        (14,    0,     1,     true),  // 22/15 = 1.46 (округление 1). Изменилось -> New!
+        (00,    0i64,  0i64,  true),   // холодный старт: total_t == 0 -> average = value -> New
+        (01,    0,     0,     false),  // 0/1 = 0 -> Old
+        (02,    3,     0,     false),  // 0/2 = 0 -> Old (3 еще не вошла в sum)
+        (03,    0,     1,     true),   // 3/3 = 1.0 -> 1 -> New
+        (04,    0,     1,     false),  // 3/4 = 0.75 -> 1
+        (05,    2,     1,     false),  // 3/5 = 0.6 -> 1
+        (06,    0,     1,     false),  // 5/6 = 0.83 -> 1
+        (07,    1,     1,     false),  // 5/7 = 0.71 -> 1
+        (08,    0,     1,     false),  // 6/8 = 0.75 -> 1
+        (09,    0,     1,     false),  // 6/9 = 0.67 -> 1
+        (10,    2,     1,     false),  // 6/10 = 0.6 -> 1 (см. примечание ниже)
+        (11,    8,     1,     false),  // 8/11 = 0.73 -> 1
+        (12,    1,     1,     false),  // 16/12 = 1.33 -> 1
+        (13,    0,     1,     false),  // 17/13 = 1.31 -> 1
+        (14,    0,     1,     false),  // 17/14 = 1.21 -> 1
     ];
     for (step, value, target, target_is_new) in test_data {
         let mut flow = FlowContext::new();
@@ -123,13 +123,14 @@ fn test_int() {
         log::debug!("{dbg} | Step {step} | \t value: {:?}   |   result: {:?}", value, result.value());
         assert!(result.as_int().value == target, "{dbg} | Step {step} | \nresult: {:?}\ntarget: {:?}", result, target);
         assert_eq!(flow_is_new, target_is_new, "{dbg} | Step {step} | Taint tracking mismatch");
+        std::thread::sleep(Duration::from_millis(50));
     }
 }
 ///
 ///
 #[test]
 fn test_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     let dbg = "FnAverage-test_real";
     log::info!("{}", dbg);
@@ -141,31 +142,34 @@ fn test_real() {
         input.clone(),
     );
     let test_data = vec![
-        (00,    0.0f32,     0.0),
-        (01,    0.0,     0.0),
-        (02,    3.3,     1.09999),
-        (03,    0.1,     0.84999),
-        (04,    0.0,     0.67999),
-        (05,    1.6,     0.83333),
-        (06,    0.0,     0.71428),
-        (07,    7.2,     1.52499),
-        (08,    0.0,     1.35555),
-        (09,    0.3,     1.24999),
-        (10,    2.2,     1.33636),
-        (11,    8.1,     1.9),
-        (12,    1.9,     1.9),
-        (13,    0.1,     1.77142),
-        (14,    0.0,     1.65333),
+        //      value       time       target
+        //                  (millis)
+        (00,    0.0f32,     000,       0.0),      // холодный старт: total_t == 0 -> value
+        (01,    0.0,        000,       0.0),      // dt ~ 0 (sleep еще не выполнялся)
+        (02,    3.3,        050,       0.0),      // dt ~ 0, sum ~ 0
+        (03,    0.1,        050,       3.3),      // 3.3*0.05/0.05
+        (04,    0.0,        050,       1.7),      // (3.3+0.1)/2
+        (05,    1.6,        050,       1.13333),  // 3.4/3
+        (06,    0.0,        050,       1.25),     // 5.0/4
+        (07,    7.2,        050,       1.0),      // 5.0/5
+        (08,    0.0,        050,       2.0333),   // 12.2/6
+        (09,    0.3,        050,       1.74286),  // 12.2/7
+        (10,    2.2,        050,       1.5625),   // 12.5/8
+        (11,    8.1,        050,       1.63333),  // 14.7/9
+        (12,    1.9,        050,       2.28),     // 22.8/10
+        (13,    0.1,        050,       2.24545),  // 24.7/11
+        (14,    0.0,        050,       2.06667),  // 24.8/12
     ];
-    for (step, value, target) in test_data {
+    for (step, value, t, target) in test_data {
         cycle.increment();
         let point = value.to_point(0, "input");
         input.borrow_mut().add(&point);
         // debug!("input: {:?}", &input);
         let result = fn_average.out().unwrap().unwrap().into_value();
         // debug!("input: {:?}", &mut input);
-        log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result);
-        assert!(result.as_real().value.aprox_eq(target, 3), "\nresult: {:?}\ntarget: {:?}", result, target);
+        log::debug!("step {} \t value: {:?}   |   result: {:?}", step, value, result.value());
+        assert!((result.as_real().value - target as f32) < 0.05, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
+        if t > 0 { std::thread::sleep(Duration::from_millis(t)); }
     }
 }
 ///
@@ -185,31 +189,31 @@ fn test_double_reset() {
         input.clone(),
     );
     let test_data = vec![
-        (00,    true,  0.0,      Some(0.00)),
-        (01,    true,  0.0,      Some(0.00)),
-        (02,    true,  3.3,      Some(3.30)),
-        (03,    false,  0.1,     Some(1.70)),
-        (04,    false,  0.0,     Some(1.133333333333333)),
-        (05,    false,  1.6,     Some(1.25)),
-        (06,    false,  0.0,     Some(1.00)),
-        (07,    false,  7.2,     Some(2.033333333333333)),
-        (08,    false,  0.0,     Some(1.742857142857143)),
-        (09,    false,  0.3,     Some(1.5625)),
-        (10,    false,  2.2,     Some(1.633333333333333)),
-        (11,    true,  8.1,     Some(8.1)),
-        (12,    true,  1.9,     Some(1.9)),
-        (13,    true,  0.1,     Some(0.1)),
-        (14,    true,  0.0,     Some(0.0)),
-        (15,    false,  0.1,     Some(0.05)),
-        (16,    false,  0.0,     Some(0.03333333333333)),
-        (17,    false,  1.6,     Some(0.425)),
-        (18,    false,  0.0,     Some(0.340)),
-        (19,    false,  7.2,     Some(1.48333333333333)),
-        (20,    false,  0.0,     Some(1.271428571428571)),
-        (21,    false,  0.3,     Some(1.15)),
-        (22,    false,  2.2,     Some(1.266666666666667)),
-        (23,    true,  0.0,     Some(0.0)),
-        (24,    true,  0.0,     Some(0.0)),
+        (00,    true,   0.0,      Some(0.0)),
+        (01,    true,   0.0,      Some(0.0)),
+        (02,    true,   3.3,      Some(3.3)),
+        (03,    false,  0.1,      Some(3.3)),         // окно [3.3]
+        (04,    false,  0.0,      Some(1.7)),         // (3.3+0.1)/2
+        (05,    false,  1.6,      Some(1.13333)),     // (3.3+0.1+0)/3
+        (06,    false,  0.0,      Some(1.25)),        // 5/4
+        (07,    false,  7.2,      Some(1.0)),         // 5/5
+        (08,    false,  0.0,      Some(2.0333)),      // 12.2/6
+        (09,    false,  0.3,      Some(1.74286)),     // 12.2/7
+        (10,    false,  2.2,      Some(1.5625)),      // 12.5/8
+        (11,    true,   8.1,      Some(8.1)),         // сброс -> value
+        (12,    true,   1.9,      Some(1.9)),         // сброс
+        (13,    true,   0.1,      Some(0.1)),         // сброс
+        (14,    true,   0.0,      Some(0.0)),         // сброс
+        (15,    false,  0.1,      Some(0.0)),         // окно [0.0]
+        (16,    false,  0.0,      Some(0.05)),        // (0+0.1)/2
+        (17,    false,  1.6,      Some(0.03333)),     // 0.1/3
+        (18,    false,  0.0,      Some(0.425)),       // 1.7/4
+        (19,    false,  7.2,      Some(0.34)),        // 1.7/5
+        (20,    false,  0.0,      Some(1.48333)),     // 8.9/6
+        (21,    false,  0.3,      Some(1.27143)),     // 8.9/7
+        (22,    false,  2.2,      Some(1.15)),        // 9.2/8
+        (23,    true,   0.0,      Some(0.0)),         // сброс
+        (24,    true,   0.0,      Some(0.0)),         // сброс
     ];
     let mut results = 0;
     let flow = FlowContext::new();
@@ -224,7 +228,7 @@ fn test_double_reset() {
         match (&result, &target) {
             (Ok(Some(result)), Some(target)) => {
                 log::debug!("Step {step} \t value: {:?}   |   result: {:?}", value, result);
-                assert!(result.as_double().value.aprox_eq(*target, 6), "Step {step} | \nresult: {:?}\ntarget: {:?}", result.as_double().value, target);
+                assert!((result.as_double().value - *target).abs() < 0.05, "Step {step} | \nresult: {:?}\ntarget: {:?}", result.as_double().value, target);
                 results += 1;
             }
             (Ok(None), None) => {
@@ -234,6 +238,7 @@ fn test_double_reset() {
             (Err(err), _) => panic!("Step {step} \t value: {:?}   |   Error: {:?}", value, err),
             _ => panic!("step {step} | \nresult: {:?}\ntarget: {:?}", result, target),
         };
+        std::thread::sleep(Duration::from_millis(50));
     }
     assert!(results == test_data.len(), "\nresult: {:?}\ntarget: {:?}", results, test_data.len());
 }

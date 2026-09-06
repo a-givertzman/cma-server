@@ -1,8 +1,9 @@
+use function_name::named;
 use indexmap::IndexMap;
 use sal_core::dbg::Dbg;
 use sal_sync::{collections::FxIndexMap, services::entity::{Point, PointType}, sync::channel::Sender};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use crate::{domain::{Edge, EdgeDetector, FnOutRef}, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult}};
+use crate::{domain::{Edge, EdgeDetector, FnOutRef}, err_pass, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult}};
 ///
 /// ### Function | Creates SQL requests on [op-cycle] falling edge:
 /// - Operating cycle SQL request (id, start, stop)
@@ -27,7 +28,6 @@ pub struct FnRecOpCycleMetric {
     reset_edge: EdgeDetector,
 }
 //
-// 
 impl FnRecOpCycleMetric {
     ///
     /// Creates new instance of the FnRecOpCycleMetric
@@ -45,6 +45,21 @@ impl FnRecOpCycleMetric {
             reset_edge: EdgeDetector::new(),
             id,
         }
+    }
+    fn collect_values<'a>(dbg: &str, values: &mut FxIndexMap<String, Point>, inputs: impl IntoIterator<Item = (&'a String, FnResult<FnFlow, String>)>) -> Result<(), String> {
+        for (input_name, input) in inputs {
+            if let Some(val_flow) = input? {
+                let value = val_flow.into_value();
+                if value.typ() == PointType::String {
+                    // log::debug!("{}.out | '{}': {:?}", self.id, input_name, p.value);
+                    // p.name = input_name.to_owned();
+                    values.insert(input_name.to_owned(), value);
+                } else {
+                    log::warn!("{dbg}.collect_values | Input '{}': unexpected type {:?}, string sql requared", input_name, value.typ());
+                }
+            }
+        }
+        Ok(())
     }
 }
 // 
@@ -69,6 +84,7 @@ impl FnOut for FnRecOpCycleMetric {
         inputs
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let reset = self.reset.as_mut().map(|f| f.out());
@@ -79,6 +95,7 @@ impl FnOut for FnRecOpCycleMetric {
             if let Some(reset) = reset? {
                 if let Some(Edge::Rising) = self.reset_edge.add(reset.into_value().to_bool().as_bool().value.0) {
                     self.state.reset();
+                    log::debug!("{}.out | Operating Cycle - Reset", self.id);
                 }
             }
         }
@@ -90,21 +107,23 @@ impl FnOut for FnRecOpCycleMetric {
         match self.state.add(op_cycle) {
             Cycle::None => {}
             Cycle::Started => {
-                log::trace!("{}.out | Operating Cycle - Active", self.id);
-                for (input_name, input) in inputs {
-                    if let Some(val_flow) = input? {
-                        let value = val_flow.into_value();
-                        if value.typ() == PointType::String {
-                            // log::debug!("{}.out | '{}': {:?}", self.id, input_name, p.value);
-                            // p.name = input_name.to_owned();
-                            self.values.insert(input_name.to_owned(), value);
-                        } else {
-                            log::warn!("{}.out | Input '{}': unexpected type {:?}, string sql requared", self.id, input_name, value.typ());
-                        }
-                    }
-                }
+                log::debug!("{}.out | Operating Cycle - Active", self.id);
+                Self::collect_values(&self.id, &mut self.values, inputs).map_err(|err| err_pass!(self.id, err).to_string())?;
+                // for (input_name, input) in inputs {
+                //     if let Some(val_flow) = input? {
+                //         let value = val_flow.into_value();
+                //         if value.typ() == PointType::String {
+                //             // log::debug!("{}.out | '{}': {:?}", self.id, input_name, p.value);
+                //             // p.name = input_name.to_owned();
+                //             self.values.insert(input_name.to_owned(), value);
+                //         } else {
+                //             log::warn!("{}.out | Input '{}': unexpected type {:?}, string sql requared", self.id, input_name, value.typ());
+                //         }
+                //     }
+                // }
             }
             Cycle::Finished => {
+                Self::collect_values(&self.id, &mut self.values, inputs).map_err(|err| err_pass!(self.id, err).to_string())?;
                 log::debug!("{}.out | Operating Cycle - SENDING {} values...", self.id, self.values.len());
                 let log_values: Vec<String> = self.values.iter().map(|(key, point)| {
                     format!("'{}': '{}'", key, point.value().to_string())

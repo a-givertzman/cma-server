@@ -187,7 +187,7 @@ impl Service for VirtualDevice {
             match table {
                 Some(mut table) => {
                     let header = Header::from(&name, table.sheet());
-                    log::info!("{dbg}.run | Header: {:?}", header);
+                    log::trace!("{dbg}.run | Header: {:?}", header);
                     let input_block = InputBlock::new("time", "name", "value", &header);
                     let rows = table.rows();
                     let columns = table.columns();
@@ -214,12 +214,14 @@ impl Service for VirtualDevice {
                         let row = table.row(row_ix, columns);
                         if let Some(index) = row.get(0) {
                             if let spreadsheet_ods::Value::Number(ix) = index {
-                                if ix >= &0.0 {
+                                if *ix >= 0.0 {
                                     log::trace!("{dbg}.run | row {row_ix} | Index {ix} | {:?}", row);
                                     match input_block.from_row(&row) {
+                                        Err(err) => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Skipped. {err}"),
                                         Ok(event) => {
                                             log::trace!("{dbg}.run | row {row_ix} | Index {ix} | Event {:?}", event);
                                             match conf.inputs.get(&event.name) {
+                                                None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Skipped. Event '{}' isn't configured", event.name),
                                                 Some(point_conf) => {
                                                     let time_elapsed = time.elapsed();
                                                     if time_elapsed > event.time {
@@ -235,6 +237,7 @@ impl Service for VirtualDevice {
                                                                 std::thread::sleep(event.time - time_elapsed);
                                                             }
                                                             match send_to.send(point) {
+                                                                Err(err) => log::warn!("{dbg}.run | Can't send Event {:?}, error: {:?}", event, err),
                                                                 Ok(_) => {
                                                                     time = Instant::now();
                                                                     let mut results = FxIndexMap::default();
@@ -247,12 +250,10 @@ impl Service for VirtualDevice {
                                                                                 // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
                                                                                 results.insert(point.name().split("/").last().unwrap().to_owned(), point);
                                                                             }
-                                                                            Err(err) => match err {
-                                                                                kanal::ReceiveErrorTimeout::Timeout => {}
-                                                                                _ => {
-                                                                                    log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
-                                                                                    exit.store(true, Ordering::Release);
-                                                                                }
+                                                                            Err(crate::domain::RecvTimeoutError::Timeout) => {}
+                                                                            Err(err) => {
+                                                                                log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
+                                                                                exit.store(true, Ordering::Release);
                                                                             }
                                                                         }
                                                                     }
@@ -296,18 +297,13 @@ impl Service for VirtualDevice {
                                                                         }
                                                                     }
                                                                 }
-                                                                Err(err) => {
-                                                                    log::warn!("{dbg}.run | Can't send Event {:?}, error: {:?}", event, err);
-                                                                }
                                                             }
                                                         },
                                                     };
                                                     
                                                 }
-                                                None => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Skipped. Event '{}' isn't configured", event.name),
                                             }
                                         }
-                                        Err(err) => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Skipped. {err}"),
                                     }
                                 }
                             }
