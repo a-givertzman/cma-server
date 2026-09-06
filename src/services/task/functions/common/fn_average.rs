@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use concat_string::concat_string;
 use crate::domain::{FnOutRef, TryTo};
-use crate::err_pass;
+use crate::{err, err_pass};
 use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 
 /// ### Function | `FnAverage` (Time-Weighted Average)
@@ -16,7 +16,7 @@ use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
 /// - `reset`: Сбрасывает накопленную сумму и таймеры если `> 0`.
 /// - `input`: Источник числовых данных. Выходной `Point` автоматически наследует 
-///   тип данных входа (Bool, Int, Real или Double).
+///   тип данных входа (Int, Real или Double).
 /// - Игнорирует нечисловые типы (возвращает `Err`).
 #[derive(Debug)]
 pub struct FnAverage {
@@ -83,14 +83,10 @@ impl FnOut for FnAverage {
         let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         let reset = self.reset.as_mut().map(|f| f.borrow_mut().out());
-        let Some(input) = flow.map(input)? else {
-            self.last_t = None;
-            return Ok(None)
-        };
         // let mut force_recalc = false;
         if let Some(reset) = reset {
             if let Some(reset) = flow.ignore(reset)? {
-                let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
+                let reset: bool = (&reset).try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid reset").to_string())?;
                 if reset {
                     self.total_t = 0.0;
                     self.last_t = None;
@@ -100,6 +96,10 @@ impl FnOut for FnAverage {
                 }
             }
         }
+        let Some(input) = flow.map(input)? else {
+            self.last_t = None;
+            return Ok(None)
+        };
         // Закоментировано потому что из двух вариантов реализации среднего: "Событийный" и "Взвешенный по времени"
         // более подходящим и универсальным является "Взвешенный по времени", поэтому пока оставляю его.
         // В будущем можно добавить отдельно событийный вариант FnEventAverage, который будет считать только FlowNew.
@@ -109,7 +109,10 @@ impl FnOut for FnAverage {
         //     return flow.wrap_old(average.clone());
         // }
         // trace!("{}.out | input: {:?}", self.id, input);
-        let value = input.try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid input type {:?}", input.typ()).to_string())?;
+        let value: f64 = input.try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid input type {:?}", input.typ()).to_string())?;
+        if !value.is_finite() {
+            return Err(err!(self.id, "Invalid input value: {:?}", input.typ()).to_string());
+        }
         let now = Instant::now();
         let dt = self.last_t.map_or(0.0, |last| now.duration_since(last).as_secs_f64());
         self.last_t = Some(now);
@@ -121,16 +124,16 @@ impl FnOut for FnAverage {
         // log::debug!("{}.out | count: {:?}", self.id, self.count);
         // log::debug!("{}.out | average: {:?}", self.id, average);
         let (average, point) = match input.typ() {
-            PointType::Int => {
+            PointType::Int | PointType::Bool=> {
                 let av = average.round();
                 (av, Point::Int(Self::point_with(&input, &self.id, av as i64)))
             }
-            PointType::Real => (average, Point::Real(Self::point_with(&input, &self.id, average as f32))),
+            PointType::Real => ((average as f32) as f64, Point::Real(Self::point_with(&input, &self.id, average as f32))),
             PointType::Double => (average, Point::Double(Self::point_with(&input, &self.id, average))),
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
+            _ => return Err(err!(self.id, "Invalid input type: {:?}", input.typ()).to_string()),
         };
         let is_changed = self.average.as_ref().map_or(true, |prev| {
-            (prev.to_double().as_double().value - average).abs() > 1e-12 * average.abs() ||
+            (prev.to_double().as_double().value - average).abs() > 1e-9 * average.abs() ||
             prev.status() != input.status()
         });
         self.average = Some(point.clone());

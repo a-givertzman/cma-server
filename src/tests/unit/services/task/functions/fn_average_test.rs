@@ -60,22 +60,31 @@ fn test_bool() {
         None,
         input.clone(),
     );
+    let must = true; // Обязательно
+    let opt = false;  // Может играть
     let test_data = vec![
-        (00,    false),
-        (01,    false),
-        (02,    true),
-        (03,    false),
-        (04,    false),
-        (05,    true),
+        (00,    false,  0,  must), // холодны старт
+        (01,    true,   0,  must), // 0 / 1 => 0
+        (02,    true,   1,  opt),  // 1 / 2 => 0.5
+        (03,    false,  1,  must), // 2 / 3 => 0.7
+        (04,    false,  1,  opt),  // 2 / 4 => 0.5
+        (05,    true,   0,  must), // 2 / 5 => 0.4
+        (06,    true,   1,  opt),  // 3 / 6 => 0.5
+        (07,    false,  1,  must), // 4 / 7 => 0.57
+        (08,    false,  1,  opt),  // 4 / 8 => 0.5
+        (09,    false,  0,  must), // 4 / 9 => 0.44
     ];
     let flow = FlowContext::new();
-    for (step, value) in &test_data {
+    for (step, value, target, must) in &test_data {
         cycle.increment();
         let point = value.to_point(0, "input");
         input.borrow_mut().add(&point);
-        let result = flow.ignore(fn_average.out());
+        let result = flow.ignore(fn_average.out()).unwrap().unwrap();
         log::debug!("{dbg} | Step {step} | input: {:?} => result: {:?}", value, result);
-        assert!(result.is_err(), "{dbg} | Step {step} | \nresult: {:?}\ntarget: Err(_)", result);
+        if *must {
+            assert!(result.as_int().value == *target, "{dbg} | Step {step} | \nresult: {:?}\ntarget: {:?}", result, target);
+        }
+        std::thread::sleep(Duration::from_millis(50));
     }
 }
 ///
