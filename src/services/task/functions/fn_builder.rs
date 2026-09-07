@@ -516,7 +516,7 @@ impl FnBuilder {
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
-                            FnOr::new(parent, inputs).map_err(|err| error.pass(err))?
+                            FnAnd::new(parent, inputs).map_err(|err| error.pass(err))?
                         )))
                     }
                     //

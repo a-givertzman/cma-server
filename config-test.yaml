@@ -38,7 +38,7 @@ service VirtualDevice VirtualIed15:
                 # - /App/TestTask/Result.Val3
                 # - Result.Value4
     send-to: /App/MultiQueue.in-queue
-    path: './rec-op-cycle-test.ods'            # Optional, if signal have to be charged from the table
+    path: './Registrator-test-load.ods'            # Optional, if signal have to be charged from the table
     sheet: 'data'
     api:                                # Optional, if databese access for example required
         address: 127.0.0.1:8081

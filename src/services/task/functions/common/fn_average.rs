@@ -1,8 +1,11 @@
+use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr, PointType};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Instant;
 use concat_string::concat_string;
 use crate::domain::{FnOutRef, TryTo};
+use crate::{err, err_pass};
 use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 
 /// ### Function | `FnAverage` (Time-Weighted Average)
@@ -11,7 +14,7 @@ use crate::services::task::{FlowContext, FnFlow, FnKind, FnOut, FnResult};
 ///
 /// Особенности работы:
 /// - `enable`: (Через `FnEnable`) При значении `false` (или 0) прерывает передачу данных (возвращает `None`).
-/// - `reset`: Сбрасывает накопленную сумму и счетчик если `> 0`.
+/// - `reset`: Сбрасывает накопленную сумму и таймеры если `> 0`.
 /// - `input`: Источник числовых данных. Выходной `Point` автоматически наследует 
 ///   тип данных входа (Int, Real или Double).
 /// - Игнорирует нечисловые типы (возвращает `Err`).
@@ -21,9 +24,11 @@ pub struct FnAverage {
     kind: FnKind,
     reset: Option<FnOutRef>,
     input: FnOutRef,
-    count: u64,
     sum: f64,
     average: Option<Point>,
+    total_t: f64,
+    prev: f64,
+    last_t: Option<Instant>,
 }
 //
 // 
@@ -39,9 +44,11 @@ impl FnAverage {
             kind: FnKind::Fn,
             reset,
             input,
-            count: 0,
             sum: 0.0,
             average: None,
+            total_t: 0.0,
+            prev: 0.0,
+            last_t: None,
         }
     }
     ///
@@ -71,22 +78,28 @@ impl FnOut for FnAverage {
         inputs
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let mut flow = FlowContext::new();
         let input = self.input.borrow_mut().out();
         let reset = self.reset.as_mut().map(|f| f.borrow_mut().out());
-        let Some(input) = flow.map(input)? else { return Ok(None) };
         // let mut force_recalc = false;
         if let Some(reset) = reset {
             if let Some(reset) = flow.ignore(reset)? {
-                let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
+                let reset: bool = (&reset).try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid reset").to_string())?;
                 if reset {
-                    self.count = 0;
+                    self.total_t = 0.0;
+                    self.last_t = None;
+                    self.prev = 0.0;
                     self.sum = 0.0;
                     // force_recalc = true;
                 }
             }
         }
+        let Some(input) = flow.map(input)? else {
+            self.last_t = None;
+            return Ok(None)
+        };
         // Закоментировано потому что из двух вариантов реализации среднего: "Событийный" и "Взвешенный по времени"
         // более подходящим и универсальным является "Взвешенный по времени", поэтому пока оставляю его.
         // В будущем можно добавить отдельно событийный вариант FnEventAverage, который будет считать только FlowNew.
@@ -96,27 +109,31 @@ impl FnOut for FnAverage {
         //     return flow.wrap_old(average.clone());
         // }
         // trace!("{}.out | input: {:?}", self.id, input);
-        let value = match input.typ() {
-            PointType::Int | PointType::Real | PointType::Double => input.to_double().as_double().value,
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
-        };
-        self.sum += value;
-        self.count += 1;
-        let average = self.sum / (self.count as f64);
+        let value: f64 = input.try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid input type {:?}", input.typ()).to_string())?;
+        if !value.is_finite() {
+            return Err(err!(self.id, "Invalid input value: {:?}", input.typ()).to_string());
+        }
+        let now = Instant::now();
+        let dt = self.last_t.map_or(0.0, |last| now.duration_since(last).as_secs_f64());
+        self.last_t = Some(now);
+        self.total_t += dt;
+        self.sum += self.prev * dt;
+        self.prev = value;
+        let average = if self.total_t > 0.0 { self.sum / self.total_t } else { value };
         // log::debug!("{}.out | sum: {:?}", self.id, self.sum);
         // log::debug!("{}.out | count: {:?}", self.id, self.count);
         // log::debug!("{}.out | average: {:?}", self.id, average);
         let (average, point) = match input.typ() {
-            PointType::Int => {
+            PointType::Int | PointType::Bool=> {
                 let av = average.round();
                 (av, Point::Int(Self::point_with(&input, &self.id, av as i64)))
             }
-            PointType::Real => (average, Point::Real(Self::point_with(&input, &self.id, average as f32))),
+            PointType::Real => ((average as f32) as f64, Point::Real(Self::point_with(&input, &self.id, average as f32))),
             PointType::Double => (average, Point::Double(Self::point_with(&input, &self.id, average))),
-            _ => return Err(concat_string!(self.id, ".out | Invalid input type '", input.typ().to_string(), "'")),
+            _ => return Err(err!(self.id, "Invalid input type: {:?}", input.typ()).to_string()),
         };
         let is_changed = self.average.as_ref().map_or(true, |prev| {
-            (prev.to_double().as_double().value - average).abs() > f64::EPSILON ||
+            (prev.to_double().as_double().value - average).abs() > 1e-9 * average.abs() ||
             prev.status() != input.status()
         });
         self.average = Some(point.clone());
@@ -128,7 +145,9 @@ impl FnOut for FnAverage {
     }
     //
     fn hard_reset(&mut self) {
-        self.count = 0;
+        self.last_t = None;
+        self.total_t = 0.0;
+        self.prev = 0.0;
         self.sum = 0.0;
         self.average = None;
         if let Some(reset) = &mut self.reset {
@@ -138,7 +157,9 @@ impl FnOut for FnAverage {
     }
     //
     fn reset(&mut self) {
-        self.count = 0;
+        self.last_t = None;
+        self.total_t = 0.0;
+        self.prev = 0.0;
         self.sum = 0.0;
         self.average = None;
     }

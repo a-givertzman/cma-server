@@ -77,8 +77,7 @@ impl Header {
     /// ```
     pub fn from(parent: impl Into<String>, sheet: &spreadsheet_ods::Sheet) -> Self {
         let dbg = Dbg::new(parent, "Header");
-        let rows = sheet.row_header_max().min(10);
-        let columns = sheet.col_header_max();
+        let (rows, columns) = sheet.used_grid_size();
         // log::debug!("{dbg}.from |    rows: {}", rows);
         // log::debug!("{dbg}.from | columns: {}", columns);
         let mut input_block = String::new();
@@ -192,5 +191,18 @@ impl HeaderBlock {
     /// Returns `true` when the block is input values
     pub fn is_input(&self) -> bool {
         self.is_input
+    }
+}
+//
+impl std::fmt::Debug for Header {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Header")
+            // .field("block_row", &self.block_row)
+            // .field("index_row", &self.index_row)
+            // .field("unit_row", &self.unit_row)
+            // .field("input_block", &self.input_block)
+            .field("blocks", &self.blocks)
+            // .field("dbg", &self.dbg)
+            .finish()
     }
 }
