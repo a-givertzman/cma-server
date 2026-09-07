@@ -6,7 +6,7 @@ use sal_sync::{math::AproxEq, services::{
 }, thread_pool::ThreadPool};
 use std::{env, fs, io::Read, sync::{Arc, Once}, thread, time::{Duration, Instant}};
 use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     services::task::{Task, TaskConf, TaskTestReceiver},
     tests::unit::services::task::task_test_producer::TaskTestProducer
@@ -98,7 +98,7 @@ fn init_each() -> () {}
 /// Testing Task function 'Retain' for int value
 #[test]
 fn retain_point_bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "AppTest";
@@ -241,7 +241,7 @@ fn retain_point_bool() {
 /// Testing Task function 'Retain' for int value
 #[test]
 fn retain_point_int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "AppTest";
@@ -399,7 +399,7 @@ fn retain_point_int() {
 /// Testing Task function 'Retain' for real value
 #[test]
 fn retain_point_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     // #[derive(Copy, Clone, Eq, PartialEq)]
@@ -564,7 +564,7 @@ fn retain_point_real() {
 ///  - using [every-cycle] = true
 #[test]
 fn retain_every_cycle_point_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "AppTest";

@@ -2,7 +2,7 @@
 
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::domain::filter::{filter::{Filter, FilterEmpty}};
 ///
 ///
@@ -51,7 +51,7 @@ fn init_each() -> &'static [(i16, Option<i16>)] {
 ///
 #[test]
 fn test_filter_empty_abs_pos_i16() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_empty_abs_pos 0 - 10 - 0";
@@ -71,7 +71,7 @@ fn test_filter_empty_abs_pos_i16() {
 ///
 #[test]
 fn test_filter_empty_abs_pos_i32() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_empty_abs_pos_i32 0 - 10 - 0";
@@ -91,7 +91,7 @@ fn test_filter_empty_abs_pos_i32() {
 ///
 #[test]
 fn test_filter_empty_abs_pos_i64() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_empty_abs_pos_i64 0 - 10 - 0";
@@ -111,7 +111,7 @@ fn test_filter_empty_abs_pos_i64() {
 /// Testing FilterEmpty with absolute empty
 #[test]
 fn test_filter_empty_abs_neg_i16() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_empty_abs_neg_i16 (-10) - 10 - (-10)";
@@ -162,7 +162,7 @@ fn test_filter_empty_abs_neg_i16() {
 /// Testing FilterEmpty with absolute empty
 #[test]
 fn test_filter_empty_abs_neg_i32() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_empty_abs_neg_i32 (-10) - 10 - (-10)";
@@ -200,7 +200,7 @@ fn test_filter_empty_abs_neg_i32() {
 /// Testing FilterEmpty with absolute empty
 #[test]
 fn test_filter_empty_abs_neg_i64() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_empty_abs_neg_i64 (-10) - 10 - (-10)";

@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 use std::{sync::Once, thread, time::Duration};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 ///
 ///
 static INIT: Once = Once::new();
@@ -21,7 +21,7 @@ fn init_each() {}
 #[ignore = "Learn - all must be ignored"]
 #[test]
 fn exiting() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "thread_test";

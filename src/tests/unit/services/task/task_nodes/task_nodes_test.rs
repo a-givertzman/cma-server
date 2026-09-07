@@ -1,11 +1,11 @@
 #[cfg(test)]
 
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::{Service, Services, conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, Status, ToPoint}}, sync::{Handles, Owner, channel::{self, Receiver, Sender}}};
+use sal_sync::{services::{Service, Services, conf::{ConfTree, ServicesConf}, entity::{Name, Object, Point, ToPoint}}, sync::{Handles, Owner, channel::{self, Receiver, Sender}}};
 use testing::entities::test_value::Value;
 use std::{cell::RefCell, collections::HashMap, fmt::{Debug, Display}, rc::Rc, sync::{Arc, Once, atomic::{AtomicBool, AtomicUsize, Ordering}}, thread::{self}};
-use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, services::task::{FlowContext, FnKind, FnResult, TaskConf, TaskEvalNode, TaskNodes}};
+use debugging::session::{DebugSession, LogLevel};
+use crate::{domain::{RECV_TIMEOUT, RecvTimeoutError}, services::task::{FlowContext, FnKind, TaskConf, TaskEvalNode, TaskNodes}};
 ///
 ///
 static INIT: Once = Once::new();
@@ -32,7 +32,7 @@ fn init_each() {
 ///
 #[test]
 fn manual_eval() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "manual_eval";
@@ -70,7 +70,7 @@ fn manual_eval() {
     let conf = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("conf: {:?}", conf);
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
@@ -177,7 +177,7 @@ fn manual_eval() {
 /// Тестирует TaskNodes.eval
 #[test]
 fn eval() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "TaskNodes-test-eval";
@@ -213,7 +213,7 @@ fn eval() {
     let conf = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("conf: {:?}", conf);
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
@@ -329,7 +329,7 @@ fn eval() {
 }
 #[test]
 fn test_state_retention() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "state_retention";
@@ -356,7 +356,7 @@ fn test_state_retention() {
     let conf = TaskConf::from_yaml(&self_name, &conf).unwrap();
     log::trace!("conf: {:?}", conf);
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::new_root(serde_yaml::from_str(r#"
             retain:
         "#).unwrap()),
@@ -389,12 +389,12 @@ fn test_state_retention() {
 }
 ///
 /// ### Тест "Отравленных данных" (Poisoned Data / Type Mismatch)
-/// - Датчик сошел с ума и вместо числа прислал NaN, пустую строку или статус Invalid. 
+/// - Датчик сошел с ума и вместо числа прислал NaN, пустую строку или статус Invalid.
 /// - Движок должен проглотить это, вычислить FnResult::Err (или None),
 /// пробросить эту ошибку по зависимым узлам графа вниз, но ни в коем случае не упасть.
 #[test]
 fn poisoned_data() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let dbg = "poisoned_data";
     let services = Arc::new(Services::new(
@@ -419,9 +419,9 @@ fn poisoned_data() {
     // Подаем валидную A
     task_nodes.eval(10.to_point(0, "/path/Sensor.A"));
     // Подаем B с неверным типом данных (строку вместо int) или со статусом Invalid
-    // Зависит от того, как у вас реализован to_point с ошибками. 
+    // Зависит от того, как у вас реализован to_point с ошибками.
     // Допустим, мы шлем строку туда, где ждут Int.
-    let bad_point = "garbage".to_point(0, "/path/Sensor.B"); 
+    let bad_point = "garbage".to_point(0, "/path/Sensor.B");
     task_nodes.eval(bad_point);
     // Проверяем результат вычислений
     let node = task_nodes.get_eval_node("/path/Sensor.B").unwrap();
@@ -441,7 +441,7 @@ fn poisoned_data() {
 /// - `point int every` - Проверяем что реагирует на любое событие указанного типа
 #[test]
 fn every_logic() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     let dbg = "every_logic";
     log::debug!("{dbg}");
@@ -467,7 +467,7 @@ fn every_logic() {
     "#).unwrap();
     let conf = TaskConf::from_yaml(&self_name, &conf_yaml).unwrap();
     let services = Arc::new(Services::new(dbg, ServicesConf::new(
-        dbg, 
+        dbg,
         ConfTree::new_root(serde_yaml::from_str("retain:").unwrap()),
     ), None).unwrap());
     task_nodes.build_nodes(&Name::from(dbg), &conf, services).unwrap();

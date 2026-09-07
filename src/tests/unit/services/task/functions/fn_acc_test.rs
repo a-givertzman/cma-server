@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::{FnInOutRef, FnOutRef}, 
     services::task::{FnAcc, FnInput, FnOut},
@@ -30,7 +30,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> (FnOutRef, FnInOutRef) {
 /// Testing accumulation of the BSool's
 #[test]
 fn acc_bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("acc_bool");
     let (initial, _) = init_each("0", FnConfPointType::Int);
@@ -70,7 +70,7 @@ fn acc_bool() {
 /// Testing accumulation of the Int's
 #[test]
 fn acc_int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("acc_int");
     let (initial, _) = init_each("0", FnConfPointType::Int);
@@ -110,7 +110,7 @@ fn acc_int() {
 /// Testing accumulation of the Int's using reset
 #[test]
 fn acc_int_reset() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("acc_int_reset");
     let (initial, _) = init_each("0", FnConfPointType::Int);
@@ -153,7 +153,7 @@ fn acc_int_reset() {
 /// Testing accumulation of the Real's
 #[test]
 fn acc_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("acc_real");
     let (initial, _) = init_each("0.0", FnConfPointType::Real);
@@ -193,7 +193,7 @@ fn acc_real() {
 /// Testing accumulation of the Double's
 #[test]
 fn acc_double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("acc_double");
     let (initial, _) = init_each("0.0", FnConfPointType::Double);

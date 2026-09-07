@@ -2,7 +2,7 @@
 
 use std::{sync::Once, time::Duration};
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::domain::filter::{filter::Filter, filter_threshold::FilterThreshold};
 ///
 ///
@@ -22,7 +22,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn test_filter_threshold_abs_pos() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_threshold_abs_pos 0.0 - 1.0 - 0.0";
@@ -82,7 +82,7 @@ fn test_filter_threshold_abs_pos() {
 /// Testing FilterThreshold with absolute threshold and negative input
 #[test]
 fn test_filter_threshold_abs_neg_f64() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_threshold_abs_neg (-1.0) - 1.0 - (-1.0)";
@@ -162,7 +162,7 @@ fn test_filter_threshold_abs_neg_f64() {
 /// Testing FilterThreshold with factor and pisitive input
 #[test]
 fn test_filter_threshold_factor_pos() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let self_id = "test_filter_threshold_factor_pos 0.0 - 1.0 - 0.0 | factor";
@@ -196,7 +196,7 @@ fn test_filter_threshold_factor_pos() {
     let threasold = 1.0;
     let mut filter = FilterThreshold::<f32>::new(None, threasold, 1.5);
     let mut prev = 0.0;
-    for (step, (value, target)) in test_data.into_iter().enumerate() {
+    for (_step, (value, target)) in test_data.into_iter().enumerate() {
         let result = filter.add(value);
         let diff = (prev as f64 - (value as f64)).abs();
         if diff > threasold {
@@ -207,7 +207,7 @@ fn test_filter_threshold_factor_pos() {
     }
     let mut filter = FilterThreshold::<f64>::new(None, threasold, 1.5);
     let mut prev = 0.0;
-    for (step, (value, target)) in test_data.into_iter().map(|(value, target)| (value as f64, target.map(|t| t as f64))).enumerate() {
+    for (_step, (value, target)) in test_data.into_iter().map(|(value, target)| (value as f64, target.map(|t| t as f64))).enumerate() {
         let result = filter.add(value);
         let diff = (prev as f64 - (value as f64)).abs();
         if diff > threasold {
@@ -222,7 +222,7 @@ fn test_filter_threshold_factor_pos() {
 /// Testing FilterThreshold with factor and negative input
 #[test]
 fn test_filter_threshold_factor_neg() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     let dbg = "test_filter_threshold_factor_neg (-1.0) - 1.0 - (-1.0) | factor";
@@ -310,7 +310,7 @@ fn test_filter_threshold_factor_neg() {
 /// Manual test for exact cases
 #[test]
 fn manual_test() {
-    DebugSession::new().filter(LogLevel::Debug).init();
+    DebugSession::new().filter(LogLevel::Debug).init().unwrap();
     init_once();
     init_each();
     let dbg = "manual_test";
@@ -377,7 +377,7 @@ fn manual_test() {
     log::debug!("{dbg} | factor: {factor}");
     let mut filter = FilterThreshold::<i64>::new(None, threasold, factor);
     let mut prev = 0.0;
-    for (value, target) in test_data {
+    for (value, _target) in test_data {
         let result = filter.add(value as i64);
         let diff = (prev as f64 - (value as f64)).abs();
         if diff > threasold {

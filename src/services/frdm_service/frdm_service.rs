@@ -1,27 +1,28 @@
 //!
 //! # FRDM (Fiber Rope Defects Monitoring)
-//! 
-//! - Communication with Camera 
+//!
+//! - Communication with Camera
 //! - Receives current rope position
 //! - Scanning the rope for defects
 //! - Calculates Rope Depreciation Rate
-//! 
+//!
 //! ## Basic configuration parameters:
-//! 
+//!
 //! ```yaml
 //! service FrdmService FrdmService1:
 //!     parameter: value    # meaning
 //!     parameter: value    # meaning
 //! ```
-//! 
-use std::{path::Path, sync::{atomic::{AtomicBool, Ordering}, Arc}};
+//!
+use std::{path::Path, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
 use dashmap::DashMap;
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{
     services::{entity::{Name, Object}, Service, Services},
     thread_pool::Scheduler,
 };
-use crate::{infra::ApiClient, services::frdm_service::{FrdmServiceConf, Inputs, RopeDefect, RopeDeprecation}};
+use crate::{domain::RECV_TIMEOUT, err_pass, infra::ApiClient, services::frdm_service::{FrdmServiceConf, Inputs, RopeDefect, RopeDeprecation}};
 ///
 /// FRDM Service | Fiber Rope Defects Monitoring
 pub struct FrdmService {
@@ -56,8 +57,9 @@ impl FrdmService {
         let dbg = self.dbg.clone();
         let table = self.conf.table_settings.clone();
         let rope_length = self.conf.rope_deprecation.crane.rope.length.as_m();
-        let defect_slices = (rope_length / self.conf.rope_defect.segment.as_m()).round() as usize;
-        let deprecation_slices = (rope_length / self.conf.rope_deprecation.crane.rope.segment.as_m()).round() as usize;
+        let defect_slices = self.conf.rope_defect.db_slices(self.conf.rope_deprecation.crane.rope.length);
+        let deprecation_slices = self.conf.rope_deprecation.crane.rope.slices();
+        let mut timeout = Duration::from_millis(500);
         let _ = self.scheduler.spawn(move || {
             log::debug!("{dbg}.update_db_settings | Updating db settings...");
             let sql = format!(r"
@@ -77,18 +79,18 @@ impl FrdmService {
             ");
             log::trace!("{dbg}.update_db_settings | Fetching sql: {:?}", sql);
             while !exit.load(Ordering::Acquire) {
-                match api_client.fetch(&sql).wait() {
-                    Ok(reply) => {
-                        if reply.is_ok() {
-                            log::debug!("{dbg}.update_db_settings | Updating db settings - Ok {:?}", reply.unwrap());
-                            break;
-                        }
-                        log::warn!("{dbg}.update_db_settings | Sql reply: {:?}", reply);
+                match api_client.fetch(&sql).timeout(Duration::from_millis(500)) {
+                    Ok(None) => {},
+                    Ok(Some(Ok(reply))) => {
+                        log::debug!("{dbg}.update_db_settings | Updating db settings - Ok {:?}", reply);
+                        break;
                     },
-                    Err(err) => {
+                    Ok(Some(Err(err))) | Err(err) => {
                         log::error!("{dbg}.update_db_settings | Fetch error: {:?}", err);
                     }
                 }
+                std::thread::sleep(timeout);
+                timeout = (timeout * 2).min(Duration::from_secs(10));
             }
         })?;
         Ok(())
@@ -107,7 +109,6 @@ impl Object for FrdmService {
     }
 }
 //
-// 
 impl std::fmt::Debug for FrdmService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -117,51 +118,27 @@ impl std::fmt::Debug for FrdmService {
     }
 }
 //
-//
 impl Service for FrdmService {
     //
-    // 
+    #[named]
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let name = self.name.clone();
         let conf = self.conf.clone();
+        let winch = 1;      // Номер лебедки пока захардкожен. TODO: Вынести в конфиг, если лебедок несколько
         let services = self.services.clone();
         let scheduler = self.scheduler.clone();
         let storage_path = Path::new("assets/files").join(
-            self.name.join()
-                .chars()
-                .enumerate()
-                .filter(|(ix, ch)| !((*ix == 0) & (*ch == '/')))
-                .map(|(_, ch)| ch)
-                .collect::<String>()
+            self.name.join().trim_start_matches("/")
         );
         if let Err(err) = self.create_rope_defects_dir(&storage_path) {
             log::warn!("{}.run | Can't create folder for rope defects images: {:?}", self.dbg, err);
         }
         let api_client = Arc::new(ApiClient::new(conf.api.clone(), scheduler.clone()));
         self.tasks.insert(api_client.name().join(), api_client.clone());
-        api_client.run()?;
+        api_client.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | ApiClient ready", self.dbg);
-        self.update_db_settings(1, api_client.clone(), self.exit.clone())?;
-        // let subscription: Vec<SubscriptionCriteria> = [
-        //         conf.rope_deprecation.crane.rope.pos.clone(),
-        //         conf.rope_deprecation.crane.rope.load.clone(),
-        //     ]
-        //     .iter().chain(
-        //         conf.rope_deprecation.crane.booms.iter().filter_map(|(_, b)| {
-        //             match &b.angle {
-        //                 crate::services::frdm_service::InputKind::Const(_) => None,
-        //                 crate::services::frdm_service::InputKind::Point(v) => Some(v),
-        //             }
-        //         }),
-        //     )
-        //     .map(|point| {
-        //         let subscription = SubscriptionCriteria::new(point, Cot::Inf);
-        //         log::trace!("{dbg}.run | Subscription: {:?}", subscription);
-        //         subscription
-        //     })
-        //     .collect();
-        // let (_, recv) = services.subscribe(&conf.subscribe, &name.join(), &subscription);
+        self.update_db_settings(winch, api_client.clone(), self.exit.clone())?;
         let inputs = Arc::new(Inputs::new(&name, &conf, services.clone(), scheduler.clone(), self.exit.clone()));
         self.tasks.insert(inputs.name().join(), inputs.clone());
         let rope_deprecation = Arc::new(RopeDeprecation::new(
@@ -172,7 +149,7 @@ impl Service for FrdmService {
             scheduler.clone(),
         ));
         self.tasks.insert(rope_deprecation.name().join(), rope_deprecation.clone());
-        rope_deprecation.run()?;
+        rope_deprecation.run().map_err(|err| err_pass!(self.dbg, err))?;
         log::info!("{}.run | RopeDeprecation ready", self.dbg);
         if !conf.rope_defect.cameras.is_empty() {
             log::info!("{}.run | Camera's configured: {}", self.dbg, conf.rope_defect.cameras.len());
@@ -188,18 +165,18 @@ impl Service for FrdmService {
                     scheduler.clone(),
                 ));
                 self.tasks.insert(defect_detection.name().join(), defect_detection.clone());
-                defect_detection.run()?; 
+                defect_detection.run().map_err(|err| err_pass!(self.dbg, err))?;
             }
         } else {
             log::warn!("{}.run | No Camera's configured", self.dbg);
         }
-        inputs.run()?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
-        log::info!("{}.run | RopeDefect's ready", self.dbg);
+        inputs.run().map_err(|err| err_pass!(self.dbg, err))?;      // have to be started after all subscription being added, then it will subscribe all them on MultiQueue
+        log::info!("{}.run | Inputs ready", self.dbg);
         log::info!("{}.run | Starting - Ok", self.dbg);
         Ok(())
     }
     //
-    //
+    #[named]
     fn wait(&self) -> Result<(), Error> {
         let mut errors = vec![];
         for task in self.tasks.iter() {
@@ -207,24 +184,17 @@ impl Service for FrdmService {
                 errors.push(err);
             }
         }
-        errors
-            .is_empty()
-            .then(|| {
-                log::info!("{}.run | Exit", self.dbg);
-                ()
-            })
-            .ok_or(
-                Error::new(&self.dbg, "wait").pass(errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err)))
-            )
+        if errors.is_empty() {
+            log::info!("{}.run | Exit", self.dbg);
+            Ok(())
+        } else {
+            Err(err_pass!(self.dbg, errors.iter().fold(String::new(), |acc, err| format!("{}\n{}", acc, err))))
+        }
     }
     //
     //
     fn is_finished(&self) -> bool {
-        let mut is_finished = false;
-        for task in self.tasks.iter() {
-            is_finished = is_finished & task.value().is_finished();
-        }
-        is_finished
+        self.tasks.iter().all(|task| task.value().is_finished())
     }
     //
     //
@@ -233,6 +203,5 @@ impl Service for FrdmService {
         for task in self.tasks.iter() {
             task.value().exit();
         }
-    }    
+    }
 }
-

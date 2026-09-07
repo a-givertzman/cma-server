@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, 
     services::task::{EvalCycle, EvalCycleRef, FnBitAnd, FnInput, FnOut}
@@ -30,7 +30,7 @@ fn init_each(default: &str, type_: FnConfPointType, cycle: &EvalCycleRef) -> FnI
 #[test]
 #[ignore = "Isn't implemented yet"]
 fn test_bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_bool";
     log::info!("{}", self_id);
@@ -68,7 +68,7 @@ fn test_bool() {
 #[test]
 #[ignore = "Isn't implemented yet"]
 fn test_bool_3() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_bool_3";
     log::info!("{}", self_id);
@@ -114,7 +114,7 @@ fn test_bool_3() {
 #[test]
 #[ignore = "Isn't implemented yet"]
 fn test_int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_int";
     log::info!("{}", self_id);
@@ -159,7 +159,7 @@ fn test_int() {
 #[test]
 #[ignore = "Isn't implemented yet"]
 fn test_int_3() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_int_3";
     log::info!("{}", self_id);

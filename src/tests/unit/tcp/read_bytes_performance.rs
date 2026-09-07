@@ -7,7 +7,7 @@ mod socket_read_performance {
     };
     use std::{sync::{Once, atomic::{AtomicUsize, Ordering}, Arc}, time::{Duration, Instant}, net::{TcpStream, TcpListener}, thread, io::{Read, BufReader, Write}};
     use testing::session::test_session::TestSession;
-    use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::domain::net::protocols::jds::jds_define::JDS_END_OF_TRANSMISSION;
     //
     //
@@ -43,7 +43,7 @@ mod socket_read_performance {
     #[ignore = "Performance test"]
     #[test]
     fn read_bytes() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         println!("test read bytes from socket performance");

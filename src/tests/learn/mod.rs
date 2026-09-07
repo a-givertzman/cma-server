@@ -8,3 +8,4 @@ mod state_test;
 mod tcp_stream_test;
 mod rv_lock_test;
 mod thread_test;
+mod map_update_or_insert_test;

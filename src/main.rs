@@ -8,11 +8,12 @@ mod tcp;
 mod tests;
 
 pub(crate) use domain::short_type_name;
+pub(crate) use domain::short_type_name as me;
 pub(crate) use sal_core::error::Error;
 
 use std::path::PathBuf;
 use clap::Parser;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use sal_core::dbg::Dbg;
 use services::app::app::App;
 use crate::domain::cli::cli::Cli;
@@ -21,7 +22,7 @@ fn main() {
     DebugSession::new()
         .filter(LogLevel::Debug)
         .module("sal_sync::thread_pool", LogLevel::Info)
-        .init();
+        .init().unwrap();
     let dbg = Dbg::own("main");
     if let Err(err) = std::process::Command::new("clear").status() {
         log::debug!("{dbg} | Can't clear terminal, error: {:?}", err);

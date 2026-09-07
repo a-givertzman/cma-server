@@ -3,7 +3,7 @@
 mod slmp_client {
         use std::{io::{self, Read, Write}, net::TcpStream, sync::Once, thread, time::Duration};
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::services::slmp_client::slmp::{c_slmp_const::FrameType, device_code::DeviceCode, slmp_packet::SlmpPacket};
     ///
     ///
@@ -24,7 +24,7 @@ mod slmp_client {
     #[ignore = "Manual test with phisical device"]
     #[test]
     fn read_d() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test";
@@ -122,7 +122,7 @@ mod slmp_client {
     #[ignore = "Manual test with phisical device"]
     #[test]
     fn write_d() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let self_id = "test";

@@ -8,7 +8,7 @@ mod cma_recorder {
     }, thread_pool::ThreadPool};
     use std::{env, fs, sync::{Arc, Once}, thread, time::{Duration, Instant}};
     use testing::{entities::test_value::Value, stuff::max_test_duration::TestDuration};
-    use debugging::session::debug_session::{DebugSession, LogLevel};
+    use debugging::session::{DebugSession, LogLevel};
     use crate::{
         services::{
             ApiClient, ApiClientConf,
@@ -39,7 +39,7 @@ mod cma_recorder {
     ///  ...to be extended
     #[test]
     fn operating_event() {
-        DebugSession::new().filter(LogLevel::Info).init();
+        DebugSession::new().filter(LogLevel::Info).init().unwrap();
         init_once();
         init_each();
         let dbg = "AppTest";

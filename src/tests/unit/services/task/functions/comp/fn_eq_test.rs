@@ -1,7 +1,7 @@
 #[cfg(test)]
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{cell::RefCell, rc::Rc, sync::Once};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef,
     services::task::{EvalCycle, EvalCycleRef, FnEq, FnInput, FnOut},
@@ -29,7 +29,7 @@ fn init_each(default: &str, type_: FnConfPointType, cycle: &EvalCycleRef) -> FnI
 /// Testing Task Eq Bool's
 #[test]
 fn test_bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_bool";
     log::info!("{}", self_id);
@@ -63,7 +63,7 @@ fn test_bool() {
 /// Testing Task Eq Int's
 #[test]
 fn test_int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_int";
     log::info!("{}", self_id);
@@ -104,7 +104,7 @@ fn test_int() {
 /// Testing Eq Real's
 #[test]
 fn test_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_real";
     log::info!("{}", self_id);
@@ -154,7 +154,7 @@ fn test_real() {
 /// Testing Eq Double's
 #[test]
 fn test_double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "test_double";
     log::info!("{}", self_id);

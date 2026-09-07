@@ -16,8 +16,8 @@ mod cache;
 pub use cache::*;
 pub mod diagnosis;
 // By Anton Lobanov 6.07.2026 FRDM disabled for GAZ-192103-release-with-registrator
-// mod frdm_service;
-// pub use frdm_service::*;
+mod frdm_service;
+pub use frdm_service::*;
 pub mod history;
 mod modbus_tcp;
 pub use modbus_tcp::*;
@@ -26,9 +26,14 @@ pub mod server;
 pub mod slmp_client;
 pub mod task;
 pub mod tcp_client;
-pub mod udp_client;
+// pub mod udp_client;      // Перенес функционал в vibro_monitir, оригинальный код оставил на месте
 mod virtual_device;
 pub use virtual_device::*;
 mod services_factory;
 pub use services_factory::*;
-
+mod wear_monitor;
+pub use wear_monitor::*;
+mod vibro_monitor;
+pub use vibro_monitor::*;
+mod event_values;
+pub use event_values::*;

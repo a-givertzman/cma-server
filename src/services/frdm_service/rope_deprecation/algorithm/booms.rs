@@ -70,12 +70,12 @@ impl Booms {
     /// 2. Угол наклона к горизонту каждой стрелы (alpha_boom)
     fn angles(&mut self) -> Option<Vec<Boom>> {
         let mut alpha_sum = 0.0;
-        let mut result = vec![];
+        let mut result = Vec::with_capacity(self.items.len());
         for (i, mut boom) in self.items.iter().cloned().enumerate() {
             // log::trace!("{}.angles | Boom[{i}] '{}':  parking '{}'", self.dbg, boom.name, self.parking);
             let alpha_rel = match self.parking {
                 true => boom.parking,
-                false => match &boom.alpha_input {
+                false => match boom.alpha_input.as_ref() {
                     Some(input) => match self.inputs.get(input) {
                         Some(alpha) => alpha,
                         None => {

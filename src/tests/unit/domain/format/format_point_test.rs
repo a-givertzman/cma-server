@@ -3,7 +3,7 @@
 use sal_sync::services::entity::ToPoint;
 use std::sync::Once;
 use regex::RegexBuilder;
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::domain::format::FormatPoint;
 ///
 ///
@@ -23,7 +23,7 @@ fn init_each() -> () {}
 ///
 #[test]
 fn simple_name() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     log::info!("test_bool");
@@ -49,7 +49,7 @@ fn simple_name() {
 #[test]
 #[ignore = "sufixt `input.id` isn't supported yet"]
 fn name_sufix_id() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     log::info!("test_name_sufix_id");
@@ -83,7 +83,7 @@ fn name_sufix_id() {
 /// 
 #[test]
 fn name_sufix() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     log::info!("test_name_sufix");
@@ -115,7 +115,7 @@ fn name_sufix() {
     }
 }    #[test]
 fn prepare() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     init_each();
     log::info!("test_prepare");

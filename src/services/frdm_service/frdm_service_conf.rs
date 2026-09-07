@@ -11,16 +11,16 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///     subscribe: MultiQueue       # Service name, to subscribe for event's required for the calculations like rope positin and crane angles
 ///     api-client:
 ///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
-///         address: "0.0.0.0:8081",
-///         auth-token: "123!@#",
-///         database: "cma",
+///         address: "0.0.0.0:8081"
+///         auth-token: "123!@#"
+///         database: "cma"
 ///     table-settings: 'public.frdm_settings'
 ///     rope-defect:
 ///         tables:
 ///             defect: 'public.frdm_defect'
 ///             defect-image: 'public.frdm_defect_image'
 ///         segment: 100 mm             # Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
-///         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position 
+///         segment-threshold: 5 mm     # Acceptable camera position error in relation to exact segment position
 ///         camera-offset: 5.5 m                        # camera position from the begin of the rope (hook side)
 ///         defect-detection:
 ///             normalize:
@@ -31,7 +31,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     height: 1000        # New image height
 ///                 gamma:
 ///                     factor: 120.0       # Percent of influence of [AutoGamma] algorythm bigger the value more the effect of [AutoGamma] algorythm, %
-///             
+///
 ///             fast-scan:
 ///                 fast-contours:
 ///                     otsu-tune: 0.40
@@ -50,12 +50,12 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     add-weighted:
 ///                         weight1: 1.0            # Weight of the first array elements.
 ///                         weight2: 1.0            # Weight of the second array elements.
-///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                 rope-dimensions:        # Verifaing the rope dimensions
 ///                     rope-width: 380               # Standart rope width, px
 ///                     width-tolerance: 50.0         # Tolerance for rope width, %
 ///                     square-tolerance: 100.0       # Tolerance for rope square, %
 ///                 distortion-threshold: 1.2    # 1.1..1.3, absolute threshold to detect the geometry deffects
-///             
+///
 ///             fine-scan:
 ///                 fine-contours:
 ///                     otsu-tune: 0.40         # Auto threshold factor, 1 - no correction, 0..1 - more, 1.. - less sensitive
@@ -77,7 +77,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     #     weight2: 1.0            # Weight of the second array elements.
 ///                     bitwise-and:
 ///                         no-params: ~
-///                 rope-dimensions:        # Verifaing the rope dimensions 
+///                 rope-dimensions:        # Verifaing the rope dimensions
 ///                     rope-width: 380               # Standart rope width, px
 ///                     width-tolerance: 30.0         # Tolerance for rope width, %
 ///                     square-tolerance: 100.0       # Tolerance for rope square, %
@@ -85,7 +85,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                 defect-threshold: 2.5        # 1.1..1.3, absolute threshold to detect the geometry deffects
 ///         camera Camera1:
 ///             fps: Max                    # Max / Min / 30.0
-///             resolution: 
+///             resolution:
 ///                 width: 1200
 ///                 height: 800
 ///             index: 0
@@ -101,14 +101,16 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///             auto-packet-size: true          # StreamAutoNegotiatePacketSize
 ///             channel-packet-size: Max        # Maximizing packet size increases frame rate
 ///             resend-packet: true             # StreamPacketResendEnable
-/// 
+///
 ///     rope-deprecation:
+///         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
 ///         table: 'public.frdm_deprecation'
 ///         crane:
 ///             rope:
-///                 width: 35 mm        # Diameter of the rome
-///                 length: 3000 m      # Total working length of the rope
-///                 segment: 100 mm     # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///                 width: 35 mm            # Diameter of the rome
+///                 length: 3000 m          # Total working length of the rope
+///                 segment: 100 mm         # Whole rope will divided by the segments for the Depreciation Rate calculation, use less to incrise accuracy
+///                 aux-length: 1.200 m     # Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
 ///                 pos: point real 'Winch.EncoderBR2'      # meters, current rope position
 ///                 load: point real 'Winch.Load'           # tonn, current rope load
 ///             booms:
@@ -119,6 +121,7 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     l4: 10330.0 mm              # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     len: 11200.0 mm                          # length of the boom
 ///                     angle: point real 'Load.MainBoomAngle'   # degrees, current angle of the boom (relative axis)
+///                     parking: 0.0 deg            # Угол в парковочном положении.
 ///                 - Rotary-Boom:
 ///                     l1: 0.0 mm                  # Растояние от продольной оси стрелы до точки A (оси ее поворота), константа
 ///                     l2: 0.0 mm                  # Растояние по продольной оси стрелы от точки D (корня стрелы) до точки A (оси ее поворота), константа
@@ -126,6 +129,8 @@ use crate::{infra::ApiClientConf, services::frdm_service::{rope_defect::RopeDefe
 ///                     l4: 0.0 mm                  # Расстояние от точки A (ось поворота) стрелы до перпендикуляра к продольной оси через точку G предыдущей стрелы (до ГСК для первой срелы), константа
 ///                     len: 7984.1 mm                           # length of the rotary boom
 ///                     angle: point real 'Load.RotaryBoomAngle' # degrees, current angle of the boom (relative axis)
+///                     parking: 23.78 deg          # Угол в парковочном положении.
+///
 ///             blocks:
 ///                 - 1:
 ///                     lf: 1830.0 mm,  710.0 mm    # Растояние (x, y) от **конца** стрелы до оси блока, мм
@@ -181,7 +186,7 @@ pub struct FrdmServiceConf {
     pub rope_deprecation: RopeDeprecationConf,
 }
 //
-// 
+//
 impl FrdmServiceConf {
     ///
     /// Returns [FrdmServiceConf] built from `ConfTree`:
@@ -226,7 +231,7 @@ impl FrdmServiceConf {
             None => {
                 panic!("FrdmServiceConf.from_yaml | Format error or empty conf: {:#?}", value)
             }
-        }        
+        }
     }
     ///
     /// reads config from path

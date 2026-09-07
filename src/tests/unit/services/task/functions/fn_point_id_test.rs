@@ -3,7 +3,7 @@
 use sal_sync::services::{entity::{Name, PointConf, ToPoint}, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use testing::entities::test_value::Value;
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
      domain::FnInOutRef,
     services::task::{FnOut, FnInput, FnPointId},
@@ -48,7 +48,7 @@ const POINTS: &[(usize, &str)] = &[
 ///
 #[test]
 fn basic() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     let self_id = "fn_point_id_test";
     println!("{}", self_id);

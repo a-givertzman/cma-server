@@ -5,14 +5,14 @@
  key                           |  value  |  unit
 ------------------------------ | ------- | ------
  winch1-rope-length            |  3000.0 |  m
- winch1-defect-slices          |  30000  |  
+ winch1-defect-slices          |  3000   |  
  winch1-deprecation-slices     |  60000  |  
 
 ```sql
 -- FRDM | Setting parameters
 create table public.frdm_settings (
     id                  varchar primary key not null,
-    value               text not null
+    value               text not null,
     unit                text null
 );
 ```
@@ -21,13 +21,13 @@ create table public.frdm_settings (
 
 ## frdm_defect
 
-id  |  defect  |  timestamp  | count | acknowledged | deleted
+slice | defect | camera | first | last | score | acknowledged
 
 ```sql
 -- FRDM | Defects type
 -- Enum of geometry defect type`s
 -- containing the position of defect withing a frame';
-create type public.frdm_defect_enum as enum (
+create type public.frdm_defect_kind as enum (
     -- Detecting both sides width growing
     'expansion',
     -- Detecting both sides width reduction
@@ -40,15 +40,22 @@ create type public.frdm_defect_enum as enum (
 
 -- FRDM | Defects
 create table public.frdm_defect (
-    id                  bigint not null,
-    defect              frdm_defect_enum not null,
+    -- Номер сегмента каната (номер для регистрации, не путать с номером сегмента для расчета)
+    slice               bigint not null,
+    -- Вид дефекта
+    defect              frdm_defect_kind not null,
+    -- Номер камеры
     camera              int2 not null,
+    -- Момент первой регистрации дефекта
     first               timestamp not null,
+    -- Момент последней регистрации дефекта
     last                timestamp not null,
+    -- UI покажет дефект при score >= 3
     score               int8 default 0 not null,
+    -- Момент сдроса (score = 0) дефекта пользователем
     acknowledged        timestamp null,
-    deleted             timestamp null,
-    PRIMARY KEY (id, defect, camera)
+    
+    PRIMARY KEY (slice, defect, camera)
 );
 ```
 
@@ -56,92 +63,82 @@ create table public.frdm_defect (
 
 ## frdm_defect_image
 
-id | frdm_defect_id | camera_id | path
+image_id | slice | defect | camera | path | created
 
 ```sql
 -- FRDM | Images of the rope defects
 create table public.frdm_defect_image (
-    id                  bigserial not null,
-    frdm_defect_id      frdm_defect_enum not null,
-    camera_id           int2 not null,
+    -- Локальный уникальный идентификатор изображения
+    image_id            bigint generated always as identity primary key,
+    -- Составной внешний ключ
+    slice               bigint not null,
+    defect              frdm_defect_kind not null,
+    camera              int2 not null,
+    -- Путь к файлу изображения
     path                text not null,
+    -- Дата создания
     created             timestamp default current_timestamp not null,
-    PRIMARY KEY (id, frdm_defect_id, camera_id)
-);
 
+    CONSTRAINT fk_frdm_defect 
+            FOREIGN KEY (slice, defect, camera) 
+            REFERENCES public.frdm_defect (slice, defect, camera)
+            ON DELETE RESTRICT, -- для удаления записи дефекта сначала удалить все изображения
+);
+create index frdm_defect_image_defect_idx 
+    on public.frdm_defect_image (slice, defect, camera, created);
+```
+
+### Пример вставки
+```sql
 -- FRDM | Insert or update defect and associated image
 do $$
 begin
-	insert into public.frdm_defect (id, defect, first, last, score)
-	    values (3, 'expansion', current_timestamp, current_timestamp, 1)
-	on conflict (id, defect) do update 
-	    set (last, score) = (current_timestamp, frdm_defect.score + 1);
+    insert into public.frdm_defect (slice, defect, camera, first, last, score)
+        values (3, 'expansion', 1, current_timestamp, current_timestamp, 1)
+    on conflict (slice, defect, camera) do update
+        set (last, score) = (current_timestamp, public.frdm_defect.score + 1);
     -- Image camera 1
-    insert into public.frdm_defect_image (frdm_defect_id, camera, path)
-        values (1, 1, 'assets/frdm/defect_image/1.jpeg');
-    -- Image camera 1
-    insert into public.frdm_defect_image (frdm_defect_id, camera, path)
-        values (1, 2, 'assets/frdm/defect_image/1.jpeg');
-    -- Image camera 1
-    insert into public.frdm_defect_image (frdm_defect_id, camera, path)
-        values (1, 3, 'assets/frdm/defect_image/1.jpeg');
-    -- Image camera 1
-    insert into public.frdm_defect_image (frdm_defect_id, camera, path)
-        values (1, 4, 'assets/frdm/defect_image/1.jpeg');
-	EXCEPTION
-		WHEN others then
-			rollback;
+    insert into public.frdm_defect_image (slice, defect, camera, path)
+        values (3, 'expansion', 1, 'assets/frdm/defect_image/1.jpeg');
+    -- Image camera 2
+    insert into public.frdm_defect_image (slice, defect, camera, path)
+        values (3, 'expansion', 2, 'assets/frdm/defect_image/1.jpeg');
 end; $$
 language plpgsql;
-
--- FRDM | Function cleaning the old images keeping 10 imeges per rope slice for each defect tipe
-CREATE OR REPLACE FUNCTION public.clean_frdm_defect_image(defect_id_ frdm_defect_enum, camera_id_ bigint)
- RETURNS TABLE(path text)
-AS $function$
-declare
-	images numeric;
-	cam record;
-	err text;
-	deleted_row record;
-begin
-	-- FRDM | Function cleaning the old images keeping 10 imeges per rope slice for each defect tipe
-	for cam in select camera from public.frdm_defect_image group by camera
-	loop
-		select count(public.frdm_defect_image.id) into images from public.frdm_defect_image
-		 	where frdm_defect_id = defect_id_ and camera = camera_id_;
-		raise notice '%', format('clean_frdm_defect_image | Defect ' || defect_id_ || ' Camera[' || camera_id_ || '] images: ' || images);
-		if images > 10 then
-			raise notice '%', format('clean_frdm_defect_image | Cleaning Defect ' || defect_id_ || ' Camera[' || camera_id_ || '] images: ' || images);
-		    for deleted_row in
-			    delete from public.frdm_defect_image
-			        where (id) in (
-			            select id from public.frdm_defect_image fdi
-						where fdi.frdm_defect_id = defect_id_ and fdi.camera = camera_id_
-			            order by last
-			            limit images - 10
-						offset 1
-			        )
-		    	returning public.frdm_defect_image.id, public.frdm_defect_image.path
-			loop
-				raise notice '%', format('clean_frdm_defect_image | Deleted: ' || deleted_row);
-				path := deleted_row.path;
-				return next;
-			end loop;
-		end if;
-	end loop;
-	exception
-		when others then
-			GET STACKED DIAGNOSTICS err = PG_EXCEPTION_CONTEXT;
-			raise warning '%', format('Frdm | clean_frdm_defect_image | error: ' || err);
-end; $function$
-language plpgsql;
-
--- FRDM | Trigger for `frdm_defect_image` table to call cleaning after each insert
-create or replace trigger clean_frdm_defect_image
-    after insert on public.frdm_defect_image
-    for each row
-    execute procedure clean_frdm_defect_image();
 ```
+
+### Поиск устаревших изображений
+
+```sql
+-- FRDM | Function cleaning the old imeges keeping 10 imeges per rope slice for each defect kind
+CREATE OR REPLACE FUNCTION public.clean_frdm_defect_image(
+    slice_      bigint,             -- номер сегмента
+    defect_     frdm_defect_kind,   -- вид дефекта
+    camera_     integer,            -- номер камеры
+    keep_       int default 10      -- сколько изображений оставить
+)
+RETURNS TABLE(path text)
+AS $function$
+begin
+    return query
+    with to_delete as (
+        -- Сначала выбираем строго те ID, которые подлежат удалению
+        select fdi.image_id
+        from public.frdm_defect_image fdi
+        where fdi.slice = slice_ and fdi.defect = defect_ and fdi.camera = camera_
+        order by fdi.created asc, fdi.image_id asc -- самые старые в начале
+        offset keep_ -- пропускаем первые keep_ (свежих) и берем все, что дальше
+    )
+    delete from public.frdm_defect_image
+    where image_id in (select image_id from to_delete)
+    returning public.frdm_defect_image.path;
+end;
+$function$
+language plpgsql;
+```
+
+---
+
 
 ## frdm_deprecation
 

@@ -2,7 +2,7 @@
 
 use sal_sync::services::{entity::ToPoint, task::functions::{FnConfOptions, FnConfPointType, FnConfig}};
 use std::{sync::Once, rc::Rc, cell::RefCell};
-use debugging::session::debug_session::{DebugSession, LogLevel};
+use debugging::session::{DebugSession, LogLevel};
 use crate::{
     domain::FnInOutRef, services::task::{
         EvalCycle, FlowContext, FnInput, FnOut, FnVar
@@ -32,7 +32,7 @@ fn init_each(default: &str, type_: FnConfPointType) -> FnInOutRef {
 ///
 #[test]
 fn test_bool() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("test_bool");
     let input = init_each("false", FnConfPointType::Bool);
@@ -72,7 +72,7 @@ fn test_bool() {
 
 #[test]
 fn test_int() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("test_int");
     let input = init_each("0", FnConfPointType::Int);
@@ -109,7 +109,7 @@ fn test_int() {
 ///
 #[test]
 fn test_real() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("test_real");
     let input = init_each("0.0", FnConfPointType::Real);
@@ -146,7 +146,7 @@ fn test_real() {
 ///
 #[test]
 fn test_double() {
-    DebugSession::new().filter(LogLevel::Info).init();
+    DebugSession::new().filter(LogLevel::Info).init().unwrap();
     init_once();
     log::info!("test_double");
     let input = init_each("0.0", FnConfPointType::Double);
