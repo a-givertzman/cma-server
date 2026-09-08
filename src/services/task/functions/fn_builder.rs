@@ -672,20 +672,32 @@ impl FnBuilder {
                         })
                     }
                     //
-                    Functions::PiecewiseLineApprox => {
+                    Functions::PiecewiseLinear => {
                         let input = Self::get_input_config(parent, "input", conf, nodes, &services)
-                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnPiecewiseLineApprox | 'input' - is missed"))))
-                            .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Can't get 'input'"), err))?;
-                        log::trace!("{}.function | PiecewiseLineApprox | conf: {:#?}", dbg, conf);
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnPiecewiseLinear | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnPiecewiseLinear | Can't get 'input'"), err))?;
+                        log::trace!("{}.function | PiecewiseLinear | conf: {:#?}", dbg, conf);
                         let name = "piecewise";
                         let FnConfKind::Param(piecewise) = conf.param(name)
-                            .ok_or(error.err(format!("FnPiecewiseLineApprox | Can't get '{name}'")))? else {
-                                return Err(error.err(format!("FnPiecewiseLineApprox | Parameter 'piecewise' - has invalid type, expected map in '{}'", conf.name)));
+                            .ok_or(error.err(format!("FnPiecewiseLinear | Can't get '{name}'")))? else {
+                                return Err(error.err(format!("FnPiecewiseLinear | Parameter 'piecewise' - has invalid type, expected map in '{}'", conf.name)));
                             };
-                        let pieces = PiecewiseLinear::from_yaml(parent, &piecewise.conf)
-                            .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Wrong conf in '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnPiecewiseLineApprox::new(parent, input, pieces)
+                            FnPiecewiseLinear::new(parent, input, &piecewise.conf).map_err(|err| err_pass!(dbg, err))?
+                        )))
+                    }
+                    Functions::PiecewiseStep => {
+                        let input = Self::get_input_config(parent, "input", conf, nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnPiecewiseStep | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnPiecewiseStep | Can't get 'input'"), err))?;
+                        log::trace!("{}.function | FnPiecewiseStep | conf: {:#?}", dbg, conf);
+                        let name = "piecewise";
+                        let FnConfKind::Param(piecewise) = conf.param(name)
+                            .ok_or(error.err(format!("FnPiecewiseStep | Can't get '{name}'")))? else {
+                                return Err(error.err(format!("FnPiecewiseStep | Parameter 'piecewise' - has invalid type, expected map in '{}'", conf.name)));
+                            };
+                        Ok(Rc::new(RefCell::new(
+                            FnPiecewiseStep::new(parent, nodes.txid(), input, &piecewise.conf).map_err(|err| err_pass!(dbg, err))?
                         )))
                     }
                     //

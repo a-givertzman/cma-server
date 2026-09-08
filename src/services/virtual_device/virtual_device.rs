@@ -244,22 +244,27 @@ impl Service for VirtualDevice {
                                                                     let delay = 2 * event.time / 3;
                                                                     log::trace!("{dbg}.run | row {row_ix} | Index {ix} | Try recv result events in {:?}...", delay);
                                                                     let t = Instant::now();
-                                                                    while !exit.load(Ordering::Acquire) && (t.elapsed() <= delay) {
-                                                                        match recv.recv_timeout(RECV_TIMEOUT) {
-                                                                            Ok(point) => {
-                                                                                // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
-                                                                                results.insert(point.name().split("/").last().unwrap().to_owned(), point);
+                                                                    if conf.results.iter().any(|(_, r)| matches!(r, super::ResultKind::Event(_))) {
+                                                                        while !exit.load(Ordering::Acquire) && (t.elapsed() <= delay) {
+                                                                            match recv.recv_timeout(RECV_TIMEOUT) {
+                                                                                Ok(point) => {
+                                                                                    // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result Event {:?}", point);
+                                                                                    results.insert(point.name().split("/").last().unwrap().to_owned(), point);
+                                                                                }
+                                                                                Err(crate::domain::RecvTimeoutError::Timeout) => {}
+                                                                                Err(err) => {
+                                                                                    log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
+                                                                                    exit.store(true, Ordering::Release);
+                                                                                }
                                                                             }
-                                                                            Err(crate::domain::RecvTimeoutError::Timeout) => {}
-                                                                            Err(err) => {
-                                                                                log::error!("{dbg}.run | row {row_ix} | Index {ix} | Cant recv result events, error {:?}", err);
-                                                                                exit.store(true, Ordering::Release);
+                                                                            if exit.load(Ordering::Acquire) {
+                                                                                break 'main;
                                                                             }
                                                                         }
-                                                                    }
-                                                                    match results.is_empty() {
-                                                                        true => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | No result events received"),
-                                                                        false => log::trace!("{dbg}.run | row {row_ix} | Index {ix} | {} result events received", results.len()),
+                                                                        match results.is_empty() {
+                                                                            true => log::warn!("{dbg}.run | row {row_ix} | Index {ix} | No result events received"),
+                                                                            false => log::trace!("{dbg}.run | row {row_ix} | Index {ix} | {} result events received", results.len()),
+                                                                        }
                                                                     }
                                                                     if exit.load(Ordering::Acquire) {
                                                                         break 'main;
@@ -267,31 +272,39 @@ impl Service for VirtualDevice {
                                                                     for (result_name, result_kind) in &conf.results {
                                                                         let result_block_name = result_name.split('/').last().unwrap();
                                                                         // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result name '{}', block '{}'...", result_name, result_block_name);
-                                                                        let result_block = ResultBlock::new(result_block_name, "target", "result", "status", &header);
-                                                                        match result_kind {
-                                                                            crate::services::ResultKind::Event(_) => {
-                                                                                match results.get(result_block_name) {
-                                                                                    Some(point) => {
-                                                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, point.value());
-                                                                                        let result = point.to_double().as_double().value;
+                                                                        let result_block = ResultBlock::new(result_block_name, "target", "result", "status", &header)
+                                                                            .from_table(&table, row_ix);
+                                                                        if let Some(result_block) = result_block {
+                                                                            if result_block.has_target() {
+                                                                                match result_kind {
+                                                                                    crate::services::ResultKind::Event(_) => {
+                                                                                        match results.get(result_block_name) {
+                                                                                            Some(point) => {
+                                                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, point.value());
+                                                                                                let result = point.to_double().as_double().value;
+                                                                                                result_block.write_result(row_ix, result, &mut table);
+                                                                                            }
+                                                                                            None => {
+                                                                                                log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}' - is missed", result_block_name);
+                                                                                                result_block.write_result(row_ix, "Missed", &mut table);
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                    crate::services::ResultKind::Sql(sql_result) => {
+                                                                                        // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}'", sql_result.name);
+                                                                                        let result = Self::fetch(&dbg, &api_client, &sql_result.typ, &sql_result.sql, sql_result.delay.to_duration()).into();
+                                                                                        log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, result);
                                                                                         result_block.write_result(row_ix, result, &mut table);
                                                                                     }
-                                                                                    None => {
-                                                                                        log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}' - is missed", result_block_name);
-                                                                                        result_block.write_result(row_ix, "Missed", &mut table);
-                                                                                    }
+                                                                                }
+                                                                                if let Err(err) = table.store() {
+                                                                                    log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
                                                                                 }
                                                                             }
-                                                                            crate::services::ResultKind::Sql(sql_result) => {
-                                                                                // log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}'", sql_result.name);
-                                                                                let result = Self::fetch(&dbg, &api_client, &sql_result.typ, &sql_result.sql, sql_result.delay.to_duration()).into();
-                                                                                log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Result '{}': {:?}", result_block_name, result);
-                                                                                result_block.write_result(row_ix, result, &mut table);
-                                                                            }
+                                                                        } else {
+                                                                            log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't read result block '{result_name}'");
                                                                         }
-                                                                        if let Err(err) = table.store() {
-                                                                            log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
-                                                                        }
+
                                                                         if exit.load(Ordering::Acquire) {
                                                                             break;
                                                                         }

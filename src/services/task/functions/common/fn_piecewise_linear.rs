@@ -1,10 +1,10 @@
+use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::services::{entity::{Point, PointHlr, PointType}, types::Bool};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use concat_string::concat_string;
 use crate::{
-    domain::FnOutRef,
-    services::task::{FlowContext, FnFlow, functions::{
+    domain::FnOutRef, err_pass, services::task::{FlowContext, FnFlow, functions::{
         FnKind, FnOut, FnResult
     }}
 };
@@ -15,25 +15,29 @@ use crate::{
 ///  - real: 0.1 -> 0 | 0.5 -> 1 | 0.9 -> 1 | 1.1 -> 1
 ///  - string: try to parse int
 #[derive(Debug)]
-pub struct FnPiecewiseLineApprox {
+pub struct FnPiecewiseLinear {
     id: String,
     kind: FnKind,
     input: FnOutRef,
     piecewise: PiecewiseLinear,
 }
 // 
-impl FnPiecewiseLineApprox {
+impl FnPiecewiseLinear {
     ///
-    /// Creates new instance of the FnPiecewiseLineApprox
+    /// Creates new instance of the FnPiecewiseLinear
     #[allow(dead_code)]
-    pub fn new(parent: impl Into<String>, input: FnOutRef, piecewise: PiecewiseLinear) -> Self {
-        let self_id = format!("{}/FnPiecewiseLineApprox{}", parent.into(), COUNT.fetch_add(1, Ordering::SeqCst));
-        Self { 
+    #[named]
+    pub fn new(parent: impl Into<String>, input: FnOutRef, piecewise: &serde_yaml::Value) -> Result<Self, Error> {
+        let parent = parent.into();
+        let self_id = format!("{}/FnPiecewiseLinear{}", parent, COUNT.fetch_add(1, Ordering::SeqCst));
+        let piecewise = PiecewiseLinear::from_yaml(parent, piecewise)
+            .map_err(|err| err_pass!(self_id, err, "Wrong conf"))?;
+        Ok(Self { 
             id: self_id,
             kind: FnKind::Fn,
             input,
             piecewise,
-        }
+        })
     }
     ///
     /// Возвращает `PointHlr` с обновленными `name` и `value`
@@ -57,7 +61,7 @@ impl FnPiecewiseLineApprox {
 }
 //
 // 
-impl FnOut for FnPiecewiseLineApprox { 
+impl FnOut for FnPiecewiseLinear { 
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -102,12 +106,12 @@ impl FnOut for FnPiecewiseLineApprox {
     fn reset(&mut self) {}
 }
 ///
-/// Global static counter of FnPiecewiseLineApprox instances
+/// Global static counter of FnPiecewiseLinear instances
 static COUNT: AtomicUsize = AtomicUsize::new(1);
 ///
 /// Contains x & y of the point on the line
 #[derive(Debug, Copy, Clone)]
-struct LinePoint {
+pub struct LinePoint {
     x: f64, y: f64
 }
 impl LinePoint {
@@ -275,19 +279,6 @@ impl PiecewiseLinear {
             }
             None
         })
-        // let res = self.lines.binary_search_by(|probe| {
-        //     if x < probe.left.x {
-        //         std::cmp::Ordering::Greater
-        //     } else if x >= probe.right.x {
-        //         std::cmp::Ordering::Less
-        //     } else {
-        //         std::cmp::Ordering::Equal
-        //     }
-        // });
-        // match res {
-        //     Ok(i) => Some(self.lines[i].eval(x)),
-        //     Err(_) => None
-        // }
     }
 }
 ///

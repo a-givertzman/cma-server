@@ -82,55 +82,55 @@ service VirtualDevice VirtualIed15:
         sql 0_05-0_15-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_05-0_15-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_15-0_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_15-0_25-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_25-0_35-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_25-0_35-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_35-0_45-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_35-0_45-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_45-0_55-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_45-0_55-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_55-0_65-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_55-0_65-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_65-0_75-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_65-0_75-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_75-0_85-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_75-0_85-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_85-0_95-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_85-0_95-load';"
-            delay:  10ms
+            delay:  100ms
         sql 0_95-1_05-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '0_95-1_05-load';"
-            delay:  10ms
+            delay:  100ms
         sql 1_05-1_15-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '1_05-1_15-load';"
-            delay:  10ms
+            delay:  100ms
         sql 1_15-1_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '1_15-1_25-load';"
-            delay:  10ms
+            delay:  100ms
         sql 1_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = '1_25-load';"
-            delay:  10ms
+            delay:  100ms
 
 
 service ApiClient:
