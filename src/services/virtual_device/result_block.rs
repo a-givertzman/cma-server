@@ -79,7 +79,7 @@ impl ResultBlock {
     }
     /// Returns `true` if result block contains target value
     pub fn has_target(&self) -> bool {
-        log::debug!("{}.has_target | '{}' | target: {:?},    type: {:?}", crate::me::<Self>(), self.name, self.target, self.target.value_type());
+        // log::trace!("{}.has_target | '{}' | target: {:?},    type: {:?}", crate::me::<Self>(), self.name, self.target, self.target.value_type());
         self.target.value_type() != spreadsheet_ods::ValueType::Empty
     }
 }

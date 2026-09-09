@@ -209,7 +209,7 @@ impl Service for VirtualDevice {
                     }
                     log::info!("{dbg}.run | Setup - Ok");
                     let mut time = Instant::now();
-                    'main: for  row_ix in start..(rows - start) {
+                    'main: for  row_ix in start..rows {
                         if exit.load(Ordering::Acquire) { break 'main; }
                         let row = table.row(row_ix, columns);
                         if let Some(index) = row.get(0) {
@@ -225,9 +225,9 @@ impl Service for VirtualDevice {
                                                 Some(point_conf) => {
                                                     let time_elapsed = time.elapsed();
                                                     if time_elapsed > event.time {
-                                                        log::warn!("{dbg}.run | row {} | Index {} | Elapsed {:?} Event.time {:?}, Exceeded {:?}", row_ix - 1, ix - 1.0, time_elapsed, event.time, time_elapsed - event.time);
+                                                        log::warn!("{dbg}.run | row {} | Index {} | Elapsed {:?} Event.time {:?}, Exceeded {:?}", row_ix, ix, time_elapsed, event.time, time_elapsed - event.time);
                                                     } else {
-                                                        log::debug!("{dbg}.run | row {} | Index {} | Elapsed {:?} Event.time {:?}", row_ix - 1, ix - 1.0, time_elapsed, event.time);
+                                                        log::debug!("{dbg}.run | row {} | Index {} | Elapsed {:?} Event.time {:?}", row_ix, ix, time_elapsed, event.time);
                                                     }
                                                     log::debug!("{dbg}.run | row {row_ix} | Index {ix} | Input '{}': {:?}", event.name, event.value);
                                                     match event_to_point(txid, &event, &point_conf) {
@@ -297,9 +297,6 @@ impl Service for VirtualDevice {
                                                                                         result_block.write_result(row_ix, result, &mut table);
                                                                                     }
                                                                                 }
-                                                                                if let Err(err) = table.store() {
-                                                                                    log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
-                                                                                }
                                                                             }
                                                                         } else {
                                                                             log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't read result block '{result_name}'");
@@ -308,6 +305,9 @@ impl Service for VirtualDevice {
                                                                         if exit.load(Ordering::Acquire) {
                                                                             break;
                                                                         }
+                                                                    }
+                                                                    if let Err(err) = table.store() {
+                                                                        log::warn!("{dbg}.run | row {row_ix} | Index {ix} | Can't write table, errpr: {:?}", err);
                                                                     }
                                                                 }
                                                             }

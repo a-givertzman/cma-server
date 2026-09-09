@@ -92,6 +92,13 @@ impl Header {
             let row = Self::row(&sheet, row_ix, columns);
             match (&h_block, &h_index) {
                 (Some(block), Some(index)) => {
+                    if h_unit.is_none() {
+                        if let Some(ix) = row.get(0).map(|v| v.as_str_opt().map(|v| (v.to_lowercase() == "unit").then(|| row_ix)).flatten() ).flatten() {
+                            h_unit_row = ix;
+                            h_unit = Some(row);
+                            continue;
+                        }
+                    }
                     log::trace!("{dbg}.from | \n block: {:?},  \n index: {:?}", block, index);
                     for (column, block_name) in block.iter().enumerate() {
                         log::trace!("{dbg}.from | Column: {}, Block: {:?}", column, block_name);
@@ -165,10 +172,15 @@ impl Header {
     ///
     /// Returns row by index from `Sheet`
     fn row(sheet: &spreadsheet_ods::Sheet, row: u32, columns: u32) -> Vec<spreadsheet_ods::Value> {
-        sheet
-            .iter_rows((row, 0)..(row + 1, columns))
-            .map(|((_row, _col), cell)| cell.value.to_owned())
-            .collect()
+        let mut out = vec![spreadsheet_ods::Value::Empty; columns as usize];
+        for ((_row, col), cell) in sheet.iter_rows((row, 0)..(row + 1, columns)) {
+            out[col as usize] = cell.value.to_owned();
+        }
+        out
+        // sheet
+        //     .iter_rows((row, 0)..(row + 1, columns))
+        //     .map(|((_row, _col), cell)| cell.value.to_owned())
+        //     .collect()
     }
 }
 

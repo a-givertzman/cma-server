@@ -113,9 +113,9 @@ service Task RecorderTask:
             input2: winch3LoadNom
     let craneIsActive:
         input fn TimerOffDelay:
-            delay: 500ms
+            delay: 50ms
             input fn TimerOnDelay:
-                delay: 500ms
+                delay: 50ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: opCycleThreshold
@@ -123,9 +123,9 @@ service Task RecorderTask:
                     input2: opCycleThreshold
     let winch1IsActive:
         input fn TimerOffDelay:
-            delay: 500ms
+            delay: 50ms
             input fn TimerOnDelay:
-                delay: 500ms
+                delay: 50ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch1OpCycleThreshold
@@ -133,9 +133,9 @@ service Task RecorderTask:
                     input2: winch1OpCycleThreshold
     let winch2IsActive:
         input fn TimerOffDelay:
-            delay: 500ms
+            delay: 50ms
             input fn TimerOnDelay:
-                delay: 500ms
+                delay: 50ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch2OpCycleThreshold
@@ -143,9 +143,9 @@ service Task RecorderTask:
                     input2: winch2OpCycleThreshold
     let winch3IsActive:
         input fn TimerOffDelay:
-            delay: 500ms
+            delay: 50ms
             input fn TimerOnDelay:
-                delay: 500ms
+                delay: 50ms
                 input fn Ge:
                     input1 fn Threshold:                 # Triggering threshold of the operating cycle detection function on the input value based on the nominal value
                         threshold: winch3OpCycleThreshold
@@ -528,7 +528,7 @@ service Task RecorderTask:
         #
         # 3.4.1  |  распределение циклов по диапазонам нагрузки для Крана
         input34_1 fn Sql:
-            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'cycles-{range.value}-load-range';
             range: cycleLoadRange
         input34_1_L fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = '{range.value}-load';
@@ -537,7 +537,7 @@ service Task RecorderTask:
         #
         # 3.4.2  |  распределение циклов по диапазонам нагрузки для Лебедки 1
         input34_2 fn Sql:
-            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch1-cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch1-cycles-{range.value}-load-range';
             range: winch1CycleLoadRange
         input34_2_L fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-{range.value}-load';
@@ -546,7 +546,7 @@ service Task RecorderTask:
         #
         # 3.4.3  |  распределение циклов по диапазонам нагрузки для Лебедки 2
         input34_3 fn Sql:
-            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch2-cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch2-cycles-{range.value}-load-range';
             range: winch2CycleLoadRange
         input34_3_L fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-{range.value}-load';
@@ -555,7 +555,7 @@ service Task RecorderTask:
         #
         # 3.4.4  |  распределение циклов по диапазонам нагрузки для Лебедки 3
         input34_4 fn Sql:
-            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch3-cycles-{range.value}_load-range';
+            sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + 1)::TEXT where name = 'winch3-cycles-{range.value}-load-range';
             range: winch3CycleLoadRange
         input34_4_L fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-{range.value}-load';
