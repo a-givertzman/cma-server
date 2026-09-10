@@ -430,7 +430,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnMul | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -442,7 +442,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnDiv | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -524,7 +524,7 @@ impl FnBuilder {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnBitNot | Can't get '{name}'"), err))?;
+                            .map_err(|err| error.pass_with(format!("FnNot | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
                             FnNot::new(parent, input)
                         )))
@@ -577,7 +577,7 @@ impl FnBuilder {
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let reset = match input_conf {
                             Some(input_conf) => Some(Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?),
+                                .map_err(|err| error.pass_with(format!("FnAverage | Can't get '{name}'"), err))?),
                             None => None,
                         };
                         let name = "input";
@@ -594,7 +594,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnPow | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
