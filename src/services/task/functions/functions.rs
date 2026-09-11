@@ -59,7 +59,9 @@ pub enum Functions {
     Pow,
     Max,
     Min,
-    PiecewiseLineApprox,
+    /// Aliase to `PiecewiseLineApprox`
+    PiecewiseLinear,
+    PiecewiseStep,
     IsChangedValue,
     Hold,
     /// Recorder functions
@@ -121,6 +123,8 @@ impl Functions {
     const MAX                           : &'static str = "Max";
     const MIN                           : &'static str = "Min";
     const PIECEWISE_LINE_APPROX         : &'static str = "PiecewiseLineApprox";
+    const PIECEWISE_LINEAR              : &'static str = "PiecewiseLinear";
+    const PIECEWISE_STEP                : &'static str = "PiecewiseStep";
     const IS_CHANGED_VALUE              : &'static str = "IsChangedValue";
     const HOLD                          : &'static str = "Hold";
     const KEEP_VALID                    : &'static str = "KeepValid";               // Старая версия Hold, будет удалено в будущем
@@ -178,7 +182,8 @@ impl Functions {
             Self::RecOpCycleMetric      => Self::REC_OP_CYCLE_METRIC,
             Self::Max                   => Self::MAX,
             Self::Min                   => Self::MIN,
-            Self::PiecewiseLineApprox   => Self::PIECEWISE_LINE_APPROX,
+            Self::PiecewiseLinear       => Self::PIECEWISE_LINEAR,
+            Self::PiecewiseStep         => Self::PIECEWISE_STEP,
             Self::IsChangedValue        => Self::IS_CHANGED_VALUE,
             Self::Hold             => Self::HOLD,
         }
@@ -235,7 +240,9 @@ impl Functions {
             Self::REC_OP_CYCLE_METRIC                   => Ok( Self::RecOpCycleMetric ),
             Self::MAX                                   => Ok( Self::Max ),
             Self::MIN                                   => Ok( Self::Min ),
-            Self::PIECEWISE_LINE_APPROX                 => Ok( Self::PiecewiseLineApprox ),
+            Self::PIECEWISE_LINE_APPROX                 => Ok( Self::PiecewiseLinear ),
+            Self::PIECEWISE_LINEAR                      => Ok( Self::PiecewiseLinear ),
+            Self::PIECEWISE_STEP                        => Ok( Self::PiecewiseStep ),
             Self::IS_CHANGED_VALUE                      => Ok( Self::IsChangedValue ),
             Self::HOLD | Self::KEEP_VALID               => Ok( Self::Hold ),
             _ => Err(format!("Functions.from_str | Unknown function name '{}'", &input)),

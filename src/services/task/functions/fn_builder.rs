@@ -430,7 +430,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnMul | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -442,7 +442,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnDiv | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -524,7 +524,7 @@ impl FnBuilder {
                         let name = "input";
                         let input_conf = conf.input_conf(name).unwrap();
                         let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                            .map_err(|err| error.pass_with(format!("FnBitNot | Can't get '{name}'"), err))?;
+                            .map_err(|err| error.pass_with(format!("FnNot | Can't get '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
                             FnNot::new(parent, input)
                         )))
@@ -577,7 +577,7 @@ impl FnBuilder {
                         let input_conf = conf.input_conf(name).map_or(None, |conf| Some(conf));
                         let reset = match input_conf {
                             Some(input_conf) => Some(Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnMax | Can't get '{name}'"), err))?),
+                                .map_err(|err| error.pass_with(format!("FnAverage | Can't get '{name}'"), err))?),
                             None => None,
                         };
                         let name = "input";
@@ -594,7 +594,7 @@ impl FnBuilder {
                         let mut inputs = vec![];
                         for (name, input_conf) in &conf.inputs {
                             let input = Self::function(parent, name, input_conf, nodes, services.clone())
-                                .map_err(|err| error.pass_with(format!("FnSub | Can't get '{name}'"), err))?;
+                                .map_err(|err| error.pass_with(format!("FnPow | Can't get '{name}'"), err))?;
                             inputs.push(input);
                         }
                         Ok(Rc::new(RefCell::new(
@@ -672,20 +672,32 @@ impl FnBuilder {
                         })
                     }
                     //
-                    Functions::PiecewiseLineApprox => {
+                    Functions::PiecewiseLinear => {
                         let input = Self::get_input_config(parent, "input", conf, nodes, &services)
-                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnPiecewiseLineApprox | 'input' - is missed"))))
-                            .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Can't get 'input'"), err))?;
-                        log::trace!("{}.function | PiecewiseLineApprox | conf: {:#?}", dbg, conf);
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnPiecewiseLinear | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnPiecewiseLinear | Can't get 'input'"), err))?;
+                        log::trace!("{}.function | PiecewiseLinear | conf: {:#?}", dbg, conf);
                         let name = "piecewise";
                         let FnConfKind::Param(piecewise) = conf.param(name)
-                            .ok_or(error.err(format!("FnPiecewiseLineApprox | Can't get '{name}'")))? else {
-                                return Err(error.err(format!("FnPiecewiseLineApprox | Parameter 'piecewise' - has invalid type, expected map in '{}'", conf.name)));
+                            .ok_or(error.err(format!("FnPiecewiseLinear | Can't get '{name}'")))? else {
+                                return Err(error.err(format!("FnPiecewiseLinear | Parameter 'piecewise' - has invalid type, expected map in '{}'", conf.name)));
                             };
-                        let pieces = PiecewiseLinear::from_yaml(parent, &piecewise.conf)
-                            .map_err(|err| error.pass_with(format!("FnPiecewiseLineApprox | Wrong conf in '{name}'"), err))?;
                         Ok(Rc::new(RefCell::new(
-                            FnPiecewiseLineApprox::new(parent, input, pieces)
+                            FnPiecewiseLinear::new(parent, input, &piecewise.conf).map_err(|err| err_pass!(dbg, err))?
+                        )))
+                    }
+                    Functions::PiecewiseStep => {
+                        let input = Self::get_input_config(parent, "input", conf, nodes, &services)
+                            .and_then(|v| v.ok_or_else(|| error.err(format!("FnPiecewiseStep | 'input' - is missed"))))
+                            .map_err(|err| error.pass_with(format!("FnPiecewiseStep | Can't get 'input'"), err))?;
+                        log::trace!("{}.function | FnPiecewiseStep | conf: {:#?}", dbg, conf);
+                        let name = "piecewise";
+                        let FnConfKind::Param(piecewise) = conf.param(name)
+                            .ok_or(error.err(format!("FnPiecewiseStep | Can't get '{name}'")))? else {
+                                return Err(error.err(format!("FnPiecewiseStep | Parameter 'piecewise' - has invalid type, expected map in '{}'", conf.name)));
+                            };
+                        Ok(Rc::new(RefCell::new(
+                            FnPiecewiseStep::new(parent, nodes.txid(), input, &piecewise.conf).map_err(|err| err_pass!(dbg, err))?
                         )))
                     }
                     //

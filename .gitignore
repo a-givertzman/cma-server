@@ -31,3 +31,4 @@ src/tests/**/*.jpeg
 
 # Temp files
 .~lock*
+.base-check

@@ -67,9 +67,14 @@ impl Table {
     ///
     /// Returns row by index from active `Sheet` mutable
     pub fn row(&self, i: u32, cols: u32) -> Vec<Value> {
-        self.book.sheet(self.sheet)
-            .iter_rows((i, 0)..(i + 1, cols))
-            .map(|((_row, _col), cell)| cell.value.to_owned())
-            .collect()
+        let mut out = vec![Value::Empty; cols as usize];
+        for ((_row, col), cell) in self.book.sheet(self.sheet).iter_rows((i, 0)..(i + 1, cols)) {
+            out[col as usize] = cell.value.to_owned();
+        }
+        out
+        // self.book.sheet(self.sheet)
+        //     .iter_rows((i, 0)..(i + 1, cols))
+        //     .map(|((_row, _col), cell)| cell.value.to_owned())
+        //     .collect()
     }
 }

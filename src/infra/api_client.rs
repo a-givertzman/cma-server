@@ -113,6 +113,7 @@ impl Service for ApiClient {
                                         if reply.has_error() {
                                             sink.add(Err(error.pass(reply.error.toString())));
                                         } else {
+                                            log::debug!("{dbg}.run | {} rows affected", reply.data.len());
                                             sink.add(Ok(reply.data));
                                         }
                                     }
@@ -124,7 +125,7 @@ impl Service for ApiClient {
                     }
                     Err(RecvTimeoutError::Timeout) => {}
                     Err(_) => {
-                        log::debug!("{dbg}.run | Can't receive sql, channel closed");
+                        log::warn!("{dbg}.run | Can't receive sql, channel closed");
                         break;
                     }
                 }
