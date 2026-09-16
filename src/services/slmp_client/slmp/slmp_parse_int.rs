@@ -35,7 +35,7 @@ impl SlmpParseInt {
     /// - `filter` - Фильтр значения сигнала
     #[named]
     pub fn new(
-        parent: impl Into<String>,
+        parent: impl AsRef<str>,
         tx_id: usize,
         name: String,
         conf: &PointConf,
@@ -72,15 +72,15 @@ impl SlmpParseInt {
     }
     ///
     /// Логика фильтра входных евентов
-    /// 
+    ///
     /// - Изменилось value или изменился status - возвращаем новый эвент
-    /// 
+    ///
     /// - Если value не изменилось или его нет (значит status пришел)
     ///     - Если status изменился
     ///         - Если есть сохраненное последнее value - возвращаем новый эвент
     ///         - Если есть нет сохраненного value - эвента нет (изменение статуса игнорируется)
     ///     - Если status прежний - эвента нет
-    /// 
+    ///
     /// Все варианты:
     /// ```
     /// | Input value | Value changed | Status changed | Last value exists | Output value | Output status | Result |
@@ -183,7 +183,7 @@ mod slmp_parse_int_test {
     use sal_core::dbg::Dbg;
     use sal_sync::services::entity::{Name, PointConf, PointConfAddress, PointType, Status};
     use testing::stuff::max_test_duration::TestDuration;
-        
+
     ///
     ///
     static INIT: Once = Once::new();

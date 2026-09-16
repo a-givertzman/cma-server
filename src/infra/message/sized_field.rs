@@ -17,7 +17,7 @@ impl<FieldIn, FieldOut, Out> SizedField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [SizedField] new instance
     /// - `size` - Field length in the bytes calculated from previous fields
-    pub fn new(parent: impl Into<String>, size: impl Fn(&FieldIn, &FieldOut) -> usize + 'static, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    pub fn new(parent: impl AsRef<str>, size: impl Fn(&FieldIn, &FieldOut) -> usize + 'static, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
         Self {
             size: Box::new(size),
             from_bytes: Box::new(from_bytes),

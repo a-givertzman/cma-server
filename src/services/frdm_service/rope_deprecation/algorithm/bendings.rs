@@ -14,7 +14,7 @@ pub struct Bendings {
 impl Bendings {
     ///
     /// Returns [Bendings] new instance
-    pub fn new(parent: impl Into<String>, conf: &RopeConf, mut block_arcs: BlockArcs) -> Self {
+    pub fn new(parent: impl AsRef<str>, conf: &RopeConf, mut block_arcs: BlockArcs) -> Self {
         let dbg = Dbg::new(parent, "Bendings");
         let rope_len = conf.length.as_mm();
         log::debug!("{dbg}.new | Evaluating parking position...");

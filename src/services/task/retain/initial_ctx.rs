@@ -16,7 +16,7 @@ pub struct InitialCtx<Child> {
 }
 //
 impl<Child> InitialCtx<Child> {
-    pub fn new(parent: impl Into<String>, txid: usize, conf: &TaskRetainConf, path: impl AsRef<Path>, child: Child) -> Self {
+    pub fn new(parent: impl AsRef<str>, txid: usize, conf: &TaskRetainConf, path: impl AsRef<Path>, child: Child) -> Self {
         let dbg = Dbg::new(parent, crate::domain::me::<Self>());
         Self {
             txid,

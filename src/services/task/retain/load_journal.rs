@@ -21,7 +21,7 @@ pub struct LoadJournal<Child> {
 impl<Child> LoadJournal<Child> {
     ///
     /// Returns `LoadJournal` new instance
-    pub fn new(parent: impl Into<String>, child: Child) -> Self {
+    pub fn new(parent: impl AsRef<str>, child: Child) -> Self {
         let dbg = Dbg::new(parent, crate::domain::me::<Self>());
         Self {
             child,
@@ -64,10 +64,10 @@ impl<Child> LoadJournal<Child> {
     }
     ///
     /// ### Чтение с диска и парсинг `RetainState`
-    /// 
+    ///
     /// - Максимальный размер ключа - 1 KB
     /// - Максимальный размер `RetainState` - 10 MB
-    /// 
+    ///
     /// Устойчив к повреждению хвоста файла. При обнаружении бинарного мусора
     /// или неожиданного конца файла чтение останавливается, а корректно загруженные данные сохраняются.
     fn load(&self, path: &Path, txid: usize, cache: &Arc<FxSccHashMap<String, Point>>) -> Result<(), Error> {

@@ -27,7 +27,7 @@ impl Blocks {
     /// Returns [Blocks] new instance
     /// - `aux_length` - Auxiliary whip line. Length of the rope from the last block located on the end of last boom to the hook
     /// - `parking` - Calculates parking position in the first step, meaning calculations will use specific angles of booms for that position
-    pub fn new(parent: impl Into<String>, aux_length: ConfDistance, conf: &Vec<(String, BlockConf)>, parking: bool, booms: Booms) -> Self {
+    pub fn new(parent: impl AsRef<str>, aux_length: ConfDistance, conf: &Vec<(String, BlockConf)>, parking: bool, booms: Booms) -> Self {
         Self {
             aux_length: aux_length.as_mm(),
             winch_rope_alpha: 0.0,

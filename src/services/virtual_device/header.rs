@@ -2,7 +2,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::collections::FxIndexMap;
 
 ///
-/// 
+///
 pub struct Header {
     block_row: u32,
     index_row: u32,
@@ -15,14 +15,14 @@ pub struct Header {
 impl Header {
     ///
     /// ## Parse [HeaderBlock] from:
-    /// 
+    ///
     ///  - **`Input values`** blok
     /// ```
     /// | ------------------- |
     /// | time | name | value |
     /// | ------------------- |
     /// ```
-    /// 
+    ///
     ///  - **`Result & Target`** blok
     /// ```
     /// | ---------------------------- |
@@ -62,11 +62,11 @@ impl Header {
         } else {
             None
         }
-    } 
+    }
     ///
     /// Retirns [Header] parsed from `Sheet`
-    /// 
-    /// Header has folowing structure: 
+    ///
+    /// Header has folowing structure:
     /// ```
     /// |   Input values      |     Result & Target          | Result & Target | ...
     /// | ------------------- | ---------------------------- |       ...       |...
@@ -75,7 +75,7 @@ impl Header {
     /// | ms   |  -   |  -    | target     | result | status |       ...       |...
     /// | ------------------- | ---------------------------- |       ...       |...
     /// ```
-    pub fn from(parent: impl Into<String>, sheet: &spreadsheet_ods::Sheet) -> Self {
+    pub fn from(parent: impl AsRef<str>, sheet: &spreadsheet_ods::Sheet) -> Self {
         let dbg = Dbg::new(parent, "Header");
         let (rows, columns) = sheet.used_grid_size();
         // log::debug!("{dbg}.from |    rows: {}", rows);
@@ -140,7 +140,7 @@ impl Header {
                         }
                     }
                 }
-            } 
+            }
         }
         if input_block.is_empty() {
             log::error!("{dbg}.from | Input block is not found");
@@ -185,7 +185,7 @@ impl Header {
 }
 
 ///
-/// 
+///
 #[derive(Debug)]
 pub struct HeaderBlock {
     /// `true` when the block is input values

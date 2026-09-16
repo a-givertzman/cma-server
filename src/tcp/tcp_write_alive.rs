@@ -17,15 +17,15 @@ pub struct TcpWriteAlive {
     exit_pair: Arc<AtomicBool>,
 }
 //
-// 
+//
 impl TcpWriteAlive {
     ///
     /// Creates new instance of [TcpWriteAlive]
     /// - [parent] - the ID if the parent entity
-    /// - [exit] - notification from parent to exit 
-    /// - [exitPair] - notification from / to sibling pair to exit 
+    /// - [exit] - notification from parent to exit
+    /// - [exitPair] - notification from / to sibling pair to exit
     pub fn new(
-        parent: impl Into<String>,
+        parent: impl AsRef<str>,
         cycle: Option<Duration>,
         stream_write: TcpStreamWrite,
         exit: Option<Arc<AtomicBool>>,
@@ -85,7 +85,7 @@ impl TcpWriteAlive {
         stream_write.push(stream);
         log::info!("{}.run | Exit", dbg);
     }
-    /// 
+    ///
     /// Main loop of the [TcpReadAlive]
     pub fn run(&self, tcp_stream: TcpStream) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
@@ -113,7 +113,7 @@ impl TcpWriteAlive {
     }
     ///
     /// Waits for main loop being finished
-    /// 
+    ///
     /// call `exit()` to finish main loop
     pub fn wait(&self) -> Result<(), Error> {
         self.handles.wait()

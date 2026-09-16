@@ -22,7 +22,7 @@ impl Rope {
     /// - `segment` - Whole rope will divided by the segments for the Camera defect detection, recomended: `segment length = camera.width * 0.10..0.20`
     /// - `segment_threshold` - Acceptable camera position error in relation to exact segment position
     /// - `pos` - Position of the rope, meters
-    pub fn new(parent: impl Into<String>, camera_offset: ConfDistance, segment: ConfDistance, segment_threshold: ConfDistance) -> Self {
+    pub fn new(parent: impl AsRef<str>, camera_offset: ConfDistance, segment: ConfDistance, segment_threshold: ConfDistance) -> Self {
         let dbg = Dbg::new(parent, "Rope");
         Self {
             camera_offset: camera_offset.as_mm(),

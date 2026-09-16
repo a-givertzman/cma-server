@@ -45,7 +45,7 @@ postcard = { version = "^1.1", features = ["alloc", "use-std"]}
 
 #
 # SQL
-sqlparser = "^0.62"
+sqlparser = "^0.63"
 
 #
 # Regex

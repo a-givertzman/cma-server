@@ -13,7 +13,7 @@ pub struct CompactateJournal {
 }
 //
 impl CompactateJournal {
-    pub fn new(parent: impl Into<String>, conf: &TaskRetainConf) -> Self {
+    pub fn new(parent: impl AsRef<str>, conf: &TaskRetainConf) -> Self {
         let dbg = Dbg::new(parent, crate::domain::me::<Self>());
         Self {
             conf: conf.clone(),
@@ -22,7 +22,7 @@ impl CompactateJournal {
     }
     ///
     /// ### Физическая запись состояния на диск (Compactation)
-    /// 
+    ///
     /// `RetainState` пишется через атомарную подмену файлов
     #[named]
     fn store(dbg: &Dbg, conf: &TaskRetainConf, ctx: &mut RetainCtx) -> Result<(), Error> {

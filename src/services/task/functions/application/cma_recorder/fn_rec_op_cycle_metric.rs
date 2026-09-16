@@ -10,9 +10,9 @@ use crate::{domain::{Edge, EdgeDetector, FnOutRef}, err_pass, services::task::{F
 /// - Operating cycle metrics SQL requests (cycle_id, pid, metric_id, value)
 /// - Returns `op-cycle` input if all inputs are Ok
 /// - **Note:** `enable` input logic is implemented via `FnEnable` decorator.
-/// 
+///
 /// ### Example
-/// 
+///
 /// ```yaml
 /// ```
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl FnRecOpCycleMetric {
     #[allow(dead_code)]
     pub fn new(parent: impl Into<String>, send_to: Option<Sender<Point>>, reset: Option<FnOutRef>, op_cycle: FnOutRef, inputs: impl IntoIterator<Item = (String, FnOutRef)>) -> Self {
         let id = format!("{}/FnRecOpCycleMetric{}", parent.into(), COUNT.fetch_add(1, Ordering::Relaxed));
-        Self { 
+        Self {
             kind: FnKind::Fn,
             send_to,
             reset: reset.map(FnChange::new),
@@ -62,7 +62,7 @@ impl FnRecOpCycleMetric {
         Ok(())
     }
 }
-// 
+//
 impl FnOut for FnRecOpCycleMetric {
     //
     fn id(&self) -> String {
@@ -188,7 +188,7 @@ struct State {
 impl State {
     ///
     /// Returns `State::None`
-    pub fn new(parent: impl Into<String>) -> Self {
+    pub fn new(parent: impl AsRef<str>) -> Self {
         Self {
             state: Cycle::None,
             dbg: Dbg::new(parent, "State")

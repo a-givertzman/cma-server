@@ -22,7 +22,7 @@ impl BlockArcs {
     ///
     /// Returns [BlockArcs] new instance
     /// - `segment` - Rope segmetn length. Whole rope will divided by the segments for the Depreciation Rate calculation.
-    pub fn new(parent: impl Into<String>, segment: &ConfDistance, rope_sections: RopeSections) -> Self {
+    pub fn new(parent: impl AsRef<str>, segment: &ConfDistance, rope_sections: RopeSections) -> Self {
         Self {
             rope_sections,
             segment: segment.as_mm(),
