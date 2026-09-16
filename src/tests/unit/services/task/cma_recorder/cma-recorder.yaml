@@ -160,6 +160,10 @@ service Task RecorderTask:
             input2: winch2IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
             input3: winch3IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
     #
+    # Returns load of active winch
+    let activeWinchLoad:
+        # TODO
+    #
     # Returns one tic true if operating cycle is begins (isActive false -> true)
     let opCycleIsStarted:
         input fn RisingEdge:
@@ -491,9 +495,10 @@ service Task RecorderTask:
         # 3.1   | real | crane-total-operating-secs  | общее количество часов работы крана (мото-секунды)
         input31 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'crane-total-operating-secs';
-            input fn Timer:
-                reset: opCycleIsStarted
-                input: opCycleIsActive
+            input: craneOperatingCycleSecs
+            # input fn Timer:
+            #     reset: opCycleIsStarted
+            #     input: opCycleIsActive
         #
         # 3.2.0 | real | pump-total-operating-secs   | общее количество часов работы насосной станции (мото-секунды)
         input320 fn Sql:
