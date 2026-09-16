@@ -162,7 +162,15 @@ service Task RecorderTask:
     #
     # Returns load of active winch
     let activeWinchLoad:
-        # TODO
+        input fn Select:
+            select: winch1IsActive
+            input: winch1Load
+            default fn Select:
+                select: winch2IsActive
+                input: winch2Load
+                default fn Select:
+                    select: winch3IsActive
+                    input: winch3Load
     #
     # Returns one tic true if operating cycle is begins (isActive false -> true)
     let opCycleIsStarted:
@@ -492,8 +500,8 @@ service Task RecorderTask:
         #     input: craneCycleMaxLoad
         #
         #                !!! IN SECONDS
-        # 3.1   | real | crane-total-operating-secs  | общее количество часов работы крана (мото-секунды)
-        input31 fn Sql:
+        # 3.1.1   | real | crane-total-operating-secs  | общее количество часов работы крана (мото-секунды)
+        input311 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'crane-total-operating-secs';
             input: craneOperatingCycleSecs
             # input fn Timer:
@@ -659,8 +667,8 @@ service Task RecorderTask:
             start fn Hold:
                 input fn Select:
                     select: opCycleIsStarted
-                    input: craneLoad
-            stop: craneLoad
+                    input: activeWinchLoad
+            stop: activeWinchLoad
             alarmClass: alarmClass
         #
         # Operating cycle metric 'Average Load'
