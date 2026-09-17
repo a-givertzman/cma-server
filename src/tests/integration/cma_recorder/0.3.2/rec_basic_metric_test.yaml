@@ -44,6 +44,25 @@ service VirtualDevice VirtualIed15:
         address: 127.0.0.1:8081
         database: crane_data_server
         auth-token: 123!@#
+    before:     # SQLs executed before test
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'crane-characteristic-number';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'crane-total-lifted-mass';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'crane-total-operating-secs';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'cycles-distribution-by-load-ranges';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'pump-total-operating-secs';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'total-operating-cycles-count';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch1-characteristic-number';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch1-load-limiter-trip-count';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch1-total-lifted-mass';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch1-total-operating-secs';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch2-characteristic-number';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch2-load-limiter-trip-count';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch2-total-lifted-mass';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch2-total-operating-secs';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch3-characteristic-number';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch3-load-limiter-trip-count';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch3-total-lifted-mass';"
+        - sql: "update public.rec_basic_metric set value = '0.0' where name = 'winch3-total-operating-secs';"
     inputs:                             # Input signal to be charged from the specified table file, or calculated in `Task`
         point /App/ied13/db905_visual_data_fast/Winch1.LoadR0: 
             type: Real
@@ -95,9 +114,9 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'cycles-distribution-by-load-ranges';"
             delay:  200ms
-        sql pump-total-operating-hours:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql pump-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'pump-total-operating-hours';"
+            sql: "select value from rec_basic_metric where name = 'pump-total-operating-secs';"
             delay:  200ms
         sql total-operating-cycles-count:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
@@ -115,9 +134,9 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch1-total-lifted-mass';"
             delay:  200ms
-        sql winch1-total-operating-hours:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch1-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-total-operating-hours';"
+            sql: "select value from rec_basic_metric where name = 'winch1-total-operating-secs';"
             delay:  200ms
         sql winch2-characteristic-number:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
@@ -131,9 +150,9 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch2-total-lifted-mass';"
             delay:  200ms
-        sql winch2-total-operating-hours:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch2-total-operating-hours';"
+            sql: "select value from rec_basic_metric where name = 'winch2-total-operating-secs';"
             delay:  200ms
         sql winch3-characteristic-number:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
@@ -147,9 +166,9 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch3-total-lifted-mass';"
             delay:  200ms
-        sql winch3-total-operating-hours:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch3-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch3-total-operating-hours';"
+            sql: "select value from rec_basic_metric where name = 'winch3-total-operating-secs';"
             delay:  200ms
 
 

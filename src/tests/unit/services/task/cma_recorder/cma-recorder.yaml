@@ -504,32 +504,33 @@ service Task RecorderTask:
         input311 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'crane-total-operating-secs';
             input: craneOperatingCycleSecs
-            # input fn Timer:
-            #     reset: opCycleIsStarted
-            #     input: opCycleIsActive
         #
         # 3.2.0 | real | pump-total-operating-secs   | общее количество часов работы насосной станции (мото-секунды)
         input320 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'pump-total-operating-secs';
             input fn Timer:
+                reset: opCycleIsStarted
                 input: pumpIsActive
         #
         # 3.2.1 | real | winch1-total-operating-secs | общее количество часов работы лебедки 1 (мото-секунды)
         input321 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch1-total-operating-secs';
             input fn Timer:
+                reset: opCycleIsStarted
                 input: winch1IsActive
         #
         # 3.2.2 | real | winch2-total-operating-secs | общее количество часов работы лебедки 2 (мото-секунды)
         input322 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch2-total-operating-secs';
             input fn Timer:
+                reset: opCycleIsStarted
                 input: winch2IsActive
         #
         # 3.2.3 | real | winch3-total-operating-secs | общее количество часов работы лебедки 3 (мото-секунды)
         input323 fn Sql:
             sql: update public.rec_basic_metric set value = (COALESCE(NULLIF(value, ''), '0')::NUMERIC + {input.value})::TEXT where name = 'winch3-total-operating-secs';
             input fn Timer:
+                reset: opCycleIsStarted
                 input: winch3IsActive
         #
         # 3.3 | int | total-operating-cycles-count | суммарное число рабочих циклов

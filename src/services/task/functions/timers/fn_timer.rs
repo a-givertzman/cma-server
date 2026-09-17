@@ -1,8 +1,8 @@
+use function_name::named;
 use sal_core::error::Error;
 use sal_sync::services::entity::{Point, PointHlr};
-use concat_string::concat_string;
 use std::{sync::atomic::{AtomicUsize, Ordering}, time::Instant};
-use crate::{domain::{Edge, EdgeDetector, FnOutRef, TryTo}, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult}};
+use crate::{domain::{Edge, EdgeDetector, FnOutRef, TryTo}, err_pass, services::task::{FlowContext, FnChange, FnFlow, FnKind, FnOut, FnResult}};
 ///
 /// ### Function | `FnTimer`
 /// 
@@ -39,7 +39,7 @@ impl FnTimer {
             initial: initial.map(FnChange::new),
             reset: reset.map(FnChange::new),
             input: FnChange::new(input),
-            edge: EdgeDetector::new(),
+            edge: EdgeDetector::with(Some(false)),
             first,
             total_t: 0.0,
             active_t: None,
@@ -75,15 +75,16 @@ impl FnOut for FnTimer {
         inputs
     }
     //
+    #[named]
     fn out(&mut self) -> FnResult<FnFlow, String> {
         let initial = self.initial.as_mut().map(|f| f.out());
         let reset = self.reset.as_mut().map(|f| f.out());
         let input = self.input.out();
         let flow = FlowContext::new();
         let mut is_changed = false;
-        let reset = if let Some(reset) = reset {
+        if let Some(reset) = reset {
             if let Some(reset) = flow.ignore(reset)? {
-                let reset: bool = (&reset).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid reset ", err.to_string()))?;
+                let reset: bool = (&reset).try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid reset").to_string())?;
                 if reset {
                     self.edge.reset();
                     if self.total_t != 0.0 { is_changed = true; }
@@ -106,7 +107,7 @@ impl FnOut for FnTimer {
         if self.first {
             if let Some(initial) = initial {
                 if let Some(initial) = flow.ignore(initial)? {
-                    let initial: f64 = (&initial).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid initial ", err.to_string()))?;
+                    let initial: f64 = (&initial).try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid initial").to_string())?;
                     self.total_t += initial;
                     is_changed = initial != 0.0;
                     self.first = false;
@@ -114,7 +115,7 @@ impl FnOut for FnTimer {
             }
         }
         // trace!("{}.out | input: {:?}", self.id, self.input.print());
-        let is_active: bool = (&input).try_to().map_err(|err: Error| concat_string!(self.id, ".out | Invalid input ", err.to_string()))? && !reset;
+        let is_active: bool = (&input).try_to().map_err(|err: Error| err_pass!(self.id, err, "Invalid input ").to_string())?;
         let elapsed = match self.edge.add(is_active) {
             Some(Edge::Rising) => {
                 self.active_t = Some(Instant::now());
