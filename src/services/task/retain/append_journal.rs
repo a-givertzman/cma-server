@@ -67,7 +67,7 @@ impl<Child> AppendJournal<Child> {
     /// Максимально допустимый размер буффера для аммортизации перед записью в файл
     const MAX_BUFFER_SIZE: usize = 16_000;
     /// Returns `AppendJournal` new instance
-    pub fn new(parent: impl Into<String>, txid: usize, mode: RetainMode, child: Child) -> Self {
+    pub fn new(parent: impl AsRef<str>, txid: usize, mode: RetainMode, child: Child) -> Self {
         let dbg = Dbg::new(parent, crate::domain::me::<Self>());
         let notify = ChangeNotify::builder(&dbg, State::Ok)
             .on(State::Ok, |msg| log::info!("{:?}", msg))
@@ -148,7 +148,7 @@ where
 #[named]
 pub(super) fn append<T: Serialize>(
     dbg: &Dbg,
-    writer: &mut BufWriter<File>, 
+    writer: &mut BufWriter<File>,
     mode: &RetainMode,
     key: &String,
     state: &T,

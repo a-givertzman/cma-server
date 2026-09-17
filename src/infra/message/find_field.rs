@@ -17,7 +17,7 @@ impl<FieldIn, FieldOut, Out> FindField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [FindField] new instance
     /// - `size` - Field length in the bytes
-    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Option<Out>, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    pub fn new(parent: impl AsRef<str>, size: usize, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Option<Out>, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
         let dbg = Dbg::new(parent, format!("FindField(size {size})"));
         if size == 0 {
             panic!("{dbg}.new | Size should be >= 1");

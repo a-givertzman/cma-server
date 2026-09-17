@@ -10,7 +10,7 @@ use crate::{
 };
 ///
 /// ### Function | Piecewise Linear Approximation (кусочно-линейная аппроксимация)
-/// 
+///
 ///  - bool: true -> 1, false -> 0
 ///  - real: 0.1 -> 0 | 0.5 -> 1 | 0.9 -> 1 | 1.1 -> 1
 ///  - string: try to parse int
@@ -21,7 +21,7 @@ pub struct FnPiecewiseLinear {
     input: FnOutRef,
     piecewise: PiecewiseLinear,
 }
-// 
+//
 impl FnPiecewiseLinear {
     ///
     /// Creates new instance of the FnPiecewiseLinear
@@ -32,7 +32,7 @@ impl FnPiecewiseLinear {
         let self_id = format!("{}/FnPiecewiseLinear{}", parent, COUNT.fetch_add(1, Ordering::SeqCst));
         let piecewise = PiecewiseLinear::from_yaml(parent, piecewise)
             .map_err(|err| err_pass!(self_id, err, "Wrong conf"))?;
-        Ok(Self { 
+        Ok(Self {
             id: self_id,
             kind: FnKind::Fn,
             input,
@@ -60,8 +60,8 @@ impl FnPiecewiseLinear {
     }
 }
 //
-// 
-impl FnOut for FnPiecewiseLinear { 
+//
+impl FnOut for FnPiecewiseLinear {
     //
     fn id(&self) -> String {
         self.id.clone()
@@ -188,7 +188,7 @@ impl PiecewiseLinear {
     /// Creates new instance of the [Linears]
     /// - `parent` - Parent entity identifier
     /// - `pairs` - Points of piecewise-line function
-    pub fn try_new(parent: impl Into<String>, mut pairs: Vec<LinePoint>) -> Result<Self, Error> {
+    pub fn try_new(parent: impl AsRef<str>, mut pairs: Vec<LinePoint>) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "Linears");
         let error = Error::new(&dbg, "try_new");
         if pairs.len() < 2 {
@@ -197,7 +197,7 @@ impl PiecewiseLinear {
         for p in &pairs {
             if p.x.is_nan() || p.y.is_nan() {
                 return Err(error.err("Piecewise points contains NAN instead of numbers"));
-            } 
+            }
         }
         pairs.sort_by(|a, b| a.x.total_cmp(&b.x));
         let has_duplicates = pairs.windows(2).any(|w| (w[0].x - w[1].x).abs() < f64::EPSILON);
@@ -215,7 +215,7 @@ impl PiecewiseLinear {
     }
     ///
     /// ### Returns `Linears` parsed from YAML
-    /// 
+    ///
     /// Expected following YAML format:
     /// ```yaml
     /// x1: y1

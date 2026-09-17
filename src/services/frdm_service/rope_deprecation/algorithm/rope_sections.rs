@@ -14,7 +14,7 @@ pub struct RopeSections {
 impl RopeSections {
     ///
     /// Returns [RopeSections] new instance
-    pub fn new(parent: impl Into<String>, blocks: Blocks) -> Self {
+    pub fn new(parent: impl AsRef<str>, blocks: Blocks) -> Self {
         Self {
             blocks,
             dbg: Dbg::new(parent, "RopeSections"),

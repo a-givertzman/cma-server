@@ -27,7 +27,7 @@ pub struct ProducerService {
     exit: Arc<AtomicBool>,
 }
 //
-// 
+//
 impl ProducerService {
     pub fn new(conf: ProducerServiceConf, services: Arc<Services>, scheduler: Scheduler) -> Self {
         let dbg = Dbg::new(conf.name.parent(), format!("{}(ProducerService)", conf.name.me()));
@@ -97,7 +97,7 @@ impl Object for ProducerService {
     }
 }
 //
-// 
+//
 impl Debug for ProducerService {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -110,7 +110,7 @@ impl Debug for ProducerService {
 //
 impl Service for ProducerService {
     //
-    // 
+    //
     fn run(&self) -> Result<(), Error> {
         log::info!("{}.run | Starting...", self.dbg);
         let dbg = self.dbg.clone();
@@ -206,7 +206,7 @@ impl PointGen {
     ///
     /// Creates new instance of the PointGen
     pub fn new(
-        parent: impl Into<String>,
+        parent: impl AsRef<str>,
         txid: usize,
         name: String,
         config: &PointConf,
@@ -233,70 +233,70 @@ impl PointGen {
             match &self._type {
                 PointType::Bool => {
                     Some(Point::Bool(PointHlr::new(
-                        self.txid, 
-                        &self.name, 
-                        Bool(test_data_bool().as_bool()), 
-                        self.status, 
+                        self.txid,
+                        &self.name,
+                        Bool(test_data_bool().as_bool()),
+                        self.status,
                         Cot::Inf,
                         self.timestamp,
                     )))
                 }
                 PointType::Int => {
                     Some(Point::Int(PointHlr::new(
-                        self.txid, 
-                        &self.name, 
-                        test_data_int().as_int(), 
-                        self.status, 
+                        self.txid,
+                        &self.name,
+                        test_data_int().as_int(),
+                        self.status,
                         Cot::Inf,
                         self.timestamp,
                     )))
                 }
                 PointType::Real => {
                     Some(Point::Real(PointHlr::new(
-                        self.txid, 
-                        &self.name, 
-                        test_data_real().as_real(), 
-                        self.status, 
+                        self.txid,
+                        &self.name,
+                        test_data_real().as_real(),
+                        self.status,
                         Cot::Inf,
                         self.timestamp,
                     )))
                 }
                 PointType::Double => {
                     Some(Point::Double(PointHlr::new(
-                        self.txid, 
-                        &self.name, 
-                        test_data_double().as_double(), 
-                        self.status, 
+                        self.txid,
+                        &self.name,
+                        test_data_double().as_double(),
+                        self.status,
                         Cot::Inf,
                         self.timestamp,
                     )))
                 }
                 PointType::String => {
                     Some(Point::String(PointHlr::new(
-                        self.txid, 
-                        &self.name, 
-                        test_data_double().as_double().to_string(), 
-                        self.status, 
+                        self.txid,
+                        &self.name,
+                        test_data_double().as_double().to_string(),
+                        self.status,
                         Cot::Inf,
                         self.timestamp,
                     )))
                 }
                 PointType::Bytes => {
                     Some(Point::Bytes(PointHlr::new(
-                        self.txid, 
-                        &self.name, 
-                        test_data_double().as_double().to_be_bytes().to_vec(), 
-                        self.status, 
+                        self.txid,
+                        &self.name,
+                        test_data_double().as_double().to_be_bytes().to_vec(),
+                        self.status,
                         Cot::Inf,
                         self.timestamp,
                     )))
                 }
                 PointType::Json => {
                     Some(Point::String(PointHlr::new(
-                        self.txid, 
-                        &self.name, 
-                        json!(test_data_double().as_double()).to_string(), 
-                        self.status, 
+                        self.txid,
+                        &self.name,
+                        json!(test_data_double().as_double()).to_string(),
+                        self.status,
                         Cot::Inf,
                         self.timestamp,
                     )))
@@ -315,7 +315,7 @@ impl PointGen {
         self.status = Status::Ok;
         self.timestamp = timestamp;
         self.is_changed = true;
-    }    
+    }
 }
 //
 //

@@ -3,12 +3,12 @@ use crate::infra::message::{Field, FieldConf, FieldTerminator, FixedField, Messa
 
 ///
 /// # Represents a Modbus network message
-/// 
+///
 /// - Parse Modbus message fields from bytes
 /// - Build bytes from Modbus message fields
-/// 
+///
 /// ## Message format
-/// 
+///
 /// ```ignore
 ///  Transaction ID | Protocol ID | Length Field |  Unit ID | Function Code | Data
 ///  ---            | ---         | ---          | ---      | ---           | ---
@@ -26,7 +26,7 @@ pub struct ModbusMessage {
 impl ModbusMessage {
     ///
     /// Returns [ModbusMessage] new instance
-    pub fn new(parent: impl Into<String>) -> Self {
+    pub fn new(parent: impl AsRef<str>) -> Self {
         let dbg = Dbg::new(parent, "ModbusMessage");
         Self {
             transaction: 0,

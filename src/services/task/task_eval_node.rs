@@ -12,16 +12,16 @@ pub struct TaskEvalNode {
     dbg: Dbg,
 }
 //
-// 
+//
 impl TaskEvalNode {
     ///
     /// Creates new instance from input name, input it self and dependent vars & outs
-    pub fn new(parent: impl Into<String>, name: impl Into<String>, input: Vec<FnInOutRef>) -> Self {
+    pub fn new(parent: impl AsRef<str>, name: impl Into<String>, input: Vec<FnInOutRef>) -> Self {
         let name = name.into();
         let dbg = Dbg::new(parent, &name);
-        TaskEvalNode { 
-            name, 
-            input, 
+        TaskEvalNode {
+            name,
+            input,
             vars:  vec![],
             outs: vec![],
             dbg,
@@ -43,7 +43,7 @@ impl TaskEvalNode {
         input
     }
     ///
-    /// 
+    ///
     fn contains_var(&self, var: &FnOutRef) -> bool {
         let var_id = var.borrow().id();
         for self_var in &self.vars {
@@ -54,7 +54,7 @@ impl TaskEvalNode {
         false
     }
     ///
-    /// 
+    ///
     fn contains_out(&self, out: &FnOutRef) -> bool {
         let out_id = out.borrow().id();
         for self_out in &self.outs {
@@ -65,7 +65,7 @@ impl TaskEvalNode {
         false
     }
     ///
-    /// 
+    ///
     pub fn add_vars(&mut self, vars: &Vec<FnOutRef>) {
         for var in vars {
             if !self.contains_var(var) {
@@ -74,7 +74,7 @@ impl TaskEvalNode {
         }
     }
     ///
-    /// 
+    ///
     pub fn add_out(&mut self, out: FnOutRef) {
         if !self.contains_out(&out) {
             self.outs.push(out);
@@ -86,7 +86,7 @@ impl TaskEvalNode {
         self.name.clone()
     }
     // ///
-    // /// 
+    // ///
     // pub fn get_input(&self) -> Vec<FnInOutRef> {
     //     self.input.clone()
     // }
@@ -97,7 +97,7 @@ impl TaskEvalNode {
         &self.vars
     }
     ///
-    /// 
+    ///
     #[allow(unused)]
     pub fn get_outs(&self) -> &Vec<FnOutRef> {
         &self.outs

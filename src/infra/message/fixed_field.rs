@@ -17,7 +17,7 @@ impl<FieldIn, FieldOut, Out> FixedField<FieldIn, FieldOut, Out> {
     ///
     /// Returns [FixedField] new instance
     /// - `size` - Field length in the bytes
-    pub fn new(parent: impl Into<String>, size: usize, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
+    pub fn new(parent: impl AsRef<str>, size: usize, from_bytes: impl Fn(&Dbg, &[u8]) -> Result<Out, Error> + 'static, field: impl MessageParse<FieldIn, FieldOut, Bytes> + 'static) -> Self {
         Self {
             size,
             from_bytes: Box::new(from_bytes),

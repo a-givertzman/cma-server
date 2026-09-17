@@ -108,6 +108,7 @@ fn elapsed_reset() {
     );
     let is_new = true; let is_old = false;
     let test_data = vec![
+        //   value  flow    reset
         (00, false, is_old, false),
         (01, false, is_old, false),
         (02, true,  is_old, false),
@@ -129,7 +130,7 @@ fn elapsed_reset() {
         (18, true,  is_old, false),
         (19, false, is_new, false),
         (20, false, is_old, false),
-        (21, false, is_new, true),
+        (21, false, is_old, true),
         (22, false, is_old, false),
     ];
     let mut start: Option<Instant> = None;

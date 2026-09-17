@@ -19,7 +19,7 @@ impl Booms {
     /// Returns [Booms] new instance
     /// - `inputs` - Input values required for calculation
     /// - `parking` - Calculates parking position in the first step, meaning calculations will use specific angles of booms for that position
-    pub fn new(parent: impl Into<String>, conf: &Vec<(String, BoomConf)>, inputs: Arc<Inputs>, parking: bool) -> Self {
+    pub fn new(parent: impl AsRef<str>, conf: &Vec<(String, BoomConf)>, inputs: Arc<Inputs>, parking: bool) -> Self {
         let dbg = Dbg::new(parent, "Booms");
         Self {
             items: conf.iter().map(|(name, conf)| {

@@ -17,7 +17,7 @@ impl Table {
     /// Returns [Book] new instance read from `path`
     /// - `path` - path to ODS file
     /// - `sheet` - name of the sheet to be set as active, later active Sheet can be changed by calling `Table::change_sheet(name)`
-    pub fn load(parent: impl Into<String>, path: impl Into<String>, sheet: impl Into<String>) -> Result<Self, Error> {
+    pub fn load(parent: impl AsRef<str>, path: impl Into<String>, sheet: impl Into<String>) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, "Table");
         let error = Error::new(&dbg, "load");
         let path = path.into();

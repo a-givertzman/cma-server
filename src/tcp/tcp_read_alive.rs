@@ -3,7 +3,7 @@ use log::LevelFilter;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{services::{entity::Point, ServiceCycle}, sync::{channel::Sender, Handles}, thread_pool::Scheduler};
 use std::{
-    io::BufReader, net::TcpStream, 
+    io::BufReader, net::TcpStream,
     sync::{atomic::{AtomicBool, Ordering}, Arc},
     thread::{self}, time::Duration,
 };
@@ -26,14 +26,14 @@ impl TcpReadAlive {
     ///
     /// Creates new instance of [TcpReadAlive]
     /// - [parent] - the ID if the parent entity
-    /// - [exit] - notification from parent to exit 
-    /// - [exitPair] - notification from / to sibling pair to exit 
+    /// - [exit] - notification from parent to exit
+    /// - [exitPair] - notification from / to sibling pair to exit
     pub fn new(
-        parent: impl Into<String>, 
+        parent: impl AsRef<str>,
         stream_read: Box<dyn TcpStreamRead>,
-        dest: Sender<Point>, 
+        dest: Sender<Point>,
         cycle: Option<Duration>,
-        exit: Option<Arc<AtomicBool>>, 
+        exit: Option<Arc<AtomicBool>>,
         exit_pair: Option<Arc<AtomicBool>>,
         scheduler: Option<Scheduler>,
     ) -> Self {
@@ -132,7 +132,7 @@ impl TcpReadAlive {
     }
     ///
     /// Waits for main loop being finished
-    /// 
+    ///
     /// call `exit()` to finish main loop
     pub fn wait(&self) -> Result<(), Error> {
         self.handles.wait()

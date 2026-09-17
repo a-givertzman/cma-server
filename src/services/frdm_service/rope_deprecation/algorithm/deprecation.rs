@@ -48,7 +48,7 @@ impl<F: Fn(usize, f64)> Deprecation<F> {
     /// Returns [Deprecation] new instance
     /// - `inputs` - [Inputs] provides `Events` required for the calculations
     /// - `results` - Callback `|slice_ix, deprecation| {...}` provides deprecation results as index of slice and it new `deprecation` value
-    pub fn new(parent: impl Into<String>, conf: &CraneConf, inputs: Arc<Inputs>, bendings: Bendings, results: F) -> Self {
+    pub fn new(parent: impl AsRef<str>, conf: &CraneConf, inputs: Arc<Inputs>, bendings: Bendings, results: F) -> Self {
         let dbg = Dbg::new(parent, "Deprecation");
         inputs.subscribe(conf.rope.load.clone());
         inputs.subscribe(conf.rope.pos.clone());
@@ -183,28 +183,28 @@ mod tests {
         let test_data: &[(i32, Range<f64>, Vec<usize>)] = &[
             (01,  0.0.. 5.0, vec![0]),
             (02,  0.0..10.0, vec![0]),
-    
+
             (10, 08.0..10.0, vec![0]),
             (11, 09.0..11.0, vec![0, 1]),
             (12, 10.0..12.0, vec![1]),
             (13, 11.0..13.0, vec![1]),
-    
+
             (30, 11.0..35.0, vec![1, 2, 3]),
             (31, 12.0..35.0, vec![1, 2, 3]),
             (32, 15.0..35.0, vec![1, 2, 3]),
             (33, 17.0..35.0, vec![1, 2, 3]),
             (34, 19.0..35.0, vec![1, 2, 3]),
-    
+
             (41, 15.0..31.0, vec![1, 2, 3]),
             (42, 15.0..32.0, vec![1, 2, 3]),
             (43, 15.0..35.0, vec![1, 2, 3]),
             (44, 15.0..37.0, vec![1, 2, 3]),
             (45, 15.0..39.0, vec![1, 2, 3]),
-    
+
             (51, 15.0..39.0, vec![1, 2, 3]),
             (52, 15.0..40.0, vec![1, 2, 3]),
             (53, 15.0..41.0, vec![1, 2, 3, 4]),
-    
+
         ];
         let conf = ConfTree::new_root(serde_yaml::from_str(r"
             rope:
@@ -230,7 +230,7 @@ mod tests {
                     scheme: TopTop
                     bind: Drum
         ").unwrap());
-    
+
         let crane_conf = CraneConf::new(&dbg, conf);
         let mut conf = FrdmServiceConf::default();
         conf.rope_deprecation.crane = crane_conf;

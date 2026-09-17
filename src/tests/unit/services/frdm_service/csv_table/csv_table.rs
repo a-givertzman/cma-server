@@ -36,7 +36,7 @@ pub struct CsvTable {
 #[allow(unused)]
 impl CsvTable {
     /// ### Returns empty `CsvTable` new instance
-    pub fn new(prnt: impl Into<String>) -> Self {
+    pub fn new(prnt: impl AsRef<str>) -> Self {
         let dbg = Dbg::new(prnt, crate::me::<Self>());
         Self {
             header: vec![],
@@ -46,7 +46,7 @@ impl CsvTable {
     }
     /// ### Loads table from the csv file
     #[named]
-    pub fn load(parent: impl Into<String>, path: impl AsRef<Path>) -> Result<Self, Error> {
+    pub fn load(parent: impl AsRef<str>, path: impl AsRef<Path>) -> Result<Self, Error> {
         let dbg = Dbg::new(parent, crate::me::<Self>());
         let rdr = OpenOptions::new().read(true).open(path.as_ref()).map_err(|err| err_pass!(dbg, err, "Can't open file '{}'", path.as_ref().display()))?;
         let mut rdr = csv::ReaderBuilder::new()
