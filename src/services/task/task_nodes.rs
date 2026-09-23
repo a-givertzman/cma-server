@@ -245,7 +245,7 @@ impl TaskNodes {
                 FnConfKind::Var(_) => {
                     Rc::new(RefCell::new(FnEvalOnce::new(parent, self.cycle.clone(), 
                     FnBuilder::new(parent, &mut node_conf, self, services.clone())
-                            .map_err(|err| error.pass_with(format!("Can't build eval node '{node_name}': {:?}", conf), err))?,
+                            .map_err(|err| error.pass_with(format!("Can't build eval node '{node_name}'"), err))?,
                     )))
                 }
                 FnConfKind::Const(conf) => {

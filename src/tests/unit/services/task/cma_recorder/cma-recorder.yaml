@@ -160,18 +160,6 @@ service Task RecorderTask:
             input2: winch2IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
             input3: winch3IsActive  # ОТКЛЮЧИ несущестующие лебедки что бы не заглушить opCycleIsActive !!!
     #
-    # Returns load of active winch
-    let activeWinchLoad:
-        input fn Select:
-            select: winch1IsActive
-            input: winch1Load
-            default fn Select:
-                select: winch2IsActive
-                input: winch2Load
-                default fn Select:
-                    select: winch3IsActive
-                    input: winch3Load
-    #
     # Returns one tic true if operating cycle is begins (isActive false -> true)
     let opCycleIsStarted:
         input fn RisingEdge:
@@ -195,6 +183,32 @@ service Task RecorderTask:
                     default: const int 0
                     key: 'OperatingCycleId'
                 input: opCycleIsStarted
+    #
+    # Returns load of the active winch
+    let activeWinchLoad:
+        input fn Select:
+            select: winch1IsActive
+            input: winch1Load
+            default fn Select:
+                select: winch2IsActive
+                input: winch2Load
+                default fn Select:
+                    select: winch3IsActive
+                    input: winch3Load
+    #
+    # Average load of the active winch
+    let activeWinchCycleAverageLoad:
+        input fn Hold:
+            input fn Average:
+                reset: opCycleIsStarted
+                input: activeWinchLoad   # ??? unit ???
+    #
+    # Max load in operating cycle of the active winch, ??? unit ???
+    let activeWinchCycleMaxLoad:
+        input fn Hold:
+            input fn Max:
+                reset: opCycleIsStarted
+                input: activeWinchLoad   # ??? unit ???
     #
     # Crane Average load in operating cycle, ??? unit ???
     let craneCycleAverageLoad:
@@ -676,13 +690,13 @@ service Task RecorderTask:
         input02 fn Sql:
             sql: insert into public.rec_operating_metric (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'average_load', {input.value});
             opCycleId: opCycleId
-            input: craneCycleAverageLoad
+            input: activeWinchCycleAverageLoad
         #
         # Operating cycle metric 'Max Load'
         input03 fn Sql:
             sql: insert into public.rec_operating_metric (operating_cycle_id, metric_id, value) values ({opCycleId.value}, 'max_load', {input.value});
             opCycleId: opCycleId
-            input: craneCycleMaxLoad
+            input: activeWinchCycleMaxLoad
 
 
     ###############   Operating Cycle Events (Live Data)   ###############
