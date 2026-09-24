@@ -52,7 +52,7 @@ INSERT INTO public.rec_basic_metric VALUES ('3.1                             ', 
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
 INSERT INTO public.rec_basic_metric VALUES ('3.1.1                           ', 'real', 'crane-total-operating-secs', 'общее количество часов работы крана', '0.0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
-INSERT INTO public.rec_basic_metric VALUES ('3.2.0                           ', 'real', 'pump-total-operating-hours', 'общее количество часов работы насосной станции (моточасы)', '0.0')
+INSERT INTO public.rec_basic_metric VALUES ('3.2.0                           ', 'real', 'pump-total-operating-secs', 'общее количество часов работы насосной станции (моточасы)', '0.0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
 INSERT INTO public.rec_basic_metric VALUES ('3.2.1                           ', 'real', 'winch1-total-operating-secs', 'общее количество часов работы лебедки 1 (моточасы)', '0.0')
 	on conflict(name) do update set id = EXCLUDED.id, type = EXCLUDED.type, name = EXCLUDED.name, description = EXCLUDED.description, value = EXCLUDED.value;
