@@ -1,8 +1,9 @@
 use std::{fmt::Write, sync::Arc, time::Duration};
 use function_name::named;
+use rustfft::{Fft, num_complex::Complex};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::{ChangeNotify, ExitNotify}, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
-use vibro_core::{DiagFeatures, DiagnosticResult, Eval, Severity, VibroSensor};
+use vibro_core::{DiagFeatures, DiagnosticResult, Eval, MirroredBuffer, Severity, VibroSensor};
 use crate::{domain::Sender, err, err_pass};
 
 /// ### VibroAdc | Расчетный вибродиагностики для одного датчика
@@ -194,6 +195,54 @@ where
                     }
                 }
             }).collect();
+
+            // TODO: Временный код для тестирования связи. Удалить в проде
+            // ======================= FOR TESTING ========================
+            let f_sampl = conf[0].dsp.adc.sample_rate_hz as f32;
+            let n_fft = 320_000;
+            // let k_fft = 2.0 / (n_fft as f32);
+            // let freq_step = f_sampl / n_fft as f32; 
+            let mut test_options = TestOptions::new(conf[0].dsp.adc.sample_rate_hz as f32, n_fft);
+            let mut planner = rustfft::FftPlanner::new();
+            let fft = planner.plan_fft_forward(n_fft);
+            let mut buffer = [
+                MirroredBuffer::new(n_fft),
+                MirroredBuffer::new(n_fft),
+            ];
+            let mut fft_buf: Vec<Complex<f32>> = Vec::with_capacity(n_fft);
+            struct TestOptions {
+                ch: usize,
+                n_fft: usize,
+                k_fft: f32,
+                freq_step: f32,
+            }
+            impl TestOptions {
+                fn new(sample_rate_hz: f32, n_fft: usize) -> Self {
+                    Self {
+                        ch: 0,
+                        n_fft,
+                        k_fft: 2.0 / (n_fft as f32),
+                        freq_step: sample_rate_hz / n_fft as f32,
+                    }
+                }
+                fn with_ch(&mut self, ch: usize) {
+                    self.ch = ch;
+                }
+                fn get_amplitude(&self, i: usize, val: Complex<f32>) -> f32 {
+                    if i == 0 || i == self.n_fft / 2 {
+                        // Для постоянной составляющей (i = 0) и частоты Найквиста (i = n_fft / 2)
+                        val.norm() / (self.n_fft as f32)
+                    } else {
+                        // Для всех остальных частот (энергия делится между положительными и отрицательными частотами)
+                        self.k_fft * val.norm() / (self.n_fft as f32)
+                    }
+                }
+                fn get_freq(&self, i: usize) -> f32 {
+                    (i as f32) * self.freq_step
+                }
+            }
+            // ======================= FOR TESTING ========================
+
             while !exit.get() {
                 // Получение АЦП-выборки из сети
                 match udp.read(&mut samples) {
@@ -203,6 +252,37 @@ where
                     }
                     Ok(_) => {
                         status.add(State::Ok, format!("{dbg}.run | UDP read successful"));
+                        // TODO: Временный код для тестирования связи. Удалить в проде
+                        // ======================= FOR TESTING ========================
+                        fn process_channel(dbg: &Dbg, options: &TestOptions, fft: &Arc<dyn Fft<f32>>, fft_buf: &mut Vec<Complex<f32>>, buffer: &mut MirroredBuffer<u16>, chunk: &Vec<u16>) {
+                            buffer.push_chunk(chunk);
+                            if let Some(window) = buffer.pop_window() {
+                                fft_buf.clear();
+                                fft_buf.extend(window.iter().map(|v| Complex::new(*v as f32 - 2048.0, 0.0)));
+                                fft.process(fft_buf);
+                                for (i, complex) in fft_buf.iter().enumerate() {
+                                    let amplitude = options.get_amplitude(i, *complex);
+                                    if amplitude > 0.1 {
+                                        let freq = options.get_freq(i);
+                                        log::debug!("{dbg}.run(test) | Channel {} | Freq {:.4}: {amplitude}", options.ch, freq);
+                                    }
+                                }
+                            } else {
+                                log::warn!("{dbg}.run(test) | Channel {} | FFT Buffer is not ready", options.ch);
+                            }
+                        }
+                        for ch in 0..1 {
+                            if let Some(chunk) = samples.get(ch) {
+                                test_options.with_ch(ch);
+                                process_channel(dbg, &test_options, &fft, &mut fft_buf, &mut buffer[ch], chunk);
+                            } else {
+                                log::warn!("{dbg}.run(test) | Channel {ch} | Can't get from ADC samples");
+                            }
+
+                        }
+                        continue;
+                        // ======================= FOR TESTING ========================
+
                         // Запускаем расчеты
                         for ((_conf, sensor), channel_samples) in sensors.iter().zip(&mut samples) {
                             if let Err(err) = sensor.eval(channel_samples) {
