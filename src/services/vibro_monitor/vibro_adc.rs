@@ -274,7 +274,7 @@ where
                                 fft.process(fft_buf);
                                 for i in 0..(fft_buf.len() / 2) {
                                     let amplitude = options.get_amplitude(i, fft_buf);
-                                    if amplitude > 0.1 {
+                                    if amplitude > 0.25 {
                                         let freq = options.get_freq(i);
                                         log::debug!("{dbg}.run(test) | Channel {} | Freq {:.4}: {amplitude}", options.ch, freq);
                                     }
