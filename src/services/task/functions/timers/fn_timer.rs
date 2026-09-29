@@ -92,9 +92,8 @@ impl FnOut for FnTimer {
                     self.ts = chrono::Utc::now();
                     self.active_t = None;
                 }
-                reset
-            } else { false }
-        } else { false };
+            }
+        }
         let Some(input) = flow.ignore(input)? else {
             if let Some(t) = self.active_t {
                 self.total_t = self.total_t + t.elapsed().as_secs_f64();
@@ -119,7 +118,7 @@ impl FnOut for FnTimer {
         let elapsed = match self.edge.add(is_active) {
             Some(Edge::Rising) => {
                 self.active_t = Some(Instant::now());
-                // log::debug!("{}.out | STARTED", self.id);
+                log::debug!("{}.out | Rising", self.id);
                 self.total_t
             }
             Some(Edge::Falling) => {
@@ -129,11 +128,12 @@ impl FnOut for FnTimer {
                 }
                 is_changed = true;
                 self.active_t = None;
+                log::debug!("{}.out | Falling", self.id);
                 self.total_t
             }
             _ => {
                 if let Some(t) = self.active_t {
-                    // log::debug!("{}.out | ACTIVE: {:?}", self.id, t);
+                    log::debug!("{}.out | ACTIVE: {:?}", self.id, t);
                     is_changed = true;
                     self.ts = chrono::Utc::now();
                     self.total_t + t.elapsed().as_secs_f64()
@@ -144,6 +144,9 @@ impl FnOut for FnTimer {
         };
         // log::trace!("{}.out | elapsed: {:?}", self.id, self.total_t);
         let point = Point::Double(Self::point_with(&input, &self.id, elapsed, self.ts));
+        // TODO: Честно вычислить is_changed в случае reset.
+        // Если ранее input = false, а сейчас true, reset = true, то мы заходим в ветку Rising,
+        // но таймер только запустился, и мы все еще возвращаем 0мс, но уже New - кажется это нужно поправить.
         if is_changed {
             flow.wrap_new(point)
         } else {
@@ -183,7 +186,9 @@ mod tests {
     use super::*;
     use std::{cell::RefCell, rc::Rc, thread::sleep, time::Duration};
     use crate::services::task::{FnFlow, FnKind, FnOut, FnResult};
+    use debugging::session::{DebugSession, LogLevel};
     use sal_sync::services::{entity::{Cot, Point, PointHlr, Status}, types::Bool};
+    //
     #[derive(Debug)]
     struct FakeNode {
         id: String,
@@ -311,5 +316,161 @@ mod tests {
         initial.borrow_mut().push_double(500.0);
         let res2 = timer.out().unwrap().unwrap();
         assert_eq!(extract_val(&res2), 100.0, "Начальное значение применяется строго один раз");
+    }
+    ///
+    /// Новые тесты, проверить
+    /// 
+    /// К2: холодный старт с активным входом (первая точка — true, без «прогрева» false)
+    ///
+    #[test]
+    fn test_cold_start_with_active_input() {
+        let input = FakeNode::new("input");
+        let mut timer = FnTimer::new("test", None, None, input.clone());
+        input.borrow_mut().push_bool(true);
+        let res1 = timer.out().unwrap().unwrap();
+        assert_eq!(extract_val(&res1), 0.0, "На фронте значение ещё не накопилось");
+        sleep(Duration::from_millis(50));
+        input.borrow_mut().push_bool(true);
+        let res2 = timer.out().unwrap().unwrap();
+        assert!(extract_val(&res2) > 0.01, "Холодный старт с true обязан накапливать время");
+    }
+    
+    /// К3 (ключевой регресс): reset-импульс в одном такте с фронтом input.
+    /// Таймер должен стартовать в том же такте и засчитывать паузу до следующей точки.
+    #[test]
+    fn test_reset_pulse_same_tick_as_rising_starts_timer() {
+        _ = DebugSession::new().filter(LogLevel::Debug).init();
+        let dbg = "test_reset_pulse_same_tick_as_rising_starts_timer";
+        let input = FakeNode::new("input");
+        let reset = FakeNode::new("reset");
+        let mut timer = FnTimer::new("test", None, Some(reset.clone()), input.clone());
+        input.borrow_mut().push_bool(false);
+        reset.borrow_mut().push_bool(false);
+        let _ = timer.out().unwrap();
+        // такт старта цикла: сброс и фронт приходят вместе
+        log::debug!("{dbg} | Input: true, Reset: true");
+        input.borrow_mut().push_bool(true);
+        reset.borrow_mut().push_bool(true);
+        let res = timer.out().unwrap().unwrap();
+        assert_eq!(extract_val(&res), 0.0, "В такте сброса значение 0.0");
+        // следующая точка только через 500 мс (разреженный поток)
+        log::debug!("{dbg} | Timeout 500 ms");
+        sleep(Duration::from_millis(500));
+        input.borrow_mut().push_bool(true);
+        reset.borrow_mut().push_bool(false);
+        log::debug!("{dbg} | Test Timer, expecting at least 500 ms...");
+        let res = timer.out().unwrap().unwrap();
+        let v = extract_val(&res);
+        log::debug!("{dbg} | Timer returns {} ms", v);
+        assert!((v - 0.5).abs() < 0.1, "Счёт с такта старта, а не со следующей точки: {v}");
+    }
+    
+    /// К5: зажатый reset — инвариант «пока reset присутствует, на выходе 0»
+    #[test]
+    fn test_level_reset_holds_zero() {
+        let input = FakeNode::new("input");
+        let reset = FakeNode::new("reset");
+        let mut timer = FnTimer::new("test", None, Some(reset.clone()), input.clone());
+        input.borrow_mut().push_bool(true);
+        reset.borrow_mut().push_bool(true);
+        let _ = timer.out().unwrap();
+        for _ in 0..3 {
+            sleep(Duration::from_millis(20));
+            input.borrow_mut().push_bool(true);
+            let res = timer.out().unwrap().unwrap();
+            assert_eq!(extract_val(&res), 0.0, "Пока reset зажат, значение должно быть 0.0");
+        }
+        // снятие reset: счёт начинается с такта снятия
+        reset.borrow_mut().push_bool(false);
+        sleep(Duration::from_millis(30));
+        input.borrow_mut().push_bool(true);
+        let v = extract_val(&timer.out().unwrap().unwrap());
+        assert!(v > 0.0, "После снятия reset счёт возобновляется: {v}");
+    }
+    
+    /// К6: обрыв связи (Ok(None)) и восстановление — счёт продолжается с накопленного
+    #[test]
+    fn test_resume_after_input_loss() {
+        let input = FakeNode::new("input");
+        let mut timer = FnTimer::new("test", None, None, input.clone());
+        input.borrow_mut().push_bool(false);
+        let _ = timer.out().unwrap();
+        input.borrow_mut().push_bool(true);
+        let _ = timer.out().unwrap();
+        sleep(Duration::from_millis(50));
+        input.borrow_mut().push_bool(true);
+        let before = extract_val(&timer.out().unwrap().unwrap());
+        assert!(before > 0.01);
+        input.borrow_mut().push_none();
+        assert!(timer.out().unwrap().is_none(), "Обрыв — прозрачный None");
+        input.borrow_mut().push_bool(true);
+        let res = timer.out().unwrap().unwrap();
+        let res = extract_val(&res);
+        assert!(res >= before, "Восстановление не теряет накопленное, ожидается: {} ms > {} ms", res, before);
+        sleep(Duration::from_millis(30));
+        input.borrow_mut().push_bool(true);
+        let after = extract_val(&timer.out().unwrap().unwrap());
+        assert!(after > before + 0.01, "Счёт продолжается после восстановления");
+    }
+    
+    /// К7: импульс reset при неактивном входе, затем новый фронт стартует с нуля
+    #[test]
+    fn test_reset_pulse_with_inactive_input() {
+        let input = FakeNode::new("input");
+        let reset = FakeNode::new("reset");
+        let mut timer = FnTimer::new("test", None, Some(reset.clone()), input.clone());
+        input.borrow_mut().push_bool(false);
+        reset.borrow_mut().push_bool(false);
+        let _ = timer.out().unwrap();
+        input.borrow_mut().push_bool(true);
+        let _ = timer.out().unwrap();
+        sleep(Duration::from_millis(30));
+        input.borrow_mut().push_bool(false);
+        let _ = timer.out().unwrap();
+        reset.borrow_mut().push_bool(true);
+        input.borrow_mut().push_bool(true);
+        let res = timer.out().unwrap().unwrap();
+        assert_eq!(extract_val(&res), 0.0, "Сброс обнуляет накопленное");
+        reset.borrow_mut().push_bool(false);
+        sleep(Duration::from_millis(30));
+        let v = extract_val(&timer.out().unwrap().unwrap());
+        assert!(v > 0.0 && v < 0.1, "Новый отсчёт идёт с нуля: {v}");
+    }
+    
+    /// К8: reset-импульс в такт спада input — reset доминирует, значение 0
+    #[test]
+    fn test_reset_pulse_same_tick_as_falling() {
+        let input = FakeNode::new("input");
+        let reset = FakeNode::new("reset");
+        let mut timer = FnTimer::new("test", None, Some(reset.clone()), input.clone());
+        input.borrow_mut().push_bool(false);
+        reset.borrow_mut().push_bool(false);
+        let _ = timer.out().unwrap();
+        input.borrow_mut().push_bool(true);
+        let _ = timer.out().unwrap();
+        sleep(Duration::from_millis(30));
+        input.borrow_mut().push_bool(false);
+        reset.borrow_mut().push_bool(true);
+        let res = timer.out().unwrap().unwrap();
+        assert_eq!(extract_val(&res), 0.0, "Reset обрабатывается первым и обнуляет значение");
+    }
+    
+    /// К3-разреженный (исходный баг 0.12с вместо 5с): пауза между тиками засчитывается полностью
+    #[test]
+    fn test_sparse_events_gap_accumulates() {
+        let input = FakeNode::new("input");
+        let reset = FakeNode::new("reset");
+        let mut timer = FnTimer::new("test", None, Some(reset.clone()), input.clone());
+        input.borrow_mut().push_bool(false);
+        reset.borrow_mut().push_bool(false);
+        let _ = timer.out().unwrap();
+        input.borrow_mut().push_bool(true);
+        reset.borrow_mut().push_bool(true);
+        let _ = timer.out().unwrap();
+        sleep(Duration::from_millis(2000));
+        input.borrow_mut().push_bool(true);
+        reset.borrow_mut().push_bool(false);
+        let v = extract_val(&timer.out().unwrap().unwrap());
+        assert!((v - 2.0).abs() < 0.1, "Пауза между событиями должна засчитываться: {v}");
     }
 }

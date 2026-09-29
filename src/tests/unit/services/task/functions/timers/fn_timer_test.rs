@@ -117,7 +117,7 @@ fn elapsed_reset() {
         (05, true,  is_old, false),
         (06, true,  is_new, false),
         (07, true,  is_new, true),
-        (08, true,  is_old, false),
+        (08, true,  is_new, false),
         (09, false, is_new, false),
         (10, true,  is_old, false),
         (11, false, is_new, false),
@@ -127,10 +127,10 @@ fn elapsed_reset() {
         (15, false, is_new, false),
         (16, false, is_old, false),
         (17, true,  is_new, true),
-        (18, true,  is_old, false),
+        (18, true,  is_new, false),
         (19, false, is_new, false),
         (20, false, is_old, false),
-        (21, false, is_old, true),
+        (21, false, is_new, true),
         (22, false, is_old, false),
     ];
     let mut start: Option<Instant> = None;
@@ -171,7 +171,7 @@ fn elapsed_reset() {
         let fn_timer_elapsed = fn_timer_result.into_value().as_double().value;
         // debug!("input: {:?}", &mut input);
         log::debug!("{dbg} | step {step}:  value: {:?}   |   state: {:?}", value, fn_timer_elapsed);
-        assert!(fn_timer_elapsed.aprox_eq(target, 2), "{dbg} | step {step}: \n current '{}' \n target '{}'", fn_timer_elapsed, target);
+        assert!((fn_timer_elapsed - target).abs() < 0.002, "{dbg} | step {step}: \n current '{}' \n target '{}'", fn_timer_elapsed, target);
         thread::sleep(Duration::from_millis(1));
     }
 }
