@@ -1,40 +1,81 @@
 #!/bin/bash
 
-export PORT=15180
-export TIMEOUT=1
-# Готовим payload в шестнадцатеричном виде для nc
-export PAYLOAD=$(printf '\x22\x04')
+echo "=================================="
+echo "Сканер Vibro-ADC устройств в сети"
+echo "=================================="
 
-# Функция проверки одного IP (экспортируем для xargs)
-check_ip() {
-    local ip=$1
-    
-    # Отправляем payload и переводим ответ в HEX (вырезаем только первые 4 символа, т.е. 2 байта)
-    # Использование xxd или od позволяет безопасно читать бинарный ответ
-    HEX_RESP=$(echo -n "$PAYLOAD" | nc -u -w $TIMEOUT $ip $PORT 2>/dev/null | od -t x1 -An | tr -d ' \n' | head -c 4)
-    
-    # Если ответ вообще есть
-    if [ ! -z "$HEX_RESP" ]; then
-        if [ "$HEX_RESP" = "2204" ]; then
-            echo "[+] $ip -> УСПЕШНО (Ответ: 0x22 0x04)" >> responded_hosts.log
-            echo "[+] $ip -> УСПЕШНО"
-        else
-            echo "[!] $ip -> ДЕВАЙС НАЙДЕН, но неверный ответ (HEX: $HEX_RESP)" >> responded_hosts.log
-            echo "[!] $ip -> Неверный ответ от девайса"
-        fi
-    fi
-}
-export -f check_ip
+# Проверяем, запущен ли скрипт от root (для tcpdump)
+if [ "$EUID" -ne 0 ]; then
+  echo "Пожалуйста, запустите скрипт от имени sudo / root!"
+  exit 1
+fi
 
-echo "Запуск асинхронного сканирования 192.168.X.Y в 200 потоков..."
-> responded_hosts.log
+PORT=15180
+LOG_FILE="scan-adc.log"
+TMP_RAW_LOG="scan-adc.log.tmp"
+> "$LOG_FILE"
+> "$TMP_RAW_LOG"
 
-# Генерируем список всех IP и передаем в xargs
-# -P 200 задает работу в 200 параллельных потоков
+# 1. ЗАПУСКАЕМ ТРАФИК-МАСТЕР В ФОНЕ
+# Он слушает любой входящий UDP-трафик с порта 15180
+echo "Включаем прослушивание сети..."
+tcpdump -l -n -i any "udp src port $PORT" > "$TMP_RAW_LOG" 2>/dev/null &
+TCPDUMP_PID=$!
+
+# Даем tcpdump полсекунды, чтобы инициализировать интерфейс
+sleep 0.5
+
+echo "Генерируем список IP-адресов 192.168.X.Y..."
+IPS=()
 for x in {0..255}; do
     for y in {1..254}; do
-        echo "192.168.$x.$y"
+        IPS+=("192.168.$x.$y")
     done
-done | xargs -I {} -P 200 bash -c 'check_ip "{}"'
+done
 
-echo "Сканирование завершено. Результаты в responded_hosts.log"
+echo "Отправляем пакеты \x22\x04..."
+PAYLOAD=$(printf '\x22\x04')
+BATCH_SIZE=800
+COUNTER=0
+
+for ip in "${IPS[@]}"; do
+    # Отправляем пакет асинхронно
+    (echo -n "$PAYLOAD" > /dev/udp/$ip/$PORT) 2>/dev/null &
+    
+    ((COUNTER++))
+    if (( COUNTER % BATCH_SIZE == 0 )); then
+        # Пауза, чтобы не забить ARP-таблицу роутера
+        sleep 0.04
+    fi
+done
+
+echo "Все пакеты отправлены. Ожидаем оставшиеся ответы (3 секунды)..."
+sleep 3
+
+# 2. ОСТАНАВЛИВАЕМ TCPDUMP
+kill $TCPDUMP_PID 2>/dev/null
+wait $TCPDUMP_PID 2>/dev/null
+
+echo "Готовим результаты сканирования..."
+
+# 3. ОБРАБАТЫВАЕМ СОБРАННЫЙ ЛОГ
+# Извлекаем IP-адреса отправителей из лога tcpdump
+if [ -s "$TMP_RAW_LOG" ]; then
+    # echo "Обработка результатов..."
+    # Строка tcpdump выглядит так: 12:34:56.789 IP 192.168.1.50.15180 > ...
+    # Вырезаем IP адрес устройства
+    awk '{
+        for(i=1;i<=NF;i++) {
+            if($i=="IP") {
+                split($(i+1), a, ".");
+                print a[1]"."a[2]"."a[3]"."a[4];
+            }
+        }
+    }' "$TMP_RAW_LOG" | sort -u > "$LOG_FILE"
+fi
+
+rm -f "$TMP_RAW_LOG"
+
+echo "====== Найденные устройства ======"
+cat "$LOG_FILE"
+echo "=================================="
