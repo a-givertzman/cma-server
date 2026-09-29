@@ -219,7 +219,7 @@ where
             struct TestOptions {
                 ch: String,
                 n_fft: usize,
-                k_fft: f32,
+                rms_factor: f32,
                 freq_step: f32,
                 dc_offset: f32,
             }
@@ -228,7 +228,7 @@ where
                     Self {
                         ch: String::new(),
                         n_fft,
-                        k_fft: 2.0f32.sqrt() / (n_fft as f32),
+                        rms_factor: 2.0f32.sqrt() / (n_fft as f32),
                         freq_step: sample_rate_hz / n_fft as f32,
                         dc_offset,
                     }
@@ -237,7 +237,7 @@ where
                 fn with_ch(&mut self, ch: impl AsRef<str>) {
                     self.ch = ch.as_ref().to_string();
                 }
-                /// Возвращает амплитуду `i`-того бина, усредненную по двум соседним бинам
+                /// Возвращает RMS `i`-того бина (суммируется по бинам i-1, i, i+1)
                 fn get_amplitude(&self, i: usize, buf: &[Complex<f32>]) -> f32 {
                     [
                         buf.get((i-1).max(0)).map_or(0.0, |v| v.norm()),
@@ -245,7 +245,7 @@ where
                         buf.get((i+1).max(0)).map_or(0.0, |v| v.norm()),
                     ].iter()
                         .fold(0.0, |acc, v| acc + v.powi(2))
-                        .sqrt() * self.k_fft
+                        .sqrt() * self.rms_factor
                 }
                 /// Возвращает частоту (Гц) `i`-того бина
                 fn get_freq(&self, i: usize) -> f32 {
@@ -263,6 +263,7 @@ where
                     }
                     Ok(_) => {
                         status.add(State::Ok, format!("{dbg}.run | UDP read successful"));
+
                         // TODO: Временный код для тестирования связи. Удалить в проде
                         // ======================= FOR TESTING ========================
                         fn process_channel(dbg: &Dbg, status: &ChangeNotify<'static, TestState, String>, options: &TestOptions, fft: &Arc<dyn Fft<f32>>, fft_buf: &mut Vec<Complex<f32>>, buffer: &mut MirroredBuffer<u16>, chunk: &Vec<u16>) {
@@ -272,15 +273,15 @@ where
                                 fft_buf.clear();
                                 fft_buf.extend(window.iter().map(|v| Complex::new(*v as f32 - options.dc_offset, 0.0)));
                                 fft.process(fft_buf);
-                                for i in 0..(fft_buf.len() / 2) {
+                                for i in 1..(fft_buf.len() / 2 - 1) {
                                     let amplitude = options.get_amplitude(i, fft_buf);
                                     if amplitude > 0.25 {
                                         let freq = options.get_freq(i);
-                                        log::debug!("{dbg}.run(test) | Channel {} | Freq {:.4}: {amplitude}", options.ch, freq);
+                                        log::debug!("{dbg}.run(test) | Channel {} | Freq {:.4}: RMS {amplitude}", options.ch, freq);
                                     }
                                 }
                             } else {
-                                status.add(TestState::Ok, format!("{dbg}.run(test) | Channel {} | FFT Buffer is not ready", options.ch));
+                                status.add(TestState::Err, format!("{dbg}.run(test) | Channel {} | FFT Buffer is not ready", options.ch));
                             }
                         }
                         for i in 0..samples.len() {
