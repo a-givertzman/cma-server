@@ -284,11 +284,15 @@ where
                             }
                         }
                         for i in 0..samples.len() {
+                            let ch = conf.get(i).map_or(format!("Not found channel index {i}"), |c| format!("{}", c.channel));
                             if let Some(chunk) = samples.get(i) {
-                                test_options.with_ch(conf.get(i).map_or(format!("Not found channel index {i}"), |c| format!("{}", c.channel)));
+                                if chunk.len() != conf[i].dsp.adc.chunk_size {
+                                    log::warn!("{dbg}.run(test) | Channel {ch} | Unexpected chunk len {}, expecting {}", chunk.len(), conf[i].dsp.adc.chunk_size);
+                                }
+                                test_options.with_ch(ch);
                                 process_channel(dbg, &test_status, &test_options, &fft, &mut fft_buf, &mut buffer[i], chunk);
                             } else {
-                                log::warn!("{dbg}.run(test) | Channel {} | Can't get from ADC samples", test_options.ch);
+                                log::warn!("{dbg}.run(test) | Channel {ch} | Can't get from ADC samples");
                             }
 
                         }
