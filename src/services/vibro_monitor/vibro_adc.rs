@@ -154,7 +154,7 @@ where
                 .on(State::Exit, |msg| log::info!("{msg}"))
                 .build();
             let udp = super::UdpClient::new(dbg, conf.len(), connection_conf);
-            let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
+            let mut samples: Vec<Vec<u16>> = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
             let sensors: Vec<(_, _)> = conf.iter().filter_map(|conf| {
                 let rpm_key = match &conf.rpm {
                     crate::services::vibro_monitor::InputKind::Const(rpm) => {
@@ -198,45 +198,48 @@ where
 
             // TODO: Временный код для тестирования связи. Удалить в проде
             // ======================= FOR TESTING ========================
-            let f_sampl = conf[0].dsp.adc.sample_rate_hz as f32;
             let n_fft = 320_000;
             // let k_fft = 2.0 / (n_fft as f32);
             // let freq_step = f_sampl / n_fft as f32; 
-            let mut test_options = TestOptions::new(conf[0].dsp.adc.sample_rate_hz as f32, n_fft);
+            let mut test_options = TestOptions::new(conf[0].dsp.adc.sample_rate_hz as f32, n_fft, conf[0].dsp.adc.ds_offset as f32);
             let mut planner = rustfft::FftPlanner::new();
             let fft = planner.plan_fft_forward(n_fft);
-            let mut buffer = [
-                MirroredBuffer::new(n_fft),
-                MirroredBuffer::new(n_fft),
-            ];
+            let mut buffer: Vec<MirroredBuffer<u16>> = samples.iter().map(|_| {
+                MirroredBuffer::new(n_fft)
+            }).collect();
             let mut fft_buf: Vec<Complex<f32>> = Vec::with_capacity(n_fft);
             struct TestOptions {
-                ch: usize,
+                ch: String,
                 n_fft: usize,
                 k_fft: f32,
                 freq_step: f32,
+                dc_offset: f32,
             }
             impl TestOptions {
-                fn new(sample_rate_hz: f32, n_fft: usize) -> Self {
+                fn new(sample_rate_hz: f32, n_fft: usize, dc_offset: f32) -> Self {
                     Self {
-                        ch: 0,
+                        ch: String::new(),
                         n_fft,
-                        k_fft: 2.0 / (n_fft as f32),
+                        k_fft: 2.0f32.sqrt() / (n_fft as f32),
                         freq_step: sample_rate_hz / n_fft as f32,
+                        dc_offset,
                     }
                 }
-                fn with_ch(&mut self, ch: usize) {
-                    self.ch = ch;
+                /// Назначает название текущего канала 
+                fn with_ch(&mut self, ch: impl AsRef<str>) {
+                    self.ch = ch.as_ref().to_string();
                 }
-                fn get_amplitude(&self, i: usize, val: Complex<f32>) -> f32 {
-                    if i == 0 || i == self.n_fft / 2 {
-                        // Для постоянной составляющей (i = 0) и частоты Найквиста (i = n_fft / 2)
-                        val.norm() / (self.n_fft as f32)
-                    } else {
-                        // Для всех остальных частот (энергия делится между положительными и отрицательными частотами)
-                        self.k_fft * val.norm() / (self.n_fft as f32)
-                    }
+                /// Возвращает амплитуду `i`-того бина, усредненную по двум соседним бинам
+                fn get_amplitude(&self, i: usize, buf: &[Complex<f32>]) -> f32 {
+                    [
+                        buf.get((i-1).max(0)).map_or(0.0, |v| v.norm()),
+                        buf.get((i+0).max(0)).map_or(0.0, |v| v.norm()),
+                        buf.get((i+1).max(0)).map_or(0.0, |v| v.norm()),
+                    ].iter()
+                        .fold(0.0, |acc, v| acc + v.powi(2))
+                        .sqrt() * self.k_fft
                 }
+                /// Возвращает частоту (Гц) `i`-того бина
                 fn get_freq(&self, i: usize) -> f32 {
                     (i as f32) * self.freq_step
                 }
@@ -258,10 +261,10 @@ where
                             buffer.push_chunk(chunk);
                             if let Some(window) = buffer.pop_window() {
                                 fft_buf.clear();
-                                fft_buf.extend(window.iter().map(|v| Complex::new(*v as f32 - 2048.0, 0.0)));
+                                fft_buf.extend(window.iter().map(|v| Complex::new(*v as f32 - options.dc_offset, 0.0)));
                                 fft.process(fft_buf);
-                                for (i, complex) in fft_buf.iter().enumerate() {
-                                    let amplitude = options.get_amplitude(i, *complex);
+                                for i in 0..(fft_buf.len() / 2) {
+                                    let amplitude = options.get_amplitude(i, fft_buf);
                                     if amplitude > 0.1 {
                                         let freq = options.get_freq(i);
                                         log::debug!("{dbg}.run(test) | Channel {} | Freq {:.4}: {amplitude}", options.ch, freq);
@@ -271,12 +274,12 @@ where
                                 log::warn!("{dbg}.run(test) | Channel {} | FFT Buffer is not ready", options.ch);
                             }
                         }
-                        for ch in 0..1 {
-                            if let Some(chunk) = samples.get(ch) {
-                                test_options.with_ch(ch);
-                                process_channel(dbg, &test_options, &fft, &mut fft_buf, &mut buffer[ch], chunk);
+                        for i in 0..samples.len() {
+                            if let Some(chunk) = samples.get(i) {
+                                test_options.with_ch(conf.get(i).map_or(format!("Not found channel index {i}"), |c| format!("{}", c.channel)));
+                                process_channel(dbg, &test_options, &fft, &mut fft_buf, &mut buffer[i], chunk);
                             } else {
-                                log::warn!("{dbg}.run(test) | Channel {ch} | Can't get from ADC samples");
+                                log::warn!("{dbg}.run(test) | Channel {} | Can't get from ADC samples", test_options.ch);
                             }
 
                         }
