@@ -199,8 +199,6 @@ where
             // TODO: Временный код для тестирования связи. Удалить в проде
             // ======================= FOR TESTING ========================
             let n_fft = 320_000;
-            // let k_fft = 2.0 / (n_fft as f32);
-            // let freq_step = f_sampl / n_fft as f32; 
             let mut test_options = TestOptions::new(conf[0].dsp.adc.sample_rate_hz as f32, n_fft, conf[0].dsp.adc.ds_offset as f32);
             let mut planner = rustfft::FftPlanner::new();
             let fft = planner.plan_fft_forward(n_fft);
@@ -208,6 +206,16 @@ where
                 MirroredBuffer::new(n_fft)
             }).collect();
             let mut fft_buf: Vec<Complex<f32>> = Vec::with_capacity(n_fft);
+            let test_status = ChangeNotify::builder(dbg, TestState::None)
+                .on(TestState::Ok, |msg| log::debug!("{msg}"))
+                .on(TestState::Err, |msg| log::warn!("{msg}"))
+                .build();
+            #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            enum TestState {
+                None,
+                Ok,
+                Err,
+            }
             struct TestOptions {
                 ch: String,
                 n_fft: usize,
@@ -257,9 +265,10 @@ where
                         status.add(State::Ok, format!("{dbg}.run | UDP read successful"));
                         // TODO: Временный код для тестирования связи. Удалить в проде
                         // ======================= FOR TESTING ========================
-                        fn process_channel(dbg: &Dbg, options: &TestOptions, fft: &Arc<dyn Fft<f32>>, fft_buf: &mut Vec<Complex<f32>>, buffer: &mut MirroredBuffer<u16>, chunk: &Vec<u16>) {
+                        fn process_channel(dbg: &Dbg, status: &ChangeNotify<'static, TestState, String>, options: &TestOptions, fft: &Arc<dyn Fft<f32>>, fft_buf: &mut Vec<Complex<f32>>, buffer: &mut MirroredBuffer<u16>, chunk: &Vec<u16>) {
                             buffer.push_chunk(chunk);
                             if let Some(window) = buffer.pop_window() {
+                                status.add(TestState::Ok, format!("{dbg}.run(test) | FFT Buffer is full"));
                                 fft_buf.clear();
                                 fft_buf.extend(window.iter().map(|v| Complex::new(*v as f32 - options.dc_offset, 0.0)));
                                 fft.process(fft_buf);
@@ -271,13 +280,13 @@ where
                                     }
                                 }
                             } else {
-                                log::warn!("{dbg}.run(test) | Channel {} | FFT Buffer is not ready", options.ch);
+                                status.add(TestState::Ok, format!("{dbg}.run(test) | Channel {} | FFT Buffer is not ready", options.ch));
                             }
                         }
                         for i in 0..samples.len() {
                             if let Some(chunk) = samples.get(i) {
                                 test_options.with_ch(conf.get(i).map_or(format!("Not found channel index {i}"), |c| format!("{}", c.channel)));
-                                process_channel(dbg, &test_options, &fft, &mut fft_buf, &mut buffer[i], chunk);
+                                process_channel(dbg, &test_status, &test_options, &fft, &mut fft_buf, &mut buffer[i], chunk);
                             } else {
                                 log::warn!("{dbg}.run(test) | Channel {} | Can't get from ADC samples", test_options.ch);
                             }
