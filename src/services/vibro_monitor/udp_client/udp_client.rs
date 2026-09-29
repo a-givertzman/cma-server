@@ -18,8 +18,7 @@ use super::{InputType, UdpClientConnect, UdpClientConf};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum State {
     None,
-    Start,
-    Exit,
+    Ok,
     ReadError,
     ConnectError,
     Connected,
@@ -67,6 +66,7 @@ pub struct UdpClient {
     socket: RefCell<Option<UdpSocket>>,
     /// Буфер для чтения из сокета
     buff: RefCell<Vec<u8>>,
+    status: Arc<ChangeNotify<'static, State, String>>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
@@ -99,6 +99,11 @@ impl UdpClient {
             conf,
             socket: RefCell::new(None),
             buff: RefCell::new(vec![0; mtu]),
+            status: Arc::new(ChangeNotify::builder(&dbg, State::None)
+                .on(State::Connected, |msg| log::info!("{msg}"))
+                .on(State::ConnectError, |msg| log::warn!("{msg}"))
+                .on(State::ReadError, |msg| log::warn!("{msg}"))
+                .build()),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
@@ -200,9 +205,13 @@ impl UdpClient {
         if self.socket.borrow().is_none() {
             let udp_connect = UdpClientConnect::new(&self.name, &self.conf.local_addr, &self.conf.remote_addr, self.conf.mtu);
             match udp_connect.connect() {
-                Err(err) => return Err(err_pass!(self.dbg, err, "Socket is not connected")),
+                Err(err) => {
+                    let err = err_pass!(self.dbg, err, "Socket is not connected");
+                    self.status.add(State::ConnectError, err.to_string());
+                    return Err(err)
+                }
                 Ok(socket) => {
-                    _ = self.socket.borrow_mut().replace(socket);
+                    let _ = self.socket.borrow_mut().replace(socket);
                 }
             }
         }
@@ -210,8 +219,9 @@ impl UdpClient {
         let Some(socket) = socket.as_ref() else  {
             return Err(err!(self.dbg, "Socket is not connected"));
         };
+        self.status.add(State::Connected, format!("{} receive | Connected to {}", self.dbg, self.conf.remote_addr));
         let mut buff = self.buff.borrow_mut();
-        match socket.recv_from(&mut buff) {
+        let result = match socket.recv_from(&mut buff) {
             Ok((len, _)) => {
                 // let count = u32::from_le_bytes(buf.get(3..=6).unwrap_or(&[0,0,0,0]).try_into().unwrap()) as usize;
                 // log::debug!("{dbg}.read | Received buffer {} bytes, \n\t | {}, {}, {}, {} | {}, {}, {}, {}", len,
@@ -225,14 +235,24 @@ impl UdpClient {
                 //     u16::from_le_bytes(buf.get(13..=14).unwrap_or(&[0,0]).try_into().unwrap()),
                 // );
                 // self.parse(buf.as_slice(), Utc::now());
+                self.status.add(State::Ok, format!("{} receive | UDP read sucessful {len} bytes", self.dbg));
                 Ok(len)
             }
-            Err(err) => match err.kind() {
-                std::io::ErrorKind::WouldBlock => Err(err_pass!(self.dbg, err, "Socket read timeout")),
-                std::io::ErrorKind::TimedOut => Err(err_pass!(self.dbg, err, "Socket read timeout")),
-                _ => Err(err_pass!(self.dbg, err, "Socket read timeout")),
+            Err(err) => {
+                let err = match err.kind() {
+                    std::io::ErrorKind::WouldBlock => err_pass!(self.dbg, err, "Can't read socket"),
+                    std::io::ErrorKind::TimedOut => err_pass!(self.dbg, err, "Can't read socket"),
+                    _ => err_pass!(self.dbg, err, "Can't read socket"),
+                };
+                self.status.add(State::ConnectError, err.to_string());
+                Err(err)
             }
+        };
+        match &result {
+            Ok(len) => self.status.add(State::Ok, format!("Received {len} bytes")),
+            Err(err) => self.status.add(State::ConnectError, err.to_string()),
         }
+        result
     }
     ///
     pub fn exit(&self) {

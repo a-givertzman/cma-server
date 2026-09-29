@@ -1,11 +1,11 @@
 use std::{fmt::Write, sync::Arc, time::Duration};
 use function_name::named;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{kernel::state::ExitNotify, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
+use sal_sync::{kernel::state::{ChangeNotify, ExitNotify}, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
 use vibro_core::{DiagFeatures, DiagnosticResult, Eval, Severity, VibroSensor};
 use crate::{domain::Sender, err, err_pass};
 
-/// ### VibroSensor | Расчетный вибродиагностики для одного датчика
+/// ### VibroAdc | Расчетный вибродиагностики для одного датчика
 /// 
 /// Алгоритмы анализа и диагностики разделены на три частотных диапазона:
 ///  
@@ -67,7 +67,7 @@ impl<F> VibroAdc<F>
 where
     F: EventValueAccess<str, f64> {
     ///
-    /// ### Returns [VibroSensor] new instance
+    /// ### Returns [VibroAdc] new instance
     /// - `parent` - Parent entity identifier (for debugging).
     /// - `conf` - Конфигурации цифровой обработки вибросигналов.
     /// - `event_values` - Агрегатор входных эвентов.
@@ -88,7 +88,7 @@ where
         scheduler: Scheduler,
         exit: Arc<ExitNotify>,
     ) -> Self {
-        let name = Name::new(parent, "VibroSensor");
+        let name = Name::new(parent, "VibroAdc");
         let dbg = Dbg::new(name.parent(), name.me());
         Self {
             name,
@@ -147,6 +147,11 @@ where
         let handle = self.scheduler.spawn(move || {
             service_release.add(Ok(()));
             let dbg = &dbg;
+            let status: ChangeNotify<'static, State, String> = ChangeNotify::builder(dbg, State::None)
+                .on(State::Ok, |msg| log::info!("{msg}"))
+                .on(State::Err, |msg| log::warn!("{msg}"))
+                .on(State::Exit, |msg| log::info!("{msg}"))
+                .build();
             let udp = super::UdpClient::new(dbg, conf.len(), connection_conf);
             let mut samples = conf.iter().map(|conf| vec![0u16; conf.dsp.adc.chunk_size]).collect();
             let sensors: Vec<(_, _)> = conf.iter().filter_map(|conf| {
@@ -192,8 +197,12 @@ where
             while !exit.get() {
                 // Получение АЦП-выборки из сети
                 match udp.read(&mut samples) {
-                    Err(err) => log::warn!("{dbg}.run | {}", err),
+                    Err(err) => {
+                        // log::warn!("{dbg}.run | {}", err),
+                        status.add(State::Err, format!("{dbg}.run | {}", err));
+                    }
                     Ok(_) => {
+                        status.add(State::Ok, format!("{dbg}.run | UDP read successful"));
                         // Запускаем расчеты
                         for ((_conf, sensor), channel_samples) in sensors.iter().zip(&mut samples) {
                             if let Err(err) = sensor.eval(channel_samples) {
@@ -351,4 +360,16 @@ fn wrap_nan(v: &f64) -> &dyn std::fmt::Display {
         return &"'NaN'";
     }
     v
+}
+///
+/// Operation state of the service
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum State {
+    None,
+    Ok,
+    // ReadError,
+    // ConnectError,
+    // Connected,
+    Err,
+    Exit,
 }

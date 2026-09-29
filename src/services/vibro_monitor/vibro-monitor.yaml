@@ -7,7 +7,7 @@ services:
             path: point/id.json
             api:
                 table: public.tags
-                address: 0.0.0.0:8080
+                address: 0.0.0.0:8081
                 auth-token: 123!@#
                 database: crane_data_server
 
@@ -40,7 +40,7 @@ service VibroMonitor VibroMonitor-01:
         wait-started: 10 ms         # optional, next service will wait until current completely started plus specified time
         address: "0.0.0.0:8081"
         auth-token: "123!@#"
-        database: "cma"
+        database: "crane_data_server"
     tables:
         equipment: 'public.equipment'
         faults: 'public.vibration_faults'
