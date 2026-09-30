@@ -240,9 +240,9 @@ where
                 /// Возвращает RMS `i`-того бина (суммируется по бинам i-1, i, i+1)
                 fn get_amplitude(&self, i: usize, buf: &[Complex<f32>]) -> f32 {
                     [
-                        buf.get((i-1).max(0)).map_or(0.0, |v| v.norm()),
-                        buf.get((i+0).max(0)).map_or(0.0, |v| v.norm()),
-                        buf.get((i+1).max(0)).map_or(0.0, |v| v.norm()),
+                        buf.get(i.saturating_sub(1)).map_or(0.0, |v| v.norm()),
+                        buf.get(i).map_or(0.0, |v| v.norm()),
+                        buf.get(i + 1).map_or(0.0, |v| v.norm()),
                     ].iter()
                         .fold(0.0, |acc, v| acc + v.powi(2))
                         .sqrt() * self.rms_factor
