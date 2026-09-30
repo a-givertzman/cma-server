@@ -285,7 +285,7 @@ where
                             }
                         }
                         for i in 0..samples.len() {
-                            let ch = conf.get(i).map_or(format!("Not found channel index {i}"), |c| format!("{}", c.channel));
+                            let ch = conf.get(i).map(|c| format!("{}", c.channel)).expect(&format!("{dbg}.run(test) | Not found channel index {i}"));
                             if let Some(chunk) = samples.get(i) {
                                 if chunk.len() != conf[i].dsp.adc.chunk_size {
                                     log::warn!("{dbg}.run(test) | Channel {ch} | Unexpected chunk len {}, expecting {}", chunk.len(), conf[i].dsp.adc.chunk_size);
