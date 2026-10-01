@@ -100,6 +100,7 @@ impl UdpClient {
             socket: RefCell::new(None),
             buff: RefCell::new(vec![0; mtu]),
             status: Arc::new(ChangeNotify::builder(&dbg, State::None)
+                .on(State::Ok, |msg| log::info!("{msg}"))
                 .on(State::Connected, |msg| log::info!("{msg}"))
                 .on(State::ConnectError, |msg| log::warn!("{msg}"))
                 .on(State::ReadError, |msg| log::warn!("{msg}"))
