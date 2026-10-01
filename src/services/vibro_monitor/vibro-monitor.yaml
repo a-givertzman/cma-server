@@ -48,6 +48,29 @@ service VibroMonitor VibroMonitor-01:
     sensor Motor-AC1:
         target: Motor-AC1               # Уникальный идентификатор целевого механизма
         rpm: point real '/App/Ied01/Motor.AC1.RPM'  # Текущая скорость вращения вала механизма, об/мин
+        channel: 0                      # Номер канала в АЦП (0..255). 0 - первый канал.
+        connection:                     # Параметры связи с датчиком
+            reconnect: 1000 ms                      # reconnect timeout when connection is lost
+            protocol: 'udp-raw'                     # udp-raw
+            local-addr: 192.168.100.100:15180    # Local machine address
+            remote-addr: 192.168.100.241:15180   # IP Address of the vibro-sensor ADC unit
+            mtu: 1500                               # Maximum Transmission Unit, default 1500
+        adc:                            # Параметры сбора сырых данных с АЦП
+            ds-offset: 2048             # Постоянная составляющая сигнала. Будет вычитаться из сырых сэмплов.
+            sample-rate-hz: 320000
+            chunk-size: 512             # Размер выборки, поступающей из АЦП (сэмплов u16).
+        analysis:                       # Параметры цифровой обработки и виброаналитики
+            order-tracking:             
+                max-order: 300              # Максимальный порядок (кратность частоты вращения), до которого производится спектральный анализ.
+                order-resolution: 0.05      # Требуемая спектральное разрешение в угловом домене.
+                # samples-per-rev: 256      # Плотность угловой дискретизации (сэмплов на оборот).
+            bands:
+                low-order: 0.5..10.0        # Границы низкочастотной зоны в порядках (Orders)
+                mid-hz: ..5000              # Верхняя граница среднего диапазона в Герцах (нижняя определяется порядками).
+                high-hz: 5000..10000        # Границы высокочастотной зоны в Герцах.
+    sensor Motor-AC2:
+        target: Motor-AC2               # Уникальный идентификатор целевого механизма
+        rpm: point real '/App/Ied01/Motor.AC2.RPM'  # Текущая скорость вращения вала механизма, об/мин
         channel: 1                      # Номер канала в АЦП (0..255). 0 - первый канал.
         connection:                     # Параметры связи с датчиком
             reconnect: 1000 ms                      # reconnect timeout when connection is lost
