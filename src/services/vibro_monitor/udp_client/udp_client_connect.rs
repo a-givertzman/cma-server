@@ -104,9 +104,11 @@ impl UdpClientConnect {
                                 log::trace!("{}.handshake | {}: Start message ACK - Ok", self.dbg, src_addr);
                                 Ok(())
                             }
-                            // Unexpected Data message received, but Start message expected
+                            // Data message received, Ok as Start ACK
                             &[UdpClient::DAT, _addr, _type_, _c1,_c2,_c3, _c4, ..] => {
-                                Err(error.err(format!("Start message ACK expected, but Data message received: {:?}...", &buf[..=10])))
+                                log::trace!("{}.handshake | {}: Start message ACK - Ok", self.dbg, src_addr);
+                                // Err(error.err(format!("Start message ACK expected, but Data message received: {:?}...", &buf[..=10])))
+                                Ok(())
                             }
                             &[UdpClient::ERR, err] | &[UdpClient::ERR, err, ..] => {
                                 Err(error.err(format!("Start message ACK expected, but error received: {:?}", err)))
