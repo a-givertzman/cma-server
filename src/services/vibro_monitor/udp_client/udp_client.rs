@@ -67,6 +67,7 @@ pub struct UdpClient {
     /// Буфер для чтения из сокета
     buff: RefCell<Vec<u8>>,
     status: Arc<ChangeNotify<'static, State, String>>,
+    errors: RefCell<ErrorLimit>,
     exit: Arc<AtomicBool>,
     dbg: Dbg,
 }
@@ -105,6 +106,7 @@ impl UdpClient {
                 .on(State::ConnectError, |msg| log::warn!("{msg}"))
                 .on(State::ReadError, |msg| log::warn!("{msg}"))
                 .build()),
+            errors: RefCell::new(ErrorLimit::new(2)),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
@@ -216,42 +218,55 @@ impl UdpClient {
                 }
             }
         }
-        let socket = self.socket.borrow();
-        let Some(socket) = socket.as_ref() else  {
-            return Err(err!(self.dbg, "Socket is not connected"));
-        };
-        self.status.add(State::Connected, format!("{} receive | Connected to {}", self.dbg, self.conf.remote_addr));
-        let mut buff = self.buff.borrow_mut();
-        let result = match socket.recv_from(&mut buff) {
-            Ok((len, _)) => {
-                // let count = u32::from_le_bytes(buf.get(3..=6).unwrap_or(&[0,0,0,0]).try_into().unwrap()) as usize;
-                // log::debug!("{dbg}.read | Received buffer {} bytes, \n\t | {}, {}, {}, {} | {}, {}, {}, {}", len,
-                //     buf.get(0).unwrap_or(&0),
-                //     buf.get(1).unwrap_or(&0),
-                //     buf.get(2).unwrap_or(&0),
-                //     count,
-                //     u16::from_le_bytes(buf.get(07..=08).unwrap_or(&[0,0]).try_into().unwrap()),
-                //     u16::from_le_bytes(buf.get(09..=10).unwrap_or(&[0,0]).try_into().unwrap()),
-                //     u16::from_le_bytes(buf.get(11..=12).unwrap_or(&[0,0]).try_into().unwrap()),
-                //     u16::from_le_bytes(buf.get(13..=14).unwrap_or(&[0,0]).try_into().unwrap()),
-                // );
-                // self.parse(buf.as_slice(), Utc::now());
-                self.status.add(State::Ok, format!("{} receive | UDP read sucessful {len} bytes", self.dbg));
-                Ok(len)
-            }
-            Err(err) => {
-                let err = match err.kind() {
-                    std::io::ErrorKind::WouldBlock => err_pass!(self.dbg, err, "Can't read socket"),
-                    std::io::ErrorKind::TimedOut => err_pass!(self.dbg, err, "Can't read socket"),
-                    _ => err_pass!(self.dbg, err, "Can't read socket"),
-                };
-                self.status.add(State::ConnectError, err.to_string());
-                Err(err)
+        let result = {
+            let socket = self.socket.borrow();
+            let Some(socket) = socket.as_ref() else  {
+                return Err(err!(self.dbg, "Socket is not connected"));
+            };
+            self.status.add(State::Connected, format!("{} receive | Connected to {}", self.dbg, self.conf.remote_addr));
+            let mut buff = self.buff.borrow_mut();
+            match socket.recv_from(&mut buff) {
+                Ok((len, _)) => {
+                    // let count = u32::from_le_bytes(buf.get(3..=6).unwrap_or(&[0,0,0,0]).try_into().unwrap()) as usize;
+                    // log::debug!("{dbg}.read | Received buffer {} bytes, \n\t | {}, {}, {}, {} | {}, {}, {}, {}", len,
+                    //     buf.get(0).unwrap_or(&0),
+                    //     buf.get(1).unwrap_or(&0),
+                    //     buf.get(2).unwrap_or(&0),
+                    //     count,
+                    //     u16::from_le_bytes(buf.get(07..=08).unwrap_or(&[0,0]).try_into().unwrap()),
+                    //     u16::from_le_bytes(buf.get(09..=10).unwrap_or(&[0,0]).try_into().unwrap()),
+                    //     u16::from_le_bytes(buf.get(11..=12).unwrap_or(&[0,0]).try_into().unwrap()),
+                    //     u16::from_le_bytes(buf.get(13..=14).unwrap_or(&[0,0]).try_into().unwrap()),
+                    // );
+                    Ok(len)
+                }
+                Err(err) => {
+                    let err = match err.kind() {
+                        std::io::ErrorKind::Interrupted | std::io::ErrorKind::PermissionDenied | std::io::ErrorKind::OutOfMemory => {
+                            let err = err_pass!(self.dbg, err, "Can't read socket");
+                            self.status.add(State::ReadError, err.to_string());
+                            return Err(err);
+                        }
+                        _ => err_pass!(self.dbg, err, "Can't read socket"),
+                    };
+                    Err(err)
+                }
             }
         };
         match &result {
-            Ok(len) => self.status.add(State::Ok, format!("Received {len} bytes")),
-            Err(err) => self.status.add(State::ConnectError, err.to_string()),
+            Ok(len) => {
+                    self.errors.borrow_mut().reset();
+                    self.status.add(State::Ok, format!("{} receive | Received {len} bytes", self.dbg));
+            }
+            Err(err) => {
+                if self.errors.borrow_mut().add().is_err() {
+                    self.errors.borrow_mut().reset();
+                    self.socket.borrow_mut().take();
+                    self.status.add(State::ConnectError, err.to_string());
+                } else {
+                    self.status.add(State::ReadError, err.to_string());
+                }
+            }
         }
         result
     }

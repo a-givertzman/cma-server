@@ -67,6 +67,9 @@ pub struct VibroAdc<F> {
 impl<F> VibroAdc<F>
 where
     F: EventValueAccess<str, f64> {
+    /// Default timeout between read retries
+    const DEFAULT_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
+    const MAX_RETRY_TIMEOUT: Duration = Duration::from_secs(3);
     ///
     /// ### Returns [VibroAdc] new instance
     /// - `parent` - Parent entity identifier (for debugging).
@@ -254,14 +257,20 @@ where
             }
             // ======================= FOR TESTING ========================
 
+            let mut timeout = Self::DEFAULT_RETRY_TIMEOUT;
             while !exit.get() {
                 // Получение АЦП-выборки из сети
                 match udp.read(&mut samples) {
                     Err(err) => {
                         // log::warn!("{dbg}.run | {}", err),
                         status.add(State::Err, format!("{dbg}.run | {}", err));
+                        std::thread::sleep(timeout);
+                        if timeout < Self::MAX_RETRY_TIMEOUT {
+                            timeout = timeout * 2;
+                        }
                     }
                     Ok(_) => {
+                        timeout = Self::DEFAULT_RETRY_TIMEOUT;
                         status.add(State::Ok, format!("{dbg}.run | UDP read successful"));
 
                         // TODO: Временный код для тестирования связи. Удалить в проде
