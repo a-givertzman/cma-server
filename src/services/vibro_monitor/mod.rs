@@ -43,3 +43,5 @@ mod sql_export;
 pub(self) use sql_export::*;
 mod vibro_adc;
 pub(self) use vibro_adc::*;
+mod exit_notify;
+pub(super) use exit_notify::*;

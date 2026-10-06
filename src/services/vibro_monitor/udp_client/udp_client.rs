@@ -215,6 +215,7 @@ impl UdpClient {
                 }
                 Ok(socket) => {
                     let _ = self.socket.borrow_mut().replace(socket);
+                    self.status.add(State::Connected, format!("{} receive | Connected to {}", self.dbg, self.conf.remote_addr));
                 }
             }
         }
@@ -223,7 +224,6 @@ impl UdpClient {
             let Some(socket) = socket.as_ref() else  {
                 return Err(err!(self.dbg, "Socket is not connected"));
             };
-            self.status.add(State::Connected, format!("{} receive | Connected to {}", self.dbg, self.conf.remote_addr));
             let mut buff = self.buff.borrow_mut();
             match socket.recv_from(&mut buff) {
                 Ok((len, _)) => {

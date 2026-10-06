@@ -4,7 +4,7 @@ use rustfft::{Fft, num_complex::Complex};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{kernel::state::{ChangeNotify, ExitNotify}, services::{EventValueAccess, Service, ServiceWaiting, entity::{Name, Object}}, sync::Handles, thread_pool::Scheduler};
 use vibro_core::{DiagFeatures, DiagnosticResult, Eval, MirroredBuffer, Severity, VibroSensor};
-use crate::{domain::Sender, err, err_pass};
+use crate::{domain::Sender, err, err_pass, services::Backoff};
 
 /// ### VibroAdc | Расчетный вибродиагностики для одного датчика
 /// 
@@ -67,9 +67,6 @@ pub struct VibroAdc<F> {
 impl<F> VibroAdc<F>
 where
     F: EventValueAccess<str, f64> {
-    /// Default timeout between read retries
-    const DEFAULT_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
-    const MAX_RETRY_TIMEOUT: Duration = Duration::from_secs(3);
     ///
     /// ### Returns [VibroAdc] new instance
     /// - `parent` - Parent entity identifier (for debugging).
@@ -257,20 +254,17 @@ where
             }
             // ======================= FOR TESTING ========================
 
-            let mut timeout = Self::DEFAULT_RETRY_TIMEOUT;
+            let backoff = Backoff::new(Duration::from_millis(100), Duration::from_secs(3));
             while !exit.get() {
                 // Получение АЦП-выборки из сети
                 match udp.read(&mut samples) {
                     Err(err) => {
                         // log::warn!("{dbg}.run | {}", err),
                         status.add(State::Err, format!("{dbg}.run | {}", err));
-                        std::thread::sleep(timeout);
-                        if timeout < Self::MAX_RETRY_TIMEOUT {
-                            timeout = timeout * 2;
-                        }
+                        backoff.next_delay();
                     }
                     Ok(_) => {
-                        timeout = Self::DEFAULT_RETRY_TIMEOUT;
+                        backoff.reset();
                         status.add(State::Ok, format!("{dbg}.run | UDP read successful"));
 
                         // TODO: Временный код для тестирования связи. Удалить в проде
