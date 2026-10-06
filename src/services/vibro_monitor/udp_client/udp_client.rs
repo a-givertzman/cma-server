@@ -416,4 +416,91 @@ mod tests {
         assert_eq!(values[1], vec![20]); // Данные CH1
         assert_eq!(values[2], vec![30]); // Данные CH2
     }
+    /// Проверяет автоматическое восстановление связи (реконект) после пропадания АЦП.
+    ///
+    /// Сценарий:
+    /// 1. Mock-АЦП отвечает на SYN и присылает один DAT-пакет - связь есть.
+    /// 2. Mock-АЦП "выключается" (перестаёт отвечать) - клиент получает серию
+    ///    таймаутов `recv_from`, сбрасывает сокет (`take`) и пытается переподключиться.
+    /// 3. Mock-АЦП "включается" снова - клиент должен сам восстановить связь,
+    ///    отправив новый SYN (handshake), и снова читать данные.
+    #[test]
+    fn test_reconnect_after_adc_lost() {
+        use std::net::UdpSocket;
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::time::{Duration, Instant};
+
+        // --- 1. Mock-АЦП ---------------------------------------------------
+        // Bind на произвольный свободный порт, чтобы получить реальный адрес.
+        let server_socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let server_addr = server_socket.local_addr().unwrap().to_string();
+        let running = Arc::new(AtomicBool::new(true));
+        let exit = Arc::new(AtomicBool::new(false));
+        let (running_srv, exit_srv) = (running.clone(), exit.clone());
+        let server = std::thread::spawn(move || {
+            server_socket.set_read_timeout(Some(Duration::from_millis(100))).unwrap();
+            let mut buf = vec![0u8; 1500];
+            while !exit_srv.load(Ordering::SeqCst) {
+                match server_socket.recv_from(&mut buf) {
+                    Ok((len, addr)) => {
+                        // "Выключенный" АЦП: SYN принимаем, но не отвечаем.
+                        if !running_srv.load(Ordering::SeqCst) {
+                            continue;
+                        }
+                        if len >= 2 && buf[0] == UdpClient::SYN {
+                            // ACK на start-сообщение.
+                            let _ = server_socket.send_to(&[UdpClient::SYN, UdpClient::EOT], addr);
+                            // Пауза, чтобы ACK гарантированно опередил DAT.
+                            std::thread::sleep(Duration::from_millis(10));
+                            // Один DAT-пакет: 1 канал, 4 сэмпла `u16`.
+                            let data: [u16; 4] = [10, 20, 30, 40];
+                            let mut packet = vec![UdpClient::DAT, 1u8, InputType::U16 as u8];
+                            packet.extend(((data.len() * 2) as u32).to_le_bytes());
+                            packet.extend(data.iter().flat_map(|v| v.to_le_bytes()));
+                            let _ = server_socket.send_to(&packet, addr);
+                        }
+                    }
+                    Err(ref err) if matches!(err.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut) => {}
+                    Err(_) => {}
+                }
+            }
+        });
+
+        // --- 2. Клиент ------------------------------------------------------
+        let conf = UdpClientConf {
+            description: Some("test_reconnect_after_adc_lost".into()),
+            reconnect: ConfDuration::new(1000, ConfDurationUnit::Millis),
+            protocol: "udp-raw".into(),
+            local_addr: "127.0.0.1:0".into(),
+            remote_addr: server_addr,
+            mtu: 1500,
+        };
+        let client = UdpClient::new("test_reconnect_after_adc_lost", 1, conf);
+        let mut samples = vec![vec![0u16; 4]];
+
+        // Связь есть: handshake + чтение DAT-пакета.
+        client.read(&mut samples).expect("read must be Ok while ADC is up");
+        assert_eq!(samples[0], vec![10, 20, 30, 40], "samples must be parsed from ADC packet");
+
+        // --- 3. АЦП выключен ------------------------------------------------
+        running.store(false, Ordering::SeqCst);
+        // 3 ошибки чтения подряд -> сокет сброшен; последующие read() переподключаются.
+        for _ in 0..5 {
+            assert!(client.read(&mut samples).is_err(), "read must fail while ADC is down");
+        }
+
+        // --- 4. АЦП включен снова: клиент должен восстановить связь ---------
+        running.store(true, Ordering::SeqCst);
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while client.read(&mut samples).is_err() {
+            assert!(Instant::now() < deadline, "client did not reconnect within 15s");
+        }
+        assert_eq!(samples[0], vec![10, 20, 30, 40], "samples must be parsed after reconnect");
+
+        // --- 5. Cleanup -----------------------------------------------------
+        exit.store(true, Ordering::SeqCst);
+        client.exit();
+        let _ = server.join();
+    }
 }
