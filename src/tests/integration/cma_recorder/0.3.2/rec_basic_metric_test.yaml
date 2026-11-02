@@ -110,10 +110,6 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'crane-total-operating-secs';"
             delay:  200ms
-        sql cycles-distribution-by-load-ranges:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            type: Real
-            sql: "select value from rec_basic_metric where name = 'cycles-distribution-by-load-ranges';"
-            delay:  200ms
         sql pump-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = 'pump-total-operating-secs';"
@@ -134,10 +130,6 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch1-total-lifted-mass';"
             delay:  200ms
-        sql winch1-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-total-operating-secs';"
-            delay:  200ms
         sql winch2-characteristic-number:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch2-characteristic-number';"
@@ -150,10 +142,6 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch2-total-lifted-mass';"
             delay:  200ms
-        sql winch2-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            type: Real
-            sql: "select value from rec_basic_metric where name = 'winch2-total-operating-secs';"
-            delay:  200ms
         sql winch3-characteristic-number:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch3-characteristic-number';"
@@ -165,10 +153,6 @@ service VirtualDevice VirtualIed15:
         sql winch3-total-lifted-mass:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
             sql: "select value from rec_basic_metric where name = 'winch3-total-lifted-mass';"
-            delay:  200ms
-        sql winch3-total-operating-secs:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
-            type: Real
-            sql: "select value from rec_basic_metric where name = 'winch3-total-operating-secs';"
             delay:  200ms
 
 

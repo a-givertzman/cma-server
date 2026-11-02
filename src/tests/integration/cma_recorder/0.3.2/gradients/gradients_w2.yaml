@@ -38,7 +38,7 @@ service VirtualDevice VirtualIed15:
                 # - /App/TestTask/Result.Val3
                 # - Result.Value4
     send-to: /App/MultiQueue.in-queue
-    path: 'src/tests/integration/cma_recorder/0.3.2/gradients_w2.ods'            # Optional, if signal have to be charged from the table
+    path: 'src/tests/integration/cma_recorder/0.3.2/gradients/gradients_w2.ods'            # Optional, if signal have to be charged from the table
     sheet: 'data'
     api:                                # Optional, if databese access for example required
         address: 127.0.0.1:8081
@@ -134,57 +134,57 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = '1_25-load';"
             delay:  200ms
-        sql winch1-0_05-0_15-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_05-0_15-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_05-0_15-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_05-0_15-load';"
             delay:  200ms
-        sql winch1-0_15-0_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_15-0_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_15-0_25-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_15-0_25-load';"
             delay:  200ms
-        sql winch1-0_25-0_35-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_25-0_35-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_25-0_35-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_25-0_35-load';"
             delay:  200ms
-        sql winch1-0_35-0_45-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_35-0_45-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_35-0_45-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_35-0_45-load';"
             delay:  200ms
-        sql winch1-0_45-0_55-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_45-0_55-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_45-0_55-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_45-0_55-load';"
             delay:  200ms
-        sql winch1-0_55-0_65-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_55-0_65-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_55-0_65-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_55-0_65-load';"
             delay:  200ms
-        sql winch1-0_65-0_75-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_65-0_75-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_65-0_75-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_65-0_75-load';"
             delay:  200ms
-        sql winch1-0_75-0_85-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_75-0_85-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_75-0_85-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_75-0_85-load';"
             delay:  200ms
-        sql winch1-0_85-0_95-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_85-0_95-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_85-0_95-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_85-0_95-load';"
             delay:  200ms
-        sql winch1-0_95-1_05-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-0_95-1_05-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-0_95-1_05-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-0_95-1_05-load';"
             delay:  200ms
-        sql winch1-1_05-1_15-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-1_05-1_15-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-1_05-1_15-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-1_05-1_15-load';"
             delay:  200ms
-        sql winch1-1_15-1_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-1_15-1_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-1_15-1_25-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-1_15-1_25-load';"
             delay:  200ms
-        sql winch1-1_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-1_25-load:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-1_25-load';"
+            sql: "select value from rec_basic_metric where name = 'winch2-1_25-load';"
             delay:  200ms
         sql cycles-0_05-0_15-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
@@ -238,57 +238,57 @@ service VirtualDevice VirtualIed15:
             type: Real
             sql: "select value from rec_basic_metric where name = 'cycles-1_25-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_05-0_15-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_05-0_15-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_05-0_15-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_05-0_15-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_15-0_25-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_15-0_25-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_15-0_25-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_15-0_25-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_25-0_35-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_25-0_35-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_25-0_35-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_25-0_35-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_35-0_45-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_35-0_45-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_35-0_45-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_35-0_45-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_45-0_55-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_45-0_55-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_45-0_55-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_45-0_55-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_55-0_65-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_55-0_65-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_55-0_65-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_55-0_65-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_65-0_75-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_65-0_75-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_65-0_75-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_65-0_75-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_75-0_85-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_75-0_85-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_75-0_85-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_75-0_85-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_85-0_95-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_85-0_95-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_85-0_95-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_85-0_95-load-range';"
             delay:  200ms
-        sql winch1-cycles-0_95-1_05-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-0_95-1_05-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-0_95-1_05-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-0_95-1_05-load-range';"
             delay:  200ms
-        sql winch1-cycles-1_05-1_15-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-1_05-1_15-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-1_05-1_15-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-1_05-1_15-load-range';"
             delay:  200ms
-        sql winch1-cycles-1_15-1_25-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-1_15-1_25-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-1_15-1_25-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-1_15-1_25-load-range';"
             delay:  200ms
-        sql winch1-cycles-1_25-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
+        sql winch2-cycles-1_25-load-range:               # the name of result stored in the database, to be stored into the table column 'Result.Name2/result'
             type: Real
-            sql: "select value from rec_basic_metric where name = 'winch1-cycles-1_25-load-range';"
+            sql: "select value from rec_basic_metric where name = 'winch2-cycles-1_25-load-range';"
             delay:  200ms
 
 service ApiClient:
